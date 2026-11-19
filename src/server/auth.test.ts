@@ -5,8 +5,9 @@
 // ADR 0004): the acceptance criteria of #2, end to end, with a mailer that keeps the messages.
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { SIGN_UP_REFUSED } from "@/lib/sign-in";
 import { grantAppRole } from "./admin/app-roles.ts";
-import { createAuth, ORGANIZATION_PATHS, SIGN_UP_REFUSED } from "./auth.ts";
+import { createAuth, ORGANIZATION_PATHS } from "./auth.ts";
 import type { DB } from "./db/schema.gen.ts";
 import { createTestDb } from "./db/test-db.ts";
 import { parseEnv } from "./env.ts";

@@ -12,6 +12,7 @@ import type { BetterAuthPlugin } from "better-auth/types";
 import type { Kysely } from "kysely";
 import { m } from "@/i18n/messages";
 import { projectAccessControl, projectRoles } from "@/lib/project-roles";
+import { SIGN_IN_LINK_MINUTES, SIGN_UP_REFUSED } from "@/lib/sign-in";
 import { getDb } from "./db/index.ts";
 import type { DB } from "./db/schema.gen.ts";
 import { type Env, getEnv } from "./env.ts";
@@ -22,13 +23,6 @@ import {
 } from "./invitations/acceptance.ts";
 import { INVITATION_LIFETIME_SECONDS } from "./invitations/lifetime.ts";
 import { deliverSignInLink, getMailer, type Mailer } from "./mail.ts";
-
-// NOTE: magic link plugin default (https://www.better-auth.com/docs/plugins/magic-link); no
-// requirement sets the lifetime of a sign-in link.
-export const SIGN_IN_LINK_MINUTES = 5;
-
-/** The error code a refused account creation redirects with (`?error=SIGN_UP_NOT_ALLOWED`). */
-export const SIGN_UP_REFUSED = "SIGN_UP_NOT_ALLOWED";
 
 export interface AuthDeps {
   mailer: Mailer | null;
