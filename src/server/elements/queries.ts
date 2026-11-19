@@ -42,6 +42,18 @@ export interface ElementValue {
   value: number | null;
 }
 
+/** The CKM archetype element an element is linked to (EL4, EL7). */
+export interface ElementCkmLink {
+  archetypeId: string;
+  cid: string;
+  revision: string;
+  atCode: string;
+  /** The term text of the archetype element in the archetype's original language. */
+  ckmElementName: string;
+  /** The RM type as CKM writes it; may be outside the data type list (ADR 0009). */
+  rmType: string;
+}
+
 /** An element as every member sees it: no author (EL2). */
 export interface BoardElement {
   id: string;
@@ -51,6 +63,7 @@ export interface BoardElement {
   cardinality: Cardinality | null;
   sources: ElementSource[];
   values: ElementValue[];
+  ckmLink: ElementCkmLink | null;
   commentCount: number;
   createdAt: string;
 }
@@ -129,6 +142,21 @@ async function boardElements(db: Db, projectId: string): Promise<BoardElement[]>
     .where("element.merged_into", "is", null)
     .orderBy("element_value.position")
     .execute();
+  const links = await db
+    .selectFrom("element_ckm_link")
+    .innerJoin("element", "element.id", "element_ckm_link.element_id")
+    .select([
+      "element_ckm_link.element_id",
+      "element_ckm_link.archetype_id",
+      "element_ckm_link.cid",
+      "element_ckm_link.revision",
+      "element_ckm_link.at_code",
+      "element_ckm_link.ckm_element_name",
+      "element_ckm_link.rm_type",
+    ])
+    .where("element.project_id", "=", projectId)
+    .where("element.merged_into", "is", null)
+    .execute();
   const counts = await db
     .selectFrom("element_comment")
     .innerJoin("element", "element.id", "element_comment.element_id")
@@ -140,6 +168,19 @@ async function boardElements(db: Db, projectId: string): Promise<BoardElement[]>
   const sourcesOf = groupBy(sources);
   const valuesOf = groupBy(values);
   const countOf = new Map(counts.map((row) => [row.element_id, row.count]));
+  const linkOf = new Map(
+    links.map((link) => [
+      link.element_id,
+      {
+        archetypeId: link.archetype_id,
+        cid: link.cid,
+        revision: link.revision,
+        atCode: link.at_code,
+        ckmElementName: link.ckm_element_name,
+        rmType: link.rm_type,
+      },
+    ]),
+  );
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
@@ -154,6 +195,7 @@ async function boardElements(db: Db, projectId: string): Promise<BoardElement[]>
       text: value.text,
       value: value.value === null ? null : Number(value.value),
     })),
+    ckmLink: linkOf.get(row.id) ?? null,
     commentCount: countOf.get(row.id) ?? 0,
     createdAt: row.created_at.toISOString(),
   }));
