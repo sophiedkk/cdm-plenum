@@ -117,7 +117,9 @@ person already runs stay theirs. An invitation never grants the right.
 Design choices made while building the rounds, for the owner to confirm: one
 round runs at a time; the facilitator closes a round only after its closing
 date; the change class and the panel minimum are fixed once the first round
-opens; a reason sent with a complete panel is not stored.
+opens; a reason sent with a complete panel is not stored. On the rating
+screen a score saves the moment it is chosen and a reason when the field
+loses focus; dates show in the browser's time zone, with the zone named.
 
 ### Minimum panel
 

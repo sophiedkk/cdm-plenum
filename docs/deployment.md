@@ -77,15 +77,19 @@ HTTP to HTTPS, and forwards every request to `http://127.0.0.1:3000`
 (Q-SEC-2). Never publish port 3000 on another interface.
 
 The proxy must also tell the app the client's address. The app limits how
-often one client may ask for a sign-in link or open one: 5 requests per
-60 seconds per address, the default of the better-auth magic link plugin
-(<https://www.better-auth.com/docs/plugins/magic-link>,
-<https://www.better-auth.com/docs/concepts/rate-limit>). better-auth reads
+often one client may ask for a sign-in link or open one: 30 requests per
+60 seconds per address, for each of the two (#14). The better-auth magic
+link plugin allows 5
+(<https://www.better-auth.com/docs/plugins/magic-link>); the app raises it
+with `rateLimit.customRules` in `src/server/auth.ts`
+(<https://www.better-auth.com/docs/concepts/rate-limit>), so a class behind
+one network address can sign in at the start of a session. A link still
+works once and expires after 5 minutes. better-auth reads
 the address from the `X-Forwarded-For` header and trusts it only when the
 header holds a single address. The app sets no `advanced.ipAddress` option,
 so this default applies. When the header is missing or holds a chain of
 addresses, the app logs `Rate limiting could not determine a client IP`
-and every client shares one limit, so 5 link requests a minute for the
+and every client shares one limit, so 30 link requests a minute for the
 whole site.
 
 So the proxy must replace `X-Forwarded-For` with the address it received
@@ -115,9 +119,9 @@ location / {
 ```
 
 A class that sits behind one school network address shares one limit too:
-30 students who ask for a link in the same minute get refused after the
-fifth. Hand out invitations ahead of the session, or stagger the first
-sign-in.
+up to 30 students can ask for a link in the same minute, and each can open
+theirs. A larger group gets refused after the thirtieth request; stagger
+the first sign-in, or wait a minute and ask again.
 
 ## Updates
 

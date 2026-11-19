@@ -7,6 +7,7 @@
 import { randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
 import { m } from "@/i18n/messages";
+import { LEFT_ROLE } from "@/lib/project-roles";
 import { normalizeEmail } from "../admin/app-roles.ts";
 import type { DB } from "../db/schema.gen.ts";
 import type { Mailer } from "../mail.ts";
@@ -56,6 +57,8 @@ export async function invite(
       .select("member.id")
       .where("member.organizationId", "=", project.id)
       .where("user.email", "=", email)
+      // Someone who left (PR5) may be invited again.
+      .where("member.role", "<>", LEFT_ROLE)
       .executeTakeFirst();
     if (member) return refused("already_member");
     const pending = await trx

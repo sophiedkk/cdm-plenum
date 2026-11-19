@@ -5,12 +5,13 @@ import { createFormHook, defaultValidationLogic } from "@tanstack/react-form";
 import { keepServerRefusals } from "@/lib/forms/server-refusal";
 import { FormErrors, SubmitButton } from "./form-components";
 import { fieldContext, formContext } from "./form-context";
+import { SelectField } from "./select-field";
 import { TextareaField, TextField } from "./text-fields";
 
 const formHook = createFormHook({
   fieldContext,
   formContext,
-  fieldComponents: { TextField, TextareaField },
+  fieldComponents: { TextField, TextareaField, SelectField },
   formComponents: { SubmitButton, FormErrors },
 });
 

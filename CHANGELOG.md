@@ -24,6 +24,31 @@ the project uses [Semantic Versioning](https://semver.org/).
   after a preview of accepted and refused rows, and searches CKM to link an
   element or import all elements of an archetype. CKM failures show as
   messages and the board keeps working.
+- The members page: facilitators add, rename and remove stakeholder groups,
+  invite participants by e-mail into a group, copy an invitation link to pass
+  on, and revoke invitations. Participants see each group with its expert
+  type and number of participants.
+- Participants can leave a project; their ratings in closed rounds stay in
+  the results.
+- The administration page: grant and revoke the administrator and facilitator
+  rights by e-mail address, deactivate and reactivate accounts, and read the
+  activity log filtered by action. The log records each sign-in.
+- Facilitators set the change class and the minimum panel per expert type,
+  and see the panel next to the minimum.
+- Facilitators set up a rating round with its elements, scale, consensus
+  rule, closing date and whether they may see who rated what, and open it,
+  with a reason when the panel is below the minimum.
+- Participants rate each element on the scale or choose "unable to rate",
+  with an optional reason; each answer saves at once. In later rounds they
+  see their earlier rating, the group result and the anonymous reasons.
+- After the closing date, facilitators close a round. Everyone then sees
+  each element's outcome, median, band percentages and full distribution, and
+  results per stakeholder group of 3 or more.
+- Facilitators see the response rate per stakeholder group, and who rated
+  what when the round allows it.
+- Facilitators download the elements CSV, the mind map and the anonymised
+  ratings CSV from the export page, with a hint for opening CSV files in a
+  Dutch spreadsheet program.
 - After signing in you see your projects with your role and the phase of
   each project. A person with the facilitator right creates a project from
   there and lands on its scope page.
@@ -92,3 +117,15 @@ the project uses [Semantic Versioning](https://semver.org/).
   server's command line.
 - E-mail over SMTP when you set `SMTP_URL` and `MAIL_FROM`. Without SMTP,
   the facilitator copies the invitation link and passes it on.
+
+### Changed
+
+- Up to 30 sign-in link requests, and 30 link openings, per minute per
+  network address, up from 5, so a class behind one address can sign in
+  together.
+
+### Security
+
+- A deactivated account can no longer sign in, and its open sessions end at
+  once.
+

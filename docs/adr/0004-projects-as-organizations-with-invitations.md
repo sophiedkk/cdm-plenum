@@ -69,9 +69,13 @@ uses is set when the requirements give one.
 - **An address that may not sign in gets no e-mail.** The sign-in form
   answers the same for every address, so it does not tell which addresses
   have an account or an invitation.
-- **An administrator grant is a command on the host**,
-  `pnpm admin:grant <email> [--facilitator]`, until the administration
-  screens of AD1 exist.
+- **Administrator and facilitator rights** are granted on the administration
+  page or with `pnpm admin:grant <email> [--facilitator]` on the host.
+- **A deactivated account** (AD1) gets no sign-in e-mail, and the session
+  create hook refuses a link sent before the deactivation; its sessions end at
+  once.
+- **The sign-in link rate limit** is 30 requests a minute per network address
+  for requesting and for opening a link (#14).
 
 ### Consequences
 

@@ -25,6 +25,11 @@ async function search(recipient: string): Promise<Summary[]> {
   return body.messages;
 }
 
+/** The number of messages to `recipient` in Mailpit now. */
+export async function countMessages(recipient: string): Promise<number> {
+  return (await search(recipient)).length;
+}
+
 /** Deletes the messages with these ids. */
 export async function deleteMessages(ids: readonly string[]): Promise<void> {
   if (ids.length === 0) return;
