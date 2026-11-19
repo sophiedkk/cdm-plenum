@@ -2,10 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createFileRoute } from "@tanstack/react-router";
+import { CircleAlertIcon } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
 import { z } from "zod";
+import { PublicLayout } from "@/components/shell/app-shell";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { m } from "@/i18n/messages";
 import { authClient } from "@/lib/auth-client";
+import { refusalMessage } from "@/lib/i18n/refusals";
 import { SIGN_IN_LINK_MINUTES, signInError } from "@/lib/sign-in";
 
 export const Route = createFileRoute("/sign-in")({
@@ -19,6 +26,15 @@ type State =
   | { kind: "sending" }
   | { kind: "sent"; email: string }
   | { kind: "failed" };
+
+function ErrorAlert({ children }: Readonly<{ children: string }>) {
+  return (
+    <Alert variant="destructive" className="mt-4" role="alert">
+      <CircleAlertIcon aria-hidden="true" />
+      <AlertDescription>{children}</AlertDescription>
+    </Alert>
+  );
+}
 
 function SignIn() {
   const { error } = Route.useSearch();
@@ -40,54 +56,28 @@ function SignIn() {
 
   if (state.kind === "sent") {
     return (
-      <main className="mx-auto max-w-md p-8">
+      <PublicLayout>
         <h1 className="text-2xl font-semibold">{m.sign_in_check_inbox_title()}</h1>
         <p className="mt-4" role="status">
           {m.sign_in_check_inbox({ email: state.email, minutes: SIGN_IN_LINK_MINUTES })}
         </p>
-      </main>
+      </PublicLayout>
     );
   }
 
   return (
-    <main className="mx-auto max-w-md p-8">
+    <PublicLayout>
       <h1 className="text-2xl font-semibold">{m.sign_in_title()}</h1>
-      <p className="mt-2 text-neutral-700">{m.sign_in_intro()}</p>
-      {linkError === "not_invited" && (
-        <p className="mt-4 rounded border border-red-700 p-3 text-red-800" role="alert">
-          {m.sign_in_error_not_invited()}
-        </p>
-      )}
-      {linkError === "invalid_link" && (
-        <p className="mt-4 rounded border border-red-700 p-3 text-red-800" role="alert">
-          {m.sign_in_error_invalid_link()}
-        </p>
-      )}
-      {state.kind === "failed" && (
-        <p className="mt-4 rounded border border-red-700 p-3 text-red-800" role="alert">
-          {m.sign_in_error_failed()}
-        </p>
-      )}
+      <p className="mt-2 text-muted-foreground">{m.sign_in_intro()}</p>
+      {linkError && <ErrorAlert>{refusalMessage(linkError)}</ErrorAlert>}
+      {state.kind === "failed" && <ErrorAlert>{m.sign_in_error_failed()}</ErrorAlert>}
       <form className="mt-6 flex flex-col gap-3" onSubmit={(event) => void submit(event)}>
-        <label htmlFor={emailId} className="font-medium">
-          {m.sign_in_email_label()}
-        </label>
-        <input
-          id={emailId}
-          name="email"
-          type="email"
-          autoComplete="email"
-          required
-          className="rounded border border-neutral-500 px-3 py-2"
-        />
-        <button
-          type="submit"
-          disabled={state.kind === "sending"}
-          className="rounded bg-neutral-900 px-4 py-2 font-medium text-white disabled:opacity-60"
-        >
+        <Label htmlFor={emailId}>{m.sign_in_email_label()}</Label>
+        <Input id={emailId} name="email" type="email" autoComplete="email" required />
+        <Button type="submit" disabled={state.kind === "sending"}>
           {state.kind === "sending" ? m.sign_in_sending() : m.sign_in_submit()}
-        </button>
+        </Button>
       </form>
-    </main>
+    </PublicLayout>
   );
 }

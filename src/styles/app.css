@@ -147,8 +147,9 @@
 }
 
 /* Unlayered, so it wins over the `outline-none` of the components: every focused control gets a
-   2 px outline of at least 3:1 against the background (WCAG 2.4.7, 1.4.11). */
-:focus-visible {
+   2 px outline of at least 3:1 against the background (WCAG 2.4.7, 1.4.11). An element that
+   only takes focus from a script (`tabindex="-1"`: the main landmark, an error summary) has none. */
+:focus-visible:not([tabindex="-1"]) {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }

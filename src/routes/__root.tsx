@@ -2,13 +2,35 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// <reference types="vite/client" />
-import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
+import type { QueryClient } from "@tanstack/react-query";
+import {
+  createRootRouteWithContext,
+  type ErrorComponentProps,
+  HeadContent,
+  Outlet,
+  Scripts,
+  useRouteContext,
+} from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { AppShell, PublicLayout } from "@/components/shell/app-shell";
+import { NotFoundState, RouteErrorState } from "@/components/shell/route-states";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { m } from "@/i18n/messages";
 import { getLocale } from "@/i18n/runtime";
+import { sessionQueryOptions } from "@/server/session/query-options";
 import appCss from "@/styles/app.css?url";
 
-export const Route = createRootRoute({
+export interface RouterContext {
+  queryClient: QueryClient;
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
+  // NOTE: our own design after eduLIMS (ADR 0002). The session query is always stale, so every
+  // navigation asks the server and a revoked session or role applies at once.
+  beforeLoad: async ({ context }) => ({
+    user: await context.queryClient.fetchQuery(sessionQueryOptions()),
+  }),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -21,6 +43,7 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
   component: Outlet,
   notFoundComponent: NotFound,
+  errorComponent: RouteError,
 });
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
@@ -29,18 +52,37 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-screen bg-white text-neutral-900">
-        {children}
+      <body>
+        <TooltipProvider>{children}</TooltipProvider>
+        <Toaster />
         <Scripts />
       </body>
     </html>
   );
 }
 
+/** A page outside the route tree (not found, an error) in the frame the visitor has. */
+function Frame({ children }: Readonly<{ children: ReactNode }>) {
+  const user = useRouteContext({ from: "__root__", select: (context) => context.user });
+  return user ? (
+    <AppShell user={user}>{children}</AppShell>
+  ) : (
+    <PublicLayout>{children}</PublicLayout>
+  );
+}
+
 function NotFound() {
   return (
-    <main className="mx-auto max-w-2xl p-8">
-      <h1 className="text-2xl font-semibold">{m.not_found_title()}</h1>
-    </main>
+    <Frame>
+      <NotFoundState />
+    </Frame>
+  );
+}
+
+function RouteError({ reset }: ErrorComponentProps) {
+  return (
+    <Frame>
+      <RouteErrorState reset={reset} />
+    </Frame>
   );
 }

@@ -1,0 +1,23 @@
+// SPDX-FileCopyrightText: Sophie de Klerk
+// SPDX-License-Identifier: Apache-2.0
+
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { PageHeader } from "@/components/shell/route-states";
+import { m } from "@/i18n/messages";
+
+/** The exports of the project (EX1 to EX5), for its facilitator only. */
+export const Route = createFileRoute("/_authed/projects/$projectId/export")({
+  beforeLoad: ({ context, params }) => {
+    if (context.project.role !== "facilitator") {
+      throw redirect({ to: "/projects/$projectId/scope", params });
+    }
+  },
+  head: ({ match }) => ({
+    meta: [{ title: `${m.export_title()} | ${match.context.project.name} | ${m.app_name()}` }],
+  }),
+  component: Export,
+});
+
+function Export() {
+  return <PageHeader level={2} title={m.export_title()} description={m.export_purpose()} />;
+}

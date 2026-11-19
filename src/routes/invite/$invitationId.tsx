@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PublicLayout } from "@/components/shell/app-shell";
+import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import { invitationPreviewFn } from "@/server/invitations/functions";
 import { idSchema } from "@/server/projects/schemas";
@@ -19,24 +21,21 @@ export const Route = createFileRoute("/invite/$invitationId")({
 function Invitation() {
   const preview = Route.useLoaderData();
   return (
-    <main className="mx-auto max-w-md p-8">
+    <PublicLayout>
       <h1 className="text-2xl font-semibold">{m.invite_title()}</h1>
       {preview ? (
         <>
           <p className="mt-4">{m.invite_pending({ project: preview.projectName })}</p>
-          <p className="mt-2 text-neutral-700">{m.invite_next()}</p>
-          <Link
-            to="/sign-in"
-            className="mt-6 inline-block rounded bg-neutral-900 px-4 py-2 font-medium text-white"
-          >
-            {m.invite_sign_in()}
-          </Link>
+          <p className="mt-2 text-muted-foreground">{m.invite_next()}</p>
+          <Button asChild className="mt-6">
+            <Link to="/sign-in">{m.invite_sign_in()}</Link>
+          </Button>
         </>
       ) : (
         <p className="mt-4" role="alert">
           {m.invite_invalid()}
         </p>
       )}
-    </main>
+    </PublicLayout>
   );
 }

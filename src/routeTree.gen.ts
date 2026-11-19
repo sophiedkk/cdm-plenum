@@ -10,20 +10,40 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as AuthedAdminRouteImport } from './routes/_authed/admin'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as InviteInvitationIdRouteImport } from './routes/invite/$invitationId'
+import { Route as AuthedProjectsIndexRouteImport } from './routes/_authed/projects/index'
+import { Route as AuthedProjectsProjectIdRouteImport } from './routes/_authed/projects/$projectId'
+import { Route as AuthedProjectsNewRouteImport } from './routes/_authed/projects/new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AuthedProjectsProjectIdIndexRouteImport } from './routes/_authed/projects/$projectId/index'
+import { Route as AuthedProjectsProjectIdBoardRouteImport } from './routes/_authed/projects/$projectId/board'
+import { Route as AuthedProjectsProjectIdExportRouteImport } from './routes/_authed/projects/$projectId/export'
+import { Route as AuthedProjectsProjectIdMembersRouteImport } from './routes/_authed/projects/$projectId/members'
+import { Route as AuthedProjectsProjectIdRoundsRouteImport } from './routes/_authed/projects/$projectId/rounds'
+import { Route as AuthedProjectsProjectIdScopeRouteImport } from './routes/_authed/projects/$projectId/scope'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedRoute = AuthedRouteImport.update({
+  id: '/_authed',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignInRoute = SignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedAdminRoute = AuthedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
@@ -35,51 +55,172 @@ const InviteInvitationIdRoute = InviteInvitationIdRouteImport.update({
   path: '/invite/$invitationId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedProjectsIndexRoute = AuthedProjectsIndexRouteImport.update({
+  id: '/projects/',
+  path: '/projects/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedProjectsProjectIdRoute = AuthedProjectsProjectIdRouteImport.update({
+  id: '/projects/$projectId',
+  path: '/projects/$projectId',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedProjectsNewRoute = AuthedProjectsNewRouteImport.update({
+  id: '/projects/new',
+  path: '/projects/new',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedProjectsProjectIdIndexRoute =
+  AuthedProjectsProjectIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthedProjectsProjectIdRoute,
+  } as any)
+const AuthedProjectsProjectIdBoardRoute =
+  AuthedProjectsProjectIdBoardRouteImport.update({
+    id: '/board',
+    path: '/board',
+    getParentRoute: () => AuthedProjectsProjectIdRoute,
+  } as any)
+const AuthedProjectsProjectIdExportRoute =
+  AuthedProjectsProjectIdExportRouteImport.update({
+    id: '/export',
+    path: '/export',
+    getParentRoute: () => AuthedProjectsProjectIdRoute,
+  } as any)
+const AuthedProjectsProjectIdMembersRoute =
+  AuthedProjectsProjectIdMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => AuthedProjectsProjectIdRoute,
+  } as any)
+const AuthedProjectsProjectIdRoundsRoute =
+  AuthedProjectsProjectIdRoundsRouteImport.update({
+    id: '/rounds',
+    path: '/rounds',
+    getParentRoute: () => AuthedProjectsProjectIdRoute,
+  } as any)
+const AuthedProjectsProjectIdScopeRoute =
+  AuthedProjectsProjectIdScopeRouteImport.update({
+    id: '/scope',
+    path: '/scope',
+    getParentRoute: () => AuthedProjectsProjectIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
+  '/admin': typeof AuthedAdminRoute
   '/api/health': typeof ApiHealthRoute
   '/invite/$invitationId': typeof InviteInvitationIdRoute
+  '/projects/$projectId': typeof AuthedProjectsProjectIdRouteWithChildren
+  '/projects/new': typeof AuthedProjectsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/projects/': typeof AuthedProjectsIndexRoute
+  '/projects/$projectId/board': typeof AuthedProjectsProjectIdBoardRoute
+  '/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
+  '/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
+  '/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsRoute
+  '/projects/$projectId/scope': typeof AuthedProjectsProjectIdScopeRoute
+  '/projects/$projectId/': typeof AuthedProjectsProjectIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
+  '/admin': typeof AuthedAdminRoute
   '/api/health': typeof ApiHealthRoute
   '/invite/$invitationId': typeof InviteInvitationIdRoute
+  '/projects/new': typeof AuthedProjectsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/projects': typeof AuthedProjectsIndexRoute
+  '/projects/$projectId/board': typeof AuthedProjectsProjectIdBoardRoute
+  '/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
+  '/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
+  '/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsRoute
+  '/projects/$projectId/scope': typeof AuthedProjectsProjectIdScopeRoute
+  '/projects/$projectId': typeof AuthedProjectsProjectIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authed': typeof AuthedRouteWithChildren
   '/sign-in': typeof SignInRoute
+  '/_authed/admin': typeof AuthedAdminRoute
   '/api/health': typeof ApiHealthRoute
   '/invite/$invitationId': typeof InviteInvitationIdRoute
+  '/_authed/projects/$projectId': typeof AuthedProjectsProjectIdRouteWithChildren
+  '/_authed/projects/new': typeof AuthedProjectsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_authed/projects/': typeof AuthedProjectsIndexRoute
+  '/_authed/projects/$projectId/board': typeof AuthedProjectsProjectIdBoardRoute
+  '/_authed/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
+  '/_authed/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
+  '/_authed/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsRoute
+  '/_authed/projects/$projectId/scope': typeof AuthedProjectsProjectIdScopeRoute
+  '/_authed/projects/$projectId/': typeof AuthedProjectsProjectIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/sign-in' | '/api/health' | '/invite/$invitationId' | '/api/auth/$'
+    | '/'
+    | '/sign-in'
+    | '/admin'
+    | '/api/health'
+    | '/invite/$invitationId'
+    | '/projects/$projectId'
+    | '/projects/new'
+    | '/api/auth/$'
+    | '/projects/'
+    | '/projects/$projectId/board'
+    | '/projects/$projectId/export'
+    | '/projects/$projectId/members'
+    | '/projects/$projectId/rounds'
+    | '/projects/$projectId/scope'
+    | '/projects/$projectId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sign-in' | '/api/health' | '/invite/$invitationId' | '/api/auth/$'
+  to:
+    | '/'
+    | '/sign-in'
+    | '/admin'
+    | '/api/health'
+    | '/invite/$invitationId'
+    | '/projects/new'
+    | '/api/auth/$'
+    | '/projects'
+    | '/projects/$projectId/board'
+    | '/projects/$projectId/export'
+    | '/projects/$projectId/members'
+    | '/projects/$projectId/rounds'
+    | '/projects/$projectId/scope'
+    | '/projects/$projectId'
   id:
     | '__root__'
     | '/'
+    | '/_authed'
     | '/sign-in'
+    | '/_authed/admin'
     | '/api/health'
     | '/invite/$invitationId'
+    | '/_authed/projects/$projectId'
+    | '/_authed/projects/new'
     | '/api/auth/$'
+    | '/_authed/projects/'
+    | '/_authed/projects/$projectId/board'
+    | '/_authed/projects/$projectId/export'
+    | '/_authed/projects/$projectId/members'
+    | '/_authed/projects/$projectId/rounds'
+    | '/_authed/projects/$projectId/scope'
+    | '/_authed/projects/$projectId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthedRoute: typeof AuthedRouteWithChildren
   SignInRoute: typeof SignInRoute
   ApiHealthRoute: typeof ApiHealthRoute
   InviteInvitationIdRoute: typeof InviteInvitationIdRoute
@@ -95,12 +236,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed': {
+      id: '/_authed'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign-in': {
       id: '/sign-in'
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authed/admin': {
+      id: '/_authed/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthedAdminRouteImport
+      parentRoute: typeof AuthedRoute
     }
     '/api/health': {
       id: '/api/health'
@@ -116,6 +271,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteInvitationIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/projects/': {
+      id: '/_authed/projects/'
+      path: '/projects'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof AuthedProjectsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/projects/$projectId': {
+      id: '/_authed/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof AuthedProjectsProjectIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/projects/new': {
+      id: '/_authed/projects/new'
+      path: '/projects/new'
+      fullPath: '/projects/new'
+      preLoaderRoute: typeof AuthedProjectsNewRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -123,11 +299,95 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/projects/$projectId/': {
+      id: '/_authed/projects/$projectId/'
+      path: '/'
+      fullPath: '/projects/$projectId/'
+      preLoaderRoute: typeof AuthedProjectsProjectIdIndexRouteImport
+      parentRoute: typeof AuthedProjectsProjectIdRoute
+    }
+    '/_authed/projects/$projectId/board': {
+      id: '/_authed/projects/$projectId/board'
+      path: '/board'
+      fullPath: '/projects/$projectId/board'
+      preLoaderRoute: typeof AuthedProjectsProjectIdBoardRouteImport
+      parentRoute: typeof AuthedProjectsProjectIdRoute
+    }
+    '/_authed/projects/$projectId/export': {
+      id: '/_authed/projects/$projectId/export'
+      path: '/export'
+      fullPath: '/projects/$projectId/export'
+      preLoaderRoute: typeof AuthedProjectsProjectIdExportRouteImport
+      parentRoute: typeof AuthedProjectsProjectIdRoute
+    }
+    '/_authed/projects/$projectId/members': {
+      id: '/_authed/projects/$projectId/members'
+      path: '/members'
+      fullPath: '/projects/$projectId/members'
+      preLoaderRoute: typeof AuthedProjectsProjectIdMembersRouteImport
+      parentRoute: typeof AuthedProjectsProjectIdRoute
+    }
+    '/_authed/projects/$projectId/rounds': {
+      id: '/_authed/projects/$projectId/rounds'
+      path: '/rounds'
+      fullPath: '/projects/$projectId/rounds'
+      preLoaderRoute: typeof AuthedProjectsProjectIdRoundsRouteImport
+      parentRoute: typeof AuthedProjectsProjectIdRoute
+    }
+    '/_authed/projects/$projectId/scope': {
+      id: '/_authed/projects/$projectId/scope'
+      path: '/scope'
+      fullPath: '/projects/$projectId/scope'
+      preLoaderRoute: typeof AuthedProjectsProjectIdScopeRouteImport
+      parentRoute: typeof AuthedProjectsProjectIdRoute
+    }
   }
 }
 
+interface AuthedProjectsProjectIdRouteChildren {
+  AuthedProjectsProjectIdBoardRoute: typeof AuthedProjectsProjectIdBoardRoute
+  AuthedProjectsProjectIdExportRoute: typeof AuthedProjectsProjectIdExportRoute
+  AuthedProjectsProjectIdMembersRoute: typeof AuthedProjectsProjectIdMembersRoute
+  AuthedProjectsProjectIdRoundsRoute: typeof AuthedProjectsProjectIdRoundsRoute
+  AuthedProjectsProjectIdScopeRoute: typeof AuthedProjectsProjectIdScopeRoute
+  AuthedProjectsProjectIdIndexRoute: typeof AuthedProjectsProjectIdIndexRoute
+}
+
+const AuthedProjectsProjectIdRouteChildren: AuthedProjectsProjectIdRouteChildren =
+  {
+    AuthedProjectsProjectIdBoardRoute: AuthedProjectsProjectIdBoardRoute,
+    AuthedProjectsProjectIdExportRoute: AuthedProjectsProjectIdExportRoute,
+    AuthedProjectsProjectIdMembersRoute: AuthedProjectsProjectIdMembersRoute,
+    AuthedProjectsProjectIdRoundsRoute: AuthedProjectsProjectIdRoundsRoute,
+    AuthedProjectsProjectIdScopeRoute: AuthedProjectsProjectIdScopeRoute,
+    AuthedProjectsProjectIdIndexRoute: AuthedProjectsProjectIdIndexRoute,
+  }
+
+const AuthedProjectsProjectIdRouteWithChildren =
+  AuthedProjectsProjectIdRoute._addFileChildren(
+    AuthedProjectsProjectIdRouteChildren,
+  )
+
+interface AuthedRouteChildren {
+  AuthedAdminRoute: typeof AuthedAdminRoute
+  AuthedProjectsProjectIdRoute: typeof AuthedProjectsProjectIdRouteWithChildren
+  AuthedProjectsNewRoute: typeof AuthedProjectsNewRoute
+  AuthedProjectsIndexRoute: typeof AuthedProjectsIndexRoute
+}
+
+const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedAdminRoute: AuthedAdminRoute,
+  AuthedProjectsProjectIdRoute: AuthedProjectsProjectIdRouteWithChildren,
+  AuthedProjectsNewRoute: AuthedProjectsNewRoute,
+  AuthedProjectsIndexRoute: AuthedProjectsIndexRoute,
+}
+
+const AuthedRouteWithChildren =
+  AuthedRoute._addFileChildren(AuthedRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthedRoute: AuthedRouteWithChildren,
   SignInRoute: SignInRoute,
   ApiHealthRoute: ApiHealthRoute,
   InviteInvitationIdRoute: InviteInvitationIdRoute,
