@@ -37,6 +37,7 @@ requirement keeps its row with the status "Dropped".
 | Project | The work on one candidate concept, for example "blood pressure" or "anxiety (nursing focus)". |
 | Scope statement | The concept, its use cases, what is out of scope, and the source documents of a project. |
 | Candidate element | A proposed data element on the element board, with a name, a description, a proposed data type, a cardinality, its source and an optional link to an existing CKM archetype element. |
+| Data type | One of the openEHR Reference Model data value types in the [data type list](architecture.md#element-data-types), each with its nearest FHIR data type. |
 | Stakeholder group | A group of participants with the same background, for example "nurses", "physicians" or "modellers". Results are shown per group. |
 | Round | One period in which participants rate the candidate elements. A round has a consensus rule and a closing date, both fixed before it opens. |
 | Consensus rule | The thresholds that decide whether an element is included, excluded or has no consensus, for example "at least 70% score 7 to 9 and at most 15% score 1 to 3". |
@@ -76,7 +77,7 @@ of one project and participant in another.
 
 | ID | Requirement | Priority | Acceptance criterion | Risk |
 |---|---|---|---|---|
-| EL1 | Participants add candidate elements to the project's board. | Must | *(proposed)* A participant adds an element with a name and a description; data type, cardinality and source are optional. | |
+| EL1 | Participants add candidate elements to the project's board. | Must | *(proposed)* A participant adds an element with a name and a description; data type, cardinality and source are optional. The data type is picked from the data type list, which shows the openEHR type and the FHIR type side by side, or left as "not decided". Cardinality is a minimum (0 or 1) and a maximum (1, a number, or many). | |
 | EL2 | Other participants do not see who added an element. | Must | *(proposed)* No page or API response shown to a participant contains the author of an element; the facilitator sees the author. | R-03 |
 | EL3 | A facilitator imports candidate elements from a CSV file. | Must | *(proposed)* A CSV with a name and description column adds one element per row; a row without a name is reported and not imported; the file's name is stored as the source. | R-05 |
 | EL4 | A facilitator links a candidate element to an existing element of a CKM archetype. | Must | *(proposed)* The facilitator searches CKM from the element, picks an archetype and an element, and the element shows the archetype ID, its revision and the element's at-code. The search uses the CKM REST API (see [External sources](#external-sources)). | R-06 |
@@ -84,6 +85,7 @@ of one project and participant in another.
 | EL6 | Participants comment on an element. | Should | *(proposed)* A comment appears under the element; the author is hidden from other participants as in EL2. | R-03 |
 | EL7 | A facilitator imports the elements of an existing CKM archetype as candidates. | Should | *(proposed)* Every element of the chosen archetype becomes a candidate linked to that archetype element (EL4). | R-06 |
 | EL8 | Participants group elements in an open card sort. | Could | *(proposed)* Each participant sorts the elements into groups they name; the facilitator sees how often two elements share a group. | |
+| EL9 | A facilitator lists proposed values for an element of a coded type (coded text, ordinal, scale). | Should | *(proposed)* The element holds an ordered list of values, each with a text and, for ordinal and scale, a number; the list appears in the exports. | |
 
 ### Delphi rounds
 
@@ -104,7 +106,7 @@ of one project and participant in another.
 
 | ID | Requirement | Priority | Acceptance criterion | Risk |
 |---|---|---|---|---|
-| EX1 | Export the elements and their round outcomes as CSV. | Must | *(proposed)* One row per element with name, description, data type, cardinality, source, linked CKM element and the outcome of each round; the file opens correctly in a spreadsheet program. | |
+| EX1 | Export the elements and their round outcomes as CSV. | Must | *(proposed)* One row per element with name, description, openEHR data type, FHIR data type, cardinality, source, linked CKM element and the outcome of each round; the file opens correctly in a spreadsheet program. | |
 | EX2 | Export the included elements as a FreeMind mind map (`.mm`), the format CKM itself serves for archetypes. | Must | *(proposed)* The file opens in Freeplane and in XMind and shows the concept as the root and each included element as a node with its description. | |
 | EX3 | Export a decision report of the project. | Should | *(proposed)* The report holds the scope statement, the panel per stakeholder group, the consensus rule of each round, the response rate per round, and the outcome per element. Its structure follows the ACCORD reporting guideline (<https://doi.org/10.1371/journal.pmed.1004326>). | |
 | EX4 | Export the anonymised ratings for analysis. | Should | *(proposed)* One row per rating with a random participant code per project, the stakeholder group, round, element and score; the code is stable within the project and does not appear in any other export. | R-03 |
