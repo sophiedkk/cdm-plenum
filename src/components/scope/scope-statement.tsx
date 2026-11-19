@@ -62,11 +62,13 @@ export function scopeStatementSchema() {
 
 /** The facilitator's form for the three texts (SC1). */
 export function ScopeStatementForm({
+  id,
   texts,
   save,
   onSaved,
   actions,
 }: Readonly<{
+  id?: string;
   texts: ScopeTexts;
   save: (texts: ScopeTexts) => Promise<ScopeOutcome>;
   onSaved: () => Promise<void> | void;
@@ -98,6 +100,7 @@ export function ScopeStatementForm({
 
   return (
     <form
+      id={id}
       noValidate
       className="flex flex-col gap-6"
       onSubmit={(event) => {

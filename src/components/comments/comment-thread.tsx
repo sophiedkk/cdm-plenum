@@ -5,6 +5,7 @@
 // form to add one. The author shows only when the list carries one, which only the facilitator's
 // queries do (EL2, ADR 0005).
 import { revalidateLogic } from "@tanstack/react-form";
+import { useRef } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
 import { m } from "@/i18n/messages";
@@ -66,6 +67,7 @@ export function CommentThread({
   add: (body: string) => Promise<CommentOutcome>;
   onAdded: () => Promise<void> | void;
 }>) {
+  const formRef = useRef<HTMLFormElement>(null);
   const form = useAppForm({
     defaultValues: { body: "" },
     validationLogic: revalidateLogic(),
@@ -83,6 +85,8 @@ export function CommentThread({
         return;
       }
       formApi.reset();
+      // The submit button was disabled while sending, which drops focus; the field takes it back.
+      formRef.current?.querySelector<HTMLElement>('textarea[name="body"]')?.focus();
       await onAdded();
     },
   });
@@ -108,6 +112,7 @@ export function CommentThread({
         </ol>
       )}
       <form
+        ref={formRef}
         noValidate
         className="flex flex-col gap-3"
         onSubmit={(event) => {

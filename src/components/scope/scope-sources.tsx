@@ -188,6 +188,7 @@ export function AddSourceForm({
   add: (source: { label: string; url: string | null }) => Promise<SourceOutcome>;
   onAdded: (label: string) => Promise<void> | void;
 }>) {
+  const formRef = useRef<HTMLFormElement>(null);
   const form = useAppForm({
     defaultValues: { label: "", url: "" },
     validationLogic: revalidateLogic(),
@@ -207,12 +208,15 @@ export function AddSourceForm({
         return;
       }
       formApi.reset();
+      // The submit button was disabled while sending, which drops focus; the field takes it back.
+      formRef.current?.querySelector<HTMLElement>('input[name="label"]')?.focus();
       await onAdded(label);
     },
   });
 
   return (
     <form
+      ref={formRef}
       noValidate
       className="flex flex-col gap-4"
       onSubmit={(event) => {

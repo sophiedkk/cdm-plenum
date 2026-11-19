@@ -54,9 +54,9 @@ const VIEW: CkmArchetypeView = {
 function renderPanel(actions: Partial<CkmActions>, linkTarget = { id: "el-1", name: "Systolic" }) {
   const onDone = vi.fn();
   const all: CkmActions = {
-    search: vi.fn(async () => ({ ok: true, value: [ROW] }) as const),
+    search: vi.fn(async () => ({ ok: true as const, value: [ROW] })),
     link: vi.fn(async () => ({ ok: true, value: null }) as const),
-    importAll: vi.fn(async () => ({ ok: true, value: { elementIds: ["a"] } }) as const),
+    importAll: vi.fn(async () => ({ ok: true as const, value: { elementIds: ["a"] } })),
     ...actions,
   };
   render(

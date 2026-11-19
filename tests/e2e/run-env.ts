@@ -16,6 +16,7 @@ const DEFAULTS = {
   SMTP_URL: "smtp://mailpit:1025",
   MAILPIT_URL: "http://mailpit:8025",
   E2E_PORT: "3100",
+  E2E_CKM_PORT: "3101",
 } as const;
 
 function setting(name: keyof typeof DEFAULTS): string {
@@ -34,12 +35,25 @@ export function runDatabaseUrl(): string {
   return process.env["E2E_RUN_DATABASE_URL"];
 }
 
-export function appPort(): number {
-  const port = Number(setting("E2E_PORT"));
-  if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
-    throw new Error(`E2E_PORT=${setting("E2E_PORT")} is not a port.`);
+function port(name: "E2E_PORT" | "E2E_CKM_PORT"): number {
+  const value = Number(setting(name));
+  if (!Number.isInteger(value) || value <= 0 || value > 65_535) {
+    throw new Error(`${name}=${setting(name)} is not a port.`);
   }
-  return port;
+  return value;
+}
+
+export function appPort(): number {
+  return port("E2E_PORT");
+}
+
+/** The port of the CKM stub (tests/e2e/ckm-stub.ts); the app's CKM_BASE_URL points there. */
+export function ckmStubPort(): number {
+  return port("E2E_CKM_PORT");
+}
+
+export function ckmStubUrl(): string {
+  return `http://127.0.0.1:${ckmStubPort()}`;
 }
 
 export function appUrl(): string {

@@ -25,7 +25,7 @@ function renderForm(
   render(
     <ElementForm
       withSource={initial === undefined}
-      initial={initial}
+      {...(initial ? { initial } : {})}
       submitLabel="Add element"
       submit={submit}
       onDone={onDone}

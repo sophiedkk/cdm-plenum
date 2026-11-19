@@ -136,7 +136,13 @@ function Scope() {
                 ref={editButton}
                 type="button"
                 variant="outline"
-                onClick={() => setEditing(true)}
+                onClick={() => {
+                  setEditing(true);
+                  // The button leaves with the form's arrival; the first field takes the focus.
+                  requestAnimationFrame(() =>
+                    document.querySelector<HTMLElement>("#scope-statement-form textarea")?.focus(),
+                  );
+                }}
               >
                 <PencilIcon aria-hidden="true" data-icon="inline-start" />
                 {m.scope_edit()}
@@ -145,6 +151,7 @@ function Scope() {
           </div>
           {editing ? (
             <ScopeStatementForm
+              id="scope-statement-form"
               texts={statement}
               save={(texts) => updateScope({ data: { projectId, ...texts } })}
               onSaved={async () => {
