@@ -11,6 +11,12 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A facilitator can let participants see who is in each stakeholder group.
+  It is off by default, and it never shows e-mail addresses, authors or who
+  gave a rating.
+- A facilitator can join one stakeholder group on the members page and rate
+  in rounds. Their ratings count in that group's results, the response rate
+  and the minimum panel.
 - The scope page shows the concept, use cases, what is out of scope and the
   ordered sources. The facilitator edits the texts and adds, moves and
   removes sources with buttons. Every member can comment; only the
@@ -120,6 +126,8 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Setting the project's own minimum panel now needs a reason, which the
+  panel setup shows next to the class defaults.
 - Up to 30 sign-in link requests, and 30 link openings, per minute per
   network address, up from 5, so a class behind one address can sign in
   together.

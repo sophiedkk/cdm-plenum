@@ -39,6 +39,10 @@ Option 2.
   person joins a project.
 - Each rating stores the rater's stakeholder group (`rating.team_id`), so
   results per group need no lookup through the code.
+- A facilitator who joins a stakeholder group rates with the code created
+  with the project, like any participant (DE14). The setting that shows
+  participants who is in each group (PR7) lists names per group only; it
+  never links a name to an element, a comment or a rating.
 - `facilitator_sees_raters` is fixed when the round opens, like the rule
   (DE2), and shown to participants before they rate.
 - Option 3 is rejected because it breaks DE3 and DE7. Option 1 is rejected
