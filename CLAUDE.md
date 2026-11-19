@@ -77,6 +77,68 @@ after a 7-day cooldown. `.github/workflows/ckm-contract.yml` runs
 `pnpm test:ckm` against the live CKM every Monday and by hand; run it
 locally with `scripts/dev/pnpm.sh test:ckm`.
 
+## UI
+
+The UI is React on TanStack Start with Tailwind 4 and shadcn/ui (style
+`radix-nova`, `components.json`), held to WCAG 2.1 AA (Q-ACC-1). Build every
+page from these patterns; each has a real use and a test you can copy.
+
+- **Components:** add a shadcn/ui component with
+  `scripts/dev/pnpm.sh exec shadcn add <name>`; it lands in
+  `src/components/ui/` (MIT, shadcn header). Edit a file there only for a
+  defect or an accessibility fix. Feature components go in
+  `src/components/<area>/`. Style with the theme tokens in
+  `src/styles/app.css` (`text-muted-foreground`, `text-destructive`,
+  `text-success`, `text-warning`), never with a fixed colour, so dark mode
+  (`prefers-color-scheme`) keeps AA contrast. Icons from `lucide-react` carry
+  `aria-hidden="true"`.
+- **Routes:** pages that need a session live under `src/routes/_authed/`,
+  whose layout redirects to `/sign-in` and renders the app shell
+  (`src/components/shell/app-shell.tsx`). Guards in `src/lib/guards.ts`
+  steer navigation only; the server function checks again. Every route sets
+  a translated `title` in `head()`.
+- **Project pages:** `src/routes/_authed/projects/$projectId.tsx` loads the
+  project and the user's role once and puts it in the route context
+  (`context.project.role`). It renders the project name as the `h1`, so a
+  project page starts with `PageHeader level={2}` and sets its title with
+  `projectTitle(match.context, m.<area>_title())`
+  (`src/components/projects/project-title.ts`).
+- **Data:** each area keeps a key factory and query options in
+  `src/server/<area>/query-options.ts` (example:
+  `src/server/projects/query-options.ts`, staleness in
+  `src/lib/query-config.ts`). A loader calls
+  `context.queryClient.ensureQueryData(...)`, the component reads with
+  `useSuspenseQuery`. A mutation calls the server function through
+  `useServerFn` and then invalidates keys from the factory.
+- **Forms:** `useAppForm` from `src/components/form/app-form.ts` with a Zod
+  schema whose messages come from `messages/` and whose limits match the
+  server function's validator (`newProjectSchema` in
+  `src/components/projects/new-project-form.tsx`). Use `form.AppField` with
+  `field.TextField` or `field.TextareaField`, `form.FormErrors` at the top and
+  `form.SubmitButton`; they wire the label, `aria-describedby` and the focus
+  move to the first invalid field. Show a refusal with `applyServerRefusal`
+  (`src/lib/forms/server-refusal.ts`): `{ form }` for the whole form,
+  `{ fields: { name } }` for one field. Test a form as
+  `src/components/projects/new-project-form.test.tsx` does.
+- **Refusal codes:** `refusalMessage(code)` in `src/lib/i18n/refusals.ts`
+  maps every code the server returns to a message key. A new code in a
+  `*_ACTION_ERRORS` list fails `refusals.test.ts` until it has a key and an
+  English and Dutch text. Never show a raw code.
+- **Status and outcome:** `StatusBadge` (`src/components/status/`) always
+  shows its text; colour and icon only add to it (Q-ACC-2). Example:
+  `PhaseBadge` and `RoleBadge` in `src/components/projects/project-badges.tsx`,
+  with labels from `src/lib/i18n/labels.ts`.
+- **Route states:** `src/components/shell/route-states.tsx` has
+  `PageSkeleton` (the router's default pending state), `EmptyState`,
+  `RouteErrorState` (the default error state, with a retry) and
+  `NotFoundState`. A loader that gets `not_found` throws `notFound()`.
+- **Message keys:** every new key starts with its area: `shell_`,
+  `projects_`, `scope_`, `board_`, `rounds_`, `members_`, `admin_`,
+  `export_` or `common_` (shared text and the `common_refusal_*` messages).
+  Keep both catalogues sorted (`biome check --write` sorts them).
+  `src/lib/i18n/messages.test.ts` checks the prefixes, that Dutch has every
+  English key with the same placeholders, and that no text has an em dash.
+
 ## Development environment
 
 Develop a larger application inside a container by default, so its runtimes,

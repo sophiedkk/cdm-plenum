@@ -22,8 +22,8 @@ services:
     image: localhost/cdm-plenum-dev:latest
     working_dir: /app
     volumes:
-      # :Z relabels the checkout for SELinux hosts such as Fedora.
-      - .:/app:Z
+      # :z relabels the checkout for SELinux hosts such as Fedora, shared so several dev containers can use it at once.
+      - .:/app:z
       - pnpm-store:/pnpm-store
     ports:
       - "127.0.0.1:3000:3000"
@@ -46,7 +46,7 @@ services:
     profiles: ["e2e"]
     working_dir: /app
     volumes:
-      - .:/app:Z
+      - .:/app:z
       - pnpm-store:/pnpm-store
     environment:
       TEST_DATABASE_URL: postgres://cdm_plenum:cdm_plenum@postgres:5432/cdm_plenum

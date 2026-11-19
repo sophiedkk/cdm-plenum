@@ -7,10 +7,17 @@ import { randomUUID } from "node:crypto";
 import { type Kysely, sql, type Transaction } from "kysely";
 import { m } from "@/i18n/messages";
 import type { Locale } from "@/i18n/runtime";
-import { DEFAULT_GROUPS, type DefaultGroupKey, type ExpertType } from "@/lib/project-roles";
+import { isProjectPhase, type ProjectPhase } from "@/lib/project-phases";
+import {
+  DEFAULT_GROUPS,
+  type DefaultGroupKey,
+  type ExpertType,
+  isProjectRole,
+  type ProjectRole,
+} from "@/lib/project-roles";
 import { userHasAppRole } from "../admin/app-roles.ts";
 import type { DB } from "../db/schema.gen.ts";
-import { done, type ProjectResult, refused, withProject } from "./access.ts";
+import { done, type ProjectResult, readProject, refused, withProject } from "./access.ts";
 import type {
   CreateGroupInput,
   CreateProjectInput,
@@ -84,6 +91,49 @@ export async function createProject(
       .execute();
     await log(trx, userId, projectId, "project_created", "project", projectId);
     return done({ projectId });
+  });
+}
+
+/** A project as the user sees it in a list or a page header: never more than their own role. */
+export interface ProjectSummary {
+  id: string;
+  name: string;
+  phase: ProjectPhase;
+  role: ProjectRole;
+}
+
+/** The projects the user is a member of, by name. A role or phase the app does not know is left out. */
+export async function listProjects(db: Kysely<DB>, userId: string): Promise<ProjectSummary[]> {
+  const rows = await db
+    .selectFrom("project")
+    .innerJoin("organization", "organization.id", "project.id")
+    .innerJoin("member", "member.organizationId", "project.id")
+    .select(["project.id", "organization.name", "project.phase", "member.role"])
+    .where("member.userId", "=", userId)
+    .orderBy("organization.name")
+    .orderBy("project.id")
+    .execute();
+  return rows.flatMap((row) =>
+    isProjectRole(row.role) && isProjectPhase(row.phase)
+      ? [{ id: row.id, name: row.name, phase: row.phase, role: row.role }]
+      : [],
+  );
+}
+
+/** One project with the user's role in it, for any member (`not_found` for anyone else). */
+export async function getProject(
+  db: Kysely<DB>,
+  userId: string,
+  projectId: string,
+): Promise<ProjectResult<ProjectSummary>> {
+  return readProject(db, userId, projectId, null, async (reader, project) => {
+    const row = await reader
+      .selectFrom("project")
+      .select("phase")
+      .where("id", "=", project.id)
+      .executeTakeFirstOrThrow();
+    if (!isProjectPhase(row.phase)) return refused("not_found");
+    return done({ id: project.id, name: project.name, phase: row.phase, role: project.role });
   });
 }
 

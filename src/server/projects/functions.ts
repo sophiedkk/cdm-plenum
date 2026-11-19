@@ -7,7 +7,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { getLocale } from "@/i18n/runtime";
 import { getDb } from "../db/index.ts";
 import { requireSession } from "../middleware.ts";
-import { createGroup, createProject, listGroups, removeGroup, renameGroup } from "./queries.ts";
+import {
+  createGroup,
+  createProject,
+  getProject,
+  listGroups,
+  listProjects,
+  removeGroup,
+  renameGroup,
+} from "./queries.ts";
 import {
   createGroupInput,
   createProjectInput,
@@ -20,6 +28,15 @@ export const createProjectFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(createProjectInput)
   .handler(({ data, context }) => createProject(getDb(), context.userId, data, getLocale()));
+
+export const listProjectsFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .handler(({ context }) => listProjects(getDb(), context.userId));
+
+export const getProjectFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => getProject(getDb(), context.userId, data.projectId));
 
 export const listGroupsFn = createServerFn({ method: "GET" })
   .middleware([requireSession])

@@ -11,6 +11,16 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- After signing in you see your projects with your role and the phase of
+  each project. A person with the facilitator right creates a project from
+  there and lands on its scope page.
+- Each project page shows the project name, its phase and your role, with
+  links to the scope, element board, rounds, members and (for facilitators)
+  export pages.
+- Every page has a header with the main navigation, your name, a language
+  switch between English and Nederlands that the app remembers, and sign
+  out. Administrators also see Administration. The pages follow the light
+  or dark setting of your system.
 - A production container image and `compose.yaml` that run the app and
   PostgreSQL on one host behind a reverse proxy, with an operator guide in
   `docs/deployment.md`.

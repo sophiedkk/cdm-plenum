@@ -34,6 +34,15 @@
   "assist": { "enabled": true, "actions": { "source": { "organizeImports": "on" } } },
   "overrides": [
     {
+      "includes": ["src/components/ui/**"],
+      "linter": {
+        "rules": {
+          "a11y": { "useSemanticElements": "off" },
+          "suspicious": { "noArrayIndexKey": "off" }
+        }
+      }
+    },
+    {
       "includes": ["messages/*.json"],
       "assist": { "actions": { "source": { "useSortedKeys": "on" } } }
     }
