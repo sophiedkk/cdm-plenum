@@ -57,4 +57,25 @@ describe("parseEnv", () => {
       parseEnv({ ...VALID, SMTP_URL: "http://mailpit:1025", MAIL_FROM: "not-an-address" }),
     ).toThrow("Invalid environment configuration: SMTP_URL, MAIL_FROM");
   });
+
+  it("leaves CKM_BASE_URL unset when it is missing or empty", () => {
+    expect(parseEnv(VALID).CKM_BASE_URL).toBeUndefined();
+    expect(parseEnv({ ...VALID, CKM_BASE_URL: "" }).CKM_BASE_URL).toBeUndefined();
+  });
+
+  it("accepts an http or https CKM_BASE_URL", () => {
+    const url = "https://ckm.example.test/ckm/rest";
+    expect(parseEnv({ ...VALID, CKM_BASE_URL: url }).CKM_BASE_URL).toBe(url);
+    expect(parseEnv({ ...VALID, CKM_BASE_URL: "http://localhost:8080/" }).CKM_BASE_URL).toBe(
+      "http://localhost:8080/",
+    );
+  });
+
+  it("refuses a CKM_BASE_URL that is not http or https, or has a query or fragment", () => {
+    for (const value of ["ftp://ckm.example.test/", "not a url", "https://ckm.example.test/?a=1"]) {
+      expect(() => parseEnv({ ...VALID, CKM_BASE_URL: value })).toThrow(
+        "Invalid environment configuration: CKM_BASE_URL",
+      );
+    }
+  });
 });

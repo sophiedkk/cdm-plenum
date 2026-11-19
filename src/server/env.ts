@@ -17,8 +17,13 @@ export const envSchema = z
     // Without it the app sends no e-mail: the facilitator copies invitation links (ADR 0004).
     SMTP_URL: optional(z.url({ protocol: /^smtps?$/ })),
     MAIL_FROM: optional(z.email()),
+    // The CKM REST API (ADR 0006); unset is the international CKM, set in src/server/ckm/.
+    CKM_BASE_URL: optional(z.url({ protocol: /^https?$/ })),
   })
   .superRefine((env, ctx) => {
+    if (env.CKM_BASE_URL !== undefined && /[?#]/.test(env.CKM_BASE_URL)) {
+      ctx.addIssue({ code: "custom", path: ["CKM_BASE_URL"], message: "no query or fragment" });
+    }
     if (env.SMTP_URL !== undefined && env.MAIL_FROM === undefined) {
       ctx.addIssue({ code: "custom", path: ["MAIL_FROM"], message: "required with SMTP_URL" });
     }
