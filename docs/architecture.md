@@ -76,7 +76,8 @@ first administrator and the first facilitator can get an account (AD1). The
 grants are in `app_role`.
 
 Every server function checks the session, then the project role, then
-ownership inside the SQL query. A user without a role in a project gets
+ownership inside the SQL query. Writes lock the project row (`withProject`);
+reads use the same check without a lock (`readProject`). A user without a role in a project gets
 `not_found`, never a hint that the project exists; a participant asking for a
 facilitator action gets `forbidden`. Route guards only steer navigation; they
 are not the security boundary (Q-SEC-1).
@@ -132,7 +133,7 @@ access goes through Kysely ([ADR 0002](adr/0002-stack-follows-edulims.md)).
 | Scope statement | `scope_statement`, `scope_source`, `scope_comment` | one statement per project; SC3 objections later |
 | Candidate element | `element` | name, description, data type (a key from the data type list, or none), cardinality as `min_occurs` and `max_occurs` (null for many), `merged_into` for merged duplicates, `author_member_id` (never sent to participants) |
 | Proposed value | `element_value` | ordered values of a coded, ordinal or scale element: text and optional number (EL9) |
-| Element source | `element_source` | kind (`brainstorm`, `csv`, `ckm`), label (file name or archetype ID) |
+| Element source | `element_source` | kind (`brainstorm`, `csv`, `ckm`), label (the participant's optional note, the file name or the archetype ID); every element has at least one |
 | CKM link | `element_ckm_link` | archetype ID, CKM `cid`, revision at linking time, at-code, element name as CKM showed it |
 | Comment | `element_comment` | author hidden as for elements (EL6) |
 | Round | `round` | number, scale minimum and maximum, the rule's percentages and score bands, opens and closes at, `facilitator_sees_raters`; when it opens: the panel and the minimum per expert type, and the reason for opening below the minimum (DE12) |

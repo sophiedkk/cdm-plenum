@@ -11,6 +11,20 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Facilitators write the scope statement (concept, use cases, out of scope
+  and an ordered list of sources); every participant reads it and can comment.
+- Participants add candidate elements with a name, a description and an
+  optional data type, cardinality and source, and comment on them.
+  Participants never see who added an element or wrote a comment; the
+  facilitator does.
+- Facilitators edit an element's wording, merge duplicates (descriptions,
+  sources, comments and proposed values move to the element that stays), and
+  list proposed values for coded text, ordinal and scale elements.
+- Facilitators import candidate elements from a CSV file with `name` and
+  `description` columns and optional `data_type` and `cardinality` columns,
+  comma or semicolon separated, up to 1 MiB and 1,000 rows. A preview lists
+  each refused row with its line number and reason before anything is
+  written.
 - A first web app with a home page in English and Dutch, chosen from your
   browser's language, and a health check at `/api/health`.
 - A development stack that runs with `podman compose`: the app, PostgreSQL
