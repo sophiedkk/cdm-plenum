@@ -11,6 +11,8 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
+import { setGroupNamesVisible, setRaterGroup } from "../projects/queries.ts";
+import { groupId } from "../test-fixtures.ts";
 import {
   closeRound,
   createRound,
@@ -192,6 +194,42 @@ describe("responses with the rater setting off (DE4, Q-ANON-1)", () => {
     expect(mine.ok && mine.value.elements.some((e) => (e.previous?.reasons.length ?? 0) > 0)).toBe(
       true,
     );
+  });
+
+  it("keeps a rating facilitator anonymous to participants, with group names shown (DE14, PR7)", async () => {
+    const f = p.facilitator;
+    const projectId = p.projectId;
+    await db
+      .updateTable("user")
+      .set({ name: "Invented Facilitator" })
+      .where("id", "=", f)
+      .execute();
+    await setGroupNamesVisible(db, f, { projectId, visible: true });
+    await setRaterGroup(db, f, { projectId, groupId: await groupId(db, projectId, "Nursing") });
+    const { input, nextInput } = await fullRound([]);
+    const t = { now: new Date() };
+    for (const elementId of p.elements) {
+      const saved = await saveRating(db, f, { ...nextInput, elementId, score: 5, reason: "Mine" });
+      expect(saved.ok).toBe(true);
+    }
+    const own: unknown[] = [];
+    for (const round of [input, nextInput]) {
+      own.push(
+        await getRound(db, p.raters.n1, round, t),
+        await myRatings(db, p.raters.n1, round, t),
+      );
+    }
+    own.push(await roundResults(db, p.raters.n1, input, t));
+    own.push(await listRounds(db, p.raters.n1, p.projectId, t));
+    const forbidden = await identifiers();
+    expect(forbidden).toContain("Invented Facilitator");
+    expect(leaks(own, forbidden)).toEqual([]);
+    // With the rater setting off, the facilitator's own view links no rating to anyone either.
+    expect(await ratingsByParticipant(db, f, nextInput)).toEqual({
+      ok: false,
+      error: "raters_hidden",
+    });
+    expect(leaks([await responseRate(db, f, nextInput, t)], forbidden)).toEqual([]);
   });
 
   it("keeps scores, reasons, element names and personal data out of the activity log (Q-PRIV-2)", async () => {

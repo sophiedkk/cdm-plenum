@@ -5,6 +5,7 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { GroupNamesForm, RaterGroupForm } from "@/components/members/facilitator-settings";
 import {
   NewGroupForm,
   RemoveGroupDialog,
@@ -26,29 +27,35 @@ import {
   leaveProjectFn,
   removeGroupFn,
   renameGroupFn,
+  setGroupNamesVisibleFn,
+  setRaterGroupFn,
 } from "@/server/projects/functions";
 import {
   groupMembersQueryOptions,
   groupsQueryOptions,
   projectKeys,
+  projectQueryOptions,
 } from "@/server/projects/query-options";
+import { roundKeys, roundsQueryOptions } from "@/server/rounds/query-options";
 
 const INVITATION_HOURS = INVITATION_LIFETIME_SECONDS / 3600;
 
 /**
- * The stakeholder groups, members and invitations of the project (PR3, PR5, PR6). The
- * facilitator manages groups and invitations; a participant sees the groups with the number of
- * participants in each, never their names, and can leave the project.
+ * The stakeholder groups, members and invitations of the project (PR3, PR5 to PR7, DE14). The
+ * facilitator manages groups and invitations, chooses whether participants see names, and can
+ * join a group to rate; a participant sees the groups with the number of participants in each,
+ * the names only when the facilitator allows it, and can leave the project.
  */
 export const Route = createFileRoute("/_authed/projects/$projectId/members")({
   loader: async ({ context, params }) => {
     const { queryClient, project } = context;
     if (project.role === "facilitator") {
-      const [groups, invitations] = await Promise.all([
+      const [groups, invitations, rounds] = await Promise.all([
         queryClient.ensureQueryData(groupMembersQueryOptions(params.projectId)),
         queryClient.ensureQueryData(invitationsQueryOptions(params.projectId)),
+        queryClient.ensureQueryData(roundsQueryOptions(params.projectId)),
       ]);
-      if (!groups.ok || !invitations.ok) throw notFound();
+      if (!groups.ok || !invitations.ok || !rounds.ok) throw notFound();
       return;
     }
     const groups = await queryClient.ensureQueryData(groupsQueryOptions(params.projectId));
@@ -81,13 +88,21 @@ function Members() {
 function FacilitatorMembers({ projectId }: Readonly<{ projectId: string }>) {
   const { data: groups } = useSuspenseQuery(groupMembersQueryOptions(projectId));
   const { data: invitations } = useSuspenseQuery(invitationsQueryOptions(projectId));
+  const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
+  const { data: rounds } = useSuspenseQuery(roundsQueryOptions(projectId));
   const queryClient = useQueryClient();
+  const setGroupNamesVisible = useServerFn(setGroupNamesVisibleFn);
+  const setRaterGroup = useServerFn(setRaterGroupFn);
   const createGroup = useServerFn(createGroupFn);
   const renameGroup = useServerFn(renameGroupFn);
   const removeGroup = useServerFn(removeGroupFn);
   const invite = useServerFn(inviteFn);
   const revokeInvitation = useServerFn(revokeInvitationFn);
-  if (!groups.ok || !invitations.ok) return <NotFoundState />;
+  if (!groups.ok || !invitations.ok || !detail.ok || !rounds.ok) return <NotFoundState />;
+  // The server locks the group from opening to closing, `awaiting_close` included.
+  const roundOpen = rounds.value.some(
+    (round) => round.status === "open" || round.status === "awaiting_close",
+  );
 
   const refreshGroups = () =>
     queryClient.invalidateQueries({ queryKey: projectKeys.groups(projectId) });
@@ -134,6 +149,37 @@ function FacilitatorMembers({ projectId }: Readonly<{ projectId: string }>) {
           }}
         />
       </section>
+      <Separator />
+      <div className="grid gap-10 lg:grid-cols-2">
+        <GroupNamesForm
+          key={String(detail.value.groupNamesVisible)}
+          visible={detail.value.groupNamesVisible}
+          save={(visible) => setGroupNamesVisible({ data: { projectId, visible } })}
+          onSaved={async (visible) => {
+            toast.success(visible ? m.members_names_shown() : m.members_names_hidden());
+            await queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
+          }}
+        />
+        <RaterGroupForm
+          key={detail.value.ownGroupId ?? "none"}
+          groups={groups.value}
+          ownGroupId={detail.value.ownGroupId}
+          roundOpen={roundOpen}
+          save={(groupId) => setRaterGroup({ data: { projectId, groupId } })}
+          onSaved={async (groupName) => {
+            toast.success(
+              groupName === null
+                ? m.members_rater_left()
+                : m.members_rater_joined({ group: groupName }),
+            );
+            // The project detail holds the facilitator's group and nests the group keys.
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) }),
+              queryClient.invalidateQueries({ queryKey: roundKeys.project(projectId) }),
+            ]);
+          }}
+        />
+      </div>
       <Separator />
       <section aria-labelledby="invitations-title" className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
@@ -182,7 +228,11 @@ function ParticipantMembers({
           <h3 id="groups-title" className="text-lg font-semibold">
             {m.members_groups_title()}
           </h3>
-          <p className="text-muted-foreground">{m.members_groups_description_participant()}</p>
+          <p className="text-muted-foreground">
+            {groups.value.some((group) => group.names !== null)
+              ? m.members_groups_description_participant_names()
+              : m.members_groups_description_participant()}
+          </p>
         </div>
         <GroupCountTable groups={groups.value} />
       </section>

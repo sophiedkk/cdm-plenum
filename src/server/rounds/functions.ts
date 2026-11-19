@@ -15,7 +15,7 @@ import {
   openRound,
   panelStatus,
   setChangeClass,
-  setPanelMinimum,
+  setPanelMinimums,
   updateRound,
 } from "./queries.ts";
 import { clearRating, myRatings, ratingsByParticipant, saveRating } from "./ratings.ts";
@@ -24,7 +24,7 @@ import {
   changeClassInput,
   createRoundInput,
   openRoundInput,
-  panelMinimumInput,
+  panelMinimumsInput,
   ratingInput,
   roundInput,
   saveRatingInput,
@@ -38,10 +38,10 @@ export const setChangeClassFn = createServerFn({ method: "POST" })
   .validator(changeClassInput)
   .handler(({ data, context }) => setChangeClass(getDb(), context.userId, data));
 
-export const setPanelMinimumFn = createServerFn({ method: "POST" })
+export const setPanelMinimumsFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
-  .validator(panelMinimumInput)
-  .handler(({ data, context }) => setPanelMinimum(getDb(), context.userId, data));
+  .validator(panelMinimumsInput)
+  .handler(({ data, context }) => setPanelMinimums(getDb(), context.userId, data));
 
 export const panelStatusFn = createServerFn({ method: "GET" })
   .middleware([requireSession])

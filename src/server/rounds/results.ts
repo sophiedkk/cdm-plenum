@@ -7,6 +7,7 @@
 import type { Kysely } from "kysely";
 import type { Outcome } from "@/lib/consensus";
 import type { ExpertType } from "@/lib/panel";
+import { RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
 import {
@@ -66,11 +67,14 @@ export interface GroupResponse {
   groupId: string;
   groupName: string;
   expertType: ExpertType;
-  /** Participants of the group who had joined by the time the round closed, or by now. */
+  /**
+   * Raters of the group who had joined by the time the round closed, or by now: participants
+   * and a facilitator who joined the group (DE14).
+   */
   invited: number;
-  /** Participants with at least one answer in the round. */
+  /** Raters with at least one answer in the round. */
   started: number;
-  /** Participants with an answer, "unable to rate" included, for every element of the round. */
+  /** Raters with an answer, "unable to rate" included, for every element of the round. */
   completed: number;
 }
 
@@ -111,8 +115,13 @@ export async function responseRate(
       .select((eb) => eb.fn.count<string>("member.id").distinct().as("count"))
       .where("member.organizationId", "=", project.id)
       .where("team.organizationId", "=", project.id)
-      .where("member.role", "=", "participant")
-      .where("member.createdAt", "<=", cutoff)
+      .where("member.role", "in", RATER_ROLES)
+      // A facilitator's member row is as old as the project; their group membership is not.
+      .where(
+        (eb) => eb.fn<Date>("greatest", ["member.createdAt", "teamMember.createdAt"]),
+        "<=",
+        cutoff,
+      )
       .groupBy("team.id")
       .execute();
     const invited = new Map(invitedRows.map((row) => [row.id, Number(row.count)]));

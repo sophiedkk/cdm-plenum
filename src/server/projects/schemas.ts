@@ -31,3 +31,10 @@ export type RenameGroupInput = z.infer<typeof renameGroupInput>;
 
 export const groupInput = z.object({ projectId: idSchema, groupId: idSchema });
 export type GroupInput = z.infer<typeof groupInput>;
+
+export const groupNamesVisibleInput = z.object({ projectId: idSchema, visible: z.boolean() });
+export type GroupNamesVisibleInput = z.infer<typeof groupNamesVisibleInput>;
+
+/** A null group takes the facilitator out of the group they rate in (DE14). */
+export const raterGroupInput = z.object({ projectId: idSchema, groupId: idSchema.nullable() });
+export type RaterGroupInput = z.infer<typeof raterGroupInput>;

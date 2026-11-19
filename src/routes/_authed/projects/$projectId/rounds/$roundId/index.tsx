@@ -33,6 +33,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import { refusalMessage } from "@/lib/i18n/refusals";
+import { mayRate } from "@/lib/project-roles";
+import { projectQueryOptions } from "@/server/projects/query-options";
 import { closeRoundFn, openRoundFn, updateRoundFn } from "@/server/rounds/functions";
 import type { RoundDetail } from "@/server/rounds/queries";
 import {
@@ -121,8 +123,10 @@ function RoundPage() {
   const { projectId, roundId } = Route.useParams();
   const { project } = Route.useRouteContext();
   const { data } = useSuspenseQuery(roundQueryOptions(projectId, roundId));
+  const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
   const round = valueOrNotFound(data);
   const isFacilitator = project.role === "facilitator";
+  const canRate = detail.ok && mayRate(detail.value.role, detail.value.ownGroupId);
 
   return (
     <div className="flex flex-col gap-10">
@@ -132,7 +136,7 @@ function RoundPage() {
           title={m.rounds_round_name({ number: round.number })}
           description={m.rounds_page_description()}
           actions={
-            !isFacilitator &&
+            canRate &&
             round.status === "open" && (
               <Button asChild>
                 <Link

@@ -25,9 +25,10 @@ export const LEFT_ROLE = "left";
 
 /** What can be done in a project, by resource; the roles below grant subsets. */
 export const PROJECT_STATEMENTS = {
+  project: ["update"],
   invitation: ["create", "list", "cancel"],
   member: ["list"],
-  group: ["create", "update", "delete"],
+  group: ["create", "update", "delete", "join"],
   scope: ["update", "read_authors"],
   element: ["update", "merge", "import", "set_values", "read_authors"],
   ckm: ["search", "link", "import"],
@@ -38,15 +39,17 @@ export const PROJECT_STATEMENTS = {
 export const projectAccessControl = createAccessControl(PROJECT_STATEMENTS);
 
 /**
- * The facilitator invites, manages stakeholder groups, edits the scope and the board, sees who
- * wrote what (EL2, ADR 0005), uses CKM (EL4, EL7) and downloads the exports. A participant
- * manages nothing: reading the scope, adding elements and commenting need only a membership.
+ * The facilitator changes the project settings (PR7), invites, manages stakeholder groups and
+ * joins one to rate (DE14), edits the scope and the board, sees who wrote what (EL2, ADR 0005),
+ * uses CKM (EL4, EL7) and downloads the exports. A participant manages nothing: reading the
+ * scope, adding elements and commenting need only a membership.
  */
 export const projectRoles = {
   facilitator: projectAccessControl.newRole({
+    project: ["update"],
     invitation: ["create", "list", "cancel"],
     member: ["list"],
-    group: ["create", "update", "delete"],
+    group: ["create", "update", "delete", "join"],
     scope: ["update", "read_authors"],
     element: ["update", "merge", "import", "set_values", "read_authors"],
     ckm: ["search", "link", "import"],
@@ -61,6 +64,20 @@ export type ProjectPermission = {
     readonly [K in R]: readonly [(typeof PROJECT_STATEMENTS)[R][number]];
   };
 }[keyof typeof PROJECT_STATEMENTS];
+
+/**
+ * The roles whose members can sit in a stakeholder group and rate: every participant, and a
+ * facilitator who placed themselves in one group (DE14, owner decision 2026-11-19).
+ */
+export const RATER_ROLES = ["participant", "facilitator"] as const satisfies readonly ProjectRole[];
+
+/**
+ * Whether the member may rate in an open round: a participant always, a facilitator only from
+ * their own stakeholder group (DE14). The server checks this again when a rating is saved.
+ */
+export function mayRate(role: ProjectRole, ownGroupId: string | null): boolean {
+  return role === "participant" || ownGroupId !== null;
+}
 
 /** Returns whether `role` may do `permission` in a project. */
 export function projectCan(role: ProjectRole, permission: ProjectPermission): boolean {

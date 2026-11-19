@@ -294,7 +294,14 @@ describe("getProject", () => {
     const { facilitator, participant, projectId } = await setup();
     expect(await getProject(db, facilitator, projectId)).toEqual({
       ok: true,
-      value: { id: projectId, name: "Blood pressure", phase: "scope", role: "facilitator" },
+      value: {
+        id: projectId,
+        name: "Blood pressure",
+        phase: "scope",
+        role: "facilitator",
+        groupNamesVisible: false,
+        ownGroupId: null,
+      },
     });
     const seen = await getProject(db, participant, projectId);
     expect(seen.ok && seen.value.role).toBe("participant");

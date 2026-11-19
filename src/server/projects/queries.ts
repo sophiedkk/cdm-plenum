@@ -15,6 +15,7 @@ import {
   isProjectRole,
   LEFT_ROLE,
   type ProjectRole,
+  RATER_ROLES,
 } from "@/lib/project-roles";
 import { userHasAppRole } from "../admin/app-roles.ts";
 import type { DB } from "../db/schema.gen.ts";
@@ -30,6 +31,8 @@ import type {
   CreateGroupInput,
   CreateProjectInput,
   GroupInput,
+  GroupNamesVisibleInput,
+  RaterGroupInput,
   RenameGroupInput,
 } from "./schemas.ts";
 
@@ -128,20 +131,52 @@ export async function listProjects(db: Kysely<DB>, userId: string): Promise<Proj
   );
 }
 
+/** One project as its page header and tabs need it. */
+export interface ProjectDetail extends ProjectSummary {
+  /** Whether participants see who is in each stakeholder group (PR7). */
+  groupNamesVisible: boolean;
+  /** The user's own stakeholder group; a facilitator has one only after joining it (DE14). */
+  ownGroupId: string | null;
+}
+
+/** The stakeholder group of `userId` in the project, or null when they are in none. */
+export async function ownGroupId(
+  db: Kysely<DB>,
+  projectId: string,
+  userId: string,
+): Promise<string | null> {
+  const row = await db
+    .selectFrom("teamMember")
+    .innerJoin("team", "team.id", "teamMember.teamId")
+    .select("team.id")
+    .where("team.organizationId", "=", projectId)
+    .where("teamMember.userId", "=", userId)
+    .orderBy("teamMember.createdAt")
+    .executeTakeFirst();
+  return row?.id ?? null;
+}
+
 /** One project with the user's role in it, for any member (`not_found` for anyone else). */
 export async function getProject(
   db: Kysely<DB>,
   userId: string,
   projectId: string,
-): Promise<ProjectResult<ProjectSummary>> {
+): Promise<ProjectResult<ProjectDetail>> {
   return readProject(db, userId, projectId, null, async (reader, project) => {
     const row = await reader
       .selectFrom("project")
-      .select("phase")
+      .select(["phase", "group_names_visible"])
       .where("id", "=", project.id)
       .executeTakeFirstOrThrow();
     if (!isProjectPhase(row.phase)) return refused("not_found");
-    return done({ id: project.id, name: project.name, phase: row.phase, role: project.role });
+    return done({
+      id: project.id,
+      name: project.name,
+      phase: row.phase,
+      role: project.role,
+      groupNamesVisible: row.group_names_visible,
+      ownGroupId: await ownGroupId(reader, project.id, userId),
+    });
   });
 }
 
@@ -149,53 +184,90 @@ export interface StakeholderGroup {
   id: string;
   name: string;
   expertType: ExpertType;
-  /** How many participants are in the group; no names, so every member may see it. */
+  /** How many raters are in the group: its participants and a facilitator who joined (DE14). */
   participants: number;
 }
 
+export interface VisibleGroup extends StakeholderGroup {
+  /**
+   * The names of the raters in the group when the facilitator lets participants see them (PR7),
+   * an empty string for a person without a name; null when the setting is off. Never an address.
+   */
+  names: string[] | null;
+}
+
 /**
- * The stakeholder groups of a project with the number of participants in each, for any member
- * (`not_found` for anyone else). The panel composition is visible without naming anyone.
+ * The stakeholder groups of a project with the number of raters in each, for any member
+ * (`not_found` for anyone else). The names come along only when the project's PR7 setting is
+ * on; who wrote an element or comment, or gave a rating, is never part of this (Q-ANON-1).
  */
 export async function listGroups(
   db: Kysely<DB>,
   userId: string,
   projectId: string,
-): Promise<ProjectResult<StakeholderGroup[]>> {
+): Promise<ProjectResult<VisibleGroup[]>> {
   return readProject(db, userId, projectId, null, async (reader, project) => {
-    const rows = await reader
+    const groups = await reader
       .selectFrom("team")
-      .leftJoin("teamMember", "teamMember.teamId", "team.id")
-      .leftJoin("member", (join) =>
+      .select(["id", "name", "expert_type"])
+      .where("organizationId", "=", project.id)
+      .orderBy("name")
+      .orderBy("id")
+      .execute();
+    const { group_names_visible: visible } = await reader
+      .selectFrom("project")
+      .select("group_names_visible")
+      .where("id", "=", project.id)
+      .executeTakeFirstOrThrow();
+    const raters = reader
+      .selectFrom("teamMember")
+      .innerJoin("team", "team.id", "teamMember.teamId")
+      .innerJoin("member", (join) =>
         join
           .onRef("member.userId", "=", "teamMember.userId")
-          .on("member.organizationId", "=", project.id)
-          .on("member.role", "=", "participant"),
+          .onRef("member.organizationId", "=", "team.organizationId"),
       )
-      .select(["team.id", "team.name", "team.expert_type"])
-      .select((eb) => eb.fn.count<string>("member.id").as("participants"))
       .where("team.organizationId", "=", project.id)
-      .groupBy(["team.id", "team.name", "team.expert_type"])
-      .orderBy("team.name")
-      .orderBy("team.id")
-      .execute();
+      .where("member.role", "in", RATER_ROLES);
+    const counts = new Map(
+      (
+        await raters
+          .select("team.id as groupId")
+          .select((eb) => eb.fn.count<string>("member.id").as("count"))
+          .groupBy("team.id")
+          .execute()
+      ).map((row) => [row.groupId, Number(row.count)]),
+    );
+    // NOTE: PR7, owner decision 2026-11-19. The names are read only when the setting is on, so
+    // a response with the setting off cannot carry one.
+    const names = visible
+      ? await raters
+          .innerJoin("user", "user.id", "member.userId")
+          .select(["team.id as groupId", "user.name"])
+          .orderBy("user.name")
+          .orderBy("member.id")
+          .execute()
+      : null;
     return done(
-      rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        expertType: row.expert_type as ExpertType,
-        participants: Number(row.participants),
+      groups.map((group) => ({
+        id: group.id,
+        name: group.name,
+        expertType: group.expert_type as ExpertType,
+        participants: counts.get(group.id) ?? 0,
+        names: names?.filter((row) => row.groupId === group.id).map((row) => row.name) ?? null,
       })),
     );
   });
 }
 
-/** A participant as the facilitator sees them in the members list (PR3). */
+/** A rater as the facilitator sees them in the members list (PR3, DE14). */
 export interface GroupMember {
   memberId: string;
   /** The account name; empty until the person sets one. */
   name: string;
   email: string;
+  /** `facilitator` for a facilitator who joined the group to rate (DE14). */
+  role: ProjectRole;
 }
 
 export interface GroupWithMembers extends StakeholderGroup {
@@ -203,8 +275,8 @@ export interface GroupWithMembers extends StakeholderGroup {
 }
 
 /**
- * The stakeholder groups with their participants by name, for the facilitator only
- * (`forbidden` for a participant). A participant gets `listGroups`, which names no one.
+ * The stakeholder groups with their raters by name and address, for the facilitator only
+ * (`forbidden` for a participant). A participant gets `listGroups`, without addresses.
  */
 export async function listGroupMembers(
   db: Kysely<DB>,
@@ -228,9 +300,15 @@ export async function listGroupMembers(
           .onRef("member.organizationId", "=", "team.organizationId"),
       )
       .innerJoin("user", "user.id", "member.userId")
-      .select(["team.id as groupId", "member.id as memberId", "user.name", "user.email"])
+      .select([
+        "team.id as groupId",
+        "member.id as memberId",
+        "member.role",
+        "user.name",
+        "user.email",
+      ])
       .where("team.organizationId", "=", project.id)
-      .where("member.role", "=", "participant")
+      .where("member.role", "in", RATER_ROLES)
       .orderBy("user.email")
       .orderBy("member.id")
       .execute();
@@ -238,7 +316,12 @@ export async function listGroupMembers(
       groups.map((group) => {
         const members = rows
           .filter((row) => row.groupId === group.id)
-          .map((row) => ({ memberId: row.memberId, name: row.name, email: row.email }));
+          .map((row) => ({
+            memberId: row.memberId,
+            name: row.name,
+            email: row.email,
+            role: row.role as ProjectRole,
+          }));
         return {
           id: group.id,
           name: group.name,
@@ -288,6 +371,97 @@ export async function leaveProject(
         .execute();
     }
     await log(trx, userId, project.id, "member_left", "project", project.id);
+    return done(null);
+  });
+}
+
+/** Lets participants see who is in each stakeholder group, or not (PR7, facilitator only). */
+export async function setGroupNamesVisible(
+  db: Kysely<DB>,
+  userId: string,
+  input: GroupNamesVisibleInput,
+): Promise<ProjectResult<null>> {
+  return withProject(db, userId, input.projectId, { project: ["update"] }, async (trx, project) => {
+    await trx
+      .updateTable("project")
+      .set({ group_names_visible: input.visible })
+      .where("id", "=", project.id)
+      .execute();
+    const action = input.visible ? "group_names_shown" : "group_names_hidden";
+    await log(trx, userId, project.id, action, "project", project.id);
+    return done(null);
+  });
+}
+
+/** Whether a round of the project is open: opened and not yet closed. */
+async function roundRunning(trx: Kysely<DB>, projectId: string): Promise<boolean> {
+  const row = await trx
+    .selectFrom("round")
+    .select("id")
+    .where("project_id", "=", projectId)
+    .where("opened_at", "is not", null)
+    .where("closed_at", "is", null)
+    .executeTakeFirst();
+  return row !== undefined;
+}
+
+/**
+ * Places the facilitator in one stakeholder group as a rater, moves them to another, or takes
+ * them out with a null group (DE14). They stay facilitator. While a round is open they can join
+ * a group but not move or leave (`rater_group_locked`).
+ */
+export async function setRaterGroup(
+  db: Kysely<DB>,
+  userId: string,
+  input: RaterGroupInput,
+): Promise<ProjectResult<null>> {
+  return withProject(db, userId, input.projectId, { group: ["join"] }, async (trx, project) => {
+    if (input.groupId !== null) {
+      const team = await trx
+        .selectFrom("team")
+        .select("id")
+        .where("id", "=", input.groupId)
+        .where("organizationId", "=", project.id)
+        .executeTakeFirst();
+      if (!team) return refused("group_not_found");
+    }
+    const current = await ownGroupId(trx, project.id, userId);
+    if (current === input.groupId) return done(null);
+    // NOTE: our own design, no requirement sets it. A rating keeps the group it was saved in,
+    // so moving during an open round would split one rater over two group results.
+    if (current !== null && (await roundRunning(trx, project.id))) {
+      return refused("rater_group_locked");
+    }
+    const left = await trx
+      .deleteFrom("teamMember")
+      .where("userId", "=", userId)
+      .where("teamId", "in", (eb) =>
+        eb.selectFrom("team").select("id").where("organizationId", "=", project.id),
+      )
+      .returning("teamId")
+      .execute();
+    for (const { teamId } of left) {
+      await trx
+        .updateTable("team")
+        .set((eb) => ({ memberCount: eb("memberCount", "-", 1) }))
+        .where("id", "=", teamId)
+        .where("memberCount", ">", 0)
+        .execute();
+    }
+    if (input.groupId === null) {
+      await log(trx, userId, project.id, "rater_group_left", "project", project.id);
+      return done(null);
+    }
+    await trx
+      .insertInto("teamMember")
+      .values({ id: randomUUID(), teamId: input.groupId, userId, createdAt: new Date() })
+      .execute();
+    await trx
+      .updateTable("team")
+      .set((eb) => ({ memberCount: eb("memberCount", "+", 1) }))
+      .where("id", "=", input.groupId)
+      .execute();
+    await log(trx, userId, project.id, "rater_group_joined", "group", input.groupId);
     return done(null);
   });
 }

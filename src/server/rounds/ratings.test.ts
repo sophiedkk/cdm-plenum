@@ -173,14 +173,18 @@ describe("saveRating and clearRating (DE3)", () => {
     ).toEqual({ ok: false, error: "round_not_found" });
   });
 
-  it("refuses the facilitator (forbidden) and a non-member (not_found)", async () => {
+  it("refuses a facilitator without a group (DE14) and a non-member (not_found)", async () => {
     const roundId = await openedRound(db, p.facilitator, p.projectId);
     const clear = { projectId: p.projectId, roundId, elementId: p.elements[0] };
     expect(await rate(p.facilitator, roundId, p.elements[0], 7)).toEqual({
       ok: false,
-      error: "forbidden",
+      error: "rater_group_required",
     });
-    expect(await clearRating(db, p.facilitator, clear)).toEqual({ ok: false, error: "forbidden" });
+    expect(await clearRating(db, p.facilitator, clear)).toEqual({
+      ok: false,
+      error: "rater_group_required",
+    });
+    expect(await db.selectFrom("rating").select("score").execute()).toEqual([]);
     expect(await rate(p.outsider, roundId, p.elements[0], 7)).toEqual({
       ok: false,
       error: "not_found",

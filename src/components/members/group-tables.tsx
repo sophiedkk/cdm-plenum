@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The stakeholder groups of a project (PR6). The facilitator sees the participants by name and
-// manages the groups; a participant sees only how many take part in each group.
+// The stakeholder groups of a project (PR6). The facilitator sees the raters by name and address
+// and manages the groups; a participant sees how many take part in each group, and their names
+// when the facilitator turned that on (PR7).
 import type { ReactNode } from "react";
+import { RoleBadge } from "@/components/projects/project-badges";
 import {
   Table,
   TableBody,
@@ -14,11 +16,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { m } from "@/i18n/messages";
-import type { GroupWithMembers, StakeholderGroup } from "@/server/projects/queries";
+import type { GroupWithMembers, VisibleGroup } from "@/server/projects/queries";
 import { ExpertTypeBadge } from "./member-badges";
 
-/** The groups with the number of participants in each, and no names. */
-export function GroupCountTable({ groups }: Readonly<{ groups: readonly StakeholderGroup[] }>) {
+/** A name in a list, or a note that the person has not set one. */
+function PersonName({ name }: Readonly<{ name: string }>) {
+  return name === "" ? (
+    <span className="text-muted-foreground">{m.members_name_not_set()}</span>
+  ) : (
+    name
+  );
+}
+
+/** The groups with the number of participants in each, and their names only when the server sent them. */
+export function GroupCountTable({ groups }: Readonly<{ groups: readonly VisibleGroup[] }>) {
+  const showNames = groups.some((group) => group.names !== null);
   return (
     <Table>
       <TableCaption className="sr-only">{m.members_groups_caption()}</TableCaption>
@@ -29,6 +41,7 @@ export function GroupCountTable({ groups }: Readonly<{ groups: readonly Stakehol
           <TableHead scope="col" className="text-right">
             {m.members_column_participant_count()}
           </TableHead>
+          {showNames && <TableHead scope="col">{m.members_column_names()}</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -41,6 +54,23 @@ export function GroupCountTable({ groups }: Readonly<{ groups: readonly Stakehol
               <ExpertTypeBadge expertType={group.expertType} />
             </TableCell>
             <TableCell className="text-right tabular-nums">{group.participants}</TableCell>
+            {showNames && (
+              <TableCell className="whitespace-normal">
+                {group.names?.length ? (
+                  <ul className="flex flex-col gap-1">
+                    {group.names.map((name, index) => (
+                      // Names repeat and carry no id, so the place in the list is the key.
+                      // biome-ignore lint/suspicious/noArrayIndexKey: see above
+                      <li key={index}>
+                        <PersonName name={name} />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span className="text-muted-foreground">{m.members_no_participants()}</span>
+                )}
+              </TableCell>
+            )}
           </TableRow>
         ))}
       </TableBody>
@@ -82,15 +112,18 @@ export function GroupMemberTable({
               ) : (
                 <ul className="flex flex-col gap-1">
                   {group.members.map((member) => (
-                    <li key={member.memberId}>
-                      {member.name === "" ? (
-                        member.email
-                      ) : (
-                        <>
-                          {member.name}{" "}
-                          <span className="text-muted-foreground">({member.email})</span>
-                        </>
-                      )}
+                    <li key={member.memberId} className="flex flex-wrap items-center gap-2">
+                      <span>
+                        {member.name === "" ? (
+                          member.email
+                        ) : (
+                          <>
+                            {member.name}{" "}
+                            <span className="text-muted-foreground">({member.email})</span>
+                          </>
+                        )}
+                      </span>
+                      {member.role === "facilitator" && <RoleBadge projectRole="facilitator" />}
                     </li>
                   ))}
                 </ul>
