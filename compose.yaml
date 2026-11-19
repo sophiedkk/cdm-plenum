@@ -1,0 +1,69 @@
+# SPDX-FileCopyrightText: Sophie de Klerk
+# SPDX-License-Identifier: Apache-2.0
+#
+# The production stack (ADR 0008): the app and PostgreSQL on one host. A
+# reverse proxy on the host terminates TLS and forwards to 127.0.0.1:3000
+# (Q-SEC-2). The values come from .env; copy .env.example and fill it in.
+# docs/deployment.md has the whole procedure:
+#
+#   podman compose build
+#   podman compose run --rm app node src/server/db/migrate.ts
+#   podman compose up -d
+
+name: cdm-plenum
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: ${CDM_PLENUM_IMAGE:-localhost/cdm-plenum:latest}
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      DATABASE_URL: postgres://cdm_plenum:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/cdm_plenum
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL in .env}
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      CKM_BASE_URL: ${CKM_BASE_URL:-}
+    ports:
+      # The loopback only: the reverse proxy is the one way in.
+      - "127.0.0.1:${CDM_PLENUM_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # The image's HEALTHCHECK again, for images built in the OCI format.
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  postgres:
+    # The tag of compose.dev.yaml, pinned by its multi-arch index digest.
+    image: docker.io/library/postgres:18.7-trixie@sha256:e754b839f447639b7004895f4d8a4bfcb4e9dbe3a1bc035f27f646562a16fd61
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cdm_plenum
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: cdm_plenum
+    # No published port: only the app reaches the database.
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U cdm_plenum -d cdm_plenum"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  pgdata:
