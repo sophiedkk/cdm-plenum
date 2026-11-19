@@ -33,8 +33,13 @@ export function formatPercent(value: number): string {
 /** A date and time with the zone name, such as "19 November 2026, 17:00 CET". */
 export function formatDateTime(iso: string, timeZone: string): string {
   return new Intl.DateTimeFormat(getLocale(), {
-    dateStyle: "long",
-    timeStyle: "short",
+    // dateStyle and timeStyle refuse timeZoneName, so the parts are named one by one.
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
     timeZone,
     timeZoneName: "short",
   }).format(new Date(iso));
