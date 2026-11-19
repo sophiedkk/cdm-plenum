@@ -59,12 +59,13 @@ function Admin() {
   const reactivate = useServerFn(reactivateAccountFn);
   if (!rights.ok || !accounts.ok || !activity.ok) return <NotFoundState />;
 
-  const refresh = () =>
-    Promise.all([
+  const refresh = async () => {
+    await Promise.all([
       queryClient.invalidateQueries({ queryKey: adminKeys.all }),
       // The shell shows the administration link from the session's own rights.
       queryClient.invalidateQueries({ queryKey: sessionKeys.all }),
     ]);
+  };
 
   return (
     <>

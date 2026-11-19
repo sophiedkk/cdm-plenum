@@ -57,7 +57,8 @@ export function newGroupSchema() {
 
 /** The limits of `renameGroupInput`, with translated messages. */
 export function renameGroupSchema() {
-  return z.object({ name: groupName() });
+  // The rename form shares the group form data; its expert type stays empty and unused.
+  return z.object({ name: groupName(), expertType: z.string() });
 }
 
 /** The form data of a group form; the expert type is empty until one is chosen. */

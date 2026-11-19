@@ -5,6 +5,7 @@
 // without the administrator right gets `forbidden` from every function.
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { APP_ROLE_KEYS } from "../db/migrations/0003_access.ts";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
 import { facilitatorWithProject, insertUser } from "../test-fixtures.ts";
@@ -20,6 +21,7 @@ import {
   reactivateAccount,
   revokeRole,
 } from "./queries.ts";
+import { APP_ROLE_INPUTS } from "./schemas.ts";
 
 let db: Kysely<DB>;
 
@@ -226,5 +228,11 @@ describe("listActivity (AD2)", () => {
         targetId: projectId,
       }),
     ]);
+  });
+});
+
+describe("the role input", () => {
+  it("allows exactly the application roles of migration 0003", () => {
+    expect([...APP_ROLE_INPUTS]).toEqual([...APP_ROLE_KEYS]);
   });
 });

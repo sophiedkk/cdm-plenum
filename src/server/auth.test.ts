@@ -3,11 +3,17 @@
 
 // Sign-in by e-mail link through better-auth's own HTTP handler on real PostgreSQL (PR1, PR3,
 // ADR 0004): the acceptance criteria of #2, end to end, with a mailer that keeps the messages.
+import { randomBytes } from "node:crypto";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { SIGN_UP_REFUSED } from "@/lib/sign-in";
 import { grantAppRole } from "./admin/app-roles.ts";
-import { createAuth, ORGANIZATION_PATHS } from "./auth.ts";
+import {
+  createAuth,
+  ORGANIZATION_PATHS,
+  SIGN_IN_RATE_LIMIT,
+  SIGN_IN_RATE_LIMITED_PATHS,
+} from "./auth.ts";
 import type { DB } from "./db/schema.gen.ts";
 import { createTestDb } from "./db/test-db.ts";
 import { parseEnv } from "./env.ts";
@@ -177,6 +183,116 @@ describe("sign-in by e-mail link", () => {
     expect(logged).toHaveLength(1);
     expect(logged[0]).toContain(`${BASE}/api/auth/magic-link/verify?token=`);
     expect(logged[0]).not.toContain("new@example.test");
+  });
+});
+
+describe("deactivated accounts (AD1)", () => {
+  async function deactivate(email: string): Promise<void> {
+    await db
+      .updateTable("user")
+      .set({ deactivated_at: new Date() })
+      .where("email", "=", email)
+      .execute();
+  }
+
+  it("sends no link to a deactivated account and answers the same", async () => {
+    await grantAppRole(db, "gone@example.test", "facilitator");
+    await requestLink("gone@example.test");
+    expect((await openLink(linkFor("gone@example.test"))).session).toBe(true);
+    await deactivate("gone@example.test");
+    sent = [];
+    expect(await requestLink("gone@example.test")).toBe(200);
+    expect(sent).toEqual([]);
+  });
+
+  it("refuses a link sent before the account was deactivated, without a session", async () => {
+    await grantAppRole(db, "gone@example.test", "facilitator");
+    await requestLink("gone@example.test");
+    expect((await openLink(linkFor("gone@example.test"))).session).toBe(true);
+    await requestLink("gone@example.test");
+    const link = linkFor("gone@example.test");
+    await deactivate("gone@example.test");
+    const result = await openLink(link);
+    expect(result.session).toBe(false);
+    expect(new URL(result.location).pathname).toBe("/sign-in");
+    expect(new URL(result.location).searchParams.get("error")).toBeTruthy();
+    const id = await userId("gone@example.test");
+    const sessions = await db
+      .selectFrom("session")
+      .select("id")
+      .where("userId", "=", id ?? "")
+      .execute();
+    expect(sessions).toHaveLength(1);
+  });
+
+  it("logs every sign-in by account id (AD2)", async () => {
+    await grantAppRole(db, "first@example.test", "facilitator");
+    await requestLink("first@example.test");
+    await openLink(linkFor("first@example.test"));
+    const id = await userId("first@example.test");
+    const rows = await db
+      .selectFrom("activity_log")
+      .select(["actor_user_id", "target_id"])
+      .where("action", "=", "signed_in")
+      .execute();
+    expect(rows).toEqual([{ actor_user_id: id, target_id: null }]);
+  });
+});
+
+describe("the sign-in link rate limit (#14)", () => {
+  /** A client address no other test uses: better-auth keeps one limit store per process. */
+  function clientAddress(): string {
+    const [a, b, c] = randomBytes(3);
+    return `10.${a}.${b}.${c}`;
+  }
+
+  async function requestFrom(ip: string, email: string): Promise<number> {
+    const response = await auth.handler(
+      new Request(`${BASE}/api/auth/sign-in/magic-link`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: BASE, "x-forwarded-for": ip },
+        body: JSON.stringify({ email, callbackURL: "/" }),
+      }),
+    );
+    return response.status;
+  }
+
+  beforeEach(() => {
+    auth = createAuth(ENV, db, {
+      mailer: { send: async (message) => void sent.push(message) },
+      production: true,
+      log: () => {},
+    });
+  });
+
+  it("lets 30 link requests from one address through in a minute and refuses the next", async () => {
+    const ip = clientAddress();
+    const statuses: number[] = [];
+    for (let request = 0; request <= SIGN_IN_RATE_LIMIT.max; request += 1) {
+      statuses.push(await requestFrom(ip, `class${request}@example.test`));
+    }
+    expect(SIGN_IN_RATE_LIMIT).toEqual({ window: 60, max: 30 });
+    expect(statuses.slice(0, SIGN_IN_RATE_LIMIT.max)).toEqual(
+      Array(SIGN_IN_RATE_LIMIT.max).fill(200),
+    );
+    expect(statuses.at(-1)).toBe(429);
+    expect(await requestFrom(clientAddress(), "other@example.test")).toBe(200);
+  });
+
+  it("applies the same limit to opening links", async () => {
+    const ip = clientAddress();
+    const statuses: number[] = [];
+    for (let request = 0; request <= SIGN_IN_RATE_LIMIT.max; request += 1) {
+      const response = await auth.handler(
+        new Request(`${BASE}/api/auth/magic-link/verify?token=wrong${request}`, {
+          headers: { origin: BASE, "x-forwarded-for": ip },
+        }),
+      );
+      statuses.push(response.status);
+    }
+    expect(statuses.slice(0, SIGN_IN_RATE_LIMIT.max)).not.toContain(429);
+    expect(statuses.at(-1)).toBe(429);
+    expect([...SIGN_IN_RATE_LIMITED_PATHS]).toEqual(["/sign-in/magic-link", "/magic-link/verify"]);
   });
 });
 
