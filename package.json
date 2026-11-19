@@ -33,6 +33,7 @@
     "test": "pnpm i18n && vitest run",
     "test:watch": "pnpm i18n && vitest",
     "test:coverage": "pnpm i18n && vitest run --coverage",
+    "test:e2e": "pnpm build && playwright test",
     "test:ckm": "pnpm i18n && CKM_CONTRACT=1 vitest run src/server/ckm/contract.test.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "i18n": "paraglide-js compile --project ./project.inlang --silent",
@@ -55,9 +56,11 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@biomejs/biome": "2.6.8",
     "@inlang/paraglide-js": "3.2.2",
     "@inlang/plugin-message-format": "4.6.0",
+    "@playwright/test": "1.65.1",
     "@tailwindcss/vite": "4.3.5",
     "@types/node": "26.6.6",
     "@types/pg": "8.23.1",

@@ -11,6 +11,12 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A production container image and `compose.yaml` that run the app and
+  PostgreSQL on one host behind a reverse proxy, with an operator guide in
+  `docs/deployment.md`.
+- Browser tests check that the sign-in and invitation pages meet WCAG 2.1 AA
+  in English and Dutch and work with the keyboard alone, and that signing in
+  through the e-mail link and joining through an invitation work.
 - Facilitators can download the elements with their round outcomes as CSV,
   the included elements as a FreeMind mind map, and the anonymised ratings as
   CSV.

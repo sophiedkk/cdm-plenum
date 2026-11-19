@@ -25,7 +25,11 @@ ADR 0002); check it for a pattern before inventing one.
   `cardinality.ts`, with colocated `*.test.ts`.
 - `messages/`: the i18n catalogues; `project.inlang/` the Paraglide config.
 - `compose.dev.yaml`, `Containerfile.dev`, `scripts/dev/`: the development
-  stack.
+  stack; `Containerfile.e2e` the e2e container.
+- `tests/e2e/`: the Playwright specs and their fixtures (`fixtures.ts`: seeds,
+  `signIn` through Mailpit, `expectAxeClean`).
+- `Containerfile`, `compose.yaml`, `.env.example`: the production stack,
+  described in `docs/deployment.md`.
 
 ## Build and test
 
@@ -41,6 +45,7 @@ scripts/dev/pnpm.sh typecheck       # Paraglide compile, then tsc --noEmit
 scripts/dev/pnpm.sh lint            # biome check (fix: biome check --write)
 scripts/dev/pnpm.sh test            # Vitest unit tests (test:coverage for the 70% gate)
 scripts/dev/pnpm.sh check           # the local gate: typecheck, lint, test
+scripts/dev/e2e.sh                  # build, then Playwright with axe in the e2e container
 scripts/dev/pnpm.sh db:migrate      # migrate the dev database (db:migrate down reverts one)
 scripts/dev/pnpm.sh db:generate-types  # regenerate src/server/db/schema.gen.ts after a migration
 ```
@@ -50,7 +55,10 @@ Versions are pinned exactly in `package.json`; `pnpm-workspace.yaml` sets
 `src/routeTree.gen.ts`, `src/i18n/` or `src/server/db/schema.gen.ts` (generated).
 The unit tests need PostgreSQL running (`scripts/dev/compose.sh up -d postgres`): each
 run creates its own migrated database and every test runs in a transaction that is rolled
-back. Migrations live in `src/server/db/migrations/` with `up` and `down`; until the first
+back. The e2e suite (`scripts/dev/e2e.sh`, arguments go to Playwright) needs PostgreSQL and
+Mailpit running; it starts the production build on port 3100 against its own run database and
+drops it afterwards. Call `expectAxeClean(page)` from `tests/e2e/fixtures.ts` on every page a
+spec visits, in English and Dutch. Migrations live in `src/server/db/migrations/` with `up` and `down`; until the first
 stable release a migration may be edited, and the dev database is migrated down and up again. Every hand-written file
 starts with the SPDX header `SPDX-FileCopyrightText: Sophie de Klerk` and
 `SPDX-License-Identifier: Apache-2.0`, in the file's comment syntax. All UI
@@ -59,7 +67,8 @@ text goes through `messages/en.json` and `messages/nl.json` (ADR 0007).
 ### Continuous integration
 
 `.github/workflows/ci.yml` runs typecheck, lint, `test:coverage` (on a
-PostgreSQL service container) and build on every pull request and push to
+PostgreSQL service container), build and `test:e2e` (on PostgreSQL and
+Mailpit service containers) on every pull request and push to
 `main`; the `conclusion` job is the one check to require. Pin every action to
 a full commit SHA with the version in a comment, and check workflow changes
 with actionlint and zizmor (`uvx zizmor --persona=pedantic .github/`).

@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: Sophie de Klerk
+# SPDX-License-Identifier: Apache-2.0
+#
+# The e2e container: the development image's Node.js and pnpm, plus Chromium
+# and its system libraries for Playwright, so no browser lands on the host.
+# scripts/dev/e2e.sh builds it with PLAYWRIGHT_VERSION read from the
+# @playwright/test pin in package.json; a browser of another Playwright
+# release would not start.
+#
+# NOTE: Playwright's own image (mcr.microsoft.com/playwright) ships an older
+# Node.js than the 26 that package.json requires with engineStrict, so the
+# browsers go into the Node.js image instead.
+FROM docker.io/library/node:26.13.1-trixie-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc
+
+ARG PLAYWRIGHT_VERSION
+RUN test -n "${PLAYWRIGHT_VERSION}" || { echo "PLAYWRIGHT_VERSION is not set" >&2; exit 1; }
+
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+    PNPM_HOME=/pnpm \
+    npm_config_store_dir=/pnpm-store
+
+# npm runs in /tmp: in /app the devEngines field of package.json makes npm refuse to run.
+WORKDIR /tmp
+RUN npm install --global pnpm@12.21.0 \
+ && npx --yes "playwright@${PLAYWRIGHT_VERSION}" install --with-deps --only-shell chromium \
+ && npm cache clean --force \
+ && rm -rf /root/.npm /tmp/*
+
+WORKDIR /app
