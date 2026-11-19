@@ -11,6 +11,20 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Facilitators write the scope statement (concept, use cases, out of scope
+  and an ordered list of sources); every participant reads it and can comment.
+- Participants add candidate elements with a name, a description and an
+  optional data type, cardinality and source, and comment on them.
+  Participants never see who added an element or wrote a comment; the
+  facilitator does.
+- Facilitators edit an element's wording, merge duplicates (descriptions,
+  sources, comments and proposed values move to the element that stays), and
+  list proposed values for coded text, ordinal and scale elements.
+- Facilitators import candidate elements from a CSV file with `name` and
+  `description` columns and optional `data_type` and `cardinality` columns,
+  comma or semicolon separated, up to 1 MiB and 1,000 rows. A preview lists
+  each refused row with its line number and reason before anything is
+  written.
 - Facilitators can search CKM, link a candidate element to an element of a
   CKM archetype and import all elements of an archetype as candidates. A link
   records the archetype ID, revision and at-code.
