@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The panel of a project next to its minimum (DE11), the change class and the project's own
-// minimum per expert type (DE13). Both are fixed once a round has opened (`panel_locked`).
+// minimum per expert type with its reason (DE13). Both are fixed once a round has opened
+// (`panel_locked`).
 import { revalidateLogic } from "@tanstack/react-form";
 import { CircleAlertIcon, CircleCheckIcon, LockIcon } from "lucide-react";
 import { z } from "zod";
@@ -32,9 +33,13 @@ import { type RefusalCode, refusalMessage } from "@/lib/i18n/refusals";
 import { changeClassDescription, changeClassLabel, expertTypeLabel } from "@/lib/i18n/round-labels";
 import { CHANGE_CLASSES, type ChangeClass, EXPERT_TYPES, type ExpertType } from "@/lib/panel";
 import type { PanelStatus } from "@/server/rounds/queries";
+import { PANEL_MINIMUM_REASON_MAX } from "@/server/rounds/schemas";
 
 /** What a panel action answers: done, or refused with a code. */
 export type PanelOutcome = { ok: true } | { ok: false; error: RefusalCode };
+
+/** The project's own count per expert type; null keeps the class default (DE13). */
+export type PanelMinimums = Record<ExpertType, number | null>;
 
 /** The joined participants per expert type next to the minimum, with any shortfall in words. */
 export function PanelTable({
@@ -175,17 +180,41 @@ function ChangeClassForm({
   );
 }
 
-/** The largest minimum the server takes (`panelMinimumInput`). */
+/** The largest minimum the server takes (`panelMinimumsInput`). */
 const MINIMUM_MAX = 1000;
 
-function minimumSchema() {
+const isBlank = (value: string) => value.trim() === "";
+
+/**
+ * The limits of `panelMinimumsInput` with translated messages: a whole number or nothing per
+ * expert type, and a reason while any count is set (DE13). Call it during render.
+ */
+export function minimumSchema() {
   const count = z
     .string()
     .trim()
     .refine((value) => value === "" || (/^\d+$/.test(value) && Number(value) <= MINIMUM_MAX), {
       error: () => m.rounds_minimum_invalid({ max: MINIMUM_MAX }),
     });
-  return z.object({ clinical: count, terminology: count, architecture: count });
+  return z
+    .object({
+      clinical: count,
+      terminology: count,
+      architecture: count,
+      reason: z.string().max(PANEL_MINIMUM_REASON_MAX, {
+        error: () => m.rounds_minimum_reason_too_long({ max: PANEL_MINIMUM_REASON_MAX }),
+      }),
+    })
+    .superRefine((values, ctx) => {
+      const anyCount = EXPERT_TYPES.some((type) => !isBlank(values[type]));
+      if (anyCount && isBlank(values.reason)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["reason"],
+          message: m.rounds_minimum_reason_required(),
+        });
+      }
+    });
 }
 
 function MinimumForm({
@@ -193,7 +222,7 @@ function MinimumForm({
   save,
 }: Readonly<{
   status: PanelStatus;
-  save: (expertType: ExpertType, minimum: number | null) => Promise<PanelOutcome>;
+  save: (minimums: PanelMinimums, reason: string) => Promise<PanelOutcome>;
 }>) {
   const initial = (type: ExpertType) => {
     const value = status.overrides[type];
@@ -204,23 +233,29 @@ function MinimumForm({
       clinical: initial("clinical"),
       terminology: initial("terminology"),
       architecture: initial("architecture"),
+      reason: status.overridesReason ?? "",
     },
     validationLogic: revalidateLogic(),
     validators: { onDynamic: minimumSchema() },
     onSubmit: async ({ value, formApi }) => {
-      for (const type of EXPERT_TYPES) {
-        const text = value[type].trim();
-        if (text === initial(type)) continue;
-        let outcome: PanelOutcome;
-        try {
-          outcome = await save(type, text === "" ? null : Number(text));
-        } catch {
-          applyServerRefusal(formApi, { form: m.common_error_unexpected() });
-          return;
-        }
-        if (!outcome.ok) {
+      const toCount = (text: string) => (isBlank(text) ? null : Number(text.trim()));
+      const minimums: PanelMinimums = {
+        clinical: toCount(value.clinical),
+        terminology: toCount(value.terminology),
+        architecture: toCount(value.architecture),
+      };
+      let outcome: PanelOutcome;
+      try {
+        outcome = await save(minimums, value.reason.trim());
+      } catch {
+        applyServerRefusal(formApi, { form: m.common_error_unexpected() });
+        return;
+      }
+      if (!outcome.ok) {
+        if (outcome.error === "minimum_reason_required") {
+          applyServerRefusal(formApi, { fields: { reason: refusalMessage(outcome.error) } });
+        } else {
           applyServerRefusal(formApi, { form: refusalMessage(outcome.error) });
-          return;
         }
       }
     },
@@ -256,6 +291,14 @@ function MinimumForm({
             </form.AppField>
           ))}
         </div>
+        <form.AppField name="reason">
+          {(field) => (
+            <field.TextareaField
+              label={m.rounds_minimum_reason_label()}
+              description={m.rounds_minimum_reason_help({ max: PANEL_MINIMUM_REASON_MAX })}
+            />
+          )}
+        </form.AppField>
       </FieldSet>
       <div>
         <form.AppForm>
@@ -263,6 +306,17 @@ function MinimumForm({
         </form.AppForm>
       </div>
     </form>
+  );
+}
+
+/** The facilitator's reason for the project's own counts, next to the class defaults (DE13). */
+function MinimumReason({ status }: Readonly<{ status: PanelStatus }>) {
+  if (status.overridesReason === null) return null;
+  return (
+    <dl className="flex flex-col gap-1 text-sm">
+      <dt className="font-medium">{m.rounds_minimum_reason_heading()}</dt>
+      <dd className="whitespace-pre-line text-muted-foreground">{status.overridesReason}</dd>
+    </dl>
   );
 }
 
@@ -277,7 +331,7 @@ export function PanelSetup({
 }: Readonly<{
   status: PanelStatus;
   saveChangeClass: (changeClass: ChangeClass) => Promise<PanelOutcome>;
-  saveMinimum: (expertType: ExpertType, minimum: number | null) => Promise<PanelOutcome>;
+  saveMinimum: (minimums: PanelMinimums, reason: string) => Promise<PanelOutcome>;
 }>) {
   return (
     <section aria-labelledby="panel-heading" className="flex flex-col gap-4">
@@ -299,6 +353,7 @@ export function PanelSetup({
           <li key={line}>{line}</li>
         ))}
       </ul>
+      <MinimumReason status={status} />
       {status.locked ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <LockIcon aria-hidden="true" className="size-4" />
@@ -311,7 +366,11 @@ export function PanelSetup({
             current={status.changeClass}
             save={saveChangeClass}
           />
-          <MinimumForm key={JSON.stringify(status.overrides)} status={status} save={saveMinimum} />
+          <MinimumForm
+            key={`${JSON.stringify(status.overrides)}-${status.overridesReason}`}
+            status={status}
+            save={saveMinimum}
+          />
         </div>
       )}
     </section>

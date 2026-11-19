@@ -10,9 +10,11 @@ import { DATA_TYPES } from "@/lib/data-types";
 import { CHANGE_CLASSES } from "@/lib/panel";
 import { createAuth } from "../auth.ts";
 import { parseEnv } from "../env.ts";
+import { PANEL_MINIMUM_REASON_MAX as ROUNDS_REASON_MAX } from "../rounds/schemas.ts";
 import { createMigrator } from "./index.ts";
 import { DATA_TYPE_KEYS } from "./migrations/0002_projects.ts";
 import { CHANGE_CLASS_KEYS } from "./migrations/0004_panel.ts";
+import { PANEL_MINIMUM_REASON_MAX } from "./migrations/0006_group_names_and_raters.ts";
 import { migrations } from "./migrations/index.ts";
 import { baseTestDatabaseUrl, createTestDb } from "./test-db.ts";
 import { createRunDatabase, dropRunDatabase } from "./test-run-database.ts";
@@ -69,5 +71,9 @@ describe("migrations", () => {
 
   it("allow exactly the change classes of src/lib/panel.ts", () => {
     expect([...CHANGE_CLASS_KEYS]).toEqual([...CHANGE_CLASSES]);
+  });
+
+  it("allow the DE13 reason length the round validator takes", () => {
+    expect(PANEL_MINIMUM_REASON_MAX).toBe(ROUNDS_REASON_MAX);
   });
 });

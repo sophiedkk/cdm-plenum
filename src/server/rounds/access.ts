@@ -30,6 +30,8 @@ export const ROUND_ACTION_ERRORS = [
   "raters_hidden",
   "rule_invalid",
   "reason_required",
+  "rater_group_required",
+  "minimum_reason_required",
 ] as const;
 export type RoundActionError = (typeof ROUND_ACTION_ERRORS)[number];
 

@@ -1,10 +1,13 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The members page (PR3, PR5, PR6): accessible in both languages and with the keyboard only
+// The members page (PR3, PR5 to PR7): accessible in both languages and with the keyboard only
 // (Q-ACC-1, Q-I18N-1); the facilitator invites and copies the link, the invitee joins with it;
-// a participant sees the number of participants per group and no names (Q-ANON-1), and leaves.
+// a participant sees the number of participants per group and no names (Q-ANON-1) until the
+// facilitator turns the names on, never an address, and leaves.
 import type { Page } from "@playwright/test";
+import type { Kysely } from "kysely";
+import type { DB } from "../../src/server/db/schema.gen.ts";
 import {
   addressOf,
   BROWSER_LOCALE,
@@ -35,6 +38,22 @@ function groupRow(page: Page, name: string) {
 
 function membersUrl(project: SeededProject): string {
   return `/projects/${project.projectId}/members`;
+}
+
+/** Waits until every toast has finished its entry animation, so axe measures it as it is read. */
+async function toastsSettled(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page
+        .locator("[data-sonner-toast]")
+        .evaluateAll((toasts) => toasts.every((toast) => getComputedStyle(toast).opacity === "1")),
+    )
+    .toBe(true);
+}
+
+/** Gives the account of `email` an invented name. */
+async function nameAccount(db: Kysely<DB>, email: string, name: string): Promise<void> {
+  await db.updateTable("user").set({ name }).where("email", "=", email).execute();
 }
 
 /** Fills the invite form with the keyboard only and submits it. */
@@ -113,6 +132,60 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expectAxeClean(page);
       await page.keyboard.press("Escape");
       await expect(page.getByRole("alertdialog")).toBeHidden();
+    });
+
+    test("the facilitator turns the group names on and off, and a participant sees them only when on (PR7)", async ({
+      page,
+      context,
+      db,
+    }) => {
+      const project = await seedProject(db);
+      const participant = await seedParticipant(db, project);
+      const other = await seedParticipant(db, project);
+      const otherName = `Invented Nurse ${locale}`;
+      await nameAccount(db, other, otherName);
+
+      async function setNames(on: boolean, saved: string) {
+        await context.clearCookies();
+        await signIn(page, project.facilitator.email, locale);
+        await page.goto(membersUrl(project));
+        const box = page.getByRole("checkbox", { name: text.members_names_label });
+        await expectHydrated(box);
+        await expect(box).toBeChecked({ checked: !on });
+        await box.click();
+        await page.getByRole("button", { name: text.members_names_save }).click();
+        await expect(page.getByText(saved)).toBeVisible();
+        await expect(box).toBeChecked({ checked: on });
+        await toastsSettled(page);
+        await expectAxeClean(page);
+      }
+
+      async function asParticipant() {
+        await context.clearCookies();
+        await signIn(page, participant, locale);
+        await page.goto(membersUrl(project));
+        await expect(groupRow(page, FIRST_GROUP)).toBeVisible();
+      }
+
+      await setNames(true, text.members_names_shown);
+      await asParticipant();
+      await expect(page.getByText(text.members_groups_description_participant_names)).toBeVisible();
+      const row = groupRow(page, FIRST_GROUP);
+      await expect(row).toContainText(otherName);
+      await expect(page.getByText(other)).toHaveCount(0);
+      await expect(
+        page.getByRole("columnheader", { name: text.members_column_names }),
+      ).toBeVisible();
+      await expectAxeClean(page);
+
+      await setNames(false, text.members_names_hidden);
+      await asParticipant();
+      await expect(page.getByText(text.members_groups_description_participant)).toBeVisible();
+      await expect(page.getByText(otherName)).toHaveCount(0);
+      await expect(page.getByRole("columnheader", { name: text.members_column_names })).toHaveCount(
+        0,
+      );
+      await expectAxeClean(page);
     });
   });
 }

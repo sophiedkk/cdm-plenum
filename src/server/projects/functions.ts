@@ -17,12 +17,16 @@ import {
   listProjects,
   removeGroup,
   renameGroup,
+  setGroupNamesVisible,
+  setRaterGroup,
 } from "./queries.ts";
 import {
   createGroupInput,
   createProjectInput,
   groupInput,
+  groupNamesVisibleInput,
   projectInput,
+  raterGroupInput,
   renameGroupInput,
 } from "./schemas.ts";
 
@@ -69,3 +73,13 @@ export const removeGroupFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(groupInput)
   .handler(({ data, context }) => removeGroup(getDb(), context.userId, data));
+
+export const setGroupNamesVisibleFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(groupNamesVisibleInput)
+  .handler(({ data, context }) => setGroupNamesVisible(getDb(), context.userId, data));
+
+export const setRaterGroupFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(raterGroupInput)
+  .handler(({ data, context }) => setRaterGroup(getDb(), context.userId, data));
