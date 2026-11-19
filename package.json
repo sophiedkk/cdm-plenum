@@ -39,6 +39,7 @@
     "i18n": "paraglide-js compile --project ./project.inlang --silent",
     "db:migrate": "node src/server/db/migrate.ts",
     "db:generate-types": "kysely-codegen --dialect postgres --out-file src/server/db/schema.gen.ts",
+    "db:seed-demo": "pnpm i18n && node --import ./scripts/node/alias-hooks.mjs src/server/db/seed-demo.ts",
     "admin:grant": "node src/server/admin/grant.ts grant",
     "admin:revoke": "node src/server/admin/grant.ts revoke"
   },

@@ -11,6 +11,9 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `pnpm db:seed-demo` loads a demo project on blood pressure into a
+  development database: a scope, eight elements, eight invented participants,
+  a closed first round with results and an open second round.
 - A facilitator can let participants see who is in each stakeholder group.
   It is off by default, and it never shows e-mail addresses, authors or who
   gave a rating.
