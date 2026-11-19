@@ -56,6 +56,16 @@ starts with the SPDX header `SPDX-FileCopyrightText: Sophie de Klerk` and
 `SPDX-License-Identifier: Apache-2.0`, in the file's comment syntax. All UI
 text goes through `messages/en.json` and `messages/nl.json` (ADR 0007).
 
+### Continuous integration
+
+`.github/workflows/ci.yml` runs typecheck, lint, `test:coverage` (on a
+PostgreSQL service container) and build on every pull request and push to
+`main`; the `conclusion` job is the one check to require. Pin every action to
+a full commit SHA with the version in a comment, and check workflow changes
+with actionlint and zizmor (`uvx zizmor --persona=pedantic .github/`).
+Dependabot (`.github/dependabot.yml`) proposes weekly npm and action updates
+after a 7-day cooldown.
+
 ## Development environment
 
 Develop a larger application inside a container by default, so its runtimes,

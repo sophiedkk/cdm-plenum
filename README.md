@@ -30,6 +30,8 @@ Open <http://localhost:3000>. Mailpit shows the e-mails the app sends at
 <http://localhost:8025>. Stop the stack with `scripts/dev/compose.sh down`.
 
 Run the checks (typecheck, lint, unit tests) with `scripts/dev/pnpm.sh check`.
+CI runs the same checks, plus the coverage gate and the build, on every pull
+request (`.github/workflows/ci.yml`).
 
 ## Use of AI
 
