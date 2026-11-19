@@ -91,6 +91,7 @@ describe("addElement (EL1)", () => {
         cardinality: null,
         sources: [{ kind: "brainstorm", label: "" }],
         values: [],
+        ckmLink: null,
         commentCount: 0,
         createdAt: expect.any(String),
       },
@@ -198,6 +199,36 @@ describe("authors (EL2, EL6)", () => {
     expect(personLeaks(await listElementsWithAuthors(db, m.facilitator, projectId), m)).not.toEqual(
       [],
     );
+  });
+});
+
+describe("CKM link on the board (EL4)", () => {
+  it("shows every member the archetype, revision and at-code an element is linked to", async () => {
+    const linked = await add(m.participant, { name: "Systolic" });
+    await add(m.participant, { name: "Comment" });
+    await db
+      .insertInto("element_ckm_link")
+      .values({
+        element_id: linked,
+        archetype_id: "openEHR-EHR-OBSERVATION.blood_pressure.v2",
+        cid: "1013.1.3574",
+        revision: "2.0.17",
+        at_code: "at0004",
+        ckm_element_name: "Systolic",
+        rm_type: "DV_QUANTITY",
+      })
+      .execute();
+    expect((await board()).map((element) => element.ckmLink)).toEqual([
+      {
+        archetypeId: "openEHR-EHR-OBSERVATION.blood_pressure.v2",
+        cid: "1013.1.3574",
+        revision: "2.0.17",
+        atCode: "at0004",
+        ckmElementName: "Systolic",
+        rmType: "DV_QUANTITY",
+      },
+      null,
+    ]);
   });
 });
 
