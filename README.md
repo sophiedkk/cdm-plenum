@@ -39,7 +39,7 @@ scripts/dev/compose.sh exec dev pnpm admin:grant you@example.test --facilitator
 ```
 
 To try the whole flow at once, load the demo project "Blood pressure
-(demo)": a scope, eight elements, eight invented participants in four
+(demo)": a scope, eight elements, eight invented participants in five
 stakeholder groups, a closed first round with results, and an open second
 round. Your address becomes facilitator and administrator of it; a second run
 changes nothing.
@@ -53,11 +53,9 @@ The participants have `example.test` addresses (for example
 participant's view and rate in round 2.
 
 Run the checks (typecheck, lint, unit tests) with `scripts/dev/pnpm.sh check`,
-and the browser tests with `scripts/dev/e2e.sh`. They run Playwright with
-Chromium and an accessibility check in a container of their own, against
-PostgreSQL and Mailpit of the stack above. CI runs the same checks, plus the
-coverage gate and the build, on every pull request
-(`.github/workflows/ci.yml`).
+and the browser tests with `scripts/dev/e2e.sh`.
+[docs/testing.md](docs/testing.md) explains the test suites, how to run part
+of one, how to write a test, and a walkthrough to try the demo by hand.
 
 ## Run it in production
 
