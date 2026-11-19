@@ -113,6 +113,17 @@ access goes through Kysely ([ADR 0002](adr/0002-stack-follows-edulims.md)).
 | Rating | `rating` | round, element, rating code, score or "unable to rate", optional reason |
 | Activity log | `activity_log` | time, actor, action, target id; never a score, an element text or a name (Q-PRIV-2) |
 
+The database holds the rules it can check itself, so no code path can skip
+them (`src/server/db/migrations/0002_projects.ts`):
+
+- `CHECK` constraints on the data type key, the cardinality, the phase, the
+  outcome and the round's scale and percentages.
+- A trigger refuses a change to a round's rule, closing date or rater setting
+  once the round is open (DE2).
+- A trigger accepts a rating only while its round is open, with a score inside
+  the round's scale and a rating code of the round's project (DE3).
+- Rating codes are random version 4 UUIDs; other ids are `uuidv7()`.
+
 ### Element data types
 
 An element's data type is one key from a fixed list in `src/lib/data-types.ts`.

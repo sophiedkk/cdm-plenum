@@ -41,11 +41,17 @@ scripts/dev/pnpm.sh typecheck       # Paraglide compile, then tsc --noEmit
 scripts/dev/pnpm.sh lint            # biome check (fix: biome check --write)
 scripts/dev/pnpm.sh test            # Vitest unit tests (test:coverage for the 70% gate)
 scripts/dev/pnpm.sh check           # the local gate: typecheck, lint, test
+scripts/dev/pnpm.sh db:migrate      # migrate the dev database (db:migrate down reverts one)
+scripts/dev/pnpm.sh db:generate-types  # regenerate src/server/db/schema.gen.ts after a migration
 ```
 
 Versions are pinned exactly in `package.json`; `pnpm-workspace.yaml` sets
 `saveExact`, `engineStrict` and a 24-hour `minimumReleaseAge`. Never edit
-`src/routeTree.gen.ts` or `src/i18n/` (generated). Every hand-written file
+`src/routeTree.gen.ts`, `src/i18n/` or `src/server/db/schema.gen.ts` (generated).
+The unit tests need PostgreSQL running (`scripts/dev/compose.sh up -d postgres`): each
+run creates its own migrated database and every test runs in a transaction that is rolled
+back. Migrations live in `src/server/db/migrations/` with `up` and `down`; until the first
+stable release a migration may be edited, and the dev database is migrated down and up again. Every hand-written file
 starts with the SPDX header `SPDX-FileCopyrightText: Sophie de Klerk` and
 `SPDX-License-Identifier: Apache-2.0`, in the file's comment syntax. All UI
 text goes through `messages/en.json` and `messages/nl.json` (ADR 0007).

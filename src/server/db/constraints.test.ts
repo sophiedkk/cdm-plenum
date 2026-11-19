@@ -1,0 +1,275 @@
+// SPDX-FileCopyrightText: Sophie de Klerk
+// SPDX-License-Identifier: Apache-2.0
+
+// The rules the database holds itself (docs/architecture.md#data): cardinality and data type
+// checks, the round lock of DE2, and the rating trigger of DE3.
+import { type Kysely, sql } from "kysely";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { DB } from "./schema.gen.ts";
+import { createTestDb } from "./test-db.ts";
+
+let db: Kysely<DB>;
+
+beforeEach(async () => {
+  db = await createTestDb();
+});
+
+afterEach(async () => {
+  await db.destroy();
+});
+
+/** Runs `work` in a savepoint and expects the database to refuse it with `message`. */
+async function expectRefused(work: (trx: Kysely<DB>) => Promise<unknown>, message: RegExp) {
+  await expect(db.transaction().execute(work)).rejects.toThrow(message);
+}
+
+async function project(id = "org-1") {
+  await db
+    .insertInto("organization")
+    .values({ id, name: "Blood pressure", slug: id, createdAt: new Date() })
+    .execute();
+  await db.insertInto("project").values({ id }).execute();
+  return id;
+}
+
+async function member(projectId: string, suffix: string) {
+  const userId = `user-${suffix}`;
+  await db
+    .insertInto("user")
+    .values({
+      id: userId,
+      name: "Test Person",
+      email: `${suffix}@example.test`,
+      emailVerified: true,
+    })
+    .execute();
+  const memberId = `member-${suffix}`;
+  await db
+    .insertInto("member")
+    .values({
+      id: memberId,
+      organizationId: projectId,
+      userId,
+      role: "participant",
+      createdAt: new Date(),
+    })
+    .execute();
+  const code = await db
+    .insertInto("rating_code")
+    .values({ project_id: projectId, member_id: memberId })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  return code.id;
+}
+
+async function element(projectId: string, name = "Systolic") {
+  const row = await db
+    .insertInto("element")
+    .values({ project_id: projectId, name })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  return row.id;
+}
+
+async function round(projectId: string, opened: boolean) {
+  const row = await db
+    .insertInto("round")
+    .values({
+      project_id: projectId,
+      number: 1,
+      closes_at: new Date(Date.now() + 86_400_000),
+      opened_at: opened ? new Date() : null,
+    })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  return row.id;
+}
+
+describe("element", () => {
+  it("accepts a known data type and the cardinalities 0..1, 1..* and 1..3", async () => {
+    const p = await project();
+    for (const [min, max] of [
+      [0, 1],
+      [1, null],
+      [1, 3],
+    ] as const) {
+      await db
+        .insertInto("element")
+        .values({
+          project_id: p,
+          name: "Systolic",
+          data_type: "quantity",
+          min_occurs: min,
+          max_occurs: max,
+        })
+        .execute();
+    }
+  });
+
+  it("refuses an unknown data type", async () => {
+    const p = await project();
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("element")
+          .values({ project_id: p, name: "X", data_type: "DV_TEXT" })
+          .execute(),
+      /element_data_type_check/,
+    );
+  });
+
+  it("refuses a minimum of 2, a maximum below the minimum and a maximum without a minimum", async () => {
+    const p = await project();
+    for (const [min, max] of [
+      [2, 3],
+      [1, 0],
+      [null, 1],
+    ] as const) {
+      await expectRefused(
+        (trx) =>
+          trx
+            .insertInto("element")
+            .values({ project_id: p, name: "X", min_occurs: min, max_occurs: max })
+            .execute(),
+        /element_cardinality_check/,
+      );
+    }
+  });
+
+  it("refuses a blank name", async () => {
+    const p = await project();
+    await expectRefused(
+      (trx) => trx.insertInto("element").values({ project_id: p, name: "  " }).execute(),
+      /element_name_check/,
+    );
+  });
+});
+
+describe("round", () => {
+  it("lets the facilitator change the rule before the round opens", async () => {
+    const r = await round(await project(), false);
+    await db.updateTable("round").set({ agreement_pct: "80" }).where("id", "=", r).execute();
+  });
+
+  it("refuses a change to the rule, the closing date or the rater setting once open (DE2)", async () => {
+    const r = await round(await project(), true);
+    for (const change of [
+      { agreement_pct: "60" },
+      { closes_at: new Date(Date.now() + 2 * 86_400_000) },
+      { facilitator_sees_raters: true },
+    ]) {
+      await expectRefused(
+        (trx) => trx.updateTable("round").set(change).where("id", "=", r).execute(),
+        /round_rule_locked/,
+      );
+    }
+  });
+
+  it("still lets an open round close", async () => {
+    const r = await round(await project(), true);
+    await db.updateTable("round").set({ closed_at: new Date() }).where("id", "=", r).execute();
+  });
+
+  it("refuses bands that overlap", async () => {
+    const p = await project();
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("round")
+          .values({
+            project_id: p,
+            number: 1,
+            closes_at: new Date(),
+            bottom_band_max: 7,
+            top_band_min: 7,
+          })
+          .execute(),
+      /round_scale_check/,
+    );
+  });
+});
+
+describe("rating", () => {
+  async function setup(opened: boolean) {
+    const p = await project();
+    const code = await member(p, "a");
+    const e = await element(p);
+    const r = await round(p, opened);
+    await db.insertInto("round_element").values({ round_id: r, element_id: e }).execute();
+    return { p, code, e, r };
+  }
+
+  it('accepts a score inside the scale and "unable to rate" in an open round', async () => {
+    const { code, e, r } = await setup(true);
+    await db
+      .insertInto("rating")
+      .values({ round_id: r, element_id: e, rating_code_id: code, score: 9 })
+      .execute();
+    await db
+      .updateTable("rating")
+      .set({ score: null, reason: "Outside my practice" })
+      .where("rating_code_id", "=", code)
+      .execute();
+  });
+
+  it("refuses a rating in a round that is not open", async () => {
+    const { code, e, r } = await setup(false);
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("rating")
+          .values({ round_id: r, element_id: e, rating_code_id: code, score: 5 })
+          .execute(),
+      /rating_round_not_open/,
+    );
+  });
+
+  it("refuses a rating in a closed round", async () => {
+    const { code, e, r } = await setup(true);
+    await db.updateTable("round").set({ closed_at: new Date() }).where("id", "=", r).execute();
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("rating")
+          .values({ round_id: r, element_id: e, rating_code_id: code, score: 5 })
+          .execute(),
+      /rating_round_not_open/,
+    );
+  });
+
+  it("refuses a score outside the round's scale", async () => {
+    const { code, e, r } = await setup(true);
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("rating")
+          .values({ round_id: r, element_id: e, rating_code_id: code, score: 10 })
+          .execute(),
+      /rating_score_out_of_scale/,
+    );
+  });
+
+  it("refuses a rating code of another project", async () => {
+    const { e, r } = await setup(true);
+    const other = await project("org-2");
+    const foreignCode = await member(other, "b");
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("rating")
+          .values({ round_id: r, element_id: e, rating_code_id: foreignCode, score: 5 })
+          .execute(),
+      /rating_code_wrong_project/,
+    );
+  });
+});
+
+describe("rating_code", () => {
+  it("is a random version 4 UUID, so it reveals no join order (ADR 0005)", async () => {
+    const code = await member(await project(), "a");
+    const { rows } = await sql<{
+      version: number;
+    }>`select uuid_extract_version(${code}::uuid) as version`.execute(db);
+    expect(rows[0]?.version).toBe(4);
+  });
+});
