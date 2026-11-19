@@ -44,6 +44,7 @@
     "@tanstack/react-start": "1.169.5",
     "better-auth": "1.7.25",
     "kysely": "0.29.9",
+    "nodemailer": "10.6.0",
     "pg": "8.23.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",

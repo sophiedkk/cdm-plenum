@@ -30,6 +30,7 @@ services:
     environment:
       DATABASE_URL: postgres://cdm_plenum:cdm_plenum@postgres:5432/cdm_plenum
       SMTP_URL: smtp://mailpit:1025
+      MAIL_FROM: cdm-plenum@example.test
       BETTER_AUTH_SECRET: dev-only-secret-not-for-production-use-0000
       BETTER_AUTH_URL: http://localhost:3000
     command: ["pnpm", "dev"]
