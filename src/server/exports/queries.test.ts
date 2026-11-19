@@ -9,7 +9,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { BOM } from "@/lib/csv";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
-import { facilitatorWithProject, insertUser, participantInGroup } from "../test-fixtures.ts";
+import {
+  facilitatorWithProject,
+  groupId,
+  insertUser,
+  joinedParticipant,
+} from "../test-fixtures.ts";
 import { type ExportFile, exportElementsCsv, exportMindMap, exportRatingsCsv } from "./queries.ts";
 
 let db: Kysely<DB>;
@@ -78,6 +83,16 @@ async function addElement(
   return row.id;
 }
 
+/** The panel and minimum per expert type an opened round stores (DE12); 0 needs no reason. */
+const OPENING_SNAPSHOT = {
+  panel_clinical: 0,
+  minimum_clinical: 0,
+  panel_terminology: 0,
+  minimum_terminology: 0,
+  panel_architecture: 0,
+  minimum_architecture: 0,
+};
+
 /** Opens a round with the given elements, so ratings can be stored; close it with `closeRound`. */
 async function openRound(projectId: string, number: number, elementIds: string[]) {
   const round = await db
@@ -87,6 +102,7 @@ async function openRound(projectId: string, number: number, elementIds: string[]
       number,
       opened_at: new Date(Date.now() - 3_600_000),
       closes_at: new Date(Date.now() + 86_400_000),
+      ...OPENING_SNAPSHOT,
     })
     .returning("id")
     .executeTakeFirstOrThrow();
@@ -201,7 +217,7 @@ async function setup() {
     ])
     .execute();
 
-  const raters: { userId: string; group: string }[] = [];
+  const raters: { userId: string; group: string; groupId: string }[] = [];
   const groups: [string, number][] = [
     ["Nursing", 4],
     ["General medicine", 3],
@@ -210,8 +226,8 @@ async function setup() {
   for (const [group, count] of groups) {
     for (let i = 0; i < count; i += 1) {
       const name = `${group.toLowerCase().replaceAll(" ", "")}${i}`;
-      const userId = await participantInGroup(db, facilitator, projectId, group, name);
-      raters.push({ userId, group });
+      const userId = await joinedParticipant(db, facilitator, projectId, group, name);
+      raters.push({ userId, group, groupId: await groupId(db, projectId, group) });
     }
   }
   // Invented names, so the privacy test can look for them.
@@ -226,14 +242,22 @@ async function setup() {
 
   const round1 = await openRound(projectId, 1, [systolic, position, comment]);
   for (const [i, code] of codes.entries()) {
+    const team_id = raters[i]?.groupId ?? null;
     await db
       .insertInto("rating")
       .values([
-        { round_id: round1, element_id: systolic, rating_code_id: code, score: 7 + (i % 3) },
+        {
+          round_id: round1,
+          element_id: systolic,
+          rating_code_id: code,
+          team_id,
+          score: 7 + (i % 3),
+        },
         {
           round_id: round1,
           element_id: position,
           rating_code_id: code,
+          team_id,
           score: i === 0 ? null : 5,
           reason: i === 0 ? "=1+1; weet ik niet" : null,
         },
@@ -247,10 +271,16 @@ async function setup() {
   });
 
   const round2 = await openRound(projectId, 2, [position]);
-  for (const code of codes.slice(0, 5)) {
+  for (const [i, code] of codes.slice(0, 5).entries()) {
     await db
       .insertInto("rating")
-      .values({ round_id: round2, element_id: position, rating_code_id: code, score: 8 })
+      .values({
+        round_id: round2,
+        element_id: position,
+        rating_code_id: code,
+        team_id: raters[i]?.groupId ?? null,
+        score: 8,
+      })
       .execute();
   }
   await closeRound(round2, { [position]: "included" });

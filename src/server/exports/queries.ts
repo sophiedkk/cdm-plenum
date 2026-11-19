@@ -11,7 +11,7 @@ import { type MindMapNode, writeFreeMind } from "@/lib/freemind";
 import type { DB } from "../db/schema.gen.ts";
 import { done, type ProjectResult, withProject } from "../projects/access.ts";
 import { log } from "../projects/queries.ts";
-import { ratingCodeGroups, shownGroups } from "./rating-groups.ts";
+import { shownGroups } from "./rating-groups.ts";
 
 /** A generated export: the file name to offer, its media type and its text. */
 export interface ExportFile {
@@ -286,10 +286,10 @@ export async function exportMindMap(
 }
 
 /**
- * EX4: one row per rating of a closed round, with the participant's rating code, their
- * stakeholder group (empty for a group too small to show, Q-PRIV-3), the round number, the
- * element name, the score (empty for "unable to rate") and the reason. No member id, user id,
- * name or e-mail address is read into this export.
+ * EX4: one row per rating of a closed round, with the participant's rating code, the stakeholder
+ * group stored on the rating (empty for a group too small to name, Q-PRIV-3), the round number,
+ * the element name, the score (empty for "unable to rate") and the reason. The query reads no
+ * member, user, name or e-mail address.
  */
 export async function exportRatingsCsv(
   db: Kysely<DB>,
@@ -302,8 +302,15 @@ export async function exportRatingsCsv(
       .selectFrom("rating")
       .innerJoin("round", "round.id", "rating.round_id")
       .innerJoin("element", "element.id", "rating.element_id")
+      .leftJoin("team", (join) =>
+        join
+          .onRef("team.id", "=", "rating.team_id")
+          .onRef("team.organizationId", "=", "round.project_id"),
+      )
       .select([
         "rating.rating_code_id as code",
+        "team.id as groupId",
+        "team.name as groupName",
         "round.number as round",
         "element.name as element",
         "rating.score",
@@ -316,13 +323,13 @@ export async function exportRatingsCsv(
       .orderBy("element.id")
       .orderBy("rating.rating_code_id")
       .execute();
-    const groups = shownGroups(await ratingCodeGroups(trx, project.id));
+    const named = shownGroups(ratings);
 
     const rows: CsvCell[][] = [
       ["participant_code", "stakeholder_group", "round", "element", "score", "reason"],
       ...ratings.map((rating) => [
         rating.code,
-        groups.get(rating.code) ?? null,
+        rating.groupId !== null && named.has(rating.groupId) ? rating.groupName : null,
         rating.round,
         rating.element,
         rating.score,
