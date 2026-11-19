@@ -105,7 +105,7 @@ person already runs stay theirs. An invitation never grants the right.
 | DE3 | A participant rates each element in an open round, with an optional reason. | Must | *(proposed)* A participant saves a rating per element, changes it until the round closes, and can skip an element ("unable to rate"). | |
 | DE4 | Ratings are always anonymous to other participants. Whether the facilitator sees who gave which rating is a setting of the round, off by default. | Must | *(proposed)* The setting is fixed when the round opens, and participants see it before they rate. With the setting off, a test reads every response the facilitator gets and finds no participant identifier next to a rating; with it on, the facilitator sees each participant's ratings and other participants still see none. | R-03 |
 | DE5 | After a round closes, everyone in the project sees the result per element: the distribution, the median, the outcome under the rule, and the scores per stakeholder group. | Must | *(proposed)* Each element shows its full distribution, not only the median, and its outcome; each stakeholder group with at least 3 ratings has its own distribution (Brookes et al. 2016, <https://doi.org/10.1186/s13063-016-1479-x>). | R-03 |
-| DE6 | The facilitator sees the response rate of each round, per stakeholder group. | Must | *(proposed)* The round page shows invited, started and completed participants per group. | R-04 |
+| DE6 | The facilitator sees the response rate of each round, per stakeholder group. | Must | *(proposed)* The round page shows invited, started and completed participants per group. Invited means joined before the round closed (pending invitations do not count); started means at least one answer; completed means an answer for every element, "unable to rate" included. | R-04 |
 | DE7 | A facilitator opens a next round on the elements without consensus. | Should | *(proposed)* The next round carries over the elements with "no consensus"; each participant sees their own earlier rating and the group result next to each element. | |
 | DE8 | Reasons given in a round are shown anonymously in the next round. | Should | *(proposed)* Every reason from round N appears without author next to its element in round N+1. | R-03 |
 | DE9 | A participant who moves far from their earlier rating gives a reason. | Could | *(proposed)* A change of 3 or more points on the scale asks for a reason before saving. | |
@@ -113,6 +113,11 @@ person already runs stay theirs. An invitation never grants the right.
 | DE11 | A project has a change class, and the round setup shows the panel per expert type next to the minimum panel of that class. | Should | *(proposed)* The facilitator picks the class when creating the project (default D, a new model) and can change it until the first round opens. The round setup lists, per expert type, the participants who have joined and the minimum from the [minimum panel table](#minimum-panel); a shortfall is shown with text, not colour alone. Owner decision 2026-11-19. | R-08 |
 | DE12 | A facilitator can open a round below the minimum panel by giving a reason. | Should | *(proposed)* Opening a round below the minimum asks for a short reason and then opens the round; it is never refused for the panel alone. The round stores the panel per expert type at the moment it opened, the minimum that applied and the reason; the round page and the decision report (EX3) show them. | R-08 |
 | DE13 | A facilitator adjusts the minimum panel of a project. | Could | *(proposed)* The facilitator raises or lowers the count per expert type before the first round opens; the decision report shows the adjusted counts next to the class defaults. | |
+
+Design choices made while building the rounds, for the owner to confirm: one
+round runs at a time; the facilitator closes a round only after its closing
+date; the change class and the panel minimum are fixed once the first round
+opens; a reason sent with a complete panel is not stored.
 
 ### Minimum panel
 
@@ -252,5 +257,5 @@ keeps in sync with the international CKM.
 | O-1 | Resolved 2026-11-19: the CKM REST API, see [External sources](#external-sources). |
 | O-2 | Resolved 2026-11-19: FreeMind `.mm`, as CKM serves it (EX2). |
 | O-3 | Resolved 2026-11-19 by the owner: accounts come from an invitation system (PR1, PR3). How the invitation reaches the invitee (e-mail sent by the app, or a link the facilitator passes on) and how the invitee signs in afterwards is an architecture decision. |
-| O-4 | Should the facilitator be able to take part as a participant in their own project? |
+| O-4 | Should the facilitator be able to take part as a participant in their own project? Until decided, only participants rate. |
 | O-5 | When duplicates are merged (EL5), should a CKM link on a duplicate move to the result when the result has none? Today the link stays on the merged-away element. |

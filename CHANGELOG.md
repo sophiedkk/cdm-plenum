@@ -11,6 +11,18 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Facilitators set up rating rounds with an adjustable scale, consensus
+  rule, closing date and rater visibility, open them, and close them to
+  record each element's outcome.
+- Participants rate each element, mark it "unable to rate" or give a reason,
+  and in a later round see their earlier rating, the group result and the
+  anonymous reasons.
+- Projects have a change class A to D and a minimum panel per expert type. A
+  round below the minimum opens with a reason, and the round keeps the panel
+  it opened with.
+- Everyone in a project sees closed-round results per element and per
+  stakeholder group of 3 or more; facilitators see the response rate per
+  group.
 - Facilitators write the scope statement (concept, use cases, out of scope
   and an ordered list of sources); every participant reads it and can comment.
 - Participants add candidate elements with a name, a description and an

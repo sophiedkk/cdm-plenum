@@ -125,9 +125,16 @@ export interface Organization {
 }
 
 export interface Project {
+  change_class: Generated<string>;
   created_at: Generated<Timestamp>;
   id: string;
   phase: Generated<string>;
+}
+
+export interface ProjectPanelMinimum {
+  expert_type: string;
+  minimum: number;
+  project_id: string;
 }
 
 export interface Rating {
@@ -136,6 +143,7 @@ export interface Rating {
   reason: string | null;
   round_id: string;
   score: number | null;
+  team_id: string | null;
   updated_at: Generated<Timestamp>;
 }
 
@@ -147,15 +155,22 @@ export interface RatingCode {
 
 export interface Round {
   agreement_pct: Generated<Numeric>;
+  below_minimum_reason: string | null;
   bottom_band_max: Generated<number>;
   closed_at: Timestamp | null;
   closes_at: Timestamp;
   created_at: Generated<Timestamp>;
   facilitator_sees_raters: Generated<boolean>;
   id: Generated<string>;
+  minimum_architecture: number | null;
+  minimum_clinical: number | null;
+  minimum_terminology: number | null;
   number: number;
   opened_at: Timestamp | null;
   opposition_pct: Generated<Numeric>;
+  panel_architecture: number | null;
+  panel_clinical: number | null;
+  panel_terminology: number | null;
   project_id: string;
   scale_max: Generated<number>;
   scale_min: Generated<number>;
@@ -255,6 +270,7 @@ export interface DB {
   member: Member;
   organization: Organization;
   project: Project;
+  project_panel_minimum: ProjectPanelMinimum;
   rating: Rating;
   rating_code: RatingCode;
   round: Round;
