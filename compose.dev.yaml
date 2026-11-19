@@ -38,6 +38,27 @@ services:
       postgres:
         condition: service_healthy
 
+  # The e2e suite: Playwright with Chromium against the production build, on
+  # PostgreSQL and Mailpit of this stack. Run it with scripts/dev/e2e.sh, which
+  # builds the image for the Playwright version in package.json.
+  e2e:
+    image: localhost/cdm-plenum-e2e:${PLAYWRIGHT_VERSION:-unset}
+    profiles: ["e2e"]
+    working_dir: /app
+    volumes:
+      - .:/app:Z
+      - pnpm-store:/pnpm-store
+    environment:
+      TEST_DATABASE_URL: postgres://cdm_plenum:cdm_plenum@postgres:5432/cdm_plenum
+      SMTP_URL: smtp://mailpit:1025
+      MAILPIT_URL: http://mailpit:8025
+    command: ["pnpm", "test:e2e"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
   postgres:
     image: docker.io/library/postgres:18.7-trixie
     environment:
