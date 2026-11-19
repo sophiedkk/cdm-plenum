@@ -11,6 +11,9 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Facilitators can download the elements with their round outcomes as CSV,
+  the included elements as a FreeMind mind map, and the anonymised ratings as
+  CSV.
 - Facilitators set up rating rounds with an adjustable scale, consensus
   rule, closing date and rater visibility, open them, and close them to
   record each element's outcome.

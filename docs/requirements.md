@@ -186,7 +186,7 @@ Classified by the ISO/IEC 25010 quality characteristics.
 | Q-SEC-2 | Security | HTTPS for all traffic. | All traffic is served over HTTPS behind the reverse proxy. |
 | Q-PRIV-1 | Privacy | Store only what the method needs: name, e-mail address, stakeholder group and project contributions. | The database schema holds no other personal data; the data protection check with the institution's privacy officer is approved before the first study. |
 | Q-PRIV-2 | Privacy | Logs never carry a rating, an element text or a person's name. | A test over the log output of a full round finds none of these. |
-| Q-PRIV-3 | Privacy | Group results never show a group smaller than 3. | A stakeholder group with fewer than 3 ratings on an element is shown only in the overall result. |
+| Q-PRIV-3 | Privacy | Group results never show a group smaller than 3. | In the ratings export (EX4) a group is named only when at least 3 of its participants have ratings in the export. A stakeholder group with fewer than 3 ratings on an element is shown only in the overall result. |
 | Q-AUDIT-1 | Traceability | Every element links to its source and to its rating history. | For any included element the export shows where it came from and its outcome in each round. |
 | Q-ACC-1 | Accessibility | WCAG 2.1 level AA. | An axe check and a keyboard-only walkthrough find no errors at level A and AA. |
 | Q-ACC-2 | Accessibility | Outcomes do not rely on colour alone. | Every outcome (included, excluded, no consensus) has text next to its colour. |

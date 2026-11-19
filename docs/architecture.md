@@ -311,6 +311,28 @@ All exports are generated on request from the database and are not stored.
 | Anonymised ratings | CSV, one row per rating with the rating code | EX4 |
 | Archetype skeleton | ADL 1.4 | EX5 (Could) |
 
+Exports are for the facilitator only (`export: download`) and each one writes
+an activity log row with ids only.
+
+- **CSV:** RFC 4180 with a byte order mark, CRLF line ends and every text
+  cell quoted. A cell that starts with `=`, `+`, `-`, `@`, a tab or a line
+  break gets a leading `'`, after the OWASP CSV injection guidance.
+- **Elements CSV (EX1):** one row per element that is not merged, with
+  `name, description, openehr_type, fhir_type, cardinality, sources,
+  ckm_archetype_id, ckm_at_code, ckm_revision, proposed_values` and one
+  `round_N_outcome` column per round. The sources include those of merged
+  duplicates (Q-AUDIT-1).
+- **Mind map (EX2):** the scope concept as root; an element is on the map when
+  its outcome in the last closed round that rated it is `included`. Before any
+  round has closed, every element that is not merged is on it. Text outside
+  ASCII is written as numeric character references.
+- **Ratings CSV (EX4):** closed rounds only. The participant code is the
+  stored rating code; the group comes from `rating.team_id`, never through
+  the code-to-member table (ADR 0005). A group is named only when at least 3
+  participants in it have ratings in the export; if the unnamed groups then
+  hold only 1 or 2 participants, the next smallest group is left unnamed too,
+  so nobody is identified by elimination.
+
 ## Deployment
 
 Everything runs as containers with Compose on one host
