@@ -109,16 +109,23 @@ export function RatingElement({
   const scores: number[] = [];
   for (let score = rule.scaleMin; score <= rule.scaleMax; score++) scores.push(score);
 
-  const run = async (action: () => Promise<RatingOutcome>, done: SaveState) => {
+  // Arrow keys in the radio group change the choice on every press; the saves run one after the
+  // other, so the last choice is the one the server keeps.
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const run = (action: () => Promise<RatingOutcome>, done: SaveState): Promise<boolean> => {
     setState("saving");
-    try {
-      const outcome = await action();
-      setState(outcome.ok ? done : { error: refusalMessage(outcome.error) });
-      return outcome.ok;
-    } catch {
-      setState({ error: m.common_error_unexpected() });
-      return false;
-    }
+    const next = queue.current.then(async () => {
+      try {
+        const outcome = await action();
+        setState(outcome.ok ? done : { error: refusalMessage(outcome.error) });
+        return outcome.ok;
+      } catch {
+        setState({ error: m.common_error_unexpected() });
+        return false;
+      }
+    });
+    queue.current = next;
+    return next;
   };
   const saveChoice = async (value: string, text: string) => {
     const ok = await run(() => save(value === UNABLE ? null : Number(value), text), "saved");
