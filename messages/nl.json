@@ -313,7 +313,7 @@
   "export_csv_heading": "Een CSV-bestand openen",
   "export_csv_libreoffice": "LibreOffice Calc vraagt bij het openen naar het scheidingsteken: vink Komma aan.",
   "export_download": "{name} downloaden",
-  "export_elements_description": "Eén rij per element met de datatypen, kardinaliteit, bronnen, CKM-koppeling en de uitkomst van elke ronde.",
+  "export_elements_description": "Eén rij per element met de datatypen, kardinaliteit, bronnen, CKM-koppeling, de CKM-koppelingen van samengevoegde duplicaten en de uitkomst van elke ronde.",
   "export_elements_title": "Elementen-CSV",
   "export_mind_map_description": "De opgenomen elementen als FreeMind-mindmap (.mm). Freeplane en XMind openen dit bestand.",
   "export_mind_map_title": "Mindmap",

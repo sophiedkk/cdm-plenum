@@ -112,8 +112,9 @@ function push<T>(map: Map<string, T[]>, key: string, value: T): void {
 
 /**
  * EX1: one row per element that is not merged into another, with its types, cardinality, sources,
- * CKM link, proposed values and the outcome of each round. The sources of elements merged into it
- * are listed with its own (Q-AUDIT-1).
+ * CKM link, the CKM links of merged duplicates, proposed values and the outcome of each round. The
+ * sources of elements merged into it are listed with its own (Q-AUDIT-1); their CKM links go in
+ * `merged_ckm_links`, so the three `ckm_` columns stay the element's own link (EL5, O-5).
  */
 export async function exportElementsCsv(
   db: Kysely<DB>,
@@ -144,6 +145,29 @@ export async function exportElementsCsv(
       if (!target) continue;
       const text = `${row.kind}: ${row.label}`;
       if (!sources.get(target.id)?.includes(text)) push(sources, target.id, text);
+    }
+
+    const mergedLinkRows = await trx
+      .selectFrom("element_ckm_link as link")
+      .innerJoin("element", "element.id", "link.element_id")
+      .select([
+        "link.element_id as elementId",
+        "link.archetype_id as archetypeId",
+        "link.at_code as atCode",
+        "link.revision",
+      ])
+      .where("element.project_id", "=", project.id)
+      .where("element.merged_into", "is not", null)
+      .orderBy("link.linked_at")
+      .orderBy("link.element_id")
+      .execute();
+    const mergedLinks = new Map<string, string[]>();
+    for (const row of mergedLinkRows) {
+      const element = byId.get(row.elementId);
+      const target = element && survivor(byId, element);
+      if (!target) continue;
+      const text = `${row.archetypeId} ${row.atCode} (${row.revision})`;
+      if (!mergedLinks.get(target.id)?.includes(text)) push(mergedLinks, target.id, text);
     }
 
     const valueRows = await trx
@@ -193,6 +217,7 @@ export async function exportElementsCsv(
       "ckm_archetype_id",
       "ckm_at_code",
       "ckm_revision",
+      "merged_ckm_links",
       "proposed_values",
       ...rounds.map((round) => `round_${round.number}_outcome`),
     ];
@@ -210,6 +235,7 @@ export async function exportElementsCsv(
           element.archetypeId,
           element.atCode,
           element.revision,
+          mergedLinks.get(element.id)?.join("; "),
           values.get(element.id)?.join("; "),
           ...rounds.map((round) => outcomes.get(`${round.id}/${element.id}`)),
         ];

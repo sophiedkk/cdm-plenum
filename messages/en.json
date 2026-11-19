@@ -313,7 +313,7 @@
   "export_csv_heading": "Opening a CSV file",
   "export_csv_libreoffice": "LibreOffice Calc asks for the separator when it opens the file: tick Comma.",
   "export_download": "Download {name}",
-  "export_elements_description": "One row per element with its data types, cardinality, sources, CKM link and the outcome of each round.",
+  "export_elements_description": "One row per element with its data types, cardinality, sources, CKM link, the CKM links of merged duplicates and the outcome of each round.",
   "export_elements_title": "Elements CSV",
   "export_mind_map_description": "The included elements as a FreeMind mind map (.mm), which Freeplane and XMind open.",
   "export_mind_map_title": "Mind map",
