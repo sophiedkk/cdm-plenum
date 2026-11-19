@@ -5,6 +5,8 @@
 import type { Kysely } from "kysely";
 import { grantAppRole } from "./admin/app-roles.ts";
 import type { DB } from "./db/schema.gen.ts";
+import { acceptInvitationsOnSignIn } from "./invitations/acceptance.ts";
+import { invite } from "./invitations/queries.ts";
 import { createProject } from "./projects/queries.ts";
 
 export const NOW = new Date("2026-11-19T12:00:00Z");
@@ -38,6 +40,43 @@ export async function groupId(db: Kysely<DB>, projectId: string, name: string): 
     .select("id")
     .where("organizationId", "=", projectId)
     .where("name", "=", name)
+    .executeTakeFirstOrThrow();
+  return row.id;
+}
+
+/**
+ * Invites `<name>@example.test` into the named stakeholder group and accepts it, so the user is
+ * a participant who has joined; returns the user id.
+ */
+export async function joinedParticipant(
+  db: Kysely<DB>,
+  facilitatorId: string,
+  projectId: string,
+  groupName: string,
+  name: string,
+): Promise<string> {
+  const userId = await insertUser(db, name);
+  const invited = await invite(
+    db,
+    facilitatorId,
+    { projectId, groupId: await groupId(db, projectId, groupName), email: `${name}@example.test` },
+    { baseUrl: "http://localhost:3000", mailer: null, now: new Date() },
+  );
+  if (!invited.ok) throw new Error(`invite refused: ${invited.error}`);
+  await acceptInvitationsOnSignIn(db, userId, new Date());
+  return userId;
+}
+
+/** Inserts a candidate element on the project's board and returns its id. */
+export async function insertElement(
+  db: Kysely<DB>,
+  projectId: string,
+  name: string,
+): Promise<string> {
+  const row = await db
+    .insertInto("element")
+    .values({ project_id: projectId, name, description: `Description of ${name}` })
+    .returning("id")
     .executeTakeFirstOrThrow();
   return row.id;
 }
