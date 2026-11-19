@@ -22,7 +22,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { m } from "@/i18n/messages";
-import { setChangeClassFn, setPanelMinimumFn } from "@/server/rounds/functions";
+import { mayRate } from "@/lib/project-roles";
+import { projectQueryOptions } from "@/server/projects/query-options";
+import { setChangeClassFn, setPanelMinimumsFn } from "@/server/rounds/functions";
 import {
   panelStatusQueryOptions,
   roundKeys,
@@ -48,10 +50,10 @@ const LINK = "font-medium underline underline-offset-4 hover:decoration-2";
 function RoundAction({
   round,
   projectId,
-  isFacilitator,
-}: Readonly<{ round: RoundSummary; projectId: string; isFacilitator: boolean }>) {
+  canRate,
+}: Readonly<{ round: RoundSummary; projectId: string; canRate: boolean }>) {
   const params = { projectId, roundId: round.id };
-  if (round.status === "open" && !isFacilitator) {
+  if (round.status === "open" && canRate) {
     return (
       <Button asChild size="sm">
         <Link to="/projects/$projectId/rounds/$roundId/rate" params={params}>
@@ -75,6 +77,9 @@ function Rounds() {
   const { projectId } = Route.useParams();
   const { project } = Route.useRouteContext();
   const isFacilitator = project.role === "facilitator";
+  const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
+  // DE14: a facilitator rates once they joined a stakeholder group on the members page.
+  const canRate = detail.ok && mayRate(detail.value.role, detail.value.ownGroupId);
   const { data } = useSuspenseQuery(roundsQueryOptions(projectId));
   const rounds = valueOrNotFound(data);
   const mayStart = isFacilitator && rounds.every((round) => round.status === "closed");
@@ -101,6 +106,18 @@ function Rounds() {
         {isFacilitator && unfinished && (
           <p className="text-sm text-muted-foreground">
             {m.rounds_one_at_a_time({ number: unfinished.number })}
+          </p>
+        )}
+        {!canRate && unfinished?.status === "open" && (
+          <p className="text-sm text-muted-foreground">
+            {m.rounds_rate_join_group()}{" "}
+            <Link
+              to="/projects/$projectId/members"
+              params={{ projectId }}
+              className="underline underline-offset-4"
+            >
+              {m.rounds_rate_members_link()}
+            </Link>
           </p>
         )}
         {rounds.length === 0 ? (
@@ -145,11 +162,7 @@ function Rounds() {
                     <LocalDateTime iso={round.closesAt} />
                   </TableCell>
                   <TableCell>
-                    <RoundAction
-                      round={round}
-                      projectId={projectId}
-                      isFacilitator={isFacilitator}
-                    />
+                    <RoundAction round={round} projectId={projectId} canRate={canRate} />
                   </TableCell>
                 </TableRow>
               ))}
@@ -166,7 +179,7 @@ function FacilitatorPanel({ projectId }: Readonly<{ projectId: string }>) {
   const { data } = useSuspenseQuery(panelStatusQueryOptions(projectId));
   const status = valueOrNotFound(data);
   const setChangeClass = useServerFn(setChangeClassFn);
-  const setPanelMinimum = useServerFn(setPanelMinimumFn);
+  const setPanelMinimums = useServerFn(setPanelMinimumsFn);
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries({ queryKey: roundKeys.panel(projectId) });
 
@@ -180,8 +193,8 @@ function FacilitatorPanel({ projectId }: Readonly<{ projectId: string }>) {
         toast.success(m.rounds_change_class_saved());
         return { ok: true };
       }}
-      saveMinimum={async (expertType, minimum) => {
-        const result = await setPanelMinimum({ data: { projectId, expertType, minimum } });
+      saveMinimum={async (minimums, reason) => {
+        const result = await setPanelMinimums({ data: { projectId, minimums, reason } });
         if (!result.ok) return result;
         await refresh();
         toast.success(m.rounds_minimum_saved());

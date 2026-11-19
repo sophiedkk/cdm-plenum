@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { z } from "zod";
@@ -14,17 +14,18 @@ import { NotFoundState, PageHeader } from "@/components/shell/route-states";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { m } from "@/i18n/messages";
 import { dataTypeByKey } from "@/lib/data-types";
+import { mayRate } from "@/lib/project-roles";
+import { projectQueryOptions } from "@/server/projects/query-options";
 import { clearRatingFn, saveRatingFn } from "@/server/rounds/functions";
 import { myRatingsQueryOptions, roundBoardQueryOptions } from "@/server/rounds/query-options";
 import type { MyRatings, OwnRating } from "@/server/rounds/ratings";
 
-/** The rating screen of an open round, for participants (DE3, DE4, DE7, DE8). */
+/**
+ * The rating screen of an open round (DE3, DE4, DE7, DE8), for participants and for a
+ * facilitator who joined a stakeholder group (DE14). A facilitator without a group sees the
+ * elements read-only and where to join one.
+ */
 export const Route = createFileRoute("/_authed/projects/$projectId/rounds/$roundId/rate")({
-  beforeLoad: ({ context, params }) => {
-    if (context.project.role !== "participant") {
-      throw redirect({ to: "/projects/$projectId/rounds/$roundId", params });
-    }
-  },
   loader: async ({ context, params }) => {
     if (!z.uuid().safeParse(params.roundId).success) throw notFound();
     const { queryClient } = context;
@@ -52,13 +53,15 @@ function RatePage() {
   const { projectId, roundId } = Route.useParams();
   const { data } = useSuspenseQuery(myRatingsQueryOptions(projectId, roundId));
   const { data: boardResult } = useSuspenseQuery(roundBoardQueryOptions(projectId));
+  const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
+  const canRate = detail.ok && mayRate(detail.value.role, detail.value.ownGroupId);
   const mine = valueOrNotFound(data);
   const board = valueOrNotFound(boardResult);
   const saveRating = useServerFn(saveRatingFn);
   const clearRating = useServerFn(clearRatingFn);
   const queryClient = useQueryClient();
   const { round, elements } = mine;
-  const editable = round.status === "open";
+  const editable = round.status === "open" && canRate;
   const rated = elements.filter((element) => element.own.rated).length;
   const dataTypes = new Map(board.map((element) => [element.id, element.dataType]));
   const queryKey = myRatingsQueryOptions(projectId, roundId).queryKey;
@@ -109,7 +112,24 @@ function RatePage() {
           {round.facilitatorSeesRaters ? m.rounds_raters_visible() : m.rounds_raters_hidden()}
         </AlertDescription>
       </Alert>
-      {!editable && (
+      {!canRate && (
+        <Alert>
+          <AlertTitle>{m.rounds_rate_no_group_title()}</AlertTitle>
+          <AlertDescription>
+            <p>
+              {m.rounds_rate_no_group()}{" "}
+              <Link
+                to="/projects/$projectId/members"
+                params={{ projectId }}
+                className="underline underline-offset-4"
+              >
+                {m.rounds_rate_members_link()}
+              </Link>
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+      {round.status !== "open" && (
         <Alert>
           <AlertDescription>{m.rounds_rate_not_open()}</AlertDescription>
         </Alert>

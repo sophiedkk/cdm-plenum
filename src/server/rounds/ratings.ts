@@ -6,7 +6,7 @@
 // Ratings carry the rating code only; rater-link.ts is the one place that resolves it (ADR 0005).
 import type { Kysely } from "kysely";
 import type { DB } from "../db/schema.gen.ts";
-import { log } from "../projects/queries.ts";
+import { log, ownGroupId } from "../projects/queries.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
 import { ownRatingCode, type ParticipantRatings, ratingsByParticipantQuery } from "./rater-link.ts";
 import {
@@ -31,31 +31,16 @@ function triggerRefusal(error: unknown) {
   return Object.entries(TRIGGER_REFUSALS).find(([message]) => error.message === message)?.[1];
 }
 
-/** The stakeholder group of a member in the project, or null when they are in none. */
-async function ownGroupId(
-  db: Kysely<DB>,
-  projectId: string,
-  userId: string,
-): Promise<string | null> {
-  const row = await db
-    .selectFrom("teamMember")
-    .innerJoin("team", "team.id", "teamMember.teamId")
-    .select("team.id")
-    .where("team.organizationId", "=", projectId)
-    .where("teamMember.userId", "=", userId)
-    .executeTakeFirst();
-  return row?.id ?? null;
-}
-
 function cleanReason(reason: string | undefined): string | null {
   const trimmed = reason?.trim() ?? "";
   return trimmed === "" ? null : trimmed;
 }
 
 /**
- * Saves or changes the participant's rating of one element (DE3); a null score is "unable to
- * rate". The database accepts it only while the round is open and the score is on its scale;
- * its refusals come back as `round_not_open` and `score_out_of_scale`.
+ * Saves or changes the rater's rating of one element (DE3); a null score is "unable to rate".
+ * A facilitator rates only from their own stakeholder group (DE14, `rater_group_required`).
+ * The database accepts it only while the round is open and the score is on its scale; its
+ * refusals come back as `round_not_open` and `score_out_of_scale`.
  */
 export async function saveRating(
   db: Kysely<DB>,
@@ -64,7 +49,8 @@ export async function saveRating(
 ): Promise<RoundResult<null>> {
   try {
     return await asMember(db, userId, input.projectId, async (trx, role) => {
-      if (role !== "participant") return refused("forbidden");
+      const teamId = await ownGroupId(trx, input.projectId, userId);
+      if (role === "facilitator" && teamId === null) return refused("rater_group_required");
       const round = await findRound(trx, input.projectId, input.roundId, "share");
       if (!round || round.opened_at === null) return refused("round_not_found");
       const inRound = await trx
@@ -79,7 +65,7 @@ export async function saveRating(
       const values = {
         score: input.score,
         reason: cleanReason(input.reason),
-        team_id: await ownGroupId(trx, input.projectId, userId),
+        team_id: teamId,
         updated_at: new Date(),
       };
       await trx
@@ -106,14 +92,16 @@ export async function saveRating(
   }
 }
 
-/** Removes the participant's rating of one element, while the round is open (DE3). */
+/** Removes the rater's rating of one element, while the round is open (DE3, DE14). */
 export async function clearRating(
   db: Kysely<DB>,
   userId: string,
   input: RatingInput,
 ): Promise<RoundResult<null>> {
   return asMember(db, userId, input.projectId, async (trx, role) => {
-    if (role !== "participant") return refused("forbidden");
+    if (role === "facilitator" && (await ownGroupId(trx, input.projectId, userId)) === null) {
+      return refused("rater_group_required");
+    }
     const round = await findRound(trx, input.projectId, input.roundId, "share");
     if (!round || round.opened_at === null) return refused("round_not_found");
     // The trigger guards inserts and updates only, so the open check for a delete is here,
