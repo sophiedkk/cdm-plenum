@@ -117,9 +117,12 @@ export async function requestSignInLink(
   return linkIn(await takeMessage(email), appUrl());
 }
 
-/** Signs in with the e-mail link and returns once the app has landed on its start page. */
-export async function signIn(page: Page, email: string): Promise<void> {
-  await page.goto(await requestSignInLink(page, email));
+/**
+ * Signs in with the e-mail link and returns once the app has landed on its start page. Pass the
+ * locale of the browser, so the sign-in form is found by its text in that language.
+ */
+export async function signIn(page: Page, email: string, locale: Locale = "en"): Promise<void> {
+  await page.goto(await requestSignInLink(page, email, locale));
   // A signed-in user is sent from / to their projects.
   await expect(page).toHaveURL((url) => url.pathname === "/projects");
   expect(await sessionEmail(page)).toBe(email);
