@@ -26,6 +26,8 @@ ADR 0002); check it for a pattern before inventing one.
 - `messages/`: the i18n catalogues; `project.inlang/` the Paraglide config.
 - `compose.dev.yaml`, `Containerfile.dev`, `scripts/dev/`: the development
   stack; `Containerfile.e2e` the e2e container.
+- `docs/testing.md`: the test suites, their settings and the manual
+  walkthrough on the demo data. Update it when a suite or a setting changes.
 - `tests/e2e/`: the Playwright specs and their fixtures (`fixtures.ts`: seeds,
   `signIn` through Mailpit, `expectAxeClean`).
 - `Containerfile`, `compose.yaml`, `.env.example`: the production stack,
