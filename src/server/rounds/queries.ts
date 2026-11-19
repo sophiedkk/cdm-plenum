@@ -17,6 +17,7 @@ import {
   panelShortfall,
   type Shortfall,
 } from "@/lib/panel";
+import { RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
 import { log } from "../projects/queries.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
@@ -36,7 +37,7 @@ import type {
   ChangeClassInput,
   CreateRoundInput,
   OpenRoundInput,
-  PanelMinimumInput,
+  PanelMinimumsInput,
   RoundInput,
   RuleInput,
   UpdateRoundInput,
@@ -71,35 +72,45 @@ export async function setChangeClass(
   });
 }
 
-/** Replaces the class default of one expert type, or drops the project's count (DE13). */
-export async function setPanelMinimum(
+/**
+ * Sets the project's own minimum per expert type, with the reason for it (DE13, owner decision
+ * 2026-11-19). A null count keeps the class default. With at least one count of its own the
+ * reason is required (`minimum_reason_required`); with none, the reason is cleared.
+ */
+export async function setPanelMinimums(
   db: Kysely<DB>,
   userId: string,
-  input: PanelMinimumInput,
+  input: PanelMinimumsInput,
 ): Promise<RoundResult<null>> {
   return asFacilitator(db, userId, input.projectId, async (trx, project) => {
     if (await anyRoundOpened(trx, project.id)) return refused("panel_locked");
-    if (input.minimum === null) {
-      await trx
-        .deleteFrom("project_panel_minimum")
-        .where("project_id", "=", project.id)
-        .where("expert_type", "=", input.expertType)
-        .execute();
-    } else {
+    const counts = EXPERT_TYPES.flatMap((type) => {
+      const minimum = input.minimums[type];
+      return minimum === null ? [] : [{ expert_type: type, minimum }];
+    });
+    const reason = input.reason?.trim() ?? "";
+    if (counts.length > 0 && reason === "") return refused("minimum_reason_required");
+    await trx.deleteFrom("project_panel_minimum").where("project_id", "=", project.id).execute();
+    if (counts.length > 0) {
       await trx
         .insertInto("project_panel_minimum")
-        .values({ project_id: project.id, expert_type: input.expertType, minimum: input.minimum })
-        .onConflict((oc) =>
-          oc.columns(["project_id", "expert_type"]).doUpdateSet({ minimum: input.minimum ?? 0 }),
-        )
+        .values(counts.map((count) => ({ project_id: project.id, ...count })))
         .execute();
     }
+    await trx
+      .updateTable("project")
+      .set({ panel_minimum_reason: counts.length > 0 ? reason : null })
+      .where("id", "=", project.id)
+      .execute();
     await log(trx, userId, project.id, "panel_minimum_set", "project", project.id);
     return done(null);
   });
 }
 
-/** Joined participants per expert type: members of a stakeholder group of the project. */
+/**
+ * Joined raters per expert type: members of a stakeholder group of the project, a facilitator
+ * who joined one included (DE14).
+ */
 async function joinedPanel(trx: Kysely<DB>, projectId: string): Promise<PanelCounts> {
   const rows = await trx
     .selectFrom("member")
@@ -109,7 +120,7 @@ async function joinedPanel(trx: Kysely<DB>, projectId: string): Promise<PanelCou
     .select((eb) => eb.fn.count<string>("member.id").distinct().as("count"))
     .where("member.organizationId", "=", projectId)
     .where("team.organizationId", "=", projectId)
-    .where("member.role", "=", "participant")
+    .where("member.role", "in", RATER_ROLES)
     .groupBy("team.expert_type")
     .execute();
   const joined: PanelCounts = { clinical: 0, terminology: 0, architecture: 0 };
@@ -124,13 +135,15 @@ async function joinedPanel(trx: Kysely<DB>, projectId: string): Promise<PanelCou
 interface ProjectPanel {
   changeClass: ChangeClass;
   overrides: Partial<PanelCounts>;
+  /** Why the project replaced class defaults (DE13); null without overrides. */
+  reason: string | null;
   minimum: PanelCounts;
 }
 
 async function projectPanel(trx: Kysely<DB>, projectId: string): Promise<ProjectPanel> {
   const project = await trx
     .selectFrom("project")
-    .select("change_class")
+    .select(["change_class", "panel_minimum_reason"])
     .where("id", "=", projectId)
     .executeTakeFirstOrThrow();
   const changeClass = CHANGE_CLASSES.find((key) => key === project.change_class);
@@ -142,7 +155,12 @@ async function projectPanel(trx: Kysely<DB>, projectId: string): Promise<Project
     .execute();
   const overrides: Partial<PanelCounts> = {};
   for (const row of rows) overrides[row.expert_type as ExpertType] = row.minimum;
-  return { changeClass, overrides, minimum: minimumPanel(changeClass, overrides) };
+  return {
+    changeClass,
+    overrides,
+    reason: project.panel_minimum_reason,
+    minimum: minimumPanel(changeClass, overrides),
+  };
 }
 
 export interface PanelStatus {
@@ -151,6 +169,8 @@ export interface PanelStatus {
   classDefault: PanelCounts;
   /** The expert types where the project replaced the class default. */
   overrides: Partial<PanelCounts>;
+  /** The facilitator's reason for the overrides (DE13); null when there are none. */
+  overridesReason: string | null;
   minimum: PanelCounts;
   joined: PanelCounts;
   /** Empty when the panel meets the minimum. */
@@ -172,6 +192,7 @@ export async function panelStatus(
       changeClass: panel.changeClass,
       classDefault: { ...MINIMUM_PANEL[panel.changeClass] },
       overrides: panel.overrides,
+      overridesReason: panel.reason,
       minimum: panel.minimum,
       joined,
       shortfall: panelShortfall(joined, panel.minimum),

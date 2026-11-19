@@ -127,7 +127,9 @@ export interface Organization {
 export interface Project {
   change_class: Generated<string>;
   created_at: Generated<Timestamp>;
+  group_names_visible: Generated<boolean>;
   id: string;
+  panel_minimum_reason: string | null;
   phase: Generated<string>;
 }
 

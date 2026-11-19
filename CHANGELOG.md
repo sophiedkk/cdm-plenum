@@ -14,6 +14,12 @@ the project uses [Semantic Versioning](https://semver.org/).
 - `pnpm db:seed-demo` loads a demo project on blood pressure into a
   development database: a scope, eight elements, eight invented participants,
   a closed first round with results and an open second round.
+- A facilitator can let participants see who is in each stakeholder group.
+  It is off by default, and it never shows e-mail addresses, authors or who
+  gave a rating.
+- A facilitator can join one stakeholder group on the members page and rate
+  in rounds. Their ratings count in that group's results, the response rate
+  and the minimum panel.
 - When you merge duplicate elements, the board shows the CKM links of the
   merged duplicates under "Also linked via merged duplicate", next to the
   kept element's own link. The elements CSV has a new `merged_ckm_links`
@@ -127,6 +133,8 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Setting the project's own minimum panel now needs a reason, which the
+  panel setup shows next to the class defaults.
 - Up to 30 sign-in link requests, and 30 link openings, per minute per
   network address, up from 5, so a class behind one address can sign in
   together.

@@ -4,11 +4,13 @@
 // A full Delphi round in the browser, in English and Dutch (DE1 to DE6, DE12, Q-ACC-1,
 // Q-I18N-1): the facilitator sets up a round and opens it below the minimum with a reason, two
 // participants rate (one "unable to rate"), and after the closing date the facilitator closes
-// the round and the results show the outcome.
+// the round and the results show the outcome. A facilitator rates after joining a stakeholder
+// group on the members page (DE14).
 import { randomBytes } from "node:crypto";
 import type { Browser, Page } from "@playwright/test";
 import { type Kysely, sql } from "kysely";
 import type { DB } from "../../src/server/db/schema.gen.ts";
+import { openedRound } from "../../src/server/rounds/test-round.ts";
 import { insertElement } from "../../src/server/test-fixtures.ts";
 import {
   BROWSER_LOCALE,
@@ -236,6 +238,63 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await axeClean(rater);
       await rater.context().close();
       await other.context().close();
+    });
+
+    test("the facilitator joins a stakeholder group and rates (DE14)", async ({ page, db }) => {
+      const project = await seedProject(db);
+      await insertElement(db, project.projectId, "Heart rate");
+      await seedParticipant(db, project);
+      await openedRound(db, project.facilitator.userId, project.projectId, {}, "A small panel");
+      const rounds = `/projects/${project.projectId}/rounds`;
+      const rateNow = fill(text.rounds_rate_now, { number: 1 });
+
+      // Without a group the facilitator gets no rating link, and the page says where to join.
+      await signInAs(page, project.facilitator.email, locale);
+      await page.goto(rounds);
+      await expect(page.getByText(text.rounds_rate_join_group)).toBeVisible();
+      await expect(page.getByRole("link", { name: rateNow })).toHaveCount(0);
+      await axeClean(page);
+      await page.getByRole("link", { name: text.rounds_rate_members_link }).click();
+
+      await expect(page.getByText(text.members_rater_none)).toBeVisible();
+      const group = page.getByLabel(text.members_rater_group_label, { exact: true });
+      await expectHydrated(group);
+      await axeClean(page);
+      await group.click();
+      await page.getByRole("option", { name: /^Nursing/ }).click();
+      await page.getByRole("button", { name: text.members_rater_join }).click();
+      await expect(
+        page.getByText(fill(text.members_rater_current, { group: "Nursing" })),
+      ).toBeVisible();
+      // A round is open, so the facilitator stays in this group until it closes.
+      await expect(page.getByText(text.members_rater_locked)).toBeVisible();
+      await axeClean(page);
+
+      await page.goto(rounds);
+      const link = page.getByRole("link", { name: rateNow });
+      await expect(link).toBeVisible();
+      await expectHydrated(link);
+      await link.click();
+      await expect(page.getByText(text.rounds_rate_hidden_title)).toBeVisible();
+      const heartRate = page.getByRole("group", { name: "Heart rate" });
+      const highest = heartRate.getByRole("radio", {
+        name: fill(text.rounds_rate_score_highest, { score: 9 }),
+      });
+      await expectHydrated(highest);
+      await highest.click();
+      await expect(heartRate.getByRole("status")).toHaveText(text.rounds_rate_saved);
+      await expect(
+        page.getByText(fill(text.rounds_rate_progress, { rated: 1, total: 1 })),
+      ).toBeVisible();
+      await axeClean(page);
+
+      const rating = await db
+        .selectFrom("rating")
+        .innerJoin("team", "team.id", "rating.team_id")
+        .select(["rating.score", "team.name"])
+        .where("team.organizationId", "=", project.projectId)
+        .execute();
+      expect(rating).toEqual([{ score: 9, name: "Nursing" }]);
     });
   });
 }

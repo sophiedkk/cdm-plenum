@@ -4,12 +4,14 @@
 // The input of the round server functions, checked before any handler runs. The rule's own
 // consistency (bands inside the scale, agreement above half) is `ruleError` in the query.
 import { z } from "zod";
-import { CHANGE_CLASSES, EXPERT_TYPES } from "@/lib/panel";
+import { CHANGE_CLASSES, type EXPERT_TYPES } from "@/lib/panel";
 import { idSchema } from "../projects/schemas.ts";
 
 /** The longest reason a participant gives with a rating, and a facilitator for a small panel. */
 export const RATING_REASON_MAX = 2000;
 export const BELOW_MINIMUM_REASON_MAX = 500;
+/** The longest reason for the project's own minimum panel (DE13); migration 0006 agrees. */
+export const PANEL_MINIMUM_REASON_MAX = 500;
 
 /** The scores a scale may use; the database stores them as smallint. */
 const score = z.int().min(0).max(100);
@@ -41,13 +43,22 @@ export const changeClassInput = z.object({
 });
 export type ChangeClassInput = z.infer<typeof changeClassInput>;
 
-/** A null minimum drops the project's own count, so the class default applies again. */
-export const panelMinimumInput = z.object({
+const minimumCount = z.int().min(0).max(1000).nullable();
+
+/**
+ * The project's own minimum per expert type (DE13). A null count keeps the class default; the
+ * reason is required while any count is set, which the query checks.
+ */
+export const panelMinimumsInput = z.object({
   projectId: idSchema,
-  expertType: z.enum(EXPERT_TYPES),
-  minimum: z.int().min(0).max(1000).nullable(),
+  minimums: z.object({
+    clinical: minimumCount,
+    terminology: minimumCount,
+    architecture: minimumCount,
+  } satisfies Record<(typeof EXPERT_TYPES)[number], typeof minimumCount>),
+  reason: z.string().max(PANEL_MINIMUM_REASON_MAX).optional(),
 });
-export type PanelMinimumInput = z.infer<typeof panelMinimumInput>;
+export type PanelMinimumsInput = z.infer<typeof panelMinimumsInput>;
 
 const elementIds = z.array(z.uuid()).max(1000);
 

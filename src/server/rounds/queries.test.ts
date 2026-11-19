@@ -17,11 +17,11 @@ import {
   openRound,
   panelStatus,
   setChangeClass,
-  setPanelMinimum,
+  setPanelMinimums,
   updateRound,
 } from "./queries.ts";
 import { saveRating } from "./ratings.ts";
-import type { CreateRoundInput } from "./schemas.ts";
+import { type CreateRoundInput, PANEL_MINIMUM_REASON_MAX, panelMinimumsInput } from "./schemas.ts";
 import {
   closedNow,
   inDays,
@@ -34,6 +34,7 @@ import {
 let db: Kysely<DB>;
 let p: PanelProject;
 const now = () => ({ now: new Date() });
+const NO_MINIMUMS = { clinical: null, terminology: null, architecture: null };
 
 beforeEach(async () => {
   db = await createTestDb();
@@ -72,6 +73,7 @@ describe("change class and minimum panel (DE11, DE13)", () => {
       changeClass: "D",
       classDefault: { clinical: 2, terminology: 1, architecture: 2 },
       overrides: {},
+      overridesReason: null,
       minimum: { clinical: 2, terminology: 1, architecture: 2 },
       joined: { clinical: 2, terminology: 1, architecture: 2 },
       shortfall: [],
@@ -79,34 +81,72 @@ describe("change class and minimum panel (DE11, DE13)", () => {
     });
   });
 
-  it("applies a new class and the project's own counts, and reports the shortfall", async () => {
+  it("applies a new class and the project's own counts with their reason, and reports the shortfall", async () => {
     ok(await setChangeClass(db, p.facilitator, { projectId: p.projectId, changeClass: "A" }));
     ok(
-      await setPanelMinimum(db, p.facilitator, {
+      await setPanelMinimums(db, p.facilitator, {
         projectId: p.projectId,
-        expertType: "clinical",
-        minimum: 4,
+        minimums: { ...NO_MINIMUMS, clinical: 4 },
+        reason: "  Four clinical areas take part.  ",
       }),
     );
     const status = ok(await panelStatus(db, p.facilitator, p.projectId));
     expect(status.classDefault).toEqual({ clinical: 1, terminology: 0, architecture: 1 });
     expect(status.overrides).toEqual({ clinical: 4 });
+    expect(status.overridesReason).toBe("Four clinical areas take part.");
     expect(status.minimum).toEqual({ clinical: 4, terminology: 0, architecture: 1 });
     expect(status.shortfall).toEqual([{ expertType: "clinical", joined: 2, minimum: 4 }]);
     ok(
-      await setPanelMinimum(db, p.facilitator, {
+      await setPanelMinimums(db, p.facilitator, {
         projectId: p.projectId,
-        expertType: "clinical",
-        minimum: null,
+        minimums: NO_MINIMUMS,
       }),
     );
-    expect(ok(await panelStatus(db, p.facilitator, p.projectId)).overrides).toEqual({});
+    const cleared = ok(await panelStatus(db, p.facilitator, p.projectId));
+    expect(cleared.overrides).toEqual({});
+    expect(cleared.overridesReason).toBeNull();
     expect(await actions(p.projectId)).toEqual([
       "project_created",
       "change_class_set",
       "panel_minimum_set",
       "panel_minimum_set",
     ]);
+  });
+
+  it("refuses project counts without a reason and keeps the earlier ones (DE13)", async () => {
+    const input = { projectId: p.projectId, minimums: { ...NO_MINIMUMS, terminology: 0 } };
+    ok(await setPanelMinimums(db, p.facilitator, { ...input, reason: "No terminologist yet." }));
+    for (const reason of [undefined, "", "   "]) {
+      expect(
+        await setPanelMinimums(db, p.facilitator, {
+          projectId: p.projectId,
+          minimums: { ...NO_MINIMUMS, architecture: 5 },
+          ...(reason === undefined ? {} : { reason }),
+        }),
+      ).toEqual({ ok: false, error: "minimum_reason_required" });
+    }
+    const status = ok(await panelStatus(db, p.facilitator, p.projectId));
+    expect(status.overrides).toEqual({ terminology: 0 });
+    expect(status.overridesReason).toBe("No terminologist yet.");
+  });
+
+  it("refuses a reason longer than the database takes (DE13)", async () => {
+    const tooLong = "x".repeat(PANEL_MINIMUM_REASON_MAX + 1);
+    for (const reason of [tooLong, "  "]) {
+      await expect(
+        db
+          .transaction()
+          .execute((trx) =>
+            trx
+              .updateTable("project")
+              .set({ panel_minimum_reason: reason })
+              .where("id", "=", p.projectId)
+              .execute(),
+          ),
+      ).rejects.toThrow(/project_panel_minimum_reason_check/);
+    }
+    const input = { projectId: p.projectId, minimums: NO_MINIMUMS, reason: tooLong };
+    expect(panelMinimumsInput.safeParse(input).success).toBe(false);
   });
 
   it("counts only participants who joined a group of an expert type", async () => {
@@ -121,10 +161,10 @@ describe("change class and minimum panel (DE11, DE13)", () => {
       await setChangeClass(db, p.facilitator, { projectId: p.projectId, changeClass: "B" }),
     ).toEqual({ ok: false, error: "panel_locked" });
     expect(
-      await setPanelMinimum(db, p.facilitator, {
+      await setPanelMinimums(db, p.facilitator, {
         projectId: p.projectId,
-        expertType: "terminology",
-        minimum: 0,
+        minimums: { ...NO_MINIMUMS, terminology: 0 },
+        reason: "Too late.",
       }),
     ).toEqual({ ok: false, error: "panel_locked" });
     expect(ok(await panelStatus(db, p.facilitator, p.projectId)).locked).toBe(true);
@@ -132,13 +172,17 @@ describe("change class and minimum panel (DE11, DE13)", () => {
 
   it("refuses a participant (forbidden) and a non-member (not_found)", async () => {
     const classInput = { projectId: p.projectId, changeClass: "B" } as const;
-    const minInput = { projectId: p.projectId, expertType: "clinical", minimum: 1 } as const;
+    const minInput = {
+      projectId: p.projectId,
+      minimums: { ...NO_MINIMUMS, clinical: 1 },
+      reason: "A reason.",
+    };
     for (const [user, error] of [
       [p.raters.n1, "forbidden"],
       [p.outsider, "not_found"],
     ] as const) {
       expect(await setChangeClass(db, user, classInput)).toEqual({ ok: false, error });
-      expect(await setPanelMinimum(db, user, minInput)).toEqual({ ok: false, error });
+      expect(await setPanelMinimums(db, user, minInput)).toEqual({ ok: false, error });
       expect(await panelStatus(db, user, p.projectId)).toEqual({ ok: false, error });
     }
   });
@@ -373,10 +417,10 @@ describe("openRound (DE11, DE12)", () => {
 
   it("asks for a reason below the minimum, then opens with it and keeps the snapshot (DE12)", async () => {
     ok(
-      await setPanelMinimum(db, p.facilitator, {
+      await setPanelMinimums(db, p.facilitator, {
         projectId: p.projectId,
-        expertType: "terminology",
-        minimum: 3,
+        minimums: { ...NO_MINIMUMS, terminology: 3 },
+        reason: "Three terminologists review the codes.",
       }),
     );
     const { roundId } = await draft({});
