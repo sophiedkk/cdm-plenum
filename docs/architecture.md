@@ -97,8 +97,9 @@ access goes through Kysely ([ADR 0002](adr/0002-stack-follows-edulims.md)).
 
 | Concept | Stored as | Notes |
 |---|---|---|
-| Project | better-auth `organization` plus `project` (phase, concept) | one project is one organization |
-| Stakeholder group | better-auth `team` | a participant is in exactly one group of the project |
+| Project | better-auth `organization` plus `project` (phase, change class A to D, default D) | one project is one organization |
+| Stakeholder group | better-auth `team` with an expert type (clinical, terminology, architecture) | a participant is in exactly one group of the project (PR6) |
+| Minimum panel override | `project_panel_minimum` | per project and expert type, only when the facilitator changes a class default (DE13) |
 | Facilitator, participant | better-auth `member` with a custom role | |
 | Invitation | better-auth `invitation` with its team | |
 | Scope statement | `scope_statement`, `scope_source`, `scope_comment` | one statement per project; SC3 objections later |
@@ -107,7 +108,7 @@ access goes through Kysely ([ADR 0002](adr/0002-stack-follows-edulims.md)).
 | Element source | `element_source` | kind (`brainstorm`, `csv`, `ckm`), label (file name or archetype ID) |
 | CKM link | `element_ckm_link` | archetype ID, CKM `cid`, revision at linking time, at-code, element name as CKM showed it |
 | Comment | `element_comment` | author hidden as for elements (EL6) |
-| Round | `round` | number, scale minimum and maximum, the rule's percentages and score bands, opens and closes at, `facilitator_sees_raters` |
+| Round | `round` | number, scale minimum and maximum, the rule's percentages and score bands, opens and closes at, `facilitator_sees_raters`; when it opens: the panel and the minimum per expert type, and the reason for opening below the minimum (DE12) |
 | Elements in a round | `round_element` | which elements are rated; the outcome is written when the round closes |
 | Rating pseudonym | `rating_code` | one random code per participant per project ([ADR 0005](adr/0005-rating-pseudonyms-and-anonymity.md)) |
 | Rating | `rating` | round, element, rating code, score or "unable to rate", optional reason |
@@ -166,6 +167,18 @@ list is kept as its RM name and exported without a FHIR type.
 Cardinality is stored as a minimum and a maximum. openEHR occurrences and
 FHIR element cardinality both use this form (`0..1`, `1..*`), so the
 exports write it unchanged.
+
+### Minimum panel
+
+The class defaults live in one table in `src/lib/panel.ts` (the counts in
+[requirements.md](requirements.md#minimum-panel)); a project row in
+`project_panel_minimum` overrides one expert type. When a round opens, the
+server counts the joined participants per expert type in the same
+transaction, compares them with the minimum, and stores both on the round as
+they were at that moment, so a later change to the panel or the class does
+not rewrite what the report says about an earlier round. A shortfall needs a
+reason and never blocks the round
+([ADR 0010](adr/0010-minimum-panel-as-guideline.md)).
 
 ### Consensus calculation
 

@@ -39,6 +39,9 @@ requirement keeps its row with the status "Dropped".
 | Candidate element | A proposed data element on the element board, with a name, a description, a proposed data type, a cardinality, its source and an optional link to an existing CKM archetype element. |
 | Data type | One of the openEHR Reference Model data value types in the [data type list](architecture.md#element-data-types), each with its nearest FHIR data type. |
 | Stakeholder group | A group of participants with the same background, for example "nurses", "physicians" or "modellers". Results are shown per group. |
+| Expert type | The kind of expertise a stakeholder group brings: clinical, terminology or architecture, after the expert roles in the Nictiz zib management agreements ([Beheerafspraken zib's V1.0](https://www.zibs.nl/images/7/7a/Beheerafspraken_zorginformatiebouwstenen_V1.0.pdf), section "Analyseren"). |
+| Change class | How large the modelling work of a project is, A to D, after the "zwaarterubriek" of the same agreements: A no change, B a small change, C a large change, D a large change or a new model. |
+| Minimum panel | The number of participants per expert type a project should have before a round opens, set by its change class. A guideline, not a gate (DE12). |
 | Round | One period in which participants rate the candidate elements. A round has a consensus rule and a closing date, both fixed before it opens. |
 | Consensus rule | The thresholds that decide whether an element is included, excluded or has no consensus, for example "at least 70% score 7 to 9 and at most 15% score 1 to 3". |
 
@@ -64,6 +67,7 @@ of one project and participant in another.
 | PR3 | A facilitator invites participants by e-mail address and assigns each to one stakeholder group. | Must | *(proposed)* The invitee gets a single-use invitation link that expires; accepting it creates their account or adds the project to an existing one. A used or expired link is refused, and the refusal is tested. An invited participant sees the project after sign-in; a user who is not invited gets no access to it. Every participant belongs to exactly one stakeholder group of the project. | R-01 |
 | PR4 | A project shows its phase: scope, discover, decide, hand-off. | Should | *(proposed)* The project page shows the current phase; the facilitator moves the project to the next phase. | |
 | PR5 | A participant leaves a project. | Should | *(proposed)* After leaving, the participant has no access; their ratings in closed rounds stay in the results. | R-04 |
+| PR6 | Each stakeholder group has an expert type; a new project starts with a default set of groups. | Must | *(proposed)* A new project has one terminology group, one architecture group, and clinical groups for the Nictiz expert areas: general medicine, primary care, mental health care, nursing, medication and allergies, patient, administrative. The facilitator adds, renames and removes groups, and every group keeps exactly one expert type. Owner decision 2026-11-19. | |
 
 ### Scope
 
@@ -101,6 +105,38 @@ of one project and participant in another.
 | DE8 | Reasons given in a round are shown anonymously in the next round. | Should | *(proposed)* Every reason from round N appears without author next to its element in round N+1. | R-03 |
 | DE9 | A participant who moves far from their earlier rating gives a reason. | Could | *(proposed)* A change of 3 or more points on the scale asks for a reason before saving. | |
 | DE10 | Element order is randomised per participant. | Could | *(proposed)* Two participants in the same round see the elements in a different order; one participant keeps their own order within the round. | |
+| DE11 | A project has a change class, and the round setup shows the panel per expert type next to the minimum panel of that class. | Should | *(proposed)* The facilitator picks the class when creating the project (default D, a new model) and can change it until the first round opens. The round setup lists, per expert type, the participants who have joined and the minimum from the [minimum panel table](#minimum-panel); a shortfall is shown with text, not colour alone. Owner decision 2026-11-19. | R-08 |
+| DE12 | A facilitator can open a round below the minimum panel by giving a reason. | Should | *(proposed)* Opening a round below the minimum asks for a short reason and then opens the round; it is never refused for the panel alone. The round stores the panel per expert type at the moment it opened, the minimum that applied and the reason; the round page and the decision report (EX3) show them. | R-08 |
+| DE13 | A facilitator adjusts the minimum panel of a project. | Could | *(proposed)* The facilitator raises or lowers the count per expert type before the first round opens; the decision report shows the adjusted counts next to the class defaults. | |
+
+### Minimum panel
+
+The minimum panel follows the minimum number of experts the Nictiz zib
+management agreements set for the analysis step of a change, per change class
+([Beheerafspraken zib's V1.0](https://www.zibs.nl/images/7/7a/Beheerafspraken_zorginformatiebouwstenen_V1.0.pdf),
+section "Analyseren/in analyse"). cdm-plenum applies those counts to the panel
+of a rating round; that use is our own adaptation, and later versions of the
+agreements (V1.2, V1.3) were not checked because their links no longer work.
+
+| Change class | Clinical | Terminology | Architecture |
+|---|---|---|---|
+| A, no change | 1 | 0 | 1 |
+| B, small change | 2 | 1 | 1 |
+| C, large change | 2 | 1 | 2 |
+| D, large change or new model | 2 | 1 | 2 |
+
+A participant counts toward the expert type of their stakeholder group once
+they have joined the project (accepted the invitation). The minimum is a
+guideline: a round below it opens with a reason (DE12), so a small teaching
+group can still run a round. The Nictiz agreements also give a larger
+"guideline" panel (for example 3 clinical experts for classes B to D); the
+tool shows the minimum only.
+
+### Open consultation
+
+| ID | Requirement | Priority | Acceptance criterion | Risk |
+|---|---|---|---|---|
+| CO1 | After the rating rounds, a facilitator runs an open consultation on the agreed element list. | Could | *(proposed)* Respondents answer per element "agree", "agree with a small change" (with the change) or "disagree" (with a reason), after the open consultation of the Nictiz zib management agreements. The consultation is announced at least 15 working days ahead and lasts 10, 20 or 30 working days for change class B, C or D. The facilitator sees the answers per element and decides whether substantial comments send the project back to an earlier phase. Owner decision 2026-11-19: later, not in the first version. | |
 
 ### Hand-off and export
 
@@ -162,6 +198,7 @@ Classified by the ISO/IEC 25010 quality characteristics.
 | R-05 | An imported file holds personal data by mistake. | Low | Medium | EL3 imports only name, description and source; the facilitator sees the rows before import. |
 | R-06 | CKM is unreachable or changes its API. | Medium | Low | One CKM client; the board works without CKM; a link stores the archetype ID and revision. |
 | R-07 | The consensus rule is changed after the results are known. | Low | High | DE1, DE2. |
+| R-08 | A round runs with one expert type missing, so the outcome reflects only part of the expertise. | Medium | Medium | DE11 shows the shortfall; DE12 records the reason; the decision report shows the panel per expert type. |
 
 ### Project risks
 
