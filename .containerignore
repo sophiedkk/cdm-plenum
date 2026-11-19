@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: Sophie de Klerk
+# SPDX-License-Identifier: Apache-2.0
+#
+# What the image builds leave out of their context: installed and built
+# trees, local state and secrets, and the tests.
+.git
+.github
+.claude
+node_modules
+.pnpm-store
+.output
+.nitro
+.tanstack
+coverage
+playwright-report
+test-results
+src/i18n
+project.inlang/cache
+.env
+.env.*
+!.env.example
+tests
+**/*.test.ts
+**/*.test.tsx

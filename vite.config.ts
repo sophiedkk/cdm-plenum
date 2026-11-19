@@ -16,7 +16,8 @@ export default defineConfig({
     tailwindcss(),
     // The default entry name `server` would collide with the `src/server/` directory.
     tanstackStart({ server: { entry: "./server-entry.ts" } }),
-    nitro(),
+    // Checks the configuration once at start (src/server/plugins/env-check.ts).
+    nitro({ plugins: ["./src/server/plugins/env-check.ts"] }),
     viteReact(),
   ],
 });

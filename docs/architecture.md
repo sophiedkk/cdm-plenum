@@ -345,7 +345,8 @@ Everything runs as containers with Compose on one host
 | Mailpit (development only) | catches invitation and sign-in e-mails locally |
 
 In production a reverse proxy in front of the app terminates TLS (Q-SEC-2),
-and the app sends e-mail through the institution's SMTP server.
+and the app sends e-mail through the institution's SMTP server. The operator
+procedure is [deployment.md](deployment.md).
 
 ## Quality requirements
 
