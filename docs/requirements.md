@@ -236,6 +236,7 @@ Assistant MCP server uses (`src/Tools/CkmService.php` in
 | Need | Call |
 |---|---|
 | Search archetypes (EL4) | `GET v1/archetypes?search-text=…&restrict-search-to-main-data=true&sort-key=RELEVANCE&size=…` with `Accept: application/json`; each row has the archetype ID, the CKM citeable identifier (`cid`), the status and the revision. |
+| Current revision of an archetype (EL4, EL7) | `GET v1/archetypes/{cid}` with `Accept: application/json`: the row with `revision` and `buildUid`. The XML carries no revision; its `description/other_details[@id="build_uid"]` matches `buildUid`. |
 | Element list of an archetype (EL4, EL7) | `GET v1/archetypes/{cid}/xml` (the archetype as XML) or `GET v1/archetypes/{cid}/adl`. |
 | Mind map of an archetype | `GET v1/archetypes/{cid}/mindmap` returns FreeMind 1.0.1 XML. |
 | Look up a `cid` from an archetype ID | `GET v1/archetypes/citeable-identifier/{archetype-id}`. |
