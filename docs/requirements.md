@@ -1,0 +1,210 @@
+<!-- SPDX-FileCopyrightText: Sophie de Klerk -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+# Requirements
+
+> **Status: working draft.** These requirements are a first proposal, written
+> before any code. Priorities, acceptance criteria and the requirements
+> themselves change after review with the owner and after the first sessions
+> with a group. When a requirement is unclear, missing, or conflicts with what
+> is being built, raise it with the owner instead of implementing it as
+> settled.
+
+cdm-plenum guides a group of clinicians, information modellers and
+terminologists through the early phase of developing a clinical data model:
+from the scope of a concept to an agreed list of data elements. It hands that
+list to the existing authoring tools and to review in the openEHR Clinical
+Knowledge Manager (CKM). It does not author ADL and does not run CKM review
+rounds.
+
+Each requirement has a stable ID. Code, tests, issues and pull requests cite
+these IDs (for example `EL3`, `Q-ANON-1`). An ID is never reused: a dropped
+requirement keeps its row with the status "Dropped".
+
+## How to read this
+
+- **Priority** uses MoSCoW: Must, Should, Could, Won't. Must is the first
+  working version (the MVP).
+- **Acceptance criterion** is the test that shows the requirement is met, in a
+  demo or an automated test. Every criterion is *(proposed)* until the owner
+  confirms it.
+- **Risk** refers to the [risk table](#risks).
+
+## Terms
+
+| Term | Meaning |
+|---|---|
+| Project | The work on one candidate concept, for example "blood pressure" or "anxiety (nursing focus)". |
+| Scope statement | The concept, its use cases, what is out of scope, and the source documents of a project. |
+| Candidate element | A proposed data element on the element board, with a name, a description, a proposed data type, a cardinality, its source and an optional link to an existing CKM archetype element. |
+| Stakeholder group | A group of participants with the same background, for example "nurses", "physicians" or "modellers". Results are shown per group. |
+| Round | One period in which participants rate the candidate elements. A round has a consensus rule and a closing date, both fixed before it opens. |
+| Consensus rule | The thresholds that decide whether an element is included, excluded or has no consensus, for example "at least 70% score 7 to 9 and at most 15% score 1 to 3". |
+
+## Roles
+
+A role is held per project, except administrator. A person can be facilitator
+of one project and participant in another.
+
+| Role | May | Sees |
+|---|---|---|
+| Facilitator | create and run a project; invite participants and assign them to a stakeholder group; edit the scope statement and the element board; set up, open and close rounds; export | everything in their own projects, including who took part in a round, never which participant gave which rating |
+| Participant | read the scope statement; add and comment on candidate elements; rate in an open round | the projects they are invited to; the group results of closed rounds; their own earlier ratings |
+| Administrator | manage user accounts and the administrator role | accounts and the activity log; no project content unless they also hold a project role |
+
+## Functional requirements
+
+### Projects and participants
+
+| ID | Requirement | Priority | Acceptance criterion | Risk |
+|---|---|---|---|---|
+| PR1 | Sign in with an account. An account exists only through an invitation (PR3) or an administrator (AD1). | Must | *(proposed)* A user without an account gets no access to any page except the sign-in page and the invitation page; there is no open registration. | R-01 |
+| PR2 | A facilitator creates a project for one concept. | Must | *(proposed)* The facilitator creates a project with a name and a short description, and becomes its facilitator. | |
+| PR3 | A facilitator invites participants by e-mail address and assigns each to one stakeholder group. | Must | *(proposed)* The invitee gets a single-use invitation link that expires; accepting it creates their account or adds the project to an existing one. A used or expired link is refused, and the refusal is tested. An invited participant sees the project after sign-in; a user who is not invited gets no access to it. Every participant belongs to exactly one stakeholder group of the project. | R-01 |
+| PR4 | A project shows its phase: scope, discover, decide, hand-off. | Should | *(proposed)* The project page shows the current phase; the facilitator moves the project to the next phase. | |
+| PR5 | A participant leaves a project. | Should | *(proposed)* After leaving, the participant has no access; their ratings in closed rounds stay in the results. | R-04 |
+
+### Scope
+
+| ID | Requirement | Priority | Acceptance criterion | Risk |
+|---|---|---|---|---|
+| SC1 | A facilitator writes the scope statement: concept, use cases, out of scope, source documents. | Must | *(proposed)* The scope statement has the four parts; participants can read it but not edit it. | R-02 |
+| SC2 | Participants comment on the scope statement. | Should | *(proposed)* A participant adds a comment; the facilitator sees all comments next to the statement. | |
+| SC3 | The group accepts the scope by consent, with a review date. | Could | *(proposed)* Participants answer "consent" or "objection with reason"; the facilitator sees the open objections and marks each one addressed. The method follows Sociocracy 3.0 consent decision making (<https://patterns.sociocracy30.org/consent-decision-making.html>). | R-02 |
+
+### Element board
+
+| ID | Requirement | Priority | Acceptance criterion | Risk |
+|---|---|---|---|---|
+| EL1 | Participants add candidate elements to the project's board. | Must | *(proposed)* A participant adds an element with a name and a description; data type, cardinality and source are optional. | |
+| EL2 | Other participants do not see who added an element. | Must | *(proposed)* No page or API response shown to a participant contains the author of an element; the facilitator sees the author. | R-03 |
+| EL3 | A facilitator imports candidate elements from a CSV file. | Must | *(proposed)* A CSV with a name and description column adds one element per row; a row without a name is reported and not imported; the file's name is stored as the source. | R-05 |
+| EL4 | A facilitator links a candidate element to an existing element of a CKM archetype. | Must | *(proposed)* The facilitator searches CKM from the element, picks an archetype and an element, and the element shows the archetype ID, its revision and the element's at-code. The search uses the CKM REST API (see [External sources](#external-sources)). | R-06 |
+| EL5 | A facilitator merges duplicate elements and edits an element's wording. | Must | *(proposed)* Merging two elements keeps both descriptions and both sources on the result; comments of both stay readable. | |
+| EL6 | Participants comment on an element. | Should | *(proposed)* A comment appears under the element; the author is hidden from other participants as in EL2. | R-03 |
+| EL7 | A facilitator imports the elements of an existing CKM archetype as candidates. | Should | *(proposed)* Every element of the chosen archetype becomes a candidate linked to that archetype element (EL4). | R-06 |
+| EL8 | Participants group elements in an open card sort. | Could | *(proposed)* Each participant sorts the elements into groups they name; the facilitator sees how often two elements share a group. | |
+
+### Delphi rounds
+
+| ID | Requirement | Priority | Acceptance criterion | Risk |
+|---|---|---|---|---|
+| DE1 | A facilitator sets up a rating round on the candidate elements, with a scale, a consensus rule and a closing date. The facilitator can adjust the scale and every threshold of the rule. | Must | *(proposed)* The default is a 1 to 9 scale and the rule "included when at least 70% score 7 to 9 and at most 15% score 1 to 3; excluded when at least 70% score 1 to 3 and at most 15% score 7 to 9; otherwise no consensus" (Williamson et al., COMET Handbook, <https://doi.org/10.1186/s13063-017-1978-4>). The facilitator can change the scale length and each percentage and score band before the round opens. A round cannot open without a rule and a closing date. | R-07 |
+| DE2 | The consensus rule and the closing date cannot change once a round is open. | Must | *(proposed)* After opening, the server refuses a change to the rule or the closing date; the refusal is tested. | R-07 |
+| DE3 | A participant rates each element in an open round, with an optional reason. | Must | *(proposed)* A participant saves a rating per element, changes it until the round closes, and can skip an element ("unable to rate"). | |
+| DE4 | Ratings are always anonymous to other participants. Whether the facilitator sees who gave which rating is a setting of the round, off by default. | Must | *(proposed)* The setting is fixed when the round opens, and participants see it before they rate. With the setting off, a test reads every response the facilitator gets and finds no participant identifier next to a rating; with it on, the facilitator sees each participant's ratings and other participants still see none. | R-03 |
+| DE5 | After a round closes, everyone in the project sees the result per element: the distribution, the median, the outcome under the rule, and the scores per stakeholder group. | Must | *(proposed)* Each element shows its full distribution, not only the median, and its outcome; each stakeholder group with at least 3 ratings has its own distribution (Brookes et al. 2016, <https://doi.org/10.1186/s13063-016-1479-x>). | R-03 |
+| DE6 | The facilitator sees the response rate of each round, per stakeholder group. | Must | *(proposed)* The round page shows invited, started and completed participants per group. | R-04 |
+| DE7 | A facilitator opens a next round on the elements without consensus. | Should | *(proposed)* The next round carries over the elements with "no consensus"; each participant sees their own earlier rating and the group result next to each element. | |
+| DE8 | Reasons given in a round are shown anonymously in the next round. | Should | *(proposed)* Every reason from round N appears without author next to its element in round N+1. | R-03 |
+| DE9 | A participant who moves far from their earlier rating gives a reason. | Could | *(proposed)* A change of 3 or more points on the scale asks for a reason before saving. | |
+| DE10 | Element order is randomised per participant. | Could | *(proposed)* Two participants in the same round see the elements in a different order; one participant keeps their own order within the round. | |
+
+### Hand-off and export
+
+| ID | Requirement | Priority | Acceptance criterion | Risk |
+|---|---|---|---|---|
+| EX1 | Export the elements and their round outcomes as CSV. | Must | *(proposed)* One row per element with name, description, data type, cardinality, source, linked CKM element and the outcome of each round; the file opens correctly in a spreadsheet program. | |
+| EX2 | Export the included elements as a FreeMind mind map (`.mm`), the format CKM itself serves for archetypes. | Must | *(proposed)* The file opens in Freeplane and in XMind and shows the concept as the root and each included element as a node with its description. | |
+| EX3 | Export a decision report of the project. | Should | *(proposed)* The report holds the scope statement, the panel per stakeholder group, the consensus rule of each round, the response rate per round, and the outcome per element. Its structure follows the ACCORD reporting guideline (<https://doi.org/10.1371/journal.pmed.1004326>). | |
+| EX4 | Export the anonymised ratings for analysis. | Should | *(proposed)* One row per rating with a random participant code per project, the stakeholder group, round, element and score; the code is stable within the project and does not appear in any other export. | R-03 |
+| EX5 | Export the included elements as an ADL archetype skeleton. | Could | *(proposed)* The skeleton passes the openEHR archetype parser of the ADL Workbench without errors. | |
+
+### Administration
+
+| ID | Requirement | Priority | Acceptance criterion | Risk |
+|---|---|---|---|---|
+| AD1 | An administrator creates and deactivates accounts. | Must | *(proposed)* A deactivated account can no longer sign in; its ratings stay in closed rounds. | |
+| AD2 | An activity log records sign-ins, round openings and closings, and exports. | Should | *(proposed)* Each entry has time, actor and action, and no rating value. | |
+
+### Won't
+
+| ID | Requirement | Priority | Reason |
+|---|---|---|---|
+| W1 | Author or edit ADL archetypes in the tool. | Won't | Archetype Designer and the ADL Workbench do this; cdm-plenum hands off to them. |
+| W2 | Run formal CKM review rounds or publish to CKM. | Won't | CKM owns review and publication. |
+| W3 | Store patient data. | Won't | The tool holds model elements and opinions about them, never patient records. |
+| W4 | Templates (OET/OPT). | Won't | A template combines published archetypes; that work starts after the hand-off. |
+| W5 | zib and FHIR export in the first version. | Won't | openEHR first; the element model stays neutral so these can follow. |
+
+## Quality requirements
+
+Classified by the ISO/IEC 25010 quality characteristics.
+
+| ID | Characteristic | Requirement | Acceptance criterion |
+|---|---|---|---|
+| Q-ANON-1 | Security | Anonymity of authors and ratings is enforced on the server. | Tests per role show that no response to a participant names another participant as the author of an element, comment or rating, and that no response to the facilitator links a rating to a participant unless the round's setting allows it (DE4). |
+| Q-SEC-1 | Security | Every page and server function checks the session and the project role. | Tests with one account per role find no project data reachable outside the role. |
+| Q-SEC-2 | Security | HTTPS for all traffic. | All traffic is served over HTTPS behind the reverse proxy. |
+| Q-PRIV-1 | Privacy | Store only what the method needs: name, e-mail address, stakeholder group and project contributions. | The database schema holds no other personal data; the data protection check with the institution's privacy officer is approved before the first study. |
+| Q-PRIV-2 | Privacy | Logs never carry a rating, an element text or a person's name. | A test over the log output of a full round finds none of these. |
+| Q-PRIV-3 | Privacy | Group results never show a group smaller than 3. | A stakeholder group with fewer than 3 ratings on an element is shown only in the overall result. |
+| Q-AUDIT-1 | Traceability | Every element links to its source and to its rating history. | For any included element the export shows where it came from and its outcome in each round. |
+| Q-ACC-1 | Accessibility | WCAG 2.1 level AA. | An axe check and a keyboard-only walkthrough find no errors at level A and AA. |
+| Q-ACC-2 | Accessibility | Outcomes do not rely on colour alone. | Every outcome (included, excluded, no consensus) has text next to its colour. |
+| Q-I18N-1 | Usability | The interface is available in English and Dutch. | Every user-visible text comes from the message catalogue; switching to Dutch leaves no English text on the Must screens. |
+| Q-PERF-1 | Performance | Fast pages. | Pages load within 2 seconds with a project of 100 elements and 50 participants. |
+| Q-MAINT-1 | Maintainability | Transferable to a new developer. | Test coverage of the core is at least 70%; `CLAUDE.md` and the architecture documentation are up to date. |
+| Q-MAINT-2 | Maintainability | Runs as containers through Compose. | The whole stack starts from the Compose file on a clean machine with Podman. |
+
+## Risks
+
+### Product risks
+
+| ID | Risk | Likelihood | Impact | Measure |
+|---|---|---|---|---|
+| R-01 | A person sees a project they are not invited to. | Low | High | PR1, PR3, Q-SEC-1. |
+| R-02 | The scope stays vague, so the element list keeps growing. | Medium | Medium | SC1, SC3. |
+| R-03 | A participant's opinion becomes traceable to them, so senior voices dominate or people hold back. | Medium | High | EL2, DE4, DE5, Q-ANON-1, Q-PRIV-3. |
+| R-04 | Participants drop out between rounds, so the result overstates consensus. | High | Medium | DE6, PR5; short rounds; the decision report shows the response rate. |
+| R-05 | An imported file holds personal data by mistake. | Low | Medium | EL3 imports only name, description and source; the facilitator sees the rows before import. |
+| R-06 | CKM is unreachable or changes its API. | Medium | Low | One CKM client; the board works without CKM; a link stores the archetype ID and revision. |
+| R-07 | The consensus rule is changed after the results are known. | Low | High | DE1, DE2. |
+
+### Project risks
+
+| ID | Risk | Likelihood | Impact | Measure |
+|---|---|---|---|---|
+| P-01 | Too few clinicians available for a test round. | Medium | High | Plan the first study early with a course group; allow small panels. |
+| P-02 | A research study needs ethical or privacy approval that takes time. | Medium | Medium | Start the privacy check (Q-PRIV-1) before the first study. |
+| P-03 | Single maintainer. | Medium | Medium | Guard the scope with MoSCoW; drop Could items when time runs short. |
+
+## Evaluation measures
+
+The first use is research and teaching, so the tool records what an evaluation
+needs. These are proposals.
+
+| ID | Measure | Calculation |
+|---|---|---|
+| E-01 | Response rate per round | Completed participants divided by invited participants, per round and per stakeholder group. |
+| E-02 | Consensus reached | Share of elements included or excluded after each round. |
+| E-03 | Rounds to consensus | Number of rounds until no element has "no consensus", or until the facilitator stops. |
+| E-04 | Reuse share | Share of included elements linked to an existing CKM archetype element. |
+| E-05 | Element sources | Included elements per source (brainstorm, CSV import, CKM import). |
+
+## External sources
+
+The CKM REST API at `https://ckm.openehr.org/ckm/rest` answers without
+sign-in. These calls were checked on 2026-11-19 and are the ones the openEHR
+Assistant MCP server uses (`src/Tools/CkmService.php` in
+<https://github.com/Cadasto/openehr-assistant-mcp>):
+
+| Need | Call |
+|---|---|
+| Search archetypes (EL4) | `GET v1/archetypes?search-text=…&restrict-search-to-main-data=true&sort-key=RELEVANCE&size=…` with `Accept: application/json`; each row has the archetype ID, the CKM citeable identifier (`cid`), the status and the revision. |
+| Element list of an archetype (EL4, EL7) | `GET v1/archetypes/{cid}/xml` (the archetype as XML) or `GET v1/archetypes/{cid}/adl`. |
+| Mind map of an archetype | `GET v1/archetypes/{cid}/mindmap` returns FreeMind 1.0.1 XML. |
+| Look up a `cid` from an archetype ID | `GET v1/archetypes/citeable-identifier/{archetype-id}`. |
+
+If the API is unreachable or changes (R-06), the fallback is the openEHR CKM
+mirror on GitHub (<https://github.com/openEHR/CKM-mirror>), which openEHR
+keeps in sync with the international CKM.
+
+## Open questions
+
+| ID | Question |
+|---|---|
+| O-1 | Resolved 2026-11-19: the CKM REST API, see [External sources](#external-sources). |
+| O-2 | Resolved 2026-11-19: FreeMind `.mm`, as CKM serves it (EX2). |
+| O-3 | Resolved 2026-11-19 by the owner: accounts come from an invitation system (PR1, PR3). How the invitation reaches the invitee (e-mail sent by the app, or a link the facilitator passes on) and how the invitee signs in afterwards is an architecture decision. |
+| O-4 | Should the facilitator be able to take part as a participant in their own project? |
