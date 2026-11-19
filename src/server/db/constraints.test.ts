@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The rules the database holds itself (docs/architecture.md#data): cardinality and data type
-// checks, the round lock of DE2, and the rating trigger of DE3.
+// checks, the round lock of DE2, the opening snapshot of DE12, and the rating trigger of DE3.
 import { type Kysely, sql } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DB } from "./schema.gen.ts";
@@ -71,6 +71,16 @@ async function element(projectId: string, name = "Systolic") {
   return row.id;
 }
 
+/** The opening snapshot of a round whose panel met the minimum (DE12). */
+const FULL_PANEL = {
+  panel_clinical: 2,
+  minimum_clinical: 2,
+  panel_terminology: 1,
+  minimum_terminology: 1,
+  panel_architecture: 2,
+  minimum_architecture: 2,
+};
+
 async function round(projectId: string, opened: boolean) {
   const row = await db
     .insertInto("round")
@@ -78,7 +88,7 @@ async function round(projectId: string, opened: boolean) {
       project_id: projectId,
       number: 1,
       closes_at: new Date(Date.now() + 86_400_000),
-      opened_at: opened ? new Date() : null,
+      ...(opened ? { opened_at: new Date(), ...FULL_PANEL } : {}),
     })
     .returning("id")
     .executeTakeFirstOrThrow();
@@ -170,6 +180,85 @@ describe("round", () => {
     await db.updateTable("round").set({ closed_at: new Date() }).where("id", "=", r).execute();
   });
 
+  it("refuses a change to the opening snapshot once open (DE12)", async () => {
+    const r = await round(await project(), true);
+    for (const change of [
+      { panel_clinical: 3 },
+      { minimum_architecture: 1 },
+      { below_minimum_reason: "Teaching group" },
+    ]) {
+      await expectRefused(
+        (trx) => trx.updateTable("round").set(change).where("id", "=", r).execute(),
+        /round_rule_locked/,
+      );
+    }
+  });
+
+  it("refuses an open round without its panel snapshot, and a draft with one", async () => {
+    const p = await project();
+    const closes_at = new Date(Date.now() + 86_400_000);
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("round")
+          .values({ project_id: p, number: 1, closes_at, opened_at: new Date() })
+          .execute(),
+      /round_panel_snapshot_check/,
+    );
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("round")
+          .values({ project_id: p, number: 1, closes_at, ...FULL_PANEL })
+          .execute(),
+      /round_panel_snapshot_check/,
+    );
+  });
+
+  it("holds a reason exactly when the panel was below the minimum (DE12)", async () => {
+    const p = await project();
+    const values = { project_id: p, closes_at: new Date(), opened_at: new Date() };
+    const below = { ...FULL_PANEL, panel_terminology: 0 };
+    for (const [number, snapshot] of [
+      [1, { ...below }],
+      [2, { ...below, below_minimum_reason: "  " }],
+      [3, { ...FULL_PANEL, below_minimum_reason: "Not needed" }],
+    ] as const) {
+      await expectRefused(
+        (trx) =>
+          trx
+            .insertInto("round")
+            .values({ ...values, number, ...snapshot })
+            .execute(),
+        /round_panel_snapshot_check/,
+      );
+    }
+    await db
+      .insertInto("round")
+      .values({ ...values, number: 4, ...below, below_minimum_reason: "Teaching group" })
+      .execute();
+  });
+
+  it("refuses a negative panel count", async () => {
+    const p = await project();
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("round")
+          .values({
+            project_id: p,
+            number: 1,
+            closes_at: new Date(),
+            opened_at: new Date(),
+            ...FULL_PANEL,
+            panel_clinical: -1,
+            below_minimum_reason: "x",
+          })
+          .execute(),
+      /round_panel_clinical_check/,
+    );
+  });
+
   it("refuses bands that overlap", async () => {
     const p = await project();
     await expectRefused(
@@ -185,6 +274,42 @@ describe("round", () => {
           })
           .execute(),
       /round_scale_check/,
+    );
+  });
+});
+
+describe("project panel (DE11, DE13)", () => {
+  it("starts as change class D and refuses a class outside A to D", async () => {
+    const p = await project();
+    const row = await db
+      .selectFrom("project")
+      .select("change_class")
+      .where("id", "=", p)
+      .executeTakeFirstOrThrow();
+    expect(row.change_class).toBe("D");
+    await expectRefused(
+      (trx) => trx.updateTable("project").set({ change_class: "E" }).where("id", "=", p).execute(),
+      /project_change_class_check/,
+    );
+  });
+
+  it("refuses an unknown expert type and a negative minimum", async () => {
+    const p = await project();
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("project_panel_minimum")
+          .values({ project_id: p, expert_type: "billing", minimum: 1 })
+          .execute(),
+      /project_panel_minimum_expert_type_check/,
+    );
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("project_panel_minimum")
+          .values({ project_id: p, expert_type: "clinical", minimum: -1 })
+          .execute(),
+      /project_panel_minimum_minimum_check/,
     );
   });
 });

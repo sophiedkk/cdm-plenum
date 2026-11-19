@@ -135,10 +135,10 @@ access goes through Kysely ([ADR 0002](adr/0002-stack-follows-edulims.md)).
 | Element source | `element_source` | kind (`brainstorm`, `csv`, `ckm`), label (file name or archetype ID) |
 | CKM link | `element_ckm_link` | archetype ID, CKM `cid`, revision at linking time, at-code, element name as CKM showed it |
 | Comment | `element_comment` | author hidden as for elements (EL6) |
-| Round | `round` | number, scale minimum and maximum, the rule's percentages and score bands, opens and closes at, `facilitator_sees_raters`; when it opens: the panel and the minimum per expert type, and the reason for opening below the minimum (DE12) |
+| Round | `round` | number, scale minimum and maximum, the rule's percentages and score bands, opens and closes at, `facilitator_sees_raters`; when it opens: `panel_*` and `minimum_*` per expert type and `below_minimum_reason` (DE12), held by one CHECK: a draft has no snapshot, an open round all of it, a reason exactly when below the minimum |
 | Elements in a round | `round_element` | which elements are rated; the outcome is written when the round closes |
 | Rating pseudonym | `rating_code` | one random code per participant per project ([ADR 0005](adr/0005-rating-pseudonyms-and-anonymity.md)) |
-| Rating | `rating` | round, element, rating code, score or "unable to rate", optional reason |
+| Rating | `rating` | round, element, rating code, score or "unable to rate", optional reason, and `team_id`: the rater's stakeholder group when the rating was saved, so group results never read the code-to-member table (ADR 0005) |
 | Activity log | `activity_log` | time, actor, action, target id; never a score, an element text or a name (Q-PRIV-2) |
 
 The database holds the rules it can check itself, so no code path can skip
@@ -146,8 +146,8 @@ them (`src/server/db/migrations/0002_projects.ts`):
 
 - `CHECK` constraints on the data type key, the cardinality, the phase, the
   outcome and the round's scale and percentages.
-- A trigger refuses a change to a round's rule, closing date or rater setting
-  once the round is open (DE2).
+- A trigger refuses a change to a round's rule, closing date, rater setting or
+  panel snapshot once the round is open (DE2, DE12).
 - A trigger accepts a rating only while its round is open, with a score inside
   the round's scale and a rating code of the round's project (DE3).
 - Rating codes are random version 4 UUIDs; other ids are `uuidv7()`.
@@ -219,9 +219,19 @@ consulted settles it, and the decision report states it.
 The default rule is the one in DE1. Every threshold is stored on the round,
 so a project can use another rule and the report shows which one applied.
 
-Group results are calculated per stakeholder group and shown only for a group
-with at least 3 ratings on the element (Q-PRIV-3); smaller groups count in
-the overall result only.
+Group results are calculated per stakeholder group, taken from
+`rating.team_id`, and shown only for a group with at least 3 ratings on the
+element (Q-PRIV-3); smaller groups count in the overall result only.
+
+### Round life cycle
+
+A round is a draft until the facilitator opens it; only a draft can change.
+One round runs at a time: a new round needs the previous one closed. The
+facilitator closes a round once its closing date has passed, never earlier,
+because an early close would shorten a date DE2 fixes; between the date and
+the close the round shows as awaiting close and the database already refuses
+ratings. Closing writes each element's outcome in one transaction. Only
+participants rate (O-4 is open). Reads never change a round.
 
 ## Application structure
 

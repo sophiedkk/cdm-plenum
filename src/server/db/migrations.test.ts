@@ -7,10 +7,12 @@ import { NO_MIGRATIONS } from "kysely/migration";
 import pg from "pg";
 import { afterEach, describe, expect, it } from "vitest";
 import { DATA_TYPES } from "@/lib/data-types";
+import { CHANGE_CLASSES } from "@/lib/panel";
 import { createAuth } from "../auth.ts";
 import { parseEnv } from "../env.ts";
 import { createMigrator } from "./index.ts";
 import { DATA_TYPE_KEYS } from "./migrations/0002_projects.ts";
+import { CHANGE_CLASS_KEYS } from "./migrations/0004_panel.ts";
 import { migrations } from "./migrations/index.ts";
 import { baseTestDatabaseUrl, createTestDb } from "./test-db.ts";
 import { createRunDatabase, dropRunDatabase } from "./test-run-database.ts";
@@ -63,5 +65,9 @@ describe("migrations", () => {
 
   it("allow exactly the data type keys of src/lib/data-types.ts", () => {
     expect([...DATA_TYPE_KEYS]).toEqual(DATA_TYPES.map((type) => type.key));
+  });
+
+  it("allow exactly the change classes of src/lib/panel.ts", () => {
+    expect([...CHANGE_CLASS_KEYS]).toEqual([...CHANGE_CLASSES]);
   });
 });
