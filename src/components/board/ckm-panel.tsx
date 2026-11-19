@@ -218,9 +218,18 @@ export function CkmPanel({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {view.elements.map((element) => (
+                {view.elements.map((element, index) => (
                   <TableRow key={element.path}>
-                    <TableCell className="whitespace-normal">{element.name}</TableCell>
+                    <TableCell className="whitespace-normal">
+                      {element.name}
+                      {/* The path tells apart elements with the same name in other events. */}
+                      <span
+                        id={`ckm-path-${index}`}
+                        className="block font-mono text-xs break-all text-muted-foreground"
+                      >
+                        {element.path}
+                      </span>
+                    </TableCell>
                     <TableCell className="font-mono text-xs">{element.atCode}</TableCell>
                     <TableCell className="font-mono text-xs whitespace-normal">
                       {rmTypes(element)}
@@ -233,6 +242,7 @@ export function CkmPanel({
                           size="sm"
                           variant="outline"
                           disabled={busy}
+                          aria-describedby={`ckm-path-${index}`}
                           onClick={() =>
                             run(
                               () => actions.link(view, element),
