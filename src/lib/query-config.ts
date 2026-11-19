@@ -10,6 +10,10 @@ export const STALE_TIME = {
   session: 0,
   /** The project list and one project's header: other members rarely change them. */
   projects: 30_000,
+  /** Stakeholder groups, members and invitations: the facilitator's own changes invalidate them. */
+  members: 30_000,
+  /** The administration page: always revalidated, so a change by another administrator shows. */
+  admin: 0,
 } as const;
 
 /** The `staleTime` of a query that sets none. */

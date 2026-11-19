@@ -6,6 +6,7 @@
 // refusals.test.ts checks the map against the server's code lists and both catalogues.
 import { m } from "@/i18n/messages";
 import type { SignInError } from "@/lib/sign-in";
+import type { AdminActionError } from "@/server/admin/queries";
 import type { CkmActionError } from "@/server/ckm/queries";
 import type { ProjectActionError } from "@/server/projects/access";
 import type { RoundActionError } from "@/server/rounds/access";
@@ -19,7 +20,12 @@ export const AUTH_REFUSALS = [
 export type AuthRefusal = (typeof AUTH_REFUSALS)[number];
 
 /** Every refusal code a server function returns today. */
-export type RefusalCode = ProjectActionError | RoundActionError | CkmActionError | AuthRefusal;
+export type RefusalCode =
+  | ProjectActionError
+  | RoundActionError
+  | CkmActionError
+  | AdminActionError
+  | AuthRefusal;
 
 /** The message key of each refusal code; `satisfies` makes a missing code a type error. */
 export const REFUSAL_MESSAGE_KEYS = {
@@ -63,6 +69,8 @@ export const REFUSAL_MESSAGE_KEYS = {
   ckm_element_not_found: "common_refusal_ckm_element_not_found",
   ckm_no_elements: "common_refusal_ckm_no_elements",
   ckm_already_imported: "common_refusal_ckm_already_imported",
+  account_not_found: "common_refusal_account_not_found",
+  own_account: "common_refusal_own_account",
   unauthenticated: "common_refusal_unauthenticated",
   not_invited: "sign_in_error_not_invited",
   invalid_link: "sign_in_error_invalid_link",

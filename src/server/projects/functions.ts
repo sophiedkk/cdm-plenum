@@ -11,6 +11,8 @@ import {
   createGroup,
   createProject,
   getProject,
+  leaveProject,
+  listGroupMembers,
   listGroups,
   listProjects,
   removeGroup,
@@ -42,6 +44,16 @@ export const listGroupsFn = createServerFn({ method: "GET" })
   .middleware([requireSession])
   .validator(projectInput)
   .handler(({ data, context }) => listGroups(getDb(), context.userId, data.projectId));
+
+export const listGroupMembersFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => listGroupMembers(getDb(), context.userId, data.projectId));
+
+export const leaveProjectFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => leaveProject(getDb(), context.userId, data.projectId));
 
 export const createGroupFn = createServerFn({ method: "POST" })
   .middleware([requireSession])

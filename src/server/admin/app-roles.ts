@@ -20,11 +20,15 @@ export function normalizeEmail(email: string): string {
 export type GrantOutcome = "granted" | "already_granted";
 export type RevokeOutcome = "revoked" | "not_granted";
 
-/** Grants `role` to the address; a second grant changes nothing. */
+/**
+ * Grants `role` to the address; a second grant changes nothing. `actorUserId` is the
+ * administrator who granted it on the administration page; the host command has none.
+ */
 export async function grantAppRole(
   db: Kysely<DB>,
   email: string,
   role: AppRole,
+  actorUserId: string | null = null,
 ): Promise<GrantOutcome> {
   const row = await db
     .insertInto("app_role")
@@ -33,7 +37,7 @@ export async function grantAppRole(
     .returning("email")
     .executeTakeFirst();
   if (!row) return "already_granted";
-  await logRoleChange(db, email, role, "app_role_granted");
+  await logRoleChange(db, email, role, "app_role_granted", actorUserId);
   return "granted";
 }
 
@@ -45,6 +49,7 @@ export async function revokeAppRole(
   db: Kysely<DB>,
   email: string,
   role: AppRole,
+  actorUserId: string | null = null,
 ): Promise<RevokeOutcome> {
   const row = await db
     .deleteFrom("app_role")
@@ -53,7 +58,7 @@ export async function revokeAppRole(
     .returning("email")
     .executeTakeFirst();
   if (!row) return "not_granted";
-  await logRoleChange(db, email, role, "app_role_revoked");
+  await logRoleChange(db, email, role, "app_role_revoked", actorUserId);
   return "revoked";
 }
 
@@ -90,6 +95,7 @@ async function logRoleChange(
   email: string,
   role: AppRole,
   action: "app_role_granted" | "app_role_revoked",
+  actorUserId: string | null,
 ): Promise<void> {
   const user = await db
     .selectFrom("user")
@@ -98,6 +104,11 @@ async function logRoleChange(
     .executeTakeFirst();
   await db
     .insertInto("activity_log")
-    .values({ action, target_type: `app_role:${role}`, target_id: user?.id ?? null })
+    .values({
+      action,
+      actor_user_id: actorUserId,
+      target_type: `app_role:${role}`,
+      target_id: user?.id ?? null,
+    })
     .execute();
 }

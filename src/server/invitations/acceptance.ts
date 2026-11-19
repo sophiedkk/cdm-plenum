@@ -5,6 +5,7 @@
 // ADR 0004). better-auth calls both from its database hooks (src/server/auth.ts).
 import { randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
+import { LEFT_ROLE } from "@/lib/project-roles";
 import { hasAnyAppRole, normalizeEmail } from "../admin/app-roles.ts";
 import type { DB } from "../db/schema.gen.ts";
 
@@ -75,11 +76,19 @@ export async function acceptInvitationsOnSignIn(
       const projectId = invitation.organizationId;
       let member = await trx
         .selectFrom("member")
-        .select("id")
+        .select(["id", "role"])
         .where("organizationId", "=", projectId)
         .where("userId", "=", userId)
         .executeTakeFirst();
-      if (!member) {
+      if (member?.role === LEFT_ROLE) {
+        // Someone who left (PR5) joins again with the rating code they had.
+        await trx
+          .updateTable("member")
+          .set({ role: "participant" })
+          .where("id", "=", member.id)
+          .execute();
+        await joinGroup(trx, projectId, invitation.teamId, userId, now);
+      } else if (!member) {
         member = await trx
           .insertInto("member")
           .values({
@@ -89,7 +98,7 @@ export async function acceptInvitationsOnSignIn(
             role: "participant",
             createdAt: now,
           })
-          .returning("id")
+          .returning(["id", "role"])
           .executeTakeFirstOrThrow();
         await joinGroup(trx, projectId, invitation.teamId, userId, now);
       }

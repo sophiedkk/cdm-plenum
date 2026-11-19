@@ -5,6 +5,7 @@
 // in one of the server lists fails here until it has a key and an English and Dutch text.
 import { afterEach, describe, expect, it } from "vitest";
 import { baseLocale, overwriteGetLocale } from "@/i18n/runtime";
+import { ADMIN_ACTION_ERRORS } from "@/server/admin/queries";
 import { CKM_ACTION_ERRORS } from "@/server/ckm/queries";
 import { PROJECT_ACTION_ERRORS } from "@/server/projects/access";
 import { ROUND_ACTION_ERRORS } from "@/server/rounds/access";
@@ -16,6 +17,7 @@ const SERVER_CODES = [
     ...PROJECT_ACTION_ERRORS,
     ...ROUND_ACTION_ERRORS,
     ...CKM_ACTION_ERRORS,
+    ...ADMIN_ACTION_ERRORS,
     ...AUTH_REFUSALS,
   ]),
 ];
