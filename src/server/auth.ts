@@ -13,6 +13,7 @@ import type { Kysely } from "kysely";
 import { m } from "@/i18n/messages";
 import { projectAccessControl, projectRoles } from "@/lib/project-roles";
 import { SIGN_IN_LINK_MINUTES, SIGN_UP_REFUSED } from "@/lib/sign-in";
+import { isDeactivated, isDeactivatedEmail } from "./admin/queries.ts";
 import { getDb } from "./db/index.ts";
 import type { DB } from "./db/schema.gen.ts";
 import { type Env, getEnv } from "./env.ts";
@@ -94,12 +95,27 @@ const organizationGuard = {
   },
 } satisfies BetterAuthPlugin;
 
+// NOTE: #14. The magic link plugin allows 5 requests per 60 s per client address on both paths
+// (https://www.better-auth.com/docs/concepts/rate-limit); a class behind one school address
+// needs more. The link itself stays single use and expires after SIGN_IN_LINK_MINUTES.
+export const SIGN_IN_RATE_LIMIT = { window: 60, max: 30 } as const;
+
+/** The paths `SIGN_IN_RATE_LIMIT` applies to: asking for a sign-in link, and opening one. */
+export const SIGN_IN_RATE_LIMITED_PATHS = ["/sign-in/magic-link", "/magic-link/verify"] as const;
+
 export function createAuth(env: Env, db: Kysely<DB>, deps: AuthDeps) {
   return betterAuth({
     database: { db, type: "postgres" },
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
     disabledPaths: [...ORGANIZATION_PATHS],
+    rateLimit: {
+      // better-auth's own default: on in production only.
+      enabled: deps.production,
+      customRules: Object.fromEntries(
+        SIGN_IN_RATE_LIMITED_PATHS.map((path) => [path, { ...SIGN_IN_RATE_LIMIT }]),
+      ),
+    },
     databaseHooks: {
       user: {
         create: {
@@ -116,7 +132,18 @@ export function createAuth(env: Env, db: Kysely<DB>, deps: AuthDeps) {
       },
       session: {
         create: {
+          // AD1: a deactivated account gets no session. `false` makes the link redirect to the
+          // sign-in page with an error, as any link that does not work.
+          before: async (session) => {
+            if (await isDeactivated(db, session.userId)) return false;
+          },
           after: async (session) => {
+            // AD2: a sign-in, by account id only. A failed log entry does not refuse the sign-in.
+            await db
+              .insertInto("activity_log")
+              .values({ actor_user_id: session.userId, action: "signed_in" })
+              .execute()
+              .catch(() => console.error(`sign_in_log_failed user=${session.userId}`));
             try {
               await acceptInvitationsOnSignIn(db, session.userId, new Date());
             } catch (error) {
@@ -138,6 +165,7 @@ export function createAuth(env: Env, db: Kysely<DB>, deps: AuthDeps) {
           // sign-in form does not tell which addresses have an account or an invitation.
           const now = new Date();
           if (!(await hasAccount(db, email)) && !(await mayCreateAccount(db, email, now))) return;
+          if (await isDeactivatedEmail(db, email)) return;
           await deliverSignInLink(
             deps.mailer,
             {

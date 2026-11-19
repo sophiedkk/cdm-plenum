@@ -82,6 +82,14 @@ reads use the same check without a lock (`readProject`). A user without a role i
 facilitator action gets `forbidden`. Route guards only steer navigation; they
 are not the security boundary (Q-SEC-1).
 
+A participant sees each stakeholder group with its expert type and number of
+participants, never names; the facilitator sees names and addresses. A
+participant who leaves keeps a member row with the role `left`, which no
+access check accepts, so their rating code and authorship stay; an invitation
+restores the row and the same code. An administrator can neither deactivate
+their own account nor revoke their own administrator right, so the last
+administrator cannot be locked out.
+
 A new project starts with nine stakeholder groups, each with an expert type
 (PR6): the clinical groups general medicine, primary care, mental health
 care, nursing, medication and allergies, patient and administrative, one

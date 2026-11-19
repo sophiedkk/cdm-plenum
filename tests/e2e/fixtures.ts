@@ -117,9 +117,12 @@ export async function requestSignInLink(
   return linkIn(await takeMessage(email), appUrl());
 }
 
-/** Signs in with the e-mail link and returns once the app has landed on its start page. */
-export async function signIn(page: Page, email: string): Promise<void> {
-  await page.goto(await requestSignInLink(page, email));
+/**
+ * Signs in with the e-mail link and returns once the app has landed on its start page. Pass the
+ * locale of the browser, so the sign-in form is found by its text in that language.
+ */
+export async function signIn(page: Page, email: string, locale: Locale = "en"): Promise<void> {
+  await page.goto(await requestSignInLink(page, email, locale));
   // A signed-in user is sent from / to their projects.
   await expect(page).toHaveURL((url) => url.pathname === "/projects");
   expect(await sessionEmail(page)).toBe(email);
@@ -140,7 +143,7 @@ interface WorkerFixtures {
 export const test = base.extend<object, WorkerFixtures>({
   // NOTE: better-auth reads the client address from a single-value X-Forwarded-For, as behind
   // the reverse proxy (docs/deployment.md). A new address per test keeps the magic link rate
-  // limit (5 requests per 60 s per address) from failing parallel tests.
+  // limit (30 requests per 60 s per address, src/server/auth.ts) from failing parallel tests.
   extraHTTPHeaders: async ({ extraHTTPHeaders }, use) => {
     const [a, b, c] = randomBytes(3);
     await use({ ...extraHTTPHeaders, "X-Forwarded-For": `10.${a}.${b}.${c}` });

@@ -14,9 +14,19 @@ export function isProjectRole(value: unknown): value is ProjectRole {
   return typeof value === "string" && (PROJECT_ROLES as readonly string[]).includes(value);
 }
 
+/**
+ * The `member.role` of a participant who left the project (PR5). It is no project role, so every
+ * access check treats them as a non-member, while the row keeps their rating code (ADR 0005)
+ * and their authorship.
+ */
+// NOTE: PR5, our own design: no spec governs leaving. Deleting the row would delete the rating
+// code, which the ratings of closed rounds reference.
+export const LEFT_ROLE = "left";
+
 /** What can be done in a project, by resource; the roles below grant subsets. */
 export const PROJECT_STATEMENTS = {
   invitation: ["create", "list", "cancel"],
+  member: ["list"],
   group: ["create", "update", "delete"],
   scope: ["update", "read_authors"],
   element: ["update", "merge", "import", "set_values", "read_authors"],
@@ -35,6 +45,7 @@ export const projectAccessControl = createAccessControl(PROJECT_STATEMENTS);
 export const projectRoles = {
   facilitator: projectAccessControl.newRole({
     invitation: ["create", "list", "cancel"],
+    member: ["list"],
     group: ["create", "update", "delete"],
     scope: ["update", "read_authors"],
     element: ["update", "merge", "import", "set_values", "read_authors"],

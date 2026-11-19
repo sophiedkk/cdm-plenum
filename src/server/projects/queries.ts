@@ -13,11 +13,19 @@ import {
   type DefaultGroupKey,
   type ExpertType,
   isProjectRole,
+  LEFT_ROLE,
   type ProjectRole,
 } from "@/lib/project-roles";
 import { userHasAppRole } from "../admin/app-roles.ts";
 import type { DB } from "../db/schema.gen.ts";
-import { done, type ProjectResult, readProject, refused, withProject } from "./access.ts";
+import {
+  done,
+  lockProject,
+  type ProjectResult,
+  readProject,
+  refused,
+  withProject,
+} from "./access.ts";
 import type {
   CreateGroupInput,
   CreateProjectInput,
@@ -141,35 +149,147 @@ export interface StakeholderGroup {
   id: string;
   name: string;
   expertType: ExpertType;
+  /** How many participants are in the group; no names, so every member may see it. */
+  participants: number;
 }
 
-/** The stakeholder groups of a project, for any member (`not_found` for anyone else). */
+/**
+ * The stakeholder groups of a project with the number of participants in each, for any member
+ * (`not_found` for anyone else). The panel composition is visible without naming anyone.
+ */
 export async function listGroups(
   db: Kysely<DB>,
   userId: string,
   projectId: string,
 ): Promise<ProjectResult<StakeholderGroup[]>> {
-  const member = await db
-    .selectFrom("member")
-    .select("id")
-    .where("organizationId", "=", projectId)
-    .where("userId", "=", userId)
-    .executeTakeFirst();
-  if (!member) return refused("not_found");
-  const rows = await db
-    .selectFrom("team")
-    .select(["id", "name", "expert_type"])
-    .where("organizationId", "=", projectId)
-    .orderBy("name")
-    .orderBy("id")
-    .execute();
-  return done(
-    rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      expertType: row.expert_type as ExpertType,
-    })),
-  );
+  return readProject(db, userId, projectId, null, async (reader, project) => {
+    const rows = await reader
+      .selectFrom("team")
+      .leftJoin("teamMember", "teamMember.teamId", "team.id")
+      .leftJoin("member", (join) =>
+        join
+          .onRef("member.userId", "=", "teamMember.userId")
+          .on("member.organizationId", "=", project.id)
+          .on("member.role", "=", "participant"),
+      )
+      .select(["team.id", "team.name", "team.expert_type"])
+      .select((eb) => eb.fn.count<string>("member.id").as("participants"))
+      .where("team.organizationId", "=", project.id)
+      .groupBy(["team.id", "team.name", "team.expert_type"])
+      .orderBy("team.name")
+      .orderBy("team.id")
+      .execute();
+    return done(
+      rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        expertType: row.expert_type as ExpertType,
+        participants: Number(row.participants),
+      })),
+    );
+  });
+}
+
+/** A participant as the facilitator sees them in the members list (PR3). */
+export interface GroupMember {
+  memberId: string;
+  /** The account name; empty until the person sets one. */
+  name: string;
+  email: string;
+}
+
+export interface GroupWithMembers extends StakeholderGroup {
+  members: GroupMember[];
+}
+
+/**
+ * The stakeholder groups with their participants by name, for the facilitator only
+ * (`forbidden` for a participant). A participant gets `listGroups`, which names no one.
+ */
+export async function listGroupMembers(
+  db: Kysely<DB>,
+  userId: string,
+  projectId: string,
+): Promise<ProjectResult<GroupWithMembers[]>> {
+  return readProject(db, userId, projectId, { member: ["list"] }, async (reader, project) => {
+    const groups = await reader
+      .selectFrom("team")
+      .select(["id", "name", "expert_type"])
+      .where("organizationId", "=", project.id)
+      .orderBy("name")
+      .orderBy("id")
+      .execute();
+    const rows = await reader
+      .selectFrom("teamMember")
+      .innerJoin("team", "team.id", "teamMember.teamId")
+      .innerJoin("member", (join) =>
+        join
+          .onRef("member.userId", "=", "teamMember.userId")
+          .onRef("member.organizationId", "=", "team.organizationId"),
+      )
+      .innerJoin("user", "user.id", "member.userId")
+      .select(["team.id as groupId", "member.id as memberId", "user.name", "user.email"])
+      .where("team.organizationId", "=", project.id)
+      .where("member.role", "=", "participant")
+      .orderBy("user.email")
+      .orderBy("member.id")
+      .execute();
+    return done(
+      groups.map((group) => {
+        const members = rows
+          .filter((row) => row.groupId === group.id)
+          .map((row) => ({ memberId: row.memberId, name: row.name, email: row.email }));
+        return {
+          id: group.id,
+          name: group.name,
+          expertType: group.expert_type as ExpertType,
+          participants: members.length,
+          members,
+        };
+      }),
+    );
+  });
+}
+
+/**
+ * The participant leaves the project (PR5): they lose access at once and leave their
+ * stakeholder group. Their member row stays with `LEFT_ROLE`, so their rating code, their
+ * ratings in closed rounds and their authorship stay. A facilitator cannot leave (`forbidden`).
+ */
+export async function leaveProject(
+  db: Kysely<DB>,
+  userId: string,
+  projectId: string,
+): Promise<ProjectResult<null>> {
+  return db.transaction().execute(async (trx) => {
+    const project = await lockProject(trx, projectId, userId);
+    if (!project) return refused<null>("not_found");
+    if (project.role !== "participant") return refused<null>("forbidden");
+    await trx
+      .updateTable("member")
+      .set({ role: LEFT_ROLE })
+      .where("organizationId", "=", project.id)
+      .where("userId", "=", userId)
+      .execute();
+    const left = await trx
+      .deleteFrom("teamMember")
+      .where("userId", "=", userId)
+      .where("teamId", "in", (eb) =>
+        eb.selectFrom("team").select("id").where("organizationId", "=", project.id),
+      )
+      .returning("teamId")
+      .execute();
+    for (const { teamId } of left) {
+      await trx
+        .updateTable("team")
+        .set((eb) => ({ memberCount: eb("memberCount", "-", 1) }))
+        .where("id", "=", teamId)
+        .where("memberCount", ">", 0)
+        .execute();
+    }
+    await log(trx, userId, project.id, "member_left", "project", project.id);
+    return done(null);
+  });
 }
 
 async function nameTaken(

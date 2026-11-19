@@ -59,4 +59,9 @@ goes through a pull request with automated checks.
 
 ## Licence
 
-Apache License 2.0, see [LICENSE](LICENSE).
+Apache License 2.0, see [LICENSE](LICENSE). Each file names its licence in an
+SPDX header, and the full texts are in [`LICENSES/`](LICENSES/). The
+components in `src/components/ui/` come from the shadcn/ui registry
+(<https://ui.shadcn.com>) and stay under the MIT licence
+([`LICENSES/MIT.txt`](LICENSES/MIT.txt)); everything else is Apache-2.0
+([`LICENSES/Apache-2.0.txt`](LICENSES/Apache-2.0.txt)).

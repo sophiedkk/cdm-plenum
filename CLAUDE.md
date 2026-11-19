@@ -139,6 +139,12 @@ page from these patterns; each has a real use and a test you can copy.
   `src/lib/i18n/messages.test.ts` checks the prefixes, that Dutch has every
   English key with the same placeholders, and that no text has an em dash.
 
+- **Select fields and dates:** `field.SelectField` is registered in
+  `src/components/form/app-form.ts`; `DateTime` in
+  `src/components/status/date-time.tsx` renders a timestamp.
+- **Parallel e2e runs** need their own `E2E_PORT`: podman-compose puts the
+  stack's containers in one network namespace, so two runs on the default
+  port collide.
 - **Dates and time zones:** `src/components/rounds/format.ts` formats round
   dates in the browser's time zone and names the zone. Name the date parts
   one by one: Chromium rejects `dateStyle` together with a time zone name.
