@@ -11,6 +11,19 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The scope page shows the concept, use cases, what is out of scope and the
+  ordered sources. The facilitator edits the texts and adds, moves and
+  removes sources with buttons. Every member can comment; only the
+  facilitator sees who wrote a comment.
+- On the element board, every member adds elements with a name,
+  description, data type (openEHR and FHIR type side by side, with when to
+  use each), cardinality and source note, and comments on them. Participants
+  never see who added an element or wrote a comment.
+- The facilitator edits elements, merges duplicates, sets proposed values for
+  coded text, ordinal and scale elements, imports elements from a CSV file
+  after a preview of accepted and refused rows, and searches CKM to link an
+  element or import all elements of an archetype. CKM failures show as
+  messages and the board keeps working.
 - After signing in you see your projects with your role and the phase of
   each project. A person with the facilitator right creates a project from
   there and lands on its scope page.

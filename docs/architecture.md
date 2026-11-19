@@ -186,7 +186,8 @@ other; the pairing below is our own design.
 | `multimedia` | `DV_MULTIMEDIA` | `Attachment` | an image, a document or a signal |
 | `uri` | `DV_URI` | `uri` | a link to a resource |
 
-The list shows the type descriptions from the specification, including its
+The data type picker (help texts in `messages/` under `board_type_*`) shows
+the type descriptions from the specification, including its
 misuse notes (for example that `DV_BOOLEAN` is not for male or female), so
 participants without modelling background pick a fitting type. An element
 linked to CKM (EL4) takes its type from the archetype; a CKM type outside the

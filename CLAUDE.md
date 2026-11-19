@@ -139,6 +139,15 @@ page from these patterns; each has a real use and a test you can copy.
   `src/lib/i18n/messages.test.ts` checks the prefixes, that Dutch has every
   English key with the same placeholders, and that no text has an em dash.
 
+- **Comments:** `src/components/comments/` is the comment thread the scope
+  page and the board share. A page's own field components can use
+  `useFieldContext` with `useFieldA11y` (see
+  `src/components/board/element-fields.tsx`) without registering in
+  `app-form.ts`.
+- **CKM in e2e:** the suite runs a CKM stub (`tests/e2e/ckm-stub.ts`) on
+  `E2E_CKM_PORT` (default 3101) and points `CKM_BASE_URL` at it, so no spec
+  calls the live CKM.
+
 ## Development environment
 
 Develop a larger application inside a container by default, so its runtimes,
