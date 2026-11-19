@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// Translated names of the values the screens show: project roles and phases. A table per value
-// set, so a new role or phase is a type error until it has a label.
+// Translated names of the values the screens show: project roles, phases and expert types. A
+// table per value set, so a new value is a type error until it has a label.
 import { m } from "@/i18n/messages";
 import type { ProjectPhase } from "@/lib/project-phases";
-import type { ProjectRole } from "@/lib/project-roles";
+import type { ExpertType, ProjectRole } from "@/lib/project-roles";
 
 const ROLE_LABELS: Record<ProjectRole, () => string> = {
   facilitator: () => m.projects_role_facilitator(),
@@ -27,4 +27,15 @@ export function projectRoleLabel(role: ProjectRole): string {
 /** The name of a project phase in the active locale. */
 export function projectPhaseLabel(phase: ProjectPhase): string {
   return PHASE_LABELS[phase]();
+}
+
+const EXPERT_TYPE_LABELS: Record<ExpertType, () => string> = {
+  clinical: () => m.common_expert_type_clinical(),
+  terminology: () => m.common_expert_type_terminology(),
+  architecture: () => m.common_expert_type_architecture(),
+};
+
+/** The name of a stakeholder group's expert type (PR6) in the active locale. */
+export function expertTypeLabel(expertType: ExpertType): string {
+  return EXPERT_TYPE_LABELS[expertType]();
 }
