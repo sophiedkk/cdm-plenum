@@ -32,7 +32,7 @@ describe("migrations", () => {
   it("match the schema better-auth expects (no drift)", async () => {
     const db = await createTestDb();
     cleanup = () => db.destroy();
-    const auth = createAuth(TEST_ENV, db as unknown as Kysely<unknown>);
+    const auth = createAuth(TEST_ENV, db, { mailer: null, production: false, log: () => {} });
     const plan = await getMigrations({ ...auth.options, database: { db, type: "postgres" } });
     // On failure this prints the SQL to add as a new migration.
     const planned = await plan.compileMigrations();

@@ -36,7 +36,9 @@
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "i18n": "paraglide-js compile --project ./project.inlang --silent",
     "db:migrate": "node src/server/db/migrate.ts",
-    "db:generate-types": "kysely-codegen --dialect postgres --out-file src/server/db/schema.gen.ts"
+    "db:generate-types": "kysely-codegen --dialect postgres --out-file src/server/db/schema.gen.ts",
+    "admin:grant": "node src/server/admin/grant.ts grant",
+    "admin:revoke": "node src/server/admin/grant.ts revoke"
   },
   "dependencies": {
     "@better-auth/kysely-adapter": "1.7.25",
