@@ -30,10 +30,15 @@ Option 2.
 
 - Each participant gets one random `rating_code` per project when they join.
   Ratings carry the code, never the member id.
-- The code-to-member table is read by exactly two queries: "my own ratings"
-  for the signed-in participant, and "ratings by participant" for the
-  facilitator, which runs only when the round's `facilitator_sees_raters`
-  is true. A unit test fails when another module reads the table.
+- The code-to-member table is read by exactly two queries, both in
+  `src/server/rounds/rater-link.ts`: the own-code lookup for the signed-in
+  participant (used for "my ratings" and for rating writes), and "ratings by
+  participant" for the facilitator, which runs only when the round's
+  `facilitator_sees_raters` is true. `src/server/rounds/anonymity.test.ts`
+  fails when another module reads the table. Rows are inserted only when a
+  person joins a project.
+- Each rating stores the rater's stakeholder group (`rating.team_id`), so
+  results per group need no lookup through the code.
 - `facilitator_sees_raters` is fixed when the round opens, like the rule
   (DE2), and shown to participants before they rate.
 - Option 3 is rejected because it breaks DE3 and DE7. Option 1 is rejected
