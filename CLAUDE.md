@@ -1,10 +1,25 @@
 # CLAUDE.md
 
-<!-- One paragraph: what this project is, who it is for, and its current state. -->
+**cdm-plenum** guides a group of clinicians, information modellers and
+terminologists from the scope of a clinical concept to an agreed list of data
+elements, with an element board, a CKM reuse check and e-Delphi rating
+rounds, before anyone authors an openEHR archetype. Its first users are
+research and teaching groups. The project is in design: there is no code yet.
+The design is `docs/architecture.md` with the records in `docs/adr/`; the
+requirements draft is `docs/requirements.md`. The stack and working
+discipline follow eduLIMS (<https://github.com/Vernum-Projecten/eduLIMS>,
+ADR 0002); check it for a pattern before inventing one.
 
 ## Repo map
 
-<!-- The main folders and what lives in each. -->
+- `docs/requirements.md`: the requirements draft with stable IDs (PR, SC,
+  EL, DE, EX, AD, Q-*). Cite them in issues, tests and PRs. Never invent or
+  complete a requirement; ask the owner.
+- `docs/architecture.md`: the design authority. An ADR overrides it.
+- `docs/adr/`: decision records in MADR format.
+- The code layout (`src/routes/`, `src/server/<area>/`, `src/lib/`,
+  `messages/`) is planned in `docs/architecture.md` and lands with the
+  scaffold.
 
 ## Build and test
 
@@ -148,10 +163,8 @@ Mechanics:
 
 ## Scripts
 
-- Write shell scripts in fish, not bash, and use fish's own builtins so the
-  script reads plainly: `path` for file names and extensions, `contains` to
-  check a value against a list, `string` for text, and a named function for a
-  step with a long command.
+- Write shell scripts in bash, as eduLIMS does (owner decision, ADR 0002).
+  This differs from the owner's personal default of fish.
 - Use Python when a script needs a library or formatted output, such as
   mutagen to edit tags or rich to print tables.
 - Keep a Python script in one file with its dependencies in a PEP 723 block
@@ -213,6 +226,8 @@ Mechanics:
 ## Git
 
 - Commit or push only when asked. Never force-push `main`.
+- A pull request auto-merges when CI is green; review by a person is a
+  convention, not a branch rule (ADR 0002).
 - Branches: `<type>/<kebab-slug>`, with type `feat`, `fix`, `chore`, `docs`,
   `refactor`, `perf`, `test`, `ci` or `build`.
 - Commit messages follow Conventional Commits (`feat: add CSV export`) and describe
