@@ -5,11 +5,24 @@
 // the server at start with the variable's name, never its value.
 import { z } from "zod";
 
-export const envSchema = z.object({
-  DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
-  BETTER_AUTH_SECRET: z.string().min(32),
-  BETTER_AUTH_URL: z.url({ protocol: /^https?$/ }),
-});
+/** An empty variable counts as unset, as in a Compose file with `SMTP_URL:`. */
+const optional = <T extends z.ZodType>(schema: T) =>
+  z.preprocess((value) => (value === "" ? undefined : value), schema.optional());
+
+export const envSchema = z
+  .object({
+    DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+    BETTER_AUTH_SECRET: z.string().min(32),
+    BETTER_AUTH_URL: z.url({ protocol: /^https?$/ }),
+    // Without it the app sends no e-mail: the facilitator copies invitation links (ADR 0004).
+    SMTP_URL: optional(z.url({ protocol: /^smtps?$/ })),
+    MAIL_FROM: optional(z.email()),
+  })
+  .superRefine((env, ctx) => {
+    if (env.SMTP_URL !== undefined && env.MAIL_FROM === undefined) {
+      ctx.addIssue({ code: "custom", path: ["MAIL_FROM"], message: "required with SMTP_URL" });
+    }
+  });
 
 export type Env = z.infer<typeof envSchema>;
 

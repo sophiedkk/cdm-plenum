@@ -57,18 +57,37 @@ mode, the card sort and objection handling come after it.
 ## Roles and access
 
 Roles are held per project ([ADR 0004](adr/0004-projects-as-organizations-with-invitations.md)).
-Administrator is the one application-wide role.
+Two roles are application-wide: administrator, and the facilitator right to
+create projects (owner decision 2026-11-19). The right is held apart from the
+project role of the same name: creating a project needs the right, and makes
+the creator the project's facilitator. Revoking the right stops new projects
+and leaves existing projects and memberships alone.
 
 | Role | Held | May | Sees |
 |---|---|---|---|
-| Facilitator | per project | everything in the project: scope, board, invitations, rounds, exports | all project content; who added an element; who took part in a round; who gave which rating only when the round allows it (DE4) |
+| Facilitator (right) | application | create a project | nothing by itself |
+| Facilitator | per project | everything in the project: scope, board, stakeholder groups, invitations, rounds, exports | all project content; who added an element; who took part in a round; who gave which rating only when the round allows it (DE4) |
 | Participant | per project | read the scope, add and comment on elements, rate in an open round | project content without authors; their own ratings; group results of closed rounds |
-| Administrator | application | manage accounts and the administrator role; read the activity log | no project content unless they also hold a project role |
+| Administrator | application | manage accounts, the administrator role and the facilitator right; read the activity log | no project content unless they also hold a project role |
+
+An administrator grants and revokes the application roles by e-mail address
+with `pnpm admin:grant <email> [--facilitator]` and `pnpm admin:revoke`, so the
+first administrator and the first facilitator can get an account (AD1). The
+grants are in `app_role`.
 
 Every server function checks the session, then the project role, then
 ownership inside the SQL query. A user without a role in a project gets
-`not_found`, never a hint that the project exists. Route guards only steer
-navigation; they are not the security boundary (Q-SEC-1).
+`not_found`, never a hint that the project exists; a participant asking for a
+facilitator action gets `forbidden`. Route guards only steer navigation; they
+are not the security boundary (Q-SEC-1).
+
+A new project starts with nine stakeholder groups, each with an expert type
+(PR6): the clinical groups general medicine, primary care, mental health
+care, nursing, medication and allergies, patient and administrative, one
+terminology group and one architecture group, after the expert areas of the
+Nictiz zib management agreements. Their names are in the creator's language;
+the facilitator adds, renames and removes groups. A group with members or a
+pending invitation cannot be removed.
 
 ### Joining a project
 
@@ -78,14 +97,21 @@ There is no open registration (PR1). The flow:
 2. The app sends an invitation e-mail with a link that expires
    (`/invite/<id>`). When no SMTP server is configured, the facilitator copies
    the link from the invitation list and passes it on.
-3. The invitee opens the link and asks for a sign-in link. A user account is
-   created only for an e-mail address with a pending invitation or an
-   administrator grant.
-4. Signing in through the e-mailed link accepts the invitation: the user
-   becomes a participant of the project and a member of the stakeholder
-   group.
+3. The invitee opens the link and asks for a sign-in link. The invitation
+   page shows the project name only while the invitation is pending. A user
+   account is created only for an e-mail address with a pending, unexpired
+   invitation or an administrator grant; an address without either gets no
+   e-mail, and the sign-in page answers the same either way.
+4. Signing in through the e-mailed link accepts every pending invitation for
+   that address in one transaction: the user becomes a participant of the
+   project, a member of the stakeholder group, and gets a rating code.
 
 Sign-in is by single-use e-mail link only, so the app stores no passwords.
+The link is stored hashed and expires after 5 minutes; an invitation expires
+after 48 hours. Both are the plugin defaults, as no requirement sets them.
+Without `SMTP_URL` the app sends no e-mail: the facilitator copies the
+invitation link, and a sign-in link is written to the server log in
+development only.
 Institution sign-in through OpenID Connect can be added later as a second
 method without changing the project model.
 
@@ -98,9 +124,10 @@ access goes through Kysely ([ADR 0002](adr/0002-stack-follows-edulims.md)).
 | Concept | Stored as | Notes |
 |---|---|---|
 | Project | better-auth `organization` plus `project` (phase, change class A to D, default D) | one project is one organization |
-| Stakeholder group | better-auth `team` with an expert type (clinical, terminology, architecture) | a participant is in exactly one group of the project (PR6) |
+| Stakeholder group | better-auth `team` with `expert_type` | a participant is in exactly one group of the project; expert type `clinical`, `terminology` or `architecture` (PR6) |
 | Minimum panel override | `project_panel_minimum` | per project and expert type, only when the facilitator changes a class default (DE13) |
-| Facilitator, participant | better-auth `member` with a custom role | |
+| Facilitator, participant | better-auth `member` with a custom role | one membership per person per project |
+| Administrator, facilitator right | `app_role` | e-mail address and role, so a grant can exist before the account |
 | Invitation | better-auth `invitation` with its team | |
 | Scope statement | `scope_statement`, `scope_source`, `scope_comment` | one statement per project; SC3 objections later |
 | Candidate element | `element` | name, description, data type (a key from the data type list, or none), cardinality as `min_occurs` and `max_occurs` (null for many), `merged_into` for merged duplicates, `author_member_id` (never sent to participants) |

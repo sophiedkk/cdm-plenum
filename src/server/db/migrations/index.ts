@@ -6,10 +6,12 @@
 import type { Migration, MigrationProvider } from "kysely/migration";
 import * as m0001 from "./0001_auth.ts";
 import * as m0002 from "./0002_projects.ts";
+import * as m0003 from "./0003_access.ts";
 
 export const migrations: Record<string, Migration> = {
   "0001_auth": m0001,
   "0002_projects": m0002,
+  "0003_access": m0003,
 };
 
 export const migrationProvider: MigrationProvider = {

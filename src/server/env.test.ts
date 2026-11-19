@@ -30,4 +30,31 @@ describe("parseEnv", () => {
   it("refuses a missing variable", () => {
     expect(() => parseEnv({ DATABASE_URL: VALID.DATABASE_URL })).toThrow(/BETTER_AUTH_SECRET/);
   });
+
+  it("leaves SMTP off when SMTP_URL is unset or empty", () => {
+    expect(parseEnv(VALID).SMTP_URL).toBeUndefined();
+    expect(parseEnv({ ...VALID, SMTP_URL: "", MAIL_FROM: "" }).SMTP_URL).toBeUndefined();
+  });
+
+  it("accepts SMTP_URL with a sender address", () => {
+    const env = parseEnv({
+      ...VALID,
+      SMTP_URL: "smtps://user:pass@mail.example.test:465",
+      MAIL_FROM: "plenum@example.test",
+    });
+    expect(env.SMTP_URL).toBe("smtps://user:pass@mail.example.test:465");
+    expect(env.MAIL_FROM).toBe("plenum@example.test");
+  });
+
+  it("refuses SMTP_URL without MAIL_FROM", () => {
+    expect(() => parseEnv({ ...VALID, SMTP_URL: "smtp://mailpit:1025" })).toThrow(
+      "Invalid environment configuration: MAIL_FROM",
+    );
+  });
+
+  it("refuses an SMTP_URL that is not smtp or smtps, and a malformed MAIL_FROM", () => {
+    expect(() =>
+      parseEnv({ ...VALID, SMTP_URL: "http://mailpit:1025", MAIL_FROM: "not-an-address" }),
+    ).toThrow("Invalid environment configuration: SMTP_URL, MAIL_FROM");
+  });
 });

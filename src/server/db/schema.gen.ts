@@ -40,6 +40,12 @@ export interface ActivityLog {
   target_type: string | null;
 }
 
+export interface AppRole {
+  email: string;
+  granted_at: Generated<Timestamp>;
+  role: string;
+}
+
 export interface Element {
   author_member_id: string | null;
   created_at: Generated<Timestamp>;
@@ -201,6 +207,7 @@ export interface Session {
 
 export interface Team {
   createdAt: Timestamp;
+  expert_type: string;
   id: string;
   memberCount: number;
   name: string;
@@ -238,6 +245,7 @@ export interface Verification {
 export interface DB {
   account: Account;
   activity_log: ActivityLog;
+  app_role: AppRole;
   element: Element;
   element_ckm_link: ElementCkmLink;
   element_comment: ElementComment;
