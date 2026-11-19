@@ -24,6 +24,16 @@ export const PROJECT_ACTION_ERRORS = [
   "already_member",
   "already_invited",
   "invitation_not_found",
+  "scope_source_not_found",
+  "scope_source_order_mismatch",
+  "element_not_found",
+  "element_in_round",
+  "element_has_values",
+  "values_not_allowed",
+  "value_number_required",
+  "value_number_not_allowed",
+  "value_number_not_integer",
+  "merge_values_conflict",
 ] as const;
 export type ProjectActionError = (typeof PROJECT_ACTION_ERRORS)[number];
 
@@ -84,4 +94,29 @@ export async function withProject<T>(
     if (!projectCan(project.role, permission)) return refused<T>("forbidden");
     return action(trx, project);
   });
+}
+
+/**
+ * Runs a read after the same checks as `withProject`: a membership (`not_found` otherwise) and,
+ * when given, the role's permission (`forbidden`). It takes no lock, so readers never wait on a
+ * writer or on each other.
+ */
+export async function readProject<T>(
+  db: Kysely<DB>,
+  userId: string,
+  projectId: string,
+  permission: ProjectPermission | null,
+  action: (db: Kysely<DB>, project: LockedProject) => Promise<ProjectResult<T>>,
+): Promise<ProjectResult<T>> {
+  const row = await db
+    .selectFrom("project")
+    .innerJoin("organization", "organization.id", "project.id")
+    .innerJoin("member", "member.organizationId", "project.id")
+    .select(["project.id", "organization.name", "member.role"])
+    .where("project.id", "=", projectId)
+    .where("member.userId", "=", userId)
+    .executeTakeFirst();
+  if (!row || !isProjectRole(row.role)) return refused<T>("not_found");
+  if (permission !== null && !projectCan(row.role, permission)) return refused<T>("forbidden");
+  return action(db, { id: row.id, name: row.name, role: row.role });
 }
