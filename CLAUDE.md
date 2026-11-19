@@ -4,7 +4,7 @@
 terminologists from the scope of a clinical concept to an agreed list of data
 elements, with an element board, a CKM reuse check and e-Delphi rating
 rounds, before anyone authors an openEHR archetype. Its first users are
-research and teaching groups. The project is in an early stage: the app skeleton runs, the features do not exist yet.
+research and teaching groups. The released state is in `CHANGELOG.md`.
 The design is `docs/architecture.md` with the records in `docs/adr/`; the
 requirements draft is `docs/requirements.md`. The stack and working
 discipline follow eduLIMS (<https://github.com/Vernum-Projecten/eduLIMS>,

@@ -9,6 +9,11 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-19
+
+The first release: scope, element board with the CKM reuse check, e-Delphi
+rating rounds and the CSV and mind map exports.
+
 ### Added
 
 - `pnpm db:seed-demo` loads a demo project on blood pressure into a
@@ -130,17 +135,11 @@ the project uses [Semantic Versioning](https://semver.org/).
   server's command line.
 - E-mail over SMTP when you set `SMTP_URL` and `MAIL_FROM`. Without SMTP,
   the facilitator copies the invitation link and passes it on.
-
-### Changed
-
-- Setting the project's own minimum panel now needs a reason, which the
-  panel setup shows next to the class defaults.
+- Setting the project's own minimum panel needs a reason, which the panel
+  setup shows next to the class defaults.
 - Up to 30 sign-in link requests, and 30 link openings, per minute per
-  network address, up from 5, so a class behind one address can sign in
-  together.
+  network address, so a class behind one address can sign in together.
+- A deactivated account cannot sign in, and its open sessions end at once.
 
-### Security
-
-- A deactivated account can no longer sign in, and its open sessions end at
-  once.
-
+[Unreleased]: https://github.com/sophiedkk/cdm-plenum/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/sophiedkk/cdm-plenum/releases/tag/v0.1.0
