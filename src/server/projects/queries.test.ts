@@ -5,6 +5,7 @@
 // per role: a participant may not manage groups, a non-member gets `not_found`.
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { PROJECT_PHASES } from "@/lib/project-phases";
 import { DEFAULT_GROUPS, EXPERT_TYPES } from "@/lib/project-roles";
 import { grantAppRole, revokeAppRole } from "../admin/app-roles.ts";
 import { EXPERT_TYPE_KEYS } from "../db/migrations/0003_access.ts";
@@ -13,7 +14,15 @@ import { createTestDb } from "../db/test-db.ts";
 import { acceptInvitationsOnSignIn } from "../invitations/acceptance.ts";
 import { invite } from "../invitations/queries.ts";
 import { facilitatorWithProject, groupId, insertUser, NOW } from "../test-fixtures.ts";
-import { createGroup, createProject, listGroups, removeGroup, renameGroup } from "./queries.ts";
+import {
+  createGroup,
+  createProject,
+  getProject,
+  listGroups,
+  listProjects,
+  removeGroup,
+  renameGroup,
+} from "./queries.ts";
 
 let db: Kysely<DB>;
 
@@ -241,5 +250,62 @@ describe("stakeholder groups (PR6)", () => {
       ),
     ).rejects.toThrow(/team_expert_type_check/);
     expect([...EXPERT_TYPE_KEYS]).toEqual([...EXPERT_TYPES]);
+  });
+});
+
+describe("listProjects", () => {
+  it("lists each member's projects with their own role and the phase, by name", async () => {
+    const { facilitator, participant, outsider, projectId } = await setup();
+    await createProject(db, facilitator, { name: "Allergy" }, "en");
+    const own = await listProjects(db, facilitator);
+    expect(own.map((p) => [p.name, p.role, p.phase])).toEqual([
+      ["Allergy", "facilitator", "scope"],
+      ["Blood pressure", "facilitator", "scope"],
+    ]);
+    expect(await listProjects(db, participant)).toEqual([
+      { id: projectId, name: "Blood pressure", phase: "scope", role: "participant" },
+    ]);
+    expect(await listProjects(db, outsider)).toEqual([]);
+  });
+
+  it("shows the phase the project is in", async () => {
+    const { facilitator, projectId } = await setup();
+    await db.updateTable("project").set({ phase: "decide" }).where("id", "=", projectId).execute();
+    expect((await listProjects(db, facilitator))[0]?.phase).toBe("decide");
+  });
+
+  it("holds the same phases as the database (PR4)", async () => {
+    const { projectId } = await setup();
+    await expect(
+      db
+        .transaction()
+        .execute((trx) =>
+          trx.updateTable("project").set({ phase: "review" }).where("id", "=", projectId).execute(),
+        ),
+    ).rejects.toThrow(/project_phase_check/);
+    for (const phase of PROJECT_PHASES) {
+      await db.updateTable("project").set({ phase }).where("id", "=", projectId).execute();
+    }
+  });
+});
+
+describe("getProject", () => {
+  it("returns the project with the role of the member asking", async () => {
+    const { facilitator, participant, projectId } = await setup();
+    expect(await getProject(db, facilitator, projectId)).toEqual({
+      ok: true,
+      value: { id: projectId, name: "Blood pressure", phase: "scope", role: "facilitator" },
+    });
+    const seen = await getProject(db, participant, projectId);
+    expect(seen.ok && seen.value.role).toBe("participant");
+  });
+
+  it("refuses a non-member and an unknown project with not_found (Q-SEC-1)", async () => {
+    const { outsider, facilitator, projectId } = await setup();
+    expect(await getProject(db, outsider, projectId)).toEqual({ ok: false, error: "not_found" });
+    expect(await getProject(db, facilitator, "no-such-project")).toEqual({
+      ok: false,
+      error: "not_found",
+    });
   });
 });
