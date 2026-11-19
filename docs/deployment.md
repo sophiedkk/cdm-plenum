@@ -31,11 +31,10 @@ readable by its owner only (`chmod 600 .env`) and never commit it.
 | `CDM_PLENUM_PORT` | The loopback port the proxy forwards to. The default is 3000. |
 | `CDM_PLENUM_IMAGE` | The app image. The default is `localhost/cdm-plenum:latest`, which `podman compose build` makes. |
 
-The app reads its variables on the first request that needs them. A missing
-or malformed one makes that request fail with a server error, and the log
-shows `Invalid environment configuration:` with the variable's name (never
-its value). So after a start, sign in once and check
-`podman compose logs app`. Without `SMTP_URL` the app sends no
+The app checks its variables when it starts. A missing or malformed one stops
+the app before it serves a request, and `podman compose logs app` shows
+`Invalid environment configuration:` with the variable's name (never its
+value). Without `SMTP_URL` the app sends no
 e-mail at all: facilitators can still copy invitation links, but nobody
 receives a sign-in link, so a production stack needs SMTP.
 
