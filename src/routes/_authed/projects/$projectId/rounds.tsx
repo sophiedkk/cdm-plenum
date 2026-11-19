@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createFileRoute } from "@tanstack/react-router";
+import { projectTitle } from "@/components/projects/project-title";
 import { PageHeader } from "@/components/shell/route-states";
 import { m } from "@/i18n/messages";
 
 /** The Delphi rating rounds of the project (DE1 to DE12). */
 export const Route = createFileRoute("/_authed/projects/$projectId/rounds")({
-  head: ({ match }) => ({
-    meta: [{ title: `${m.rounds_title()} | ${match.context.project.name} | ${m.app_name()}` }],
-  }),
+  head: ({ match }) => ({ meta: [{ title: projectTitle(match.context, m.rounds_title()) }] }),
   component: Rounds,
 });
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { projectTitle } from "@/components/projects/project-title";
 import { PageHeader } from "@/components/shell/route-states";
 import { m } from "@/i18n/messages";
 
@@ -12,9 +13,7 @@ export const Route = createFileRoute("/_authed/projects/$projectId/export")({
       throw redirect({ to: "/projects/$projectId/scope", params });
     }
   },
-  head: ({ match }) => ({
-    meta: [{ title: `${m.export_title()} | ${match.context.project.name} | ${m.app_name()}` }],
-  }),
+  head: ({ match }) => ({ meta: [{ title: projectTitle(match.context, m.export_title()) }] }),
   component: Export,
 });
 

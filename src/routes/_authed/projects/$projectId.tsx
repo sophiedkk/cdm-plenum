@@ -4,6 +4,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound, Outlet } from "@tanstack/react-router";
 import { PhaseBadge, RoleBadge } from "@/components/projects/project-badges";
+import { projectTitle } from "@/components/projects/project-title";
 import { NotFoundState } from "@/components/shell/route-states";
 import { m } from "@/i18n/messages";
 import { projectQueryOptions } from "@/server/projects/query-options";
@@ -24,7 +25,7 @@ export const Route = createFileRoute("/_authed/projects/$projectId")({
     if (!result.ok) throw notFound();
     return { project: result.value };
   },
-  head: ({ match }) => ({ meta: [{ title: `${match.context.project.name} | ${m.app_name()}` }] }),
+  head: ({ match }) => ({ meta: [{ title: projectTitle(match.context) }] }),
   component: ProjectLayout,
   notFoundComponent: () => <NotFoundState title={m.projects_not_found_title()} />,
 });
