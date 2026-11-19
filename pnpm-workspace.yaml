@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: Sophie de Klerk
+# SPDX-License-Identifier: Apache-2.0
+
+# Supply-chain control: pnpm resolves no version younger than 24 hours, so a
+# compromised or yanked release has time to be caught before it is installed
+# (https://pnpm.io/settings/dependency-resolution#minimumreleaseage).
+minimumReleaseAge: 1440
+
+# Exact versions in package.json, and refuse a Node.js or pnpm outside
+# devEngines.
+saveExact: true
+engineStrict: true

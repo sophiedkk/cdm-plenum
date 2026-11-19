@@ -1,0 +1,28 @@
+# Dependencies and build output
+node_modules/
+.pnpm-store/
+.output/
+.nitro/
+.tanstack/
+.vinxi/
+dist/
+coverage/
+*.tsbuildinfo
+*.log
+
+# Generated sources
+src/i18n/
+project.inlang/cache/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Playwright
+playwright-report/
+test-results/
+
+# Claude Code
+.claude/settings.local.json
+.claude/worktrees/
