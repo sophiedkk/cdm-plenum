@@ -18,16 +18,21 @@ export function isProjectRole(value: unknown): value is ProjectRole {
 export const PROJECT_STATEMENTS = {
   invitation: ["create", "list", "cancel"],
   group: ["create", "update", "delete"],
+  ckm: ["search", "link", "import"],
 } as const;
 
 /** The access control of the project roles (better-auth `createAccessControl`). */
 export const projectAccessControl = createAccessControl(PROJECT_STATEMENTS);
 
-/** The facilitator invites and manages stakeholder groups; a participant manages nothing. */
+/**
+ * The facilitator invites, manages stakeholder groups and uses CKM (EL4, EL7); a participant
+ * manages nothing.
+ */
 export const projectRoles = {
   facilitator: projectAccessControl.newRole({
     invitation: ["create", "list", "cancel"],
     group: ["create", "update", "delete"],
+    ckm: ["search", "link", "import"],
   }),
   participant: projectAccessControl.newRole({}),
 } satisfies Record<ProjectRole, unknown>;
