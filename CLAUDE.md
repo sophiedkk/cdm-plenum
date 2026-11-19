@@ -139,6 +139,13 @@ page from these patterns; each has a real use and a test you can copy.
   `src/lib/i18n/messages.test.ts` checks the prefixes, that Dutch has every
   English key with the same placeholders, and that no text has an em dash.
 
+- **Select fields and dates:** `field.SelectField` is registered in
+  `src/components/form/app-form.ts`; `DateTime` in
+  `src/components/status/date-time.tsx` renders a timestamp.
+- **Parallel e2e runs** need their own `E2E_PORT`: podman-compose puts the
+  stack's containers in one network namespace, so two runs on the default
+  port collide.
+
 ## Development environment
 
 Develop a larger application inside a container by default, so its runtimes,

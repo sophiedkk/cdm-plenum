@@ -11,6 +11,15 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The members page: facilitators add, rename and remove stakeholder groups,
+  invite participants by e-mail into a group, copy an invitation link to pass
+  on, and revoke invitations. Participants see each group with its expert
+  type and number of participants.
+- Participants can leave a project; their ratings in closed rounds stay in
+  the results.
+- The administration page: grant and revoke the administrator and facilitator
+  rights by e-mail address, deactivate and reactivate accounts, and read the
+  activity log filtered by action. The log records each sign-in.
 - After signing in you see your projects with your role and the phase of
   each project. A person with the facilitator right creates a project from
   there and lands on its scope page.
@@ -79,3 +88,15 @@ the project uses [Semantic Versioning](https://semver.org/).
   server's command line.
 - E-mail over SMTP when you set `SMTP_URL` and `MAIL_FROM`. Without SMTP,
   the facilitator copies the invitation link and passes it on.
+
+### Changed
+
+- Up to 30 sign-in link requests, and 30 link openings, per minute per
+  network address, up from 5, so a class behind one address can sign in
+  together.
+
+### Security
+
+- A deactivated account can no longer sign in, and its open sessions end at
+  once.
+
