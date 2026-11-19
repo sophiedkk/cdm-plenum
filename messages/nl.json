@@ -1,0 +1,6 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "app_description": "Kom samen tot de gegevenselementen van een klinisch model, van scope tot overdracht.",
+  "app_name": "cdm-plenum",
+  "not_found_title": "Pagina niet gevonden"
+}

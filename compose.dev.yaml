@@ -1,0 +1,62 @@
+# SPDX-FileCopyrightText: Sophie de Klerk
+# SPDX-License-Identifier: Apache-2.0
+#
+# The development stack. Every project command runs in the `dev` container,
+# so Node.js and the dependencies stay off the host (ADR 0008):
+#
+#   scripts/dev/pnpm.sh install     # any pnpm command, in a one-off dev container
+#   scripts/dev/compose.sh up -d    # the stack, with the dev server on http://localhost:3000
+#
+# Mailpit catches every e-mail the app sends: http://localhost:8025
+#
+# The credentials are fixed, public and for development only; the ports bind
+# the loopback interface only. Never point this file at real data.
+
+name: cdm-plenum-dev
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Containerfile.dev
+    image: localhost/cdm-plenum-dev:latest
+    working_dir: /app
+    volumes:
+      # :Z relabels the checkout for SELinux hosts such as Fedora.
+      - .:/app:Z
+      - pnpm-store:/pnpm-store
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DATABASE_URL: postgres://cdm_plenum:cdm_plenum@postgres:5432/cdm_plenum
+      SMTP_URL: smtp://mailpit:1025
+    command: ["pnpm", "dev"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: docker.io/library/postgres:18.7-trixie
+    environment:
+      POSTGRES_USER: cdm_plenum
+      POSTGRES_PASSWORD: cdm_plenum
+      POSTGRES_DB: cdm_plenum
+    ports:
+      - "127.0.0.1:${CDM_PLENUM_DEV_DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U cdm_plenum -d cdm_plenum"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  mailpit:
+    image: docker.io/axllent/mailpit:v1.34.0
+    ports:
+      - "127.0.0.1:8025:8025"
+
+volumes:
+  pgdata:
+  pnpm-store:

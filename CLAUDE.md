@@ -4,7 +4,7 @@
 terminologists from the scope of a clinical concept to an agreed list of data
 elements, with an element board, a CKM reuse check and e-Delphi rating
 rounds, before anyone authors an openEHR archetype. Its first users are
-research and teaching groups. The project is in design: there is no code yet.
+research and teaching groups. The project is in an early stage: the app skeleton runs, the features do not exist yet.
 The design is `docs/architecture.md` with the records in `docs/adr/`; the
 requirements draft is `docs/requirements.md`. The stack and working
 discipline follow eduLIMS (<https://github.com/Vernum-Projecten/eduLIMS>,
@@ -17,18 +17,38 @@ ADR 0002); check it for a pattern before inventing one.
   complete a requirement; ask the owner.
 - `docs/architecture.md`: the design authority. An ADR overrides it.
 - `docs/adr/`: decision records in MADR format.
-- The code layout (`src/routes/`, `src/server/<area>/`, `src/lib/`,
-  `messages/`) is planned in `docs/architecture.md` and lands with the
-  scaffold.
+- `src/routes/`: TanStack Router file routes; `src/routeTree.gen.ts` is
+  generated.
+- `src/server/<area>/`: server-only code per area (`functions.ts`,
+  `queries.ts`, `schemas.ts`), as planned in `docs/architecture.md`.
+- `src/lib/`: code both sides import, such as `data-types.ts` (ADR 0009) and
+  `cardinality.ts`, with colocated `*.test.ts`.
+- `messages/`: the i18n catalogues; `project.inlang/` the Paraglide config.
+- `compose.dev.yaml`, `Containerfile.dev`, `scripts/dev/`: the development
+  stack.
 
 ## Build and test
 
+Every project command runs in the development container (ADR 0008); never
+install Node.js or the dependencies on the host.
+
 ```sh
-# install:
-# build:
-# test:
-# lint/format:
+scripts/dev/pnpm.sh install         # install dependencies (exact versions, 24-hour release age)
+scripts/dev/compose.sh up -d        # PostgreSQL, Mailpit and the dev server on :3000
+scripts/dev/compose.sh down         # stop the stack, keep the database volume
+scripts/dev/pnpm.sh build           # production build; also regenerates src/routeTree.gen.ts
+scripts/dev/pnpm.sh typecheck       # Paraglide compile, then tsc --noEmit
+scripts/dev/pnpm.sh lint            # biome check (fix: biome check --write)
+scripts/dev/pnpm.sh test            # Vitest unit tests (test:coverage for the 70% gate)
+scripts/dev/pnpm.sh check           # the local gate: typecheck, lint, test
 ```
+
+Versions are pinned exactly in `package.json`; `pnpm-workspace.yaml` sets
+`saveExact`, `engineStrict` and a 24-hour `minimumReleaseAge`. Never edit
+`src/routeTree.gen.ts` or `src/i18n/` (generated). Every hand-written file
+starts with the SPDX header `SPDX-FileCopyrightText: Sophie de Klerk` and
+`SPDX-License-Identifier: Apache-2.0`, in the file's comment syntax. All UI
+text goes through `messages/en.json` and `messages/nl.json` (ADR 0007).
 
 ## Development environment
 

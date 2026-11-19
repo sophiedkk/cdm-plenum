@@ -1,0 +1,61 @@
+{
+  "name": "cdm-plenum",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Guides a group from the scope of a clinical concept to an agreed set of data elements, with brainstorming and Delphi-style rating rounds before CKM review",
+  "license": "Apache-2.0",
+  "author": "Sophie de Klerk",
+  "type": "module",
+  "packageManager": "pnpm@12.21.0",
+  "engines": {
+    "node": ">=26.13.1 <27"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "26.13.1",
+      "onFail": "error"
+    },
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.21.0",
+      "onFail": "error"
+    }
+  },
+  "scripts": {
+    "dev": "vite dev --host 0.0.0.0",
+    "build": "vite build",
+    "start": "node .output/server/index.mjs",
+    "typecheck": "pnpm i18n && tsc --noEmit",
+    "lint": "biome check .",
+    "fix": "biome check --write .",
+    "format": "biome format --write .",
+    "test": "pnpm i18n && vitest run",
+    "test:watch": "pnpm i18n && vitest",
+    "test:coverage": "pnpm i18n && vitest run --coverage",
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "i18n": "paraglide-js compile --project ./project.inlang --silent"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "1.170.46",
+    "@tanstack/react-start": "1.169.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.8",
+    "@inlang/paraglide-js": "3.2.2",
+    "@inlang/plugin-message-format": "4.6.0",
+    "@tailwindcss/vite": "4.3.5",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "@vitest/coverage-v8": "5.1.1",
+    "nitro": "3.0.261103-rc",
+    "tailwindcss": "4.3.5",
+    "typescript": "7.0.2",
+    "vite": "8.3.8",
+    "vitest": "5.1.1"
+  }
+}

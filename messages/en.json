@@ -1,0 +1,6 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "app_description": "Agree on the data elements of a clinical model, from scope to hand-off.",
+  "app_name": "cdm-plenum",
+  "not_found_title": "Page not found"
+}

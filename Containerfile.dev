@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: Sophie de Klerk
+# SPDX-License-Identifier: Apache-2.0
+#
+# The development container: Node.js and pnpm at the versions in
+# package.json, so nothing of the project runs on the host (ADR 0008).
+FROM docker.io/library/node:26.13.1-trixie-slim
+
+RUN npm install --global pnpm@12.21.0 && npm cache clean --force
+
+ENV PNPM_HOME=/pnpm \
+    npm_config_store_dir=/pnpm-store
+WORKDIR /app
+EXPOSE 3000
