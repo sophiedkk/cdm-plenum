@@ -19,6 +19,7 @@ Each significant architecture or technology decision is recorded here in the
 | [0008](0008-compose-with-podman.md) | Compose on one host, developed with Podman | Proposed |
 | [0009](0009-element-data-types.md) | Element data types: openEHR RM types paired with FHIR types | Proposed |
 | [0010](0010-minimum-panel-as-guideline.md) | The minimum panel is a guideline with a recorded reason, not a gate | Proposed |
+| [0011](0011-fhir-package-client.md) | One FHIR package client on the FHIR package registry, R4 first | Proposed |
 
 ## Adding a record
 
