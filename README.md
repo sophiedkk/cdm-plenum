@@ -29,6 +29,15 @@ scripts/dev/compose.sh up -d    # PostgreSQL, Mailpit and the dev server
 Open <http://localhost:3000>. Mailpit shows the e-mails the app sends at
 <http://localhost:8025>. Stop the stack with `scripts/dev/compose.sh down`.
 
+There is no open registration. To sign in for the first time, give your
+address the right to create projects, then ask for a sign-in link at
+<http://localhost:3000/sign-in> and open it from Mailpit:
+
+```sh
+scripts/dev/compose.sh exec dev pnpm db:migrate
+scripts/dev/compose.sh exec dev pnpm admin:grant you@example.test --facilitator
+```
+
 Run the checks (typecheck, lint, unit tests) with `scripts/dev/pnpm.sh check`.
 CI runs the same checks, plus the coverage gate and the build, on every pull
 request (`.github/workflows/ci.yml`).

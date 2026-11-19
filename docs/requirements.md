@@ -50,11 +50,16 @@ requirement keeps its row with the status "Dropped".
 A role is held per project, except administrator. A person can be facilitator
 of one project and participant in another.
 
+Facilitator is also an application-wide right: only a person an administrator
+granted it to creates a project, and becomes that project's facilitator (owner
+decision 2026-11-19). Revoking the right stops new projects; the projects the
+person already runs stay theirs. An invitation never grants the right.
+
 | Role | May | Sees |
 |---|---|---|
-| Facilitator | create and run a project; invite participants and assign them to a stakeholder group; edit the scope statement and the element board; set up, open and close rounds; export | everything in their own projects, including who took part in a round, never which participant gave which rating |
+| Facilitator | create a project, with the right an administrator grants; run their projects; invite participants and assign them to a stakeholder group; edit the scope statement and the element board; set up, open and close rounds; export | everything in their own projects, including who took part in a round, never which participant gave which rating |
 | Participant | read the scope statement; add and comment on candidate elements; rate in an open round | the projects they are invited to; the group results of closed rounds; their own earlier ratings |
-| Administrator | manage user accounts and the administrator role | accounts and the activity log; no project content unless they also hold a project role |
+| Administrator | manage user accounts, the administrator role and the facilitator right | accounts and the activity log; no project content unless they also hold a project role |
 
 ## Functional requirements
 
@@ -63,7 +68,7 @@ of one project and participant in another.
 | ID | Requirement | Priority | Acceptance criterion | Risk |
 |---|---|---|---|---|
 | PR1 | Sign in with an account. An account exists only through an invitation (PR3) or an administrator (AD1). | Must | *(proposed)* A user without an account gets no access to any page except the sign-in page and the invitation page; there is no open registration. | R-01 |
-| PR2 | A facilitator creates a project for one concept. | Must | *(proposed)* The facilitator creates a project with a name and a short description, and becomes its facilitator. | |
+| PR2 | A facilitator creates a project for one concept. Only a person with the facilitator right an administrator granted creates a project (owner decision 2026-11-19). | Must | *(proposed)* The facilitator creates a project with a name and a short description, and becomes its facilitator. A user without the facilitator right is refused, and the refusal is tested. | |
 | PR3 | A facilitator invites participants by e-mail address and assigns each to one stakeholder group. | Must | *(proposed)* The invitee gets a single-use invitation link that expires; accepting it creates their account or adds the project to an existing one. A used or expired link is refused, and the refusal is tested. An invited participant sees the project after sign-in; a user who is not invited gets no access to it. Every participant belongs to exactly one stakeholder group of the project. | R-01 |
 | PR4 | A project shows its phase: scope, discover, decide, hand-off. | Should | *(proposed)* The project page shows the current phase; the facilitator moves the project to the next phase. | |
 | PR5 | A participant leaves a project. | Should | *(proposed)* After leaving, the participant has no access; their ratings in closed rounds stay in the results. | R-04 |
