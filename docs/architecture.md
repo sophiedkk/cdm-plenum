@@ -328,7 +328,8 @@ an activity log row with ids only.
   break gets a leading `'`, after the OWASP CSV injection guidance.
 - **Elements CSV (EX1):** one row per element that is not merged, with
   `name, description, openehr_type, fhir_type, cardinality, sources,
-  ckm_archetype_id, ckm_at_code, ckm_revision, proposed_values` and one
+  ckm_archetype_id, ckm_at_code, ckm_revision, merged_ckm_links,
+  proposed_values` and one
   `round_N_outcome` column per round. The sources include those of merged
   duplicates (Q-AUDIT-1).
 - **Mind map (EX2):** the scope concept as root; an element is on the map when
