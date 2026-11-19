@@ -25,7 +25,10 @@ registerHooks({
       const file = findFile(SRC + specifier.slice(2));
       if (file) return nextResolve(pathToFileURL(file).href, context);
     }
-    if (specifier.startsWith(".") && context.parentURL?.startsWith("file:")) {
+    // Only the app's own sources: packages resolve their imports themselves, and a CommonJS
+    // package's relative require must stay a path, not become a file URL.
+    const parent = context.parentURL?.startsWith("file:") ? fileURLToPath(context.parentURL) : "";
+    if (specifier.startsWith(".") && parent.startsWith(SRC)) {
       const base = fileURLToPath(new URL(specifier, context.parentURL));
       if (!existsSync(base) || !statSync(base).isFile()) {
         const file = findFile(base);

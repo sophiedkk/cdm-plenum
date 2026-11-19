@@ -11,6 +11,9 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `pnpm db:seed-demo` loads a demo project on blood pressure into a
+  development database: a scope, eight elements, eight invented participants,
+  a closed first round with results and an open second round.
 - When you merge duplicate elements, the board shows the CKM links of the
   merged duplicates under "Also linked via merged duplicate", next to the
   kept element's own link. The elements CSV has a new `merged_ckm_links`

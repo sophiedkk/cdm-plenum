@@ -191,8 +191,8 @@ export async function seedDemo(
     "scope source",
     await addScopeSource(db, facilitatorId, {
       projectId,
-      label: "openEHR CKM: Blood pressure (OBSERVATION.blood_pressure.v2)",
-      url: "https://ckm.openehr.org/ckm/archetypes/1013.1.3574",
+      label: "openEHR CKM archetype openEHR-EHR-OBSERVATION.blood_pressure.v2",
+      url: null,
     }),
   );
   must(
@@ -396,8 +396,9 @@ export async function seedDemoCommand(
 }
 
 if (import.meta.main) {
-  // biome-ignore lint/suspicious/noConsole: the CLI's own output
-  process.exitCode = await seedDemoCommand(process.argv.slice(2), process.env, (line) =>
-    console.log(line),
-  );
+  const print = (line: string) => {
+    // biome-ignore lint/suspicious/noConsole: the CLI's own output
+    console.log(line);
+  };
+  process.exitCode = await seedDemoCommand(process.argv.slice(2), process.env, print);
 }

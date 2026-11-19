@@ -38,6 +38,20 @@ scripts/dev/compose.sh exec dev pnpm db:migrate
 scripts/dev/compose.sh exec dev pnpm admin:grant you@example.test --facilitator
 ```
 
+To try the whole flow at once, load the demo project "Blood pressure
+(demo)": a scope, eight elements, eight invented participants in four
+stakeholder groups, a closed first round with results, and an open second
+round. Your address becomes facilitator and administrator of it; a second run
+changes nothing.
+
+```sh
+scripts/dev/compose.sh exec dev pnpm db:seed-demo --facilitator you@example.test
+```
+
+The participants have `example.test` addresses (for example
+`nurse.a@example.test`); sign in as one in a private window to see the
+participant's view and rate in round 2.
+
 Run the checks (typecheck, lint, unit tests) with `scripts/dev/pnpm.sh check`,
 and the browser tests with `scripts/dev/e2e.sh`. They run Playwright with
 Chromium and an accessibility check in a container of their own, against
