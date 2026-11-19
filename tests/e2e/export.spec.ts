@@ -27,7 +27,7 @@ async function signInAs(page: Page, email: string, locale: Locale): Promise<void
 
 const HEADER =
   '"name","description","openehr_type","fhir_type","cardinality","sources",' +
-  '"ckm_archetype_id","ckm_at_code","ckm_revision","proposed_values"';
+  '"ckm_archetype_id","ckm_at_code","ckm_revision","merged_ckm_links","proposed_values"';
 
 for (const locale of ["en", "nl"] as const satisfies Locale[]) {
   test.describe(`export page in ${locale}`, () => {

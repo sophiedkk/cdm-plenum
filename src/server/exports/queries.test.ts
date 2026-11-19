@@ -322,6 +322,7 @@ describe("exportElementsCsv (EX1)", () => {
       "ckm_archetype_id",
       "ckm_at_code",
       "ckm_revision",
+      "merged_ckm_links",
       "proposed_values",
       "round_1_outcome",
       "round_2_outcome",
@@ -340,6 +341,7 @@ describe("exportElementsCsv (EX1)", () => {
         ckm_archetype_id: "openEHR-EHR-OBSERVATION.blood_pressure.v2",
         ckm_at_code: "at0033",
         ckm_revision: "2.1.5",
+        merged_ckm_links: "",
         proposed_values: "",
         round_1_outcome: "excluded",
         round_2_outcome: "",
@@ -355,6 +357,7 @@ describe("exportElementsCsv (EX1)", () => {
         ckm_archetype_id: "",
         ckm_at_code: "",
         ckm_revision: "",
+        merged_ckm_links: "",
         proposed_values: "Standing (1); Sitting (2); Liggend; plat",
         round_1_outcome: "no_consensus",
         round_2_outcome: "included",
@@ -371,6 +374,7 @@ describe("exportElementsCsv (EX1)", () => {
         ckm_archetype_id: "openEHR-EHR-OBSERVATION.blood_pressure.v2",
         ckm_at_code: "at0004",
         ckm_revision: "2.1.5",
+        merged_ckm_links: "",
         proposed_values: "",
         round_1_outcome: "included",
         round_2_outcome: "",
@@ -399,7 +403,88 @@ describe("exportElementsCsv (EX1)", () => {
     const { userId, projectId } = await facilitatorWithProject(db);
     const file = value(await exportElementsCsv(db, userId, projectId));
     expect(parseCsv(file.content)).toHaveLength(1);
-    expect(parseCsv(file.content)[0]).toHaveLength(10);
+    expect(parseCsv(file.content)[0]).toHaveLength(11);
+  });
+
+  describe("merged_ckm_links (EL5, O-5)", () => {
+    const BP = "openEHR-EHR-OBSERVATION.blood_pressure.v2";
+
+    async function link(elementId: string, atCode: string, linkedAt: string, revision = "2.1.5") {
+      await db
+        .insertInto("element_ckm_link")
+        .values({
+          element_id: elementId,
+          archetype_id: BP,
+          cid: "1013.1.3574",
+          revision,
+          at_code: atCode,
+          ckm_element_name: atCode,
+          rm_type: "DV_QUANTITY",
+          linked_at: new Date(linkedAt),
+        })
+        .execute();
+    }
+
+    async function exported(userId: string, projectId: string) {
+      return records(value(await exportElementsCsv(db, userId, projectId)));
+    }
+
+    it("keeps the result's own link in the ckm columns and lists the duplicate's beside it", async () => {
+      const { userId, projectId } = await facilitatorWithProject(db);
+      const kept = await addElement(projectId, { name: "Systolic" });
+      const duplicate = await addElement(projectId, { name: "Bovendruk", merged_into: kept });
+      await link(kept, "at0004", "2026-11-01T09:00:00Z");
+      await link(duplicate, "at0005", "2026-11-01T09:01:00Z", "2.0.17");
+      expect(await exported(userId, projectId)).toMatchObject([
+        {
+          name: "Systolic",
+          ckm_archetype_id: BP,
+          ckm_at_code: "at0004",
+          ckm_revision: "2.1.5",
+          merged_ckm_links: `${BP} at0005 (2.0.17)`,
+        },
+      ]);
+    });
+
+    it("lists a duplicate's link on a result without a link of its own", async () => {
+      const { userId, projectId } = await facilitatorWithProject(db);
+      const kept = await addElement(projectId, { name: "Systolic" });
+      const duplicate = await addElement(projectId, { name: "Bovendruk", merged_into: kept });
+      await link(duplicate, "at0004", "2026-11-01T09:00:00Z");
+      expect(await exported(userId, projectId)).toMatchObject([
+        { name: "Systolic", ckm_archetype_id: "", merged_ckm_links: `${BP} at0004 (2.1.5)` },
+      ]);
+    });
+
+    it("follows a two-level merge, in the order the links were made, each link once", async () => {
+      const { userId, projectId } = await facilitatorWithProject(db);
+      const a = await addElement(projectId, { name: "A" });
+      const b = await addElement(projectId, { name: "B", merged_into: a });
+      const c = await addElement(projectId, { name: "C", merged_into: b });
+      const d = await addElement(projectId, { name: "D", merged_into: a });
+      await link(c, "at0005", "2026-11-01T09:00:00Z");
+      await link(b, "at0004", "2026-11-01T09:01:00Z");
+      await link(d, "at0005", "2026-11-01T09:02:00Z");
+      const other = await addElement(projectId, { name: "E" });
+      await link(other, "at1006", "2026-11-01T09:03:00Z");
+      expect(await exported(userId, projectId)).toMatchObject([
+        {
+          name: "A",
+          ckm_at_code: "",
+          merged_ckm_links: `${BP} at0005 (2.1.5); ${BP} at0004 (2.1.5)`,
+        },
+        { name: "E", ckm_at_code: "at1006", merged_ckm_links: "" },
+      ]);
+    });
+
+    it("leaves the column empty when no element has a link", async () => {
+      const { userId, projectId } = await facilitatorWithProject(db);
+      const kept = await addElement(projectId, { name: "Systolic" });
+      await addElement(projectId, { name: "Bovendruk", merged_into: kept });
+      expect(await exported(userId, projectId)).toMatchObject([
+        { name: "Systolic", merged_ckm_links: "" },
+      ]);
+    });
   });
 
   it("carries no rating code", async () => {

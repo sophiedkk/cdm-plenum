@@ -5,6 +5,7 @@
 // an author (EL2, Q-ANON-1); the facilitator merges duplicates, imports a CSV file and uses CKM
 // through the stub (tests/e2e/ckm-stub.ts); every page and dialog is axe-clean in English and
 // Dutch (Q-ACC-1, Q-I18N-1).
+import type { Page } from "@playwright/test";
 import { seedElement, signInTo, userIdOf } from "./board-seed.ts";
 import {
   BROWSER_LOCALE,
@@ -28,6 +29,32 @@ function fill(template: string, values: Record<string, string | number>): string
 
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Links the element `name` to the first blood pressure element called `ckmName`, via the stub. */
+async function linkToCkm(
+  page: Page,
+  text: (typeof MESSAGES)[Locale],
+  name: string,
+  ckmName: string,
+): Promise<void> {
+  const link = page.getByRole("button", {
+    name: new RegExp(`${escapeRegExp(text.board_link_ckm)}.*${escapeRegExp(name)}`),
+  });
+  await expectHydrated(link);
+  await link.click();
+  const dialog = page.getByRole("dialog", { name: fill(text.board_ckm_link_title, { name }) });
+  await dialog.getByLabel(text.board_ckm_search_label).fill("blood pressure");
+  await dialog.getByRole("button", { name: text.board_ckm_search_submit }).click();
+  await dialog
+    .getByRole("button", { name: fill(text.board_ckm_open, { name: "Blood pressure" }) })
+    .click();
+  // Blood pressure has these elements in more than one event; the first is the any-event one.
+  await dialog
+    .getByRole("button", { name: fill(text.board_ckm_link_to, { name: ckmName }) })
+    .first()
+    .click();
+  await expect(dialog).toHaveCount(0);
 }
 
 for (const locale of ["en", "nl"] as const satisfies Locale[]) {
@@ -118,6 +145,43 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const kept = page.getByRole("article", { name: /Systolic/ });
       await expect(kept).toContainText("Peak");
       await expect(kept).toContainText("Highest");
+    });
+
+    test("a merged duplicate's CKM link shows as provenance on the kept element", async ({
+      page,
+      db,
+    }) => {
+      const project = await seedProject(db);
+      const author = project.facilitator.userId;
+      await seedElement(db, author, project.projectId, { name: "Top pressure" });
+      await seedElement(db, author, project.projectId, { name: "Bottom pressure" });
+      await signInTo(
+        page,
+        project.facilitator.email,
+        locale,
+        `/projects/${project.projectId}/board`,
+      );
+      await linkToCkm(page, text, "Top pressure", "Systolic");
+      await linkToCkm(page, text, "Bottom pressure", "Diastolic");
+
+      await page.getByRole("button", { name: text.board_merge }).click();
+      const dialog = page.getByRole("dialog", { name: text.board_merge_title });
+      await dialog
+        .getByLabel(text.board_merge_into_label)
+        .selectOption({ label: "1. Top pressure" });
+      await dialog.getByRole("checkbox", { name: "2. Bottom pressure" }).check();
+      await dialog.getByRole("button", { name: text.board_merge_submit }).click();
+      await expect(dialog).toHaveCount(0);
+      await expect(page.getByRole("article")).toHaveCount(1);
+
+      const kept = page.getByRole("article", { name: /Top pressure/ });
+      await expect(kept).toContainText(text.board_ckm_linked_badge);
+      await expect(kept).toContainText(new RegExp(`${escapeRegExp(BP_ID)}.*at0004`));
+      const provenance = kept.getByRole("list", { name: text.board_ckm_merged_badge });
+      await expect(provenance.getByRole("listitem")).toHaveText([
+        new RegExp(`^${escapeRegExp(BP_ID)}.*2\\.0\\.17.*at0005 \\(Diastolic\\)$`),
+      ]);
+      await expectAxeClean(page);
     });
 
     test("the CSV preview shows a refused row and the import adds the others", async ({
