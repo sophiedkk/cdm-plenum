@@ -38,9 +38,18 @@ scripts/dev/compose.sh exec dev pnpm db:migrate
 scripts/dev/compose.sh exec dev pnpm admin:grant you@example.test --facilitator
 ```
 
-Run the checks (typecheck, lint, unit tests) with `scripts/dev/pnpm.sh check`.
-CI runs the same checks, plus the coverage gate and the build, on every pull
-request (`.github/workflows/ci.yml`).
+Run the checks (typecheck, lint, unit tests) with `scripts/dev/pnpm.sh check`,
+and the browser tests with `scripts/dev/e2e.sh`. They run Playwright with
+Chromium and an accessibility check in a container of their own, against
+PostgreSQL and Mailpit of the stack above. CI runs the same checks, plus the
+coverage gate and the build, on every pull request
+(`.github/workflows/ci.yml`).
+
+## Run it in production
+
+`compose.yaml` runs the app and PostgreSQL on one host behind a reverse
+proxy with TLS. [docs/deployment.md](docs/deployment.md) covers the
+settings, the first administrator, updates and backups.
 
 ## Use of AI
 
