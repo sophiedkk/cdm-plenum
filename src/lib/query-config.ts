@@ -10,6 +10,8 @@ export const STALE_TIME = {
   session: 0,
   /** The project list and one project's header: other members rarely change them. */
   projects: 30_000,
+  /** Rounds, ratings and results: participants rate while the facilitator watches the response. */
+  rounds: 10_000,
 } as const;
 
 /** The `staleTime` of a query that sets none. */
