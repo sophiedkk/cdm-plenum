@@ -6,9 +6,13 @@ import { getLocale } from "@/i18n/runtime";
 
 /** Formats an ISO moment for the active locale; `timeZone` defaults to the browser's own. */
 export function formatDateTime(iso: string, timeZone?: string): string {
+  // `dateStyle` cannot be combined with `timeZoneName`, so the parts are named one by one.
   return new Intl.DateTimeFormat(getLocale(), {
-    dateStyle: "medium",
-    timeStyle: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
     ...(timeZone === undefined ? {} : { timeZone, timeZoneName: "short" }),
   }).format(new Date(iso));
 }
