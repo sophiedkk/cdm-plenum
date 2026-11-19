@@ -64,6 +64,11 @@ export interface BoardElement {
   sources: ElementSource[];
   values: ElementValue[];
   ckmLink: ElementCkmLink | null;
+  /**
+   * The CKM links of the elements merged into this one, directly or through earlier merges, each
+   * once, in the order they were linked (EL5, O-5). Provenance only: `ckmLink` stays the link.
+   */
+  mergedCkmLinks: ElementCkmLink[];
   commentCount: number;
   createdAt: string;
 }
@@ -115,6 +120,77 @@ function groupBy<T extends { element_id: string }>(rows: T[]): Map<string, T[]> 
   return map;
 }
 
+interface CkmLinkRow {
+  archetype_id: string;
+  cid: string;
+  revision: string;
+  at_code: string;
+  ckm_element_name: string;
+  rm_type: string;
+}
+
+function toCkmLink(link: CkmLinkRow): ElementCkmLink {
+  return {
+    archetypeId: link.archetype_id,
+    cid: link.cid,
+    revision: link.revision,
+    atCode: link.at_code,
+    ckmElementName: link.ckm_element_name,
+    rmType: link.rm_type,
+  };
+}
+
+/**
+ * The CKM links of merged-away elements per active element of the project. The merge points
+ * earlier duplicates at the new result, but the walk follows `merged_into` to any depth, so a
+ * chain still ends at the element on the board. A link that repeats one listed before is skipped.
+ */
+async function mergedCkmLinks(db: Db, projectId: string): Promise<Map<string, ElementCkmLink[]>> {
+  const rows = await db
+    .withRecursive("merged(element_id, root_id)", (db) =>
+      db
+        .selectFrom("element")
+        .select(["element.id as element_id", "element.id as root_id"])
+        .where("element.project_id", "=", projectId)
+        .where("element.merged_into", "is", null)
+        .union((db) =>
+          db
+            .selectFrom("element")
+            .innerJoin("merged", "merged.element_id", "element.merged_into")
+            .select(["element.id as element_id", "merged.root_id"])
+            .where("element.project_id", "=", projectId),
+        ),
+    )
+    .selectFrom("merged")
+    .innerJoin("element_ckm_link as link", "link.element_id", "merged.element_id")
+    .select([
+      "merged.root_id",
+      "link.archetype_id",
+      "link.cid",
+      "link.revision",
+      "link.at_code",
+      "link.ckm_element_name",
+      "link.rm_type",
+    ])
+    .whereRef("merged.element_id", "!=", "merged.root_id")
+    .orderBy("link.linked_at")
+    .orderBy("link.element_id")
+    .execute();
+  const linksOf = new Map<string, ElementCkmLink[]>();
+  for (const row of rows) {
+    const list = linksOf.get(row.root_id) ?? [];
+    const repeats = list.some(
+      (link) =>
+        link.archetypeId === row.archetype_id &&
+        link.atCode === row.at_code &&
+        link.revision === row.revision,
+    );
+    if (!repeats) list.push(toCkmLink(row));
+    linksOf.set(row.root_id, list);
+  }
+  return linksOf;
+}
+
 /** The active elements of a project in the order they were added, without authors. */
 async function boardElements(db: Db, projectId: string): Promise<BoardElement[]> {
   const rows = await db
@@ -157,6 +233,7 @@ async function boardElements(db: Db, projectId: string): Promise<BoardElement[]>
     .where("element.project_id", "=", projectId)
     .where("element.merged_into", "is", null)
     .execute();
+  const mergedLinks = await mergedCkmLinks(db, projectId);
   const counts = await db
     .selectFrom("element_comment")
     .innerJoin("element", "element.id", "element_comment.element_id")
@@ -168,19 +245,7 @@ async function boardElements(db: Db, projectId: string): Promise<BoardElement[]>
   const sourcesOf = groupBy(sources);
   const valuesOf = groupBy(values);
   const countOf = new Map(counts.map((row) => [row.element_id, row.count]));
-  const linkOf = new Map(
-    links.map((link) => [
-      link.element_id,
-      {
-        archetypeId: link.archetype_id,
-        cid: link.cid,
-        revision: link.revision,
-        atCode: link.at_code,
-        ckmElementName: link.ckm_element_name,
-        rmType: link.rm_type,
-      },
-    ]),
-  );
+  const linkOf = new Map(links.map((link) => [link.element_id, toCkmLink(link)]));
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
@@ -196,6 +261,7 @@ async function boardElements(db: Db, projectId: string): Promise<BoardElement[]>
       value: value.value === null ? null : Number(value.value),
     })),
     ckmLink: linkOf.get(row.id) ?? null,
+    mergedCkmLinks: mergedLinks.get(row.id) ?? [],
     commentCount: countOf.get(row.id) ?? 0,
     createdAt: row.created_at.toISOString(),
   }));

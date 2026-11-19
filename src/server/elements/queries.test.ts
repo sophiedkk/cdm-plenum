@@ -92,6 +92,7 @@ describe("addElement (EL1)", () => {
         sources: [{ kind: "brainstorm", label: "" }],
         values: [],
         ckmLink: null,
+        mergedCkmLinks: [],
         commentCount: 0,
         createdAt: expect.any(String),
       },
@@ -229,6 +230,122 @@ describe("CKM link on the board (EL4)", () => {
       },
       null,
     ]);
+  });
+});
+
+describe("CKM links of merged duplicates (EL5, O-5)", () => {
+  const BP = "openEHR-EHR-OBSERVATION.blood_pressure.v2";
+  let linkedAt = Date.parse("2026-11-01T09:00:00Z");
+
+  /** Links an element to a blood pressure element; each call is linked a minute after the last. */
+  async function link(elementId: string, atCode: string, revision = "2.0.17") {
+    linkedAt += 60_000;
+    await db
+      .insertInto("element_ckm_link")
+      .values({
+        element_id: elementId,
+        archetype_id: BP,
+        cid: "1013.1.3574",
+        revision,
+        at_code: atCode,
+        ckm_element_name: `Element ${atCode}`,
+        rm_type: "DV_QUANTITY",
+        linked_at: new Date(linkedAt),
+      })
+      .execute();
+  }
+
+  function expected(atCode: string, revision = "2.0.17") {
+    return {
+      archetypeId: BP,
+      cid: "1013.1.3574",
+      revision,
+      atCode,
+      ckmElementName: `Element ${atCode}`,
+      rmType: "DV_QUANTITY",
+    };
+  }
+
+  async function merge(intoId: string, fromIds: string[]) {
+    const merged = await mergeElements(db, m.facilitator, {
+      projectId: m.projectId,
+      intoId,
+      fromIds,
+    });
+    expect(merged).toEqual({ ok: true, value: null });
+  }
+
+  it("shows a duplicate's link on the result, which keeps no link of its own", async () => {
+    const into = await add(m.participant, { name: "Systolic" });
+    const from = await add(m.participant, { name: "Systolic BP" });
+    await link(from, "at0004");
+    await merge(into, [from]);
+    const [result, ...rest] = await board();
+    expect(rest).toEqual([]);
+    expect(result?.ckmLink).toBeNull();
+    expect(result?.mergedCkmLinks).toEqual([expected("at0004")]);
+    const kept = await db.selectFrom("element_ckm_link").select("element_id").execute();
+    expect(kept).toEqual([{ element_id: from }]);
+  });
+
+  it("keeps the result's own link and lists a different duplicate link beside it", async () => {
+    const into = await add(m.participant, { name: "Systolic" });
+    const from = await add(m.participant, { name: "Top pressure" });
+    await link(into, "at0004");
+    await link(from, "at0005", "2.0.16");
+    await merge(into, [from]);
+    const [result] = await board();
+    expect(result?.ckmLink).toEqual(expected("at0004"));
+    expect(result?.mergedCkmLinks).toEqual([expected("at0005", "2.0.16")]);
+  });
+
+  it("follows two merges, in the order the links were made, and lists a repeated link once", async () => {
+    const a = await add(m.participant, { name: "A" });
+    const b = await add(m.participant, { name: "B" });
+    const c = await add(m.participant, { name: "C" });
+    const d = await add(m.participant, { name: "D" });
+    await link(c, "at0005");
+    await link(b, "at0004");
+    await link(d, "at0004");
+    await merge(b, [c]);
+    await merge(a, [b, d]);
+    const [result, ...rest] = await board();
+    expect(rest).toEqual([]);
+    expect(result?.ckmLink).toBeNull();
+    expect(result?.mergedCkmLinks).toEqual([expected("at0005"), expected("at0004")]);
+  });
+
+  it("walks a merged_into chain to any depth", async () => {
+    const a = await add(m.participant, { name: "A" });
+    const b = await add(m.participant, { name: "B" });
+    const c = await add(m.participant, { name: "C" });
+    await link(c, "at0005");
+    // A chain the merge itself never writes, so the walk does not rely on the flattening.
+    await db.updateTable("element").set({ merged_into: a }).where("id", "=", b).execute();
+    await db.updateTable("element").set({ merged_into: b }).where("id", "=", c).execute();
+    expect((await board()).map((e) => [e.id, e.mergedCkmLinks])).toEqual([
+      [a, [expected("at0005")]],
+    ]);
+  });
+
+  it("gives an empty list when no element has a link, and to the facilitator's list too", async () => {
+    const into = await add(m.participant, { name: "Systolic" });
+    const from = await add(m.participant, { name: "Systolic BP" });
+    const other = await add(m.participant, { name: "Diastolic" });
+    await link(other, "at0005");
+    await merge(into, [from]);
+    expect((await board()).map((e) => e.mergedCkmLinks)).toEqual([[], []]);
+    const authored = await listElementsWithAuthors(db, m.facilitator, m.projectId);
+    expect(authored.ok && authored.value.map((e) => e.mergedCkmLinks)).toEqual([[], []]);
+  });
+
+  it("shows the facilitator the same provenance as a participant", async () => {
+    const into = await add(m.participant, { name: "Systolic" });
+    const from = await add(m.participant, { name: "Systolic BP" });
+    await link(from, "at0004");
+    await merge(into, [from]);
+    const authored = await listElementsWithAuthors(db, m.facilitator, m.projectId);
+    expect(authored.ok && authored.value[0]?.mergedCkmLinks).toEqual([expected("at0004")]);
   });
 });
 
