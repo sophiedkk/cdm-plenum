@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// One element on the board (EL1, EL4, EL6, EL9): its fields, sources, CKM link, proposed values
-// and comments. The author shows only in the facilitator's view (EL2).
+// One element on the board (EL1, EL4, EL5, EL6, EL9): its fields, sources, CKM link and the links
+// of merged duplicates, proposed values and comments. The author shows only in the facilitator's
+// view (EL2).
 import { useQuery } from "@tanstack/react-query";
 import {
   FileSpreadsheetIcon,
@@ -25,6 +26,7 @@ import { refusalMessage } from "@/lib/i18n/refusals";
 import type { BoardElement, ElementSourceKind } from "@/server/elements/queries";
 import { elementCommentsQueryOptions } from "@/server/elements/query-options";
 import type { Author } from "@/server/projects/member";
+import { CkmLinks } from "./ckm-links";
 import { dataTypeName, dataTypePair } from "./data-type-text";
 
 export type CardElement = BoardElement & { author: Author | null };
@@ -122,19 +124,9 @@ export function ElementCard({
             ))}
           </ul>
         </Row>
-        {element.ckmLink !== null && (
+        {(element.ckmLink !== null || element.mergedCkmLinks.length > 0) && (
           <Row term={m.board_field_ckm()}>
-            <span className="flex flex-col items-start gap-1">
-              <StatusBadge tone="info" icon={LinkIcon} label={m.board_ckm_linked_badge()} />
-              <span className="break-all">
-                {m.board_ckm_link_detail({
-                  archetypeId: element.ckmLink.archetypeId,
-                  revision: element.ckmLink.revision,
-                  atCode: element.ckmLink.atCode,
-                  name: element.ckmLink.ckmElementName,
-                })}
-              </span>
-            </span>
+            <CkmLinks link={element.ckmLink} merged={element.mergedCkmLinks} />
           </Row>
         )}
         {(coded || element.values.length > 0) && (

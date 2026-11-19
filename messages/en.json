@@ -89,6 +89,7 @@
   "board_ckm_linked": "{name} is linked to {archetypeId}.",
   "board_ckm_linked_badge": "Linked to CKM",
   "board_ckm_loading": "Loading the archetype from CKM",
+  "board_ckm_merged_badge": "Also linked via merged duplicate",
   "board_ckm_no_results": "CKM found no archetypes for this search text.",
   "board_ckm_open": "Show elements of {name}",
   "board_ckm_results_heading": "Archetypes found",

@@ -89,6 +89,7 @@
   "board_ckm_linked": "{name} is gekoppeld aan {archetypeId}.",
   "board_ckm_linked_badge": "Gekoppeld aan CKM",
   "board_ckm_loading": "Het archetype wordt uit CKM geladen",
+  "board_ckm_merged_badge": "Ook gekoppeld via samengevoegd duplicaat",
   "board_ckm_no_results": "CKM vond geen archetypes voor deze zoektekst.",
   "board_ckm_open": "Elementen van {name} tonen",
   "board_ckm_results_heading": "Gevonden archetypes",
