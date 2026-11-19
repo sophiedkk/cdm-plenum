@@ -64,7 +64,9 @@ PostgreSQL service container) and build on every pull request and push to
 a full commit SHA with the version in a comment, and check workflow changes
 with actionlint and zizmor (`uvx zizmor --persona=pedantic .github/`).
 Dependabot (`.github/dependabot.yml`) proposes weekly npm and action updates
-after a 7-day cooldown.
+after a 7-day cooldown. `.github/workflows/ckm-contract.yml` runs
+`pnpm test:ckm` against the live CKM every Monday and by hand; run it
+locally with `scripts/dev/pnpm.sh test:ckm`.
 
 ## Development environment
 

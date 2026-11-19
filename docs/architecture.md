@@ -274,10 +274,29 @@ working: linking and importing show the error, nothing else waits on CKM
 (R-06).
 
 The element list of an archetype is read from the XML form
-(`v1/archetypes/{cid}/xml`): every `ELEMENT` node with its at-code, its term
-text in the archetype's original language and its data type. A link stores
-the revision, so a later CKM change does not silently change what the group
-rated.
+(`v1/archetypes/{cid}/xml`): every `ELEMENT` node with its path, at-code,
+term text in the archetype's original language, occurrences and data type.
+Internal references and slots are skipped. The current revision comes from the
+archetype's JSON row, because the XML has none; the XML is refused when its
+archetype ID or build id differs from that row. The parser refuses any
+`DOCTYPE` or entity declaration and decodes only the five predefined
+entities, so a hostile document cannot expand entities.
+
+Limits: 10 seconds per call, 4 MiB per body, 200 cached entries per kind for
+one day. A redirect is refused, not followed. `CKM_BASE_URL` points the client
+at another CKM; the international CKM is the default.
+
+A link stores the archetype ID, revision and at-code, so a later CKM change
+does not silently change what the group rated. Linking is refused when CKM
+now has another revision than the facilitator saw. The link's `rm_type` holds
+the type as CKM writes it, several types of a choice joined with ` | `, or
+`DATA_VALUE` for an open value; the element's data type key is set only when
+there is exactly one type and it is in the list. Importing the same archetype
+twice into a project is refused.
+
+`pnpm test:ckm` runs a contract test against the live CKM; a scheduled
+workflow (`.github/workflows/ckm-contract.yml`) runs it every week, so an API
+change shows up without blocking pull requests (ADR 0006).
 
 ### Exports
 

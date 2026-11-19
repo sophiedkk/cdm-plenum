@@ -23,6 +23,10 @@ the project uses [Semantic Versioning](https://semver.org/).
 - Everyone in a project sees closed-round results per element and per
   stakeholder group of 3 or more; facilitators see the response rate per
   group.
+- Facilitators can search CKM, link a candidate element to an element of a
+  CKM archetype and import all elements of an archetype as candidates. A link
+  records the archetype ID, revision and at-code.
+- Set `CKM_BASE_URL` to use another CKM; the international CKM is the default.
 - A first web app with a home page in English and Dutch, chosen from your
   browser's language, and a health check at `/api/health`.
 - A development stack that runs with `podman compose`: the app, PostgreSQL
