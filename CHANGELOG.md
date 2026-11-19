@@ -17,6 +17,10 @@ the project uses [Semantic Versioning](https://semver.org/).
 - A facilitator can join one stakeholder group on the members page and rate
   in rounds. Their ratings count in that group's results, the response rate
   and the minimum panel.
+- When you merge duplicate elements, the board shows the CKM links of the
+  merged duplicates under "Also linked via merged duplicate", next to the
+  kept element's own link. The elements CSV has a new `merged_ckm_links`
+  column listing these links as `archetype_id at_code (revision)`.
 - The scope page shows the concept, use cases, what is out of scope and the
   ordered sources. The facilitator edits the texts and adds, moves and
   removes sources with buttons. Every member can comment; only the

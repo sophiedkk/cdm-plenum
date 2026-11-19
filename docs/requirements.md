@@ -57,7 +57,7 @@ person already runs stay theirs. An invitation never grants the right.
 
 | Role | May | Sees |
 |---|---|---|
-| Facilitator | create a project, with the right an administrator grants; run their projects; invite participants and assign them to a stakeholder group; edit the scope statement and the element board; set up, open and close rounds; export | everything in their own projects, including who took part in a round, never which participant gave which rating |
+| Facilitator | create a project, with the right an administrator grants; run their projects; invite participants and assign them to a stakeholder group; edit the scope statement and the element board; set up, open and close rounds; export; rate, after placing themselves in a stakeholder group (DE14) | everything in their own projects, including who took part in a round, never which participant gave which rating |
 | Participant | read the scope statement; add and comment on candidate elements; rate in an open round | the projects they are invited to; the group results of closed rounds; their own earlier ratings |
 | Administrator | manage user accounts, the administrator role and the facilitator right | accounts and the activity log; no project content unless they also hold a project role |
 
@@ -72,6 +72,7 @@ person already runs stay theirs. An invitation never grants the right.
 | PR3 | A facilitator invites participants by e-mail address and assigns each to one stakeholder group. | Must | *(proposed)* The invitee gets a single-use invitation link that expires; accepting it creates their account or adds the project to an existing one. A used or expired link is refused, and the refusal is tested. An invited participant sees the project after sign-in; a user who is not invited gets no access to it. Every participant belongs to exactly one stakeholder group of the project. | R-01 |
 | PR4 | A project shows its phase: scope, discover, decide, hand-off. | Should | *(proposed)* The project page shows the current phase; the facilitator moves the project to the next phase. | |
 | PR5 | A participant leaves a project. | Should | *(proposed)* After leaving, the participant has no access; their ratings in closed rounds stay in the results. | R-04 |
+| PR7 | A facilitator chooses whether participants see who is in each stakeholder group. | Should | *(proposed)* A project setting, off by default: off, participants see each group's expert type and number of participants; on, they also see the names. The setting never reveals who wrote an element or comment or who gave a rating (Q-ANON-1). Owner decision 2026-11-19. | R-03 |
 | PR6 | Each stakeholder group has an expert type; a new project starts with a default set of groups. | Must | *(proposed)* A new project has one terminology group, one architecture group, and clinical groups for the Nictiz expert areas: general medicine, primary care, mental health care, nursing, medication and allergies, patient, administrative. The facilitator adds, renames and removes groups, and every group keeps exactly one expert type. Owner decision 2026-11-19. | |
 
 ### Scope
@@ -90,11 +91,13 @@ person already runs stay theirs. An invitation never grants the right.
 | EL2 | Other participants do not see who added an element. | Must | *(proposed)* No page or API response shown to a participant contains the author of an element; the facilitator sees the author. | R-03 |
 | EL3 | A facilitator imports candidate elements from a CSV file. | Must | *(proposed)* A CSV with a name and description column adds one element per row; a row without a name is reported and not imported; the file's name is stored as the source. The file is UTF-8 with a header row, comma or semicolon separated, at most 1 MiB and 1,000 rows; `data_type` takes the key or the RM type name and `cardinality` the form `0..1`. | R-05 |
 | EL4 | A facilitator links a candidate element to an existing element of a CKM archetype. | Must | *(proposed)* The facilitator searches CKM from the element, picks an archetype and an element, and the element shows the archetype ID, its revision and the element's at-code. The search uses the CKM REST API (see [External sources](#external-sources)). | R-06 |
-| EL5 | A facilitator merges duplicate elements and edits an element's wording. | Must | *(proposed)* Merging two elements keeps both descriptions and both sources on the result; comments of both stay readable. A merge is refused for an element that is already in a round, and when the proposed values do not fit the result's data type. | |
+| EL5 | A facilitator merges duplicate elements and edits an element's wording. | Must | *(proposed)* Merging two elements keeps both descriptions and both sources on the result; comments of both stay readable. A merge is refused for an element that is already in a round, and when the proposed values do not fit the result's data type. A CKM link on a duplicate stays recorded and is shown and exported as provenance of the result; the result's own link does not change. Owner decision 2026-11-19. | |
 | EL6 | Participants comment on an element. | Should | *(proposed)* A comment appears under the element; the author is hidden from other participants as in EL2. | R-03 |
 | EL7 | A facilitator imports the elements of an existing CKM archetype as candidates. | Should | *(proposed)* Every element of the chosen archetype becomes a candidate linked to that archetype element (EL4). | R-06 |
 | EL8 | Participants group elements in an open card sort. | Could | *(proposed)* Each participant sorts the elements into groups they name; the facilitator sees how often two elements share a group. | |
 | EL9 | A facilitator lists proposed values for an element of a coded type (coded text, ordinal, scale). | Should | *(proposed)* The element holds an ordered list of values, each with a text and, for ordinal and scale, a number; the list appears in the exports. | |
+| EL10 | A facilitator searches FHIR packages and links a candidate element to an element of a FHIR resource, profile or logical model. | Should | *(proposed)* The facilitator searches the FHIR package registry for FHIR R4 packages (for example `hl7.fhir.r4.core`, `hl7.fhir.uv.ips`, `nictiz.fhir.nl.r4.zib2020`), opens a StructureDefinition and links an element to one of its element paths (for example `Observation.component.value[x]`). The link stores the package, its version, the canonical URL and the path. An element can carry a CKM link and a FHIR link at the same time. Owner decision 2026-11-19. | R-09 |
+| EL11 | A facilitator imports the elements of a FHIR profile or logical model as candidates. | Could | *(proposed)* Every element of the chosen StructureDefinition becomes a candidate linked to that element (EL10), with source kind `fhir`, as EL7 does for an archetype. | R-09 |
 
 ### Delphi rounds
 
@@ -112,7 +115,8 @@ person already runs stay theirs. An invitation never grants the right.
 | DE10 | Element order is randomised per participant. | Could | *(proposed)* Two participants in the same round see the elements in a different order; one participant keeps their own order within the round. | |
 | DE11 | A project has a change class, and the round setup shows the panel per expert type next to the minimum panel of that class. | Should | *(proposed)* The facilitator picks the class when creating the project (default D, a new model) and can change it until the first round opens. The round setup lists, per expert type, the participants who have joined and the minimum from the [minimum panel table](#minimum-panel); a shortfall is shown with text, not colour alone. Owner decision 2026-11-19. | R-08 |
 | DE12 | A facilitator can open a round below the minimum panel by giving a reason. | Should | *(proposed)* Opening a round below the minimum asks for a short reason and then opens the round; it is never refused for the panel alone. The round stores the panel per expert type at the moment it opened, the minimum that applied and the reason; the round page and the decision report (EX3) show them. | R-08 |
-| DE13 | A facilitator adjusts the minimum panel of a project. | Could | *(proposed)* The facilitator raises or lowers the count per expert type before the first round opens; the decision report shows the adjusted counts next to the class defaults. | |
+| DE13 | A facilitator adjusts the minimum panel of a project, with a reason. | Could | *(proposed)* The facilitator raises or lowers the count per expert type before the first round opens and gives a reason for the change (owner decision 2026-11-19); the decision report shows the adjusted counts and the reason next to the class defaults. | |
+| DE14 | A facilitator rates, as a member of one stakeholder group. | Should | *(proposed)* A facilitator who wants to rate places themselves in one stakeholder group; their ratings then count like any participant's in the overall result, the group result, the response rate and the minimum panel. A facilitator without a group cannot rate. Owner decision 2026-11-19. | |
 
 Design choices made while building the rounds, for the owner to confirm: one
 round runs at a time; the facilitator closes a round only after its closing
@@ -154,11 +158,12 @@ tool shows the minimum only.
 
 | ID | Requirement | Priority | Acceptance criterion | Risk |
 |---|---|---|---|---|
-| EX1 | Export the elements and their round outcomes as CSV. | Must | *(proposed)* One row per element with name, description, openEHR data type, FHIR data type, cardinality, source, linked CKM element and the outcome of each round; the file opens correctly in a spreadsheet program. | |
+| EX1 | Export the elements and their round outcomes as CSV. | Must | *(proposed)* One row per element with name, description, openEHR data type, FHIR data type, cardinality, source, linked CKM element, the CKM links of merged duplicates and the outcome of each round; the file opens correctly in a spreadsheet program. | |
 | EX2 | Export the included elements as a FreeMind mind map (`.mm`), the format CKM itself serves for archetypes. | Must | *(proposed)* The file opens in Freeplane and in XMind and shows the concept as the root and each included element as a node with its description. | |
 | EX3 | Export a decision report of the project. | Should | *(proposed)* The report holds the scope statement, the panel per stakeholder group, the consensus rule of each round, the response rate per round, and the outcome per element. Its structure follows the ACCORD reporting guideline (<https://doi.org/10.1371/journal.pmed.1004326>). | |
 | EX4 | Export the anonymised ratings for analysis. | Should | *(proposed)* One row per rating with a random participant code per project, the stakeholder group, round, element and score; the code is stable within the project and does not appear in any other export. | R-03 |
 | EX5 | Export the included elements as an ADL archetype skeleton. | Could | *(proposed)* The skeleton passes the openEHR archetype parser of the ADL Workbench without errors. | |
+| EX6 | Export the included elements as a FHIR R4 logical model. | Could | *(proposed)* The StructureDefinition (kind `logical`) passes the HL7 FHIR validator; each element carries its FHIR data type (ADR 0009) and cardinality, and a FHIR link (EL10) as a mapping. | |
 
 ### Administration
 
@@ -175,7 +180,7 @@ tool shows the minimum only.
 | W2 | Run formal CKM review rounds or publish to CKM. | Won't | CKM owns review and publication. |
 | W3 | Store patient data. | Won't | The tool holds model elements and opinions about them, never patient records. |
 | W4 | Templates (OET/OPT). | Won't | A template combines published archetypes; that work starts after the hand-off. |
-| W5 | zib and FHIR export in the first version. | Won't | openEHR first; the element model stays neutral so these can follow. |
+| W5 | zib and FHIR export in the first version. | Won't | openEHR first; the element model stays neutral so these can follow. A FHIR logical model export is now EX6 (Could); a zib export stays out. |
 
 ## Quality requirements
 
@@ -211,6 +216,7 @@ Classified by the ISO/IEC 25010 quality characteristics.
 | R-06 | CKM is unreachable or changes its API. | Medium | Low | One CKM client; the board works without CKM; a link stores the archetype ID and revision. |
 | R-07 | The consensus rule is changed after the results are known. | Low | High | DE1, DE2. |
 | R-08 | A round runs with one expert type missing, so the outcome reflects only part of the expertise. | Medium | Medium | DE11 shows the shortfall; DE12 records the reason; the decision report shows the panel per expert type. |
+| R-09 | The FHIR package registry is unreachable, or a package is large or changes between versions. | Medium | Low | One FHIR package client like the CKM client; a link stores package, version, canonical URL and path; the board works without the registry. |
 
 ### Project risks
 
@@ -252,6 +258,17 @@ If the API is unreachable or changes (R-06), the fallback is the openEHR CKM
 mirror on GitHub (<https://github.com/openEHR/CKM-mirror>), which openEHR
 keeps in sync with the international CKM.
 
+The FHIR package registry at `https://packages.fhir.org` (EL10, EL11) answers
+without sign-in. These calls were checked on 2026-11-19; the package format
+is the FHIR NPM package specification
+(<https://hl7.org/fhir/packages.html>):
+
+| Need | Call |
+|---|---|
+| Search packages | `GET catalog?name=…&fhirversion=R4` returns a JSON array with `Name`, `Description` and `FhirVersion`; a search for `nictiz` lists the Nictiz packages. |
+| Versions of a package | `GET {package}` returns the package's versions, for example `nictiz.fhir.nl.r4.zib2020` up to `0.9.0-beta.1`. |
+| Contents | Each version is an NPM tarball with the package's StructureDefinitions; which packages hold logical models (for example the zibs) is not yet checked. |
+
 ## Open questions
 
 | ID | Question |
@@ -259,5 +276,5 @@ keeps in sync with the international CKM.
 | O-1 | Resolved 2026-11-19: the CKM REST API, see [External sources](#external-sources). |
 | O-2 | Resolved 2026-11-19: FreeMind `.mm`, as CKM serves it (EX2). |
 | O-3 | Resolved 2026-11-19 by the owner: accounts come from an invitation system (PR1, PR3). How the invitation reaches the invitee (e-mail sent by the app, or a link the facilitator passes on) and how the invitee signs in afterwards is an architecture decision. |
-| O-4 | Should the facilitator be able to take part as a participant in their own project? Until decided, only participants rate. |
-| O-5 | When duplicates are merged (EL5), should a CKM link on a duplicate move to the result when the result has none? Today the link stays on the merged-away element. |
+| O-4 | Resolved 2026-11-19 by the owner: facilitators can rate, as a member of one stakeholder group (DE14). |
+| O-5 | Resolved 2026-11-19 by the owner: a duplicate's CKM link stays recorded and is shown and exported as provenance of the merged element (EL5, EX1). |

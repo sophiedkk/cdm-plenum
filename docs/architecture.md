@@ -83,7 +83,10 @@ facilitator action gets `forbidden`. Route guards only steer navigation; they
 are not the security boundary (Q-SEC-1).
 
 A participant sees each stakeholder group with its expert type and number of
-participants, never names; the facilitator sees names and addresses. A
+participants; names only when the facilitator switches on the project setting
+for it (PR7, off by default). The facilitator sees names and addresses. A
+facilitator who places themselves in a stakeholder group can rate and counts
+like a participant (DE14). A
 participant who leaves keeps a member row with the role `left`, which no
 access check accepts, so their rating code and authorship stay; an invitation
 restores the row and the same code. An administrator can neither deactivate
@@ -240,8 +243,8 @@ One round runs at a time: a new round needs the previous one closed. The
 facilitator closes a round once its closing date has passed, never earlier,
 because an early close would shorten a date DE2 fixes; between the date and
 the close the round shows as awaiting close and the database already refuses
-ratings. Closing writes each element's outcome in one transaction. Only
-participants rate (O-4 is open). Reads never change a round.
+ratings. Closing writes each element's outcome in one transaction. Participants rate, and so does a facilitator who is in a stakeholder
+group (DE14). Reads never change a round.
 
 ## Application structure
 
@@ -308,6 +311,18 @@ twice into a project is refused.
 workflow (`.github/workflows/ckm-contract.yml`) runs it every week, so an API
 change shows up without blocking pull requests (ADR 0006).
 
+### FHIR package client
+
+The FHIR counterpart of the CKM client (EL10, EL11,
+[ADR 0011](adr/0011-fhir-package-client.md)). `src/server/fhir/` will be the
+only module that calls the FHIR package registry: it searches the catalogue,
+downloads a package version as its NPM tarball, and reads the
+StructureDefinitions in it, with the same timeout, size cap, typed results
+and cache as the CKM client. FHIR R4 first. A FHIR link stores the package,
+its version, the StructureDefinition's canonical URL and the element path, so
+a newer package version does not change what the group linked. An element can
+carry a CKM link and a FHIR link at once; the board shows both.
+
 ### Exports
 
 All exports are generated on request from the database and are not stored.
@@ -328,7 +343,8 @@ an activity log row with ids only.
   break gets a leading `'`, after the OWASP CSV injection guidance.
 - **Elements CSV (EX1):** one row per element that is not merged, with
   `name, description, openehr_type, fhir_type, cardinality, sources,
-  ckm_archetype_id, ckm_at_code, ckm_revision, proposed_values` and one
+  ckm_archetype_id, ckm_at_code, ckm_revision, merged_ckm_links,
+  proposed_values` and one
   `round_N_outcome` column per round. The sources include those of merged
   duplicates (Q-AUDIT-1).
 - **Mind map (EX2):** the scope concept as root; an element is on the map when
