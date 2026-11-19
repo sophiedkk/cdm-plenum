@@ -14,6 +14,8 @@ export const STALE_TIME = {
   members: 30_000,
   /** The administration page: always revalidated, so a change by another administrator shows. */
   admin: 0,
+  /** Rounds, ratings and results: participants rate while the facilitator watches the response. */
+  rounds: 10_000,
 } as const;
 
 /** The `staleTime` of a query that sets none. */

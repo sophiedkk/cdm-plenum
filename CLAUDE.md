@@ -145,6 +145,13 @@ page from these patterns; each has a real use and a test you can copy.
 - **Parallel e2e runs** need their own `E2E_PORT`: podman-compose puts the
   stack's containers in one network namespace, so two runs on the default
   port collide.
+- **Dates and time zones:** `src/components/rounds/format.ts` formats round
+  dates in the browser's time zone and names the zone. Name the date parts
+  one by one: Chromium rejects `dateStyle` together with a time zone name.
+- **Unit tests of Radix controls** such as checkboxes need a `ResizeObserver`
+  stub in jsdom (see the tests in `src/components/rounds/`).
+- **E2E sign-in** (`signIn` in `tests/e2e/fixtures.ts`) works in English only;
+  the rounds and export specs use their own `signInAs(page, email, locale)`.
 
 ## Development environment
 
