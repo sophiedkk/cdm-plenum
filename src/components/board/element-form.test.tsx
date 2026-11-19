@@ -8,7 +8,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { baseLocale, overwriteGetLocale } from "@/i18n/runtime";
 import { DATA_TYPES } from "@/lib/data-types";
-import { ElementForm, type ElementFields, type ElementOutcome } from "./element-form";
+import { type ElementFields, ElementForm, type ElementOutcome } from "./element-form";
 
 afterEach(() => {
   cleanup();
@@ -16,7 +16,9 @@ afterEach(() => {
 });
 
 function renderForm(
-  submit: (fields: ElementFields) => Promise<ElementOutcome> = vi.fn(async () => ({ ok: true }) as const),
+  submit: (fields: ElementFields) => Promise<ElementOutcome> = vi.fn(
+    async () => ({ ok: true }) as const,
+  ),
   initial?: Omit<ElementFields, "source">,
 ) {
   const onDone = vi.fn();

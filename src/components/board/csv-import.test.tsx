@@ -30,8 +30,6 @@ const FILE_ERRORS = [
   "unterminated_quote",
   "too_many_rows",
 ] as const satisfies readonly CsvFileError[];
-const CSV_ROW_ERRORS_FOR_TEST: readonly CsvRowError[] = ROW_ERRORS;
-const CSV_FILE_ERRORS_FOR_TEST: readonly CsvFileError[] = FILE_ERRORS;
 
 afterEach(() => {
   cleanup();
@@ -46,13 +44,13 @@ function chooseFile(text = CONTENT, name = "elements.csv") {
 }
 
 describe("CSV messages", () => {
-  it.each(CSV_ROW_ERRORS_FOR_TEST)("translates the row error %s", (reason) => {
+  it.each(ROW_ERRORS)("translates the row error %s", (reason) => {
     expect(csvRowErrorMessage(reason)).not.toContain("_");
     overwriteGetLocale(() => "nl");
     expect(csvRowErrorMessage(reason)).toBeTruthy();
   });
 
-  it.each(CSV_FILE_ERRORS_FOR_TEST)("translates the file error %s", (error) => {
+  it.each(FILE_ERRORS)("translates the file error %s", (error) => {
     expect(csvFileErrorMessage(error)).toBeTruthy();
   });
 
@@ -103,7 +101,9 @@ describe("CsvImport", () => {
     const onImported = vi.fn();
     render(<CsvImport preview={preview} importFile={importFile} onImported={onImported} />);
     chooseFile();
-    await waitFor(() => expect(screen.getByLabelText("CSV file").getAttribute("aria-invalid")).toBe("false"));
+    await waitFor(() =>
+      expect(screen.getByLabelText("CSV file").getAttribute("aria-invalid")).toBe("false"),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Show preview" }));
     await screen.findByRole("heading", { name: "Preview of elements.csv" });
     expect(preview).toHaveBeenCalledWith({
@@ -134,7 +134,9 @@ describe("CsvImport", () => {
     const importFile = vi.fn(async () => ({ ok: false as const, error: "forbidden" as const }));
     render(<CsvImport preview={preview} importFile={importFile} onImported={vi.fn()} />);
     chooseFile();
-    await waitFor(() => expect(screen.getByLabelText("CSV file").getAttribute("aria-invalid")).toBe("false"));
+    await waitFor(() =>
+      expect(screen.getByLabelText("CSV file").getAttribute("aria-invalid")).toBe("false"),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Show preview" }));
     expect(await screen.findByText("These columns are not read: unit.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Import the accepted rows (1)" }));

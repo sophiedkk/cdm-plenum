@@ -6,14 +6,21 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DataTypeKey } from "@/lib/data-types";
-import { type ProposedValue, parseValueNumber, ValuesForm, type ValuesOutcome } from "./values-form";
+import {
+  type ProposedValue,
+  parseValueNumber,
+  ValuesForm,
+  type ValuesOutcome,
+} from "./values-form";
 
 afterEach(cleanup);
 
 function renderForm(
   dataType: DataTypeKey,
   initial: ProposedValue[],
-  save: (values: ProposedValue[]) => Promise<ValuesOutcome> = vi.fn(async () => ({ ok: true }) as const),
+  save: (values: ProposedValue[]) => Promise<ValuesOutcome> = vi.fn(
+    async () => ({ ok: true }) as const,
+  ),
 ) {
   const onSaved = vi.fn();
   render(<ValuesForm dataType={dataType} initial={initial} save={save} onSaved={onSaved} />);
