@@ -240,6 +240,7 @@ export interface TeamMember {
 
 export interface User {
   createdAt: Generated<Timestamp>;
+  deactivated_at: Timestamp | null;
   email: string;
   emailVerified: boolean;
   id: string;
