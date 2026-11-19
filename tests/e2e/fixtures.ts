@@ -140,7 +140,7 @@ interface WorkerFixtures {
 export const test = base.extend<object, WorkerFixtures>({
   // NOTE: better-auth reads the client address from a single-value X-Forwarded-For, as behind
   // the reverse proxy (docs/deployment.md). A new address per test keeps the magic link rate
-  // limit (5 requests per 60 s per address) from failing parallel tests.
+  // limit (30 requests per 60 s per address, src/server/auth.ts) from failing parallel tests.
   extraHTTPHeaders: async ({ extraHTTPHeaders }, use) => {
     const [a, b, c] = randomBytes(3);
     await use({ ...extraHTTPHeaders, "X-Forwarded-For": `10.${a}.${b}.${c}` });
