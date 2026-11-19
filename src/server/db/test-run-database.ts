@@ -37,9 +37,20 @@ async function onBase<T>(baseUrl: string, work: (client: pg.Client) => Promise<T
   }
 }
 
-/** Creates an empty run database next to the one `baseUrl` names and returns its URL. */
-export async function createRunDatabase(baseUrl: string): Promise<string> {
-  const name = newRunDatabaseName(databaseOf(baseUrl));
+/** Throws unless `name` is a run database next to the database `baseUrl` names. */
+function assertRunDatabase(baseUrl: string, name: string, action: "create" | "drop"): void {
+  if (!RUN_SUFFIX.test(name) || !name.startsWith(`${databaseOf(baseUrl)}_run_`)) {
+    throw new Error(`Refusing to ${action} ${name}: it is not a test run database.`);
+  }
+}
+
+/**
+ * Creates an empty run database next to the one `baseUrl` names and returns its URL: the one
+ * `runUrl` names, else a new one. The e2e suite names it up front, so its workers agree on it.
+ */
+export async function createRunDatabase(baseUrl: string, runUrl?: string): Promise<string> {
+  const name = runUrl === undefined ? newRunDatabaseName(databaseOf(baseUrl)) : databaseOf(runUrl);
+  assertRunDatabase(baseUrl, name, "create");
   await onBase(baseUrl, (client) =>
     client.query(`CREATE DATABASE ${pg.escapeIdentifier(name)} ENCODING 'UTF8' TEMPLATE template0`),
   );
@@ -49,9 +60,7 @@ export async function createRunDatabase(baseUrl: string): Promise<string> {
 /** Drops the run database `runUrl` names; refuses any database that is not a run database. */
 export async function dropRunDatabase(baseUrl: string, runUrl: string): Promise<void> {
   const name = databaseOf(runUrl);
-  if (!RUN_SUFFIX.test(name) || !name.startsWith(`${databaseOf(baseUrl)}_run_`)) {
-    throw new Error(`Refusing to drop ${name}: it is not a test run database.`);
-  }
+  assertRunDatabase(baseUrl, name, "drop");
   await onBase(baseUrl, (client) =>
     client.query(`DROP DATABASE IF EXISTS ${pg.escapeIdentifier(name)} WITH (FORCE)`),
   );
