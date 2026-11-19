@@ -1,0 +1,42 @@
+# SPDX-FileCopyrightText: Sophie de Klerk
+# SPDX-License-Identifier: Apache-2.0
+
+# Weekly dependency updates for the npm packages in pnpm-lock.yaml and the
+# GitHub Actions the workflows pin. The cooldown keeps a release out of a pull
+# request for 7 days, so a compromised or yanked release has time to be caught
+# (https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference#cooldown-).
+# Security updates skip the cooldown.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+    # package.json pins exact versions; a bump keeps them exact.
+    versioning-strategy: increase
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "build"
+      include: "scope"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    cooldown:
+      default-days: 7
+    groups:
+      actions-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "ci"
+      include: "scope"
