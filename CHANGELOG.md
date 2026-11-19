@@ -11,6 +11,22 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Facilitators set the change class and the minimum panel per expert type,
+  and see the panel next to the minimum.
+- Facilitators set up a rating round with its elements, scale, consensus
+  rule, closing date and whether they may see who rated what, and open it,
+  with a reason when the panel is below the minimum.
+- Participants rate each element on the scale or choose "unable to rate",
+  with an optional reason; each answer saves at once. In later rounds they
+  see their earlier rating, the group result and the anonymous reasons.
+- After the closing date, facilitators close a round. Everyone then sees
+  each element's outcome, median, band percentages and full distribution, and
+  results per stakeholder group of 3 or more.
+- Facilitators see the response rate per stakeholder group, and who rated
+  what when the round allows it.
+- Facilitators download the elements CSV, the mind map and the anonymised
+  ratings CSV from the export page, with a hint for opening CSV files in a
+  Dutch spreadsheet program.
 - After signing in you see your projects with your role and the phase of
   each project. A person with the facilitator right creates a project from
   there and lands on its scope page.
