@@ -311,6 +311,18 @@ twice into a project is refused.
 workflow (`.github/workflows/ckm-contract.yml`) runs it every week, so an API
 change shows up without blocking pull requests (ADR 0006).
 
+### FHIR package client
+
+The FHIR counterpart of the CKM client (EL10, EL11,
+[ADR 0011](adr/0011-fhir-package-client.md)). `src/server/fhir/` will be the
+only module that calls the FHIR package registry: it searches the catalogue,
+downloads a package version as its NPM tarball, and reads the
+StructureDefinitions in it, with the same timeout, size cap, typed results
+and cache as the CKM client. FHIR R4 first. A FHIR link stores the package,
+its version, the StructureDefinition's canonical URL and the element path, so
+a newer package version does not change what the group linked. An element can
+carry a CKM link and a FHIR link at once; the board shows both.
+
 ### Exports
 
 All exports are generated on request from the database and are not stored.

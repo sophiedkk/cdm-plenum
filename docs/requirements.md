@@ -96,6 +96,8 @@ person already runs stay theirs. An invitation never grants the right.
 | EL7 | A facilitator imports the elements of an existing CKM archetype as candidates. | Should | *(proposed)* Every element of the chosen archetype becomes a candidate linked to that archetype element (EL4). | R-06 |
 | EL8 | Participants group elements in an open card sort. | Could | *(proposed)* Each participant sorts the elements into groups they name; the facilitator sees how often two elements share a group. | |
 | EL9 | A facilitator lists proposed values for an element of a coded type (coded text, ordinal, scale). | Should | *(proposed)* The element holds an ordered list of values, each with a text and, for ordinal and scale, a number; the list appears in the exports. | |
+| EL10 | A facilitator searches FHIR packages and links a candidate element to an element of a FHIR resource, profile or logical model. | Should | *(proposed)* The facilitator searches the FHIR package registry for FHIR R4 packages (for example `hl7.fhir.r4.core`, `hl7.fhir.uv.ips`, `nictiz.fhir.nl.r4.zib2020`), opens a StructureDefinition and links an element to one of its element paths (for example `Observation.component.value[x]`). The link stores the package, its version, the canonical URL and the path. An element can carry a CKM link and a FHIR link at the same time. Owner decision 2026-11-19. | R-09 |
+| EL11 | A facilitator imports the elements of a FHIR profile or logical model as candidates. | Could | *(proposed)* Every element of the chosen StructureDefinition becomes a candidate linked to that element (EL10), with source kind `fhir`, as EL7 does for an archetype. | R-09 |
 
 ### Delphi rounds
 
@@ -161,6 +163,7 @@ tool shows the minimum only.
 | EX3 | Export a decision report of the project. | Should | *(proposed)* The report holds the scope statement, the panel per stakeholder group, the consensus rule of each round, the response rate per round, and the outcome per element. Its structure follows the ACCORD reporting guideline (<https://doi.org/10.1371/journal.pmed.1004326>). | |
 | EX4 | Export the anonymised ratings for analysis. | Should | *(proposed)* One row per rating with a random participant code per project, the stakeholder group, round, element and score; the code is stable within the project and does not appear in any other export. | R-03 |
 | EX5 | Export the included elements as an ADL archetype skeleton. | Could | *(proposed)* The skeleton passes the openEHR archetype parser of the ADL Workbench without errors. | |
+| EX6 | Export the included elements as a FHIR R4 logical model. | Could | *(proposed)* The StructureDefinition (kind `logical`) passes the HL7 FHIR validator; each element carries its FHIR data type (ADR 0009) and cardinality, and a FHIR link (EL10) as a mapping. | |
 
 ### Administration
 
@@ -177,7 +180,7 @@ tool shows the minimum only.
 | W2 | Run formal CKM review rounds or publish to CKM. | Won't | CKM owns review and publication. |
 | W3 | Store patient data. | Won't | The tool holds model elements and opinions about them, never patient records. |
 | W4 | Templates (OET/OPT). | Won't | A template combines published archetypes; that work starts after the hand-off. |
-| W5 | zib and FHIR export in the first version. | Won't | openEHR first; the element model stays neutral so these can follow. |
+| W5 | zib and FHIR export in the first version. | Won't | openEHR first; the element model stays neutral so these can follow. A FHIR logical model export is now EX6 (Could); a zib export stays out. |
 
 ## Quality requirements
 
@@ -213,6 +216,7 @@ Classified by the ISO/IEC 25010 quality characteristics.
 | R-06 | CKM is unreachable or changes its API. | Medium | Low | One CKM client; the board works without CKM; a link stores the archetype ID and revision. |
 | R-07 | The consensus rule is changed after the results are known. | Low | High | DE1, DE2. |
 | R-08 | A round runs with one expert type missing, so the outcome reflects only part of the expertise. | Medium | Medium | DE11 shows the shortfall; DE12 records the reason; the decision report shows the panel per expert type. |
+| R-09 | The FHIR package registry is unreachable, or a package is large or changes between versions. | Medium | Low | One FHIR package client like the CKM client; a link stores package, version, canonical URL and path; the board works without the registry. |
 
 ### Project risks
 
@@ -253,6 +257,17 @@ Assistant MCP server uses (`src/Tools/CkmService.php` in
 If the API is unreachable or changes (R-06), the fallback is the openEHR CKM
 mirror on GitHub (<https://github.com/openEHR/CKM-mirror>), which openEHR
 keeps in sync with the international CKM.
+
+The FHIR package registry at `https://packages.fhir.org` (EL10, EL11) answers
+without sign-in. These calls were checked on 2026-11-19; the package format
+is the FHIR NPM package specification
+(<https://hl7.org/fhir/packages.html>):
+
+| Need | Call |
+|---|---|
+| Search packages | `GET catalog?name=…&fhirversion=R4` returns a JSON array with `Name`, `Description` and `FhirVersion`; a search for `nictiz` lists the Nictiz packages. |
+| Versions of a package | `GET {package}` returns the package's versions, for example `nictiz.fhir.nl.r4.zib2020` up to `0.9.0-beta.1`. |
+| Contents | Each version is an NPM tarball with the package's StructureDefinitions; which packages hold logical models (for example the zibs) is not yet checked. |
 
 ## Open questions
 
