@@ -25,6 +25,10 @@ import { Route as AuthedProjectsProjectIdExportRouteImport } from './routes/_aut
 import { Route as AuthedProjectsProjectIdMembersRouteImport } from './routes/_authed/projects/$projectId/members'
 import { Route as AuthedProjectsProjectIdRoundsRouteImport } from './routes/_authed/projects/$projectId/rounds'
 import { Route as AuthedProjectsProjectIdScopeRouteImport } from './routes/_authed/projects/$projectId/scope'
+import { Route as AuthedProjectsProjectIdRoundsIndexRouteImport } from './routes/_authed/projects/$projectId/rounds/index'
+import { Route as AuthedProjectsProjectIdRoundsNewRouteImport } from './routes/_authed/projects/$projectId/rounds/new'
+import { Route as AuthedProjectsProjectIdRoundsRoundIdIndexRouteImport } from './routes/_authed/projects/$projectId/rounds/$roundId/index'
+import { Route as AuthedProjectsProjectIdRoundsRoundIdRateRouteImport } from './routes/_authed/projects/$projectId/rounds/$roundId/rate'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -111,6 +115,30 @@ const AuthedProjectsProjectIdScopeRoute =
     path: '/scope',
     getParentRoute: () => AuthedProjectsProjectIdRoute,
   } as any)
+const AuthedProjectsProjectIdRoundsIndexRoute =
+  AuthedProjectsProjectIdRoundsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthedProjectsProjectIdRoundsRoute,
+  } as any)
+const AuthedProjectsProjectIdRoundsNewRoute =
+  AuthedProjectsProjectIdRoundsNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthedProjectsProjectIdRoundsRoute,
+  } as any)
+const AuthedProjectsProjectIdRoundsRoundIdIndexRoute =
+  AuthedProjectsProjectIdRoundsRoundIdIndexRouteImport.update({
+    id: '/$roundId/',
+    path: '/$roundId/',
+    getParentRoute: () => AuthedProjectsProjectIdRoundsRoute,
+  } as any)
+const AuthedProjectsProjectIdRoundsRoundIdRateRoute =
+  AuthedProjectsProjectIdRoundsRoundIdRateRouteImport.update({
+    id: '/$roundId/rate',
+    path: '/$roundId/rate',
+    getParentRoute: () => AuthedProjectsProjectIdRoundsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -125,9 +153,13 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/board': typeof AuthedProjectsProjectIdBoardRoute
   '/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
   '/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
-  '/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsRoute
+  '/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsRouteWithChildren
   '/projects/$projectId/scope': typeof AuthedProjectsProjectIdScopeRoute
   '/projects/$projectId/': typeof AuthedProjectsProjectIdIndexRoute
+  '/projects/$projectId/rounds/new': typeof AuthedProjectsProjectIdRoundsNewRoute
+  '/projects/$projectId/rounds/': typeof AuthedProjectsProjectIdRoundsIndexRoute
+  '/projects/$projectId/rounds/$roundId/rate': typeof AuthedProjectsProjectIdRoundsRoundIdRateRoute
+  '/projects/$projectId/rounds/$roundId/': typeof AuthedProjectsProjectIdRoundsRoundIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -141,9 +173,12 @@ export interface FileRoutesByTo {
   '/projects/$projectId/board': typeof AuthedProjectsProjectIdBoardRoute
   '/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
   '/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
-  '/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsRoute
   '/projects/$projectId/scope': typeof AuthedProjectsProjectIdScopeRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdIndexRoute
+  '/projects/$projectId/rounds/new': typeof AuthedProjectsProjectIdRoundsNewRoute
+  '/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsIndexRoute
+  '/projects/$projectId/rounds/$roundId/rate': typeof AuthedProjectsProjectIdRoundsRoundIdRateRoute
+  '/projects/$projectId/rounds/$roundId': typeof AuthedProjectsProjectIdRoundsRoundIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -160,9 +195,13 @@ export interface FileRoutesById {
   '/_authed/projects/$projectId/board': typeof AuthedProjectsProjectIdBoardRoute
   '/_authed/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
   '/_authed/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
-  '/_authed/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsRoute
+  '/_authed/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsRouteWithChildren
   '/_authed/projects/$projectId/scope': typeof AuthedProjectsProjectIdScopeRoute
   '/_authed/projects/$projectId/': typeof AuthedProjectsProjectIdIndexRoute
+  '/_authed/projects/$projectId/rounds/new': typeof AuthedProjectsProjectIdRoundsNewRoute
+  '/_authed/projects/$projectId/rounds/': typeof AuthedProjectsProjectIdRoundsIndexRoute
+  '/_authed/projects/$projectId/rounds/$roundId/rate': typeof AuthedProjectsProjectIdRoundsRoundIdRateRoute
+  '/_authed/projects/$projectId/rounds/$roundId/': typeof AuthedProjectsProjectIdRoundsRoundIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -182,6 +221,10 @@ export interface FileRouteTypes {
     | '/projects/$projectId/rounds'
     | '/projects/$projectId/scope'
     | '/projects/$projectId/'
+    | '/projects/$projectId/rounds/new'
+    | '/projects/$projectId/rounds/'
+    | '/projects/$projectId/rounds/$roundId/rate'
+    | '/projects/$projectId/rounds/$roundId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -195,9 +238,12 @@ export interface FileRouteTypes {
     | '/projects/$projectId/board'
     | '/projects/$projectId/export'
     | '/projects/$projectId/members'
-    | '/projects/$projectId/rounds'
     | '/projects/$projectId/scope'
     | '/projects/$projectId'
+    | '/projects/$projectId/rounds/new'
+    | '/projects/$projectId/rounds'
+    | '/projects/$projectId/rounds/$roundId/rate'
+    | '/projects/$projectId/rounds/$roundId'
   id:
     | '__root__'
     | '/'
@@ -216,6 +262,10 @@ export interface FileRouteTypes {
     | '/_authed/projects/$projectId/rounds'
     | '/_authed/projects/$projectId/scope'
     | '/_authed/projects/$projectId/'
+    | '/_authed/projects/$projectId/rounds/new'
+    | '/_authed/projects/$projectId/rounds/'
+    | '/_authed/projects/$projectId/rounds/$roundId/rate'
+    | '/_authed/projects/$projectId/rounds/$roundId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -341,14 +391,66 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedProjectsProjectIdScopeRouteImport
       parentRoute: typeof AuthedProjectsProjectIdRoute
     }
+    '/_authed/projects/$projectId/rounds/': {
+      id: '/_authed/projects/$projectId/rounds/'
+      path: '/'
+      fullPath: '/projects/$projectId/rounds/'
+      preLoaderRoute: typeof AuthedProjectsProjectIdRoundsIndexRouteImport
+      parentRoute: typeof AuthedProjectsProjectIdRoundsRoute
+    }
+    '/_authed/projects/$projectId/rounds/new': {
+      id: '/_authed/projects/$projectId/rounds/new'
+      path: '/new'
+      fullPath: '/projects/$projectId/rounds/new'
+      preLoaderRoute: typeof AuthedProjectsProjectIdRoundsNewRouteImport
+      parentRoute: typeof AuthedProjectsProjectIdRoundsRoute
+    }
+    '/_authed/projects/$projectId/rounds/$roundId/': {
+      id: '/_authed/projects/$projectId/rounds/$roundId/'
+      path: '/$roundId'
+      fullPath: '/projects/$projectId/rounds/$roundId/'
+      preLoaderRoute: typeof AuthedProjectsProjectIdRoundsRoundIdIndexRouteImport
+      parentRoute: typeof AuthedProjectsProjectIdRoundsRoute
+    }
+    '/_authed/projects/$projectId/rounds/$roundId/rate': {
+      id: '/_authed/projects/$projectId/rounds/$roundId/rate'
+      path: '/$roundId/rate'
+      fullPath: '/projects/$projectId/rounds/$roundId/rate'
+      preLoaderRoute: typeof AuthedProjectsProjectIdRoundsRoundIdRateRouteImport
+      parentRoute: typeof AuthedProjectsProjectIdRoundsRoute
+    }
   }
 }
+
+interface AuthedProjectsProjectIdRoundsRouteChildren {
+  AuthedProjectsProjectIdRoundsNewRoute: typeof AuthedProjectsProjectIdRoundsNewRoute
+  AuthedProjectsProjectIdRoundsIndexRoute: typeof AuthedProjectsProjectIdRoundsIndexRoute
+  AuthedProjectsProjectIdRoundsRoundIdRateRoute: typeof AuthedProjectsProjectIdRoundsRoundIdRateRoute
+  AuthedProjectsProjectIdRoundsRoundIdIndexRoute: typeof AuthedProjectsProjectIdRoundsRoundIdIndexRoute
+}
+
+const AuthedProjectsProjectIdRoundsRouteChildren: AuthedProjectsProjectIdRoundsRouteChildren =
+  {
+    AuthedProjectsProjectIdRoundsNewRoute:
+      AuthedProjectsProjectIdRoundsNewRoute,
+    AuthedProjectsProjectIdRoundsIndexRoute:
+      AuthedProjectsProjectIdRoundsIndexRoute,
+    AuthedProjectsProjectIdRoundsRoundIdRateRoute:
+      AuthedProjectsProjectIdRoundsRoundIdRateRoute,
+    AuthedProjectsProjectIdRoundsRoundIdIndexRoute:
+      AuthedProjectsProjectIdRoundsRoundIdIndexRoute,
+  }
+
+const AuthedProjectsProjectIdRoundsRouteWithChildren =
+  AuthedProjectsProjectIdRoundsRoute._addFileChildren(
+    AuthedProjectsProjectIdRoundsRouteChildren,
+  )
 
 interface AuthedProjectsProjectIdRouteChildren {
   AuthedProjectsProjectIdBoardRoute: typeof AuthedProjectsProjectIdBoardRoute
   AuthedProjectsProjectIdExportRoute: typeof AuthedProjectsProjectIdExportRoute
   AuthedProjectsProjectIdMembersRoute: typeof AuthedProjectsProjectIdMembersRoute
-  AuthedProjectsProjectIdRoundsRoute: typeof AuthedProjectsProjectIdRoundsRoute
+  AuthedProjectsProjectIdRoundsRoute: typeof AuthedProjectsProjectIdRoundsRouteWithChildren
   AuthedProjectsProjectIdScopeRoute: typeof AuthedProjectsProjectIdScopeRoute
   AuthedProjectsProjectIdIndexRoute: typeof AuthedProjectsProjectIdIndexRoute
 }
@@ -358,7 +460,8 @@ const AuthedProjectsProjectIdRouteChildren: AuthedProjectsProjectIdRouteChildren
     AuthedProjectsProjectIdBoardRoute: AuthedProjectsProjectIdBoardRoute,
     AuthedProjectsProjectIdExportRoute: AuthedProjectsProjectIdExportRoute,
     AuthedProjectsProjectIdMembersRoute: AuthedProjectsProjectIdMembersRoute,
-    AuthedProjectsProjectIdRoundsRoute: AuthedProjectsProjectIdRoundsRoute,
+    AuthedProjectsProjectIdRoundsRoute:
+      AuthedProjectsProjectIdRoundsRouteWithChildren,
     AuthedProjectsProjectIdScopeRoute: AuthedProjectsProjectIdScopeRoute,
     AuthedProjectsProjectIdIndexRoute: AuthedProjectsProjectIdIndexRoute,
   }
