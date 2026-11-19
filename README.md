@@ -16,6 +16,35 @@ The project is in an early stage. The requirements draft is in
 [docs/architecture.md](docs/architecture.md), with the decision records in
 [docs/adr/](docs/adr/README.md).
 
+## Screenshots
+
+The screenshots show the demo project, which `pnpm db:seed-demo` loads. Its
+people and addresses are invented.
+
+The scope page holds the concept, use cases, sources and comments.
+
+![The scope page of the demo project, with the scope statement, two sources and a comment](docs/screenshots/scope.png)
+
+On the element board the group collects candidate elements with their data
+type, cardinality, sources and proposed values, and links them to CKM.
+
+![The element board with the elements Systolic and Diastolic](docs/screenshots/board.png)
+
+A participant rates each element on a scale of 1 to 9 and sees the outcome
+of the previous round.
+
+![The rating page of round 2, seen by a participant](docs/screenshots/rating.png)
+
+When a round closes, the facilitator sees per element the outcome under the
+consensus rule, the median and every score.
+
+![The results of round 1: Systolic and Diastolic included](docs/screenshots/round-results.png)
+
+The members page holds the stakeholder groups, the invitations and the
+setting for what participants see.
+
+![The members page with the stakeholder groups and their participants](docs/screenshots/members.png)
+
 ## Run it locally
 
 You need Podman (or Docker) with compose. Node.js and pnpm run inside the
