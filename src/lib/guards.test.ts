@@ -49,7 +49,7 @@ describe("route guards", () => {
 describe("requireStep (PR9, PR10)", () => {
   const params = { projectId: "0190a8f0-0000-7000-8000-000000000000" };
 
-  it("sends a participant from a hidden step to the project overview", () => {
+  it("sends a participant from a hidden step to the project, which opens their current step", () => {
     const error = thrown(() =>
       requireStep("rounds")({
         context: { project: { role: "participant", phase: "discover" } },
@@ -64,6 +64,14 @@ describe("requireStep (PR9, PR10)", () => {
     const context = { project: { role: "participant", phase: "discover" } } as const;
     expect(thrown(() => requireStep("board")({ context, params }))).toBeUndefined();
     expect(thrown(() => requireStep("scope")({ context, params }))).toBeUndefined();
+  });
+
+  it("sends a participant from the export and the settings to the project", () => {
+    const context = { project: { role: "participant", phase: "handoff" } } as const;
+    for (const step of ["export", "settings"] as const) {
+      const error = thrown(() => requireStep(step)({ context, params }));
+      expect(isRedirect(error) && error.options.to).toBe("/projects/$projectId");
+    }
   });
 
   it("lets the facilitator open every step in any phase", () => {

@@ -5,7 +5,7 @@
 // shows in the form: a taken name at the name field, anything else at the top.
 import { revalidateLogic } from "@tanstack/react-form";
 import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
 import {
@@ -92,9 +92,12 @@ async function submitGroupCall<T>(
 export function NewGroupForm({
   create,
   onCreated,
+  actions,
 }: Readonly<{
   create: (input: { name: string; expertType: ExpertType }) => Promise<Outcome<unknown>>;
   onCreated: (name: string) => Promise<void> | void;
+  /** Buttons next to the submit button, such as Cancel in a dialog. */
+  actions?: ReactNode;
 }>) {
   const form = useAppForm({
     defaultValues: { name: "", expertType: "" } as GroupValues,
@@ -112,27 +115,22 @@ export function NewGroupForm({
   return (
     <form
       noValidate
-      aria-labelledby="new-group-title"
       className="flex flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();
       }}
     >
-      <h3 id="new-group-title" className="text-lg font-semibold">
-        {m.members_new_group_title()}
-      </h3>
       <form.AppForm>
         <form.FormErrors />
       </form.AppForm>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+      <div className="flex flex-col gap-4">
         <form.AppField name="name">
           {(field) => (
             <field.TextField
               label={m.members_group_name_label()}
               description={m.members_group_name_description({ max: GROUP_NAME_MAX })}
               autoComplete="off"
-              className="sm:max-w-xs"
             />
           )}
         </form.AppField>
@@ -142,12 +140,12 @@ export function NewGroupForm({
               label={m.members_expert_type_label()}
               placeholder={m.members_expert_type_placeholder()}
               options={EXPERT_TYPES.map((type) => ({ value: type, label: expertTypeLabel(type) }))}
-              className="sm:max-w-xs"
             />
           )}
         </form.AppField>
       </div>
-      <div>
+      <div className="flex flex-wrap justify-end gap-2">
+        {actions}
         <form.AppForm>
           <form.SubmitButton icon={<PlusIcon aria-hidden="true" data-icon="inline-start" />}>
             {m.members_new_group_submit()}

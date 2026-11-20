@@ -1,22 +1,30 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// One brainstorm question with its quick-add form (EL14, EL15): a name and an optional line,
-// Enter adds. After the reveal the form lists elements with a similar name while the participant
-// types; before it, `hintSource` is null and the form shows none, so nothing of others leaks.
-// "Same as this" next to a hint supports that element instead of adding the typed one (EL16).
+// The brainstorm's one quick-add form (EL14, EL15, ADR 0018): a choice of the four questions, a
+// name and an optional line; Enter adds and the question stays chosen. After the reveal the form
+// lists elements with a similar name while the participant types; before it, `hintSource` is null
+// and the form shows none, so nothing of others leaks. "Same as this" next to a hint supports that
+// element instead of adding the typed one (EL16).
 import { revalidateLogic, useStore } from "@tanstack/react-form";
 import { CopyIcon, PlusIcon } from "lucide-react";
-import { type ReactNode, useId, useRef } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
-import { similarElements } from "@/lib/brainstorm";
+import {
+  ELEMENT_PROMPTS,
+  type ElementPrompt,
+  isElementPrompt,
+  similarElements,
+} from "@/lib/brainstorm";
 import { ELEMENT_DESCRIPTION_MAX, ELEMENT_NAME_MAX } from "@/lib/elements";
 import type { Outcome } from "@/lib/forms/outcome";
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
+import { promptLabel, promptQuestion } from "@/lib/i18n/labels";
 import { refusalMessage } from "@/lib/i18n/refusals";
+import { cn } from "@/lib/utils";
 
 export interface HintElement {
   id: string;
@@ -37,8 +45,59 @@ export function quickAddSchema() {
   });
 }
 
+/** The name field, the first text field of the form; the question choices come before it. */
+const NAME_INPUT = "input:not([type=radio])";
+
+/** The fields the form sends: `addElementInput` without the project. */
+export interface QuickAddFields {
+  name: string;
+  description: string;
+  prompt: ElementPrompt;
+}
+
+/**
+ * The four questions as one row of choices, each with its short name; the full question shows
+ * under the row and describes the name field.
+ */
+function PromptChoice({
+  value,
+  onChange,
+}: Readonly<{ value: ElementPrompt; onChange: (prompt: ElementPrompt) => void }>) {
+  const id = useId();
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-2 text-sm font-medium">{m.board_quick_question_label()}</legend>
+      <div className="flex w-fit flex-wrap gap-1 rounded-lg border p-1">
+        {ELEMENT_PROMPTS.map((prompt) => (
+          <label
+            key={prompt}
+            className={cn(
+              "cursor-pointer rounded-md px-3 py-1 text-sm has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
+              prompt === value
+                ? "bg-primary font-medium text-primary-foreground"
+                : "hover:bg-accent hover:text-accent-foreground",
+            )}
+          >
+            <input
+              type="radio"
+              name={`${id}prompt`}
+              value={prompt}
+              checked={prompt === value}
+              onChange={(event) => {
+                if (isElementPrompt(event.target.value)) onChange(event.target.value);
+              }}
+              className="sr-only"
+            />
+            {promptLabel(prompt)}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 export function QuickAddForm({
-  question,
+  label,
   hintSource,
   hintLink,
   submit,
@@ -47,27 +106,29 @@ export function QuickAddForm({
   onMarkedSame,
   children,
 }: Readonly<{
-  question: string;
+  /** The name of the form and its heading. */
+  label: string;
   /** The board's elements to compare names with; null before the reveal (EL13). */
   hintSource: readonly HintElement[] | null;
   /** A link that opens a hinted element on the board. */
   hintLink: (element: HintElement) => ReactNode;
-  submit: (fields: { name: string; description: string }) => Promise<Outcome<unknown>>;
+  submit: (fields: QuickAddFields) => Promise<Outcome<unknown>>;
   onAdded: (name: string) => Promise<void> | void;
   /** Supports a hinted element; left out when marks are closed (EL16). */
   markSame?: ((element: HintElement) => Promise<Outcome<unknown>>) | undefined;
   onMarkedSame?: (element: HintElement) => Promise<void> | void;
-  /** The participant's own elements for this question, under the form. */
+  /** What shows under the form, such as the participant's own elements. */
   children?: ReactNode;
 }>) {
   const id = useId();
   const formRef = useRef<HTMLFormElement>(null);
+  const [prompt, setPrompt] = useState<ElementPrompt>(ELEMENT_PROMPTS[0]);
   const form = useAppForm({
     defaultValues: { name: "", description: "" },
     validationLogic: revalidateLogic(),
     validators: { onDynamic: quickAddSchema() },
     onSubmit: async ({ value, formApi }) => {
-      const fields = { name: value.name.trim(), description: value.description.trim() };
+      const fields = { name: value.name.trim(), description: value.description.trim(), prompt };
       try {
         const outcome = await submit(fields);
         if (!outcome.ok) {
@@ -81,7 +142,7 @@ export function QuickAddForm({
       formApi.reset();
       await onAdded(fields.name);
       // Ready for the next idea: the cursor goes back to the name.
-      formRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+      formRef.current?.querySelector<HTMLInputElement>(NAME_INPUT)?.focus();
     },
   });
   const typed = useStore(form.store, (state) => state.values.name);
@@ -102,18 +163,18 @@ export function QuickAddForm({
     // The typed element is not added: the participant chose the one on the board.
     form.reset();
     await onMarkedSame?.(element);
-    formRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+    formRef.current?.querySelector<HTMLInputElement>(NAME_INPUT)?.focus();
   }
 
   return (
-    <section aria-labelledby={`${id}question`} className="flex flex-col gap-3 border-b pb-6">
-      <h3 id={`${id}question`} className="text-lg font-semibold">
-        {question}
+    <section aria-labelledby={`${id}title`} className="flex flex-col gap-3">
+      <h3 id={`${id}title`} className="text-lg font-semibold">
+        {label}
       </h3>
       <form
         ref={formRef}
         noValidate
-        aria-labelledby={`${id}question`}
+        aria-labelledby={`${id}title`}
         className="flex flex-col gap-3"
         onSubmit={(event) => {
           event.preventDefault();
@@ -123,11 +184,13 @@ export function QuickAddForm({
         <form.AppForm>
           <form.FormErrors />
         </form.AppForm>
+        <PromptChoice value={prompt} onChange={setPrompt} />
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] md:items-start">
           <form.AppField name="name">
             {(field) => (
               <field.TextField
                 label={m.board_quick_name_label()}
+                description={promptQuestion(prompt)}
                 maxLength={ELEMENT_NAME_MAX}
                 autoComplete="off"
               />

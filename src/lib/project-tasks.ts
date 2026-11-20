@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// What the project overview shows (PR4, PR8, ADR 0013): the participant's one task for the
+// What the project header shows (PR4, PR8, PR11, ADR 0018): the participant's one task for the
 // current phase, and the facilitator's short status of it. The server reads the counts; these
 // functions only choose what to show, so the choice is tested without a database.
 import type { ProjectPhase } from "./project-phases.ts";
@@ -28,6 +28,8 @@ export interface OverviewRound {
 export interface ProjectOverview {
   phase: ProjectPhase;
   role: ProjectRole;
+  /** The concept of the scope statement, for the one line of scope in the header (PR11). */
+  concept: string;
   /** The elements on the board, merged ones left out. */
   elements: number;
   /** The elements the signed-in member added themselves, merged ones included. */

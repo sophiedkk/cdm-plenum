@@ -2,14 +2,14 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The brainstorm quick-add form (EL14, EL15): a name and one optional line, Enter adds, the
-// form empties and the cursor returns to the name; hints of similar names only when the board is
-// revealed (EL13), each with a link to the element.
+// The brainstorm quick-add form (EL14, EL15, ADR 0018): a choice of question, a name and one
+// optional line, Enter adds, the form empties, the question stays and the cursor returns to the
+// name; hints of similar names only when the board is revealed (EL13), each with a link.
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { baseLocale, overwriteGetLocale } from "@/i18n/runtime";
 import type { Outcome } from "@/lib/forms/outcome";
-import { type HintElement, QuickAddForm } from "./quick-add-form";
+import { type HintElement, type QuickAddFields, QuickAddForm } from "./quick-add-form";
 
 afterEach(() => {
   cleanup();
@@ -26,20 +26,20 @@ function renderForm({
   submit = vi.fn(async () => ({ ok: true, value: null }) as const),
   hintSource = null,
 }: {
-  submit?: (fields: { name: string; description: string }) => Promise<Outcome<unknown>>;
+  submit?: (fields: QuickAddFields) => Promise<Outcome<unknown>>;
   hintSource?: readonly HintElement[] | null;
 } = {}) {
   const onAdded = vi.fn();
   render(
     <QuickAddForm
-      question="What do you record or measure?"
+      label="Add an element"
       hintSource={hintSource}
       hintLink={(element) => <a href={`#${element.id}`}>{element.name}</a>}
       submit={submit}
       onAdded={onAdded}
     />,
   );
-  const form = screen.getByRole("form", { name: "What do you record or measure?" });
+  const form = screen.getByRole("form", { name: "Add an element" });
   return {
     submit,
     onAdded,
@@ -56,7 +56,11 @@ describe("QuickAddForm", () => {
     fireEvent.change(line, { target: { value: "Peak pressure " } });
     fireEvent.submit(form);
     await waitFor(() => expect(onAdded).toHaveBeenCalledWith("Systolic"));
-    expect(submit).toHaveBeenCalledWith({ name: "Systolic", description: "Peak pressure" });
+    expect(submit).toHaveBeenCalledWith({
+      name: "Systolic",
+      description: "Peak pressure",
+      prompt: "recorded",
+    });
     expect(name.value).toBe("");
     expect(line.value).toBe("");
     await waitFor(() => expect(document.activeElement).toBe(name));
@@ -67,7 +71,42 @@ describe("QuickAddForm", () => {
     fireEvent.change(name, { target: { value: "Cuff size" } });
     fireEvent.submit(form);
     await waitFor(() => expect(onAdded).toHaveBeenCalled());
-    expect(submit).toHaveBeenCalledWith({ name: "Cuff size", description: "" });
+    expect(submit).toHaveBeenCalledWith({ name: "Cuff size", description: "", prompt: "recorded" });
+  });
+
+  it("adds under the chosen question and keeps it chosen for the next idea", async () => {
+    const { submit, onAdded, form, name } = renderForm();
+    const method = within(form).getByRole("radio", { name: "Method" });
+    expect(within(form).getByRole("radio", { name: "What is recorded" })).toHaveProperty(
+      "checked",
+      true,
+    );
+    fireEvent.click(method);
+    expect(method).toHaveProperty("checked", true);
+    // The full question describes the name field.
+    const help = document.getElementById(
+      name.getAttribute("aria-describedby")?.split(" ")[0] ?? "",
+    );
+    expect(help?.textContent).toBe("How was it measured: method, device or position?");
+    fireEvent.change(name, { target: { value: "Cuff position" } });
+    fireEvent.submit(form);
+    await waitFor(() => expect(onAdded).toHaveBeenCalledWith("Cuff position"));
+    expect(submit).toHaveBeenCalledWith({
+      name: "Cuff position",
+      description: "",
+      prompt: "method",
+    });
+    expect(method).toHaveProperty("checked", true);
+  });
+
+  it("names the four questions in a group", () => {
+    const { form } = renderForm();
+    const group = within(form).getByRole("group", { name: "Question" });
+    expect(
+      within(group)
+        .getAllByRole("radio")
+        .map((radio) => radio.closest("label")?.textContent),
+    ).toEqual(["What is recorded", "Patient state", "Method", "Context"]);
   });
 
   it("refuses an empty name before calling the server", async () => {
@@ -137,7 +176,7 @@ describe("QuickAddForm, same as a hint (EL16)", () => {
     const onMarkedSame = vi.fn();
     render(
       <QuickAddForm
-        question="What do you record or measure?"
+        label="Add an element"
         hintSource={BOARD}
         hintLink={(element) => <a href={`#${element.id}`}>{element.name}</a>}
         submit={submit}
@@ -146,7 +185,7 @@ describe("QuickAddForm, same as a hint (EL16)", () => {
         onMarkedSame={onMarkedSame}
       />,
     );
-    const form = screen.getByRole("form", { name: "What do you record or measure?" });
+    const form = screen.getByRole("form", { name: "Add an element" });
     const name = within(form).getByLabelText("Element name") as HTMLInputElement;
     fireEvent.change(name, { target: { value: "systolic" } });
     return { submit, onAdded, onMarkedSame, form, name };

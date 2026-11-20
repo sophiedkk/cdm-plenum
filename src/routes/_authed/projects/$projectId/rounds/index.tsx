@@ -1,13 +1,10 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { PlusIcon, VoteIcon } from "lucide-react";
-import { toast } from "sonner";
 import { projectTitle } from "@/components/projects/project-title";
-import { PanelSetup } from "@/components/rounds/panel-setup";
 import { valueOrNotFound } from "@/components/rounds/result-value";
 import { LocalDateTime, RoundStatusBadge } from "@/components/rounds/round-badges";
 import { EmptyState, PageHeader } from "@/components/shell/route-states";
@@ -24,22 +21,15 @@ import {
 import { m } from "@/i18n/messages";
 import { mayRate } from "@/lib/project-roles";
 import { projectQueryOptions } from "@/server/projects/query-options";
-import { setChangeClassFn, setPanelMinimumsFn } from "@/server/rounds/functions";
-import {
-  panelStatusQueryOptions,
-  roundKeys,
-  roundsQueryOptions,
-} from "@/server/rounds/query-options";
+import { roundsQueryOptions } from "@/server/rounds/query-options";
 import type { RoundSummary } from "@/server/rounds/round";
 
-/** The rounds of the project with their state; for the facilitator also the panel (DE11 to DE13). */
+/** The rounds of the project with their state (DE1); the panel settings are on Settings (PR12). */
 export const Route = createFileRoute("/_authed/projects/$projectId/rounds/")({
   loader: async ({ context, params }) => {
-    const rounds = context.queryClient.ensureQueryData(roundsQueryOptions(params.projectId));
-    if (context.project.role === "facilitator") {
-      await context.queryClient.ensureQueryData(panelStatusQueryOptions(params.projectId));
-    }
-    valueOrNotFound(await rounds);
+    valueOrNotFound(
+      await context.queryClient.ensureQueryData(roundsQueryOptions(params.projectId)),
+    );
   },
   head: ({ match }) => ({ meta: [{ title: projectTitle(match.context, m.rounds_title()) }] }),
   component: Rounds,
@@ -112,11 +102,11 @@ function Rounds() {
           <p className="text-sm text-muted-foreground">
             {m.rounds_rate_join_group()}{" "}
             <Link
-              to="/projects/$projectId/members"
+              to="/projects/$projectId/settings"
               params={{ projectId }}
               className="underline underline-offset-4"
             >
-              {m.rounds_rate_members_link()}
+              {m.rounds_rate_settings_link()}
             </Link>
           </p>
         )}
@@ -170,36 +160,6 @@ function Rounds() {
           </Table>
         )}
       </section>
-      {isFacilitator && <FacilitatorPanel projectId={projectId} />}
     </div>
-  );
-}
-
-function FacilitatorPanel({ projectId }: Readonly<{ projectId: string }>) {
-  const { data } = useSuspenseQuery(panelStatusQueryOptions(projectId));
-  const status = valueOrNotFound(data);
-  const setChangeClass = useServerFn(setChangeClassFn);
-  const setPanelMinimums = useServerFn(setPanelMinimumsFn);
-  const queryClient = useQueryClient();
-  const refresh = () => queryClient.invalidateQueries({ queryKey: roundKeys.panel(projectId) });
-
-  return (
-    <PanelSetup
-      status={status}
-      saveChangeClass={async (changeClass) => {
-        const result = await setChangeClass({ data: { projectId, changeClass } });
-        if (!result.ok) return result;
-        await refresh();
-        toast.success(m.rounds_change_class_saved());
-        return { ok: true };
-      }}
-      saveMinimum={async (minimums, reason) => {
-        const result = await setPanelMinimums({ data: { projectId, minimums, reason } });
-        if (!result.ok) return result;
-        await refresh();
-        toast.success(m.rounds_minimum_saved());
-        return { ok: true };
-      }}
-    />
   );
 }

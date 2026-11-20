@@ -3,7 +3,9 @@
 
 // The details of one element on the board (EL1, EL4, EL5, EL6, EL9): its description, fields,
 // sources, CKM link and the links of merged duplicates, proposed values, comments and actions,
-// and the member's own marks (EL16). The author shows only in the facilitator's view (EL2).
+// and the member's own marks (EL16). The author shows only in the facilitator's view (EL2). Data
+// type, cardinality and values show from the phase that decides them (EL21); the facilitator
+// keeps the actions that set them in every phase.
 import { useQuery } from "@tanstack/react-query";
 import {
   FileSpreadsheetIcon,
@@ -22,6 +24,7 @@ import { m } from "@/i18n/messages";
 import { formatCardinality } from "@/lib/cardinality";
 import { CODED_DATA_TYPE_KEYS } from "@/lib/data-types";
 import { ELEMENT_COMMENT_MAX } from "@/lib/elements";
+import { promptLabel, promptQuestion } from "@/lib/i18n/labels";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import type { BoardElement, ElementSourceKind } from "@/server/elements/queries";
 import { elementCommentsQueryOptions } from "@/server/elements/query-options";
@@ -79,6 +82,7 @@ export function ElementDetails({
   projectId,
   element,
   isFacilitator,
+  detailFields,
   addComment,
   onCommentAdded,
   onEdit,
@@ -89,6 +93,8 @@ export function ElementDetails({
   projectId: string;
   element: CardElement;
   isFacilitator: boolean;
+  /** Whether the phase shows data type, cardinality and values (EL21). */
+  detailFields: boolean;
   /** Left out when the phase closed comments on the board (PR9). */
   addComment?: ((body: string) => Promise<CommentOutcome>) | undefined;
   onCommentAdded: () => Promise<void> | void;
@@ -106,12 +112,20 @@ export function ElementDetails({
       <div className="flex flex-col gap-3">
         {element.description !== "" && <p className="whitespace-pre-wrap">{element.description}</p>}
         <dl className="flex flex-col gap-2 text-sm">
-          <Row term={m.board_field_data_type()}>{dataTypeText(element)}</Row>
-          <Row term={m.board_field_cardinality()}>
-            {element.cardinality === null
-              ? m.board_not_decided()
-              : formatCardinality(element.cardinality)}
-          </Row>
+          {detailFields ? (
+            <>
+              <Row term={m.board_field_data_type()}>{dataTypeText(element)}</Row>
+              <Row term={m.board_field_cardinality()}>
+                {element.cardinality === null
+                  ? m.board_not_decided()
+                  : formatCardinality(element.cardinality)}
+              </Row>
+            </>
+          ) : (
+            <Row term={m.board_column_question()}>
+              {element.prompt === null ? promptLabel(null) : promptQuestion(element.prompt)}
+            </Row>
+          )}
           <Row term={m.board_field_sources()}>
             <ul className="flex flex-wrap gap-1">
               {element.sources.map((source, index) => (
@@ -130,7 +144,7 @@ export function ElementDetails({
               <CkmLinks link={element.ckmLink} merged={element.mergedCkmLinks} />
             </Row>
           )}
-          {(coded || element.values.length > 0) && (
+          {detailFields && (coded || element.values.length > 0) && (
             <Row term={m.board_field_values()}>
               {element.values.length === 0 ? (
                 m.board_values_empty()

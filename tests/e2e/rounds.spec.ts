@@ -5,7 +5,7 @@
 // Q-I18N-1): the facilitator sets up a round and opens it below the minimum with a reason, two
 // participants rate (one "unable to rate"), and after the closing date the facilitator closes
 // the round and the results show the outcome. A facilitator rates after joining a stakeholder
-// group on the members page (DE14).
+// group on the Settings page (DE14, PR12).
 import { randomBytes } from "node:crypto";
 import type { Browser, Page } from "@playwright/test";
 import { type Kysely, sql } from "kysely";
@@ -102,13 +102,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const second = await seedParticipant(db, project);
       const rounds = `/projects/${project.projectId}/rounds`;
 
-      // The facilitator sees the panel below the minimum and sets up the round.
+      // The facilitator sees the panel below the minimum on Settings (PR12) and sets up the round.
       await signInAs(page, project.facilitator.email, locale);
+      await page.goto(`/projects/${project.projectId}/settings`);
+      await expect(page.getByRole("heading", { name: text.rounds_panel_heading })).toBeVisible();
       await page.goto(rounds);
       await expect(
         page.getByRole("heading", { level: 2, name: text.rounds_title, exact: true }),
       ).toBeVisible();
-      await expect(page.getByRole("heading", { name: text.rounds_panel_heading })).toBeVisible();
+      await expect(page.getByRole("heading", { name: text.rounds_panel_heading })).toHaveCount(0);
       await axeClean(page);
 
       const newRound = page.getByRole("link", { name: text.rounds_new }).first();
@@ -276,7 +278,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(page.getByText(text.rounds_rate_join_group)).toBeVisible();
       await expect(page.getByRole("link", { name: rateNow })).toHaveCount(0);
       await axeClean(page);
-      await page.getByRole("link", { name: text.rounds_rate_members_link }).click();
+      await page.getByRole("link", { name: text.rounds_rate_settings_link }).click();
 
       await expect(page.getByText(text.members_rater_none)).toBeVisible();
       const group = page.getByLabel(text.members_rater_group_label, { exact: true });

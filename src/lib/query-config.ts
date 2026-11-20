@@ -23,8 +23,8 @@ export const STALE_TIME = {
   /** Rounds, ratings and results: participants rate while the facilitator watches the response. */
   rounds: 10_000,
   /**
-   * The project overview: always revalidated, since its counts change on the board and rating
-   * pages, whose mutations do not invalidate it.
+   * The counts of the project header (PR11): always revalidated, since they change on the
+   * brainstorm, board and rating pages. The project layout reads them again on every navigation.
    */
   overview: 0,
 } as const;

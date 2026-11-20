@@ -52,3 +52,15 @@ const PROMPT_QUESTIONS: Record<ElementPrompt, () => string> = {
 export function promptQuestion(prompt: ElementPrompt): string {
   return PROMPT_QUESTIONS[prompt]();
 }
+
+const PROMPT_LABELS: Record<ElementPrompt, () => string> = {
+  recorded: () => m.board_prompt_short_recorded(),
+  patient_state: () => m.board_prompt_short_patient_state(),
+  method: () => m.board_prompt_short_method(),
+  context: () => m.board_prompt_short_context(),
+};
+
+/** The brainstorm question in a word or two, for a table column; null for another source. */
+export function promptLabel(prompt: ElementPrompt | null): string {
+  return prompt === null ? m.board_prompt_short_none() : PROMPT_LABELS[prompt]();
+}

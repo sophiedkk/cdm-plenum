@@ -3,7 +3,8 @@
 
 // The compact board (Q-USE-1, ADR 0013): one table row per element, and a disclosure button on
 // the name that opens the details in the row below. A table keeps the column headers, so a
-// screen reader announces "Data type" or "Comments" with each value.
+// screen reader announces "Data type" or "Comments" with each value. Before the phase that
+// decides them, the brainstorm question replaces data type, cardinality and CKM (EL21).
 import { ChevronRightIcon, GitMergeIcon, LinkIcon } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { CommentOutcome } from "@/components/comments/comment-thread";
@@ -20,6 +21,7 @@ import {
 import { m } from "@/i18n/messages";
 import { formatCardinality } from "@/lib/cardinality";
 import type { Outcome } from "@/lib/forms/outcome";
+import { promptLabel } from "@/lib/i18n/labels";
 import { cn } from "@/lib/utils";
 import { dataTypeName } from "./data-type-text";
 import { type CardElement, ElementDetails } from "./element-details";
@@ -96,6 +98,7 @@ function ElementRows({
   element,
   position,
   isFacilitator,
+  detailFields,
   opened,
   actions,
   targets,
@@ -106,6 +109,7 @@ function ElementRows({
   element: CardElement;
   position: number;
   isFacilitator: boolean;
+  detailFields: boolean;
   targets: readonly MarkTarget[];
   /** The number of supporters, in the facilitator's view only (EL16). */
   supportCount: number | undefined;
@@ -151,18 +155,26 @@ function ElementRows({
         <TableCell className="hidden w-full max-w-0 truncate text-muted-foreground md:table-cell">
           {element.description}
         </TableCell>
-        <TableCell>
-          {element.dataType === null && element.ckmLink === null
-            ? notDecided
-            : shortDataType(element)}
-        </TableCell>
-        <TableCell className="tabular-nums">
-          {element.cardinality === null ? notDecided : formatCardinality(element.cardinality)}
-        </TableCell>
+        {detailFields ? (
+          <>
+            <TableCell>
+              {element.dataType === null && element.ckmLink === null
+                ? notDecided
+                : shortDataType(element)}
+            </TableCell>
+            <TableCell className="tabular-nums">
+              {element.cardinality === null ? notDecided : formatCardinality(element.cardinality)}
+            </TableCell>
+          </>
+        ) : (
+          <TableCell>{promptLabel(element.prompt)}</TableCell>
+        )}
         <TableCell className="text-right tabular-nums">{element.sources.length}</TableCell>
-        <TableCell>
-          <CkmStatus element={element} />
-        </TableCell>
+        {detailFields && (
+          <TableCell>
+            <CkmStatus element={element} />
+          </TableCell>
+        )}
         <TableCell className="text-right tabular-nums">{element.commentCount}</TableCell>
         {supportCount !== undefined && (
           <TableCell className="text-right tabular-nums">{supportCount}</TableCell>
@@ -180,6 +192,7 @@ function ElementRows({
                 projectId={projectId}
                 element={element}
                 isFacilitator={isFacilitator}
+                detailFields={detailFields}
                 addComment={addComment && ((body: string) => addComment(element, body))}
                 onCommentAdded={() => actions.onCommentAdded(element)}
                 onEdit={() => actions.onEdit(element)}
@@ -199,6 +212,7 @@ export function ElementTable({
   projectId,
   elements,
   isFacilitator,
+  detailFields,
   openElementId,
   actions,
   supportCounts,
@@ -206,6 +220,8 @@ export function ElementTable({
   projectId: string;
   elements: readonly CardElement[];
   isFacilitator: boolean;
+  /** Whether the phase shows data type, cardinality and values (EL21, `detailFieldsShown`). */
+  detailFields: boolean;
   /** The element whose details are open when the board loads. */
   openElementId?: string | undefined;
   actions: ElementActions;
@@ -213,7 +229,7 @@ export function ElementTable({
   supportCounts?: Readonly<Record<string, number>> | undefined;
 }>) {
   const targets = elements.map((element, index) => markTarget(element, index + 1));
-  const columnCount = supportCounts === undefined ? 8 : 9;
+  const columnCount = (detailFields ? 8 : 6) + (supportCounts === undefined ? 0 : 1);
   return (
     <Table aria-label={m.board_list_label()}>
       <TableHeader>
@@ -223,12 +239,18 @@ export function ElementTable({
           <TableHead scope="col" className="hidden md:table-cell">
             {m.board_description_label()}
           </TableHead>
-          <TableHead scope="col">{m.board_field_data_type()}</TableHead>
-          <TableHead scope="col">{m.board_field_cardinality()}</TableHead>
+          {detailFields ? (
+            <>
+              <TableHead scope="col">{m.board_field_data_type()}</TableHead>
+              <TableHead scope="col">{m.board_field_cardinality()}</TableHead>
+            </>
+          ) : (
+            <TableHead scope="col">{m.board_column_question()}</TableHead>
+          )}
           <TableHead scope="col" className="text-right">
             {m.board_field_sources()}
           </TableHead>
-          <TableHead scope="col">{m.board_field_ckm()}</TableHead>
+          {detailFields && <TableHead scope="col">{m.board_field_ckm()}</TableHead>}
           <TableHead scope="col" className="text-right">
             {m.board_column_comments()}
           </TableHead>
@@ -247,6 +269,7 @@ export function ElementTable({
             element={element}
             position={index + 1}
             isFacilitator={isFacilitator}
+            detailFields={detailFields}
             opened={element.id === openElementId}
             actions={actions}
             targets={targets}

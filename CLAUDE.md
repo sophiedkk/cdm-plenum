@@ -96,23 +96,31 @@ page from these patterns; each has a real use and a test you can copy.
   `src/components/<area>/`. Style with the theme tokens in
   `src/styles/app.css` (`text-muted-foreground`, `text-destructive`,
   `text-success`, `text-warning`), never with a fixed colour, so dark mode
-  (`<html data-theme>`, set by the theme switch in `src/lib/theme.ts`) keeps AA
+  (`<html data-theme>`, set from the theme choice in `src/lib/theme.ts`) keeps AA
   contrast. Icons from `lucide-react` carry
   `aria-hidden="true"`.
 - **Routes:** pages that need a session live under `src/routes/_authed/`,
   whose layout redirects to `/sign-in` and renders the app shell
-  (`src/components/shell/app-shell.tsx`). Guards in `src/lib/guards.ts`
-  steer navigation only; the server function checks again. Every route sets
-  a translated `title` in `head()`.
+  (`src/components/shell/app-shell.tsx`). Its `PersonMenu` under the
+  person's name holds language, theme (`LanguageMenuGroup`, `ThemeMenuGroup`)
+  and sign out; Administration stays a nav link for administrators. Guards
+  in `src/lib/guards.ts` steer navigation only; the server function checks
+  again. Every route sets a translated `title` in `head()`.
 - **Project pages:** `src/routes/_authed/projects/$projectId.tsx` loads the
   project and the user's role once and puts it in the route context
-  (`context.project.role`). It renders the project name as the `h1`, so a
-  project page starts with `PageHeader level={2}` and sets its title with
+  (`context.project.role`). It renders the project header
+  (`src/components/projects/project-header.tsx`, PR11) with the project name
+  as the `h1`, so a project page starts with `PageHeader level={2}`, at most
+  one intro line, and sets its title with
   `projectTitle(match.context, m.<area>_title())`
   (`src/components/projects/project-title.ts`).
 - **Phase access:** `src/lib/phase-access.ts` says which step a participant
   sees and writes in per phase (PR9, PR10); a step page uses `requireStep`,
-  `writeOpen` and `StepClosedNote`, its server function `phaseOpenFor`.
+  `writeOpen` and `StepClosedNote`, its server function `phaseOpenFor`. The
+  same file holds the tab order per phase (`STEP_ORDER`, members and settings
+  last), the page a project opens on (`MAIN_STEP`) and the phase from which
+  the board shows data type, cardinality and values (`detailFieldsShown`,
+  EL21). A new step is a new column in each table.
 - **Data:** each area keeps a key factory and query options in
   `src/server/<area>/query-options.ts` (example:
   `src/server/projects/query-options.ts`, staleness in
@@ -138,11 +146,21 @@ page from these patterns; each has a real use and a test you can copy.
   shows its text; colour and icon only add to it (Q-ACC-2). Example:
   `PhaseBadge` and `RoleBadge` in `src/components/projects/project-badges.tsx`,
   with labels from `src/lib/i18n/labels.ts`.
-- **Project overview:** a project opens on `/projects/$projectId/`
-  (`src/components/projects/project-overview.tsx`), whose task and status
-  come from `src/lib/project-tasks.ts`. A new phase task goes there with a
-  test. The overview query is always revalidated (`STALE_TIME.overview`),
-  so a board or rating mutation need not invalidate it.
+- **Project header:** every project page shows the steps and the task line
+  (`ProjectHeader`); `/projects/$projectId/` redirects to `mainStep(role,
+  phase)`. The task and the facilitator's status come from
+  `src/lib/project-tasks.ts`; a new phase task goes there with a test. The
+  layout's loader revalidates the overview query on every navigation; a
+  mutation that changes a count in the header (adding an element, a rating)
+  invalidates `projectKeys.overview`.
+- **Settings page:** `/projects/$projectId/settings` is the facilitator's
+  (`requireStep("settings")`, PR12) and holds project-wide choices: the
+  panel (`PanelSetup`) and the forms in
+  `src/components/settings/facilitator-settings.tsx`. A new project setting
+  goes there, never on a task page.
+- **Dialogs for forms:** a form that is not the page's task opens from a
+  button in `FormDialog` (`src/components/members/form-dialog.tsx`), as the
+  invite and new-group forms on Members do.
 - **Route states:** `src/components/shell/route-states.tsx` has
   `PageSkeleton` (the router's default pending state), `EmptyState`,
   `RouteErrorState` (the default error state, with a retry) and
