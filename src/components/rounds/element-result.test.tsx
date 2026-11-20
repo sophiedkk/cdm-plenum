@@ -48,7 +48,7 @@ describe("ResultsTable", () => {
   it("shows one row per element with the outcome in words, median, distribution and answers", () => {
     render(<ResultsTable elements={[SYSTOLIC, CUFF]} />);
     const systolic = row("Systolic pressure");
-    expect(within(systolic).getByText("Included")).toBeTruthy();
+    expect(within(systolic).getByText("In the archetype")).toBeTruthy();
     expect(within(systolic).getByRole("cell", { name: "8" })).toBeTruthy();
     expect(
       within(systolic).getByRole("img", {
@@ -78,11 +78,39 @@ describe("ResultsTable", () => {
     });
     expect(within(groups).getByRole("rowheader", { name: "Nursing" })).toBeTruthy();
     expect(within(groups).queryByText("Architecture")).toBeNull();
-    expect(within(groups).getByText("Included")).toBeTruthy();
+    expect(within(groups).getByText("In the archetype")).toBeTruthy();
 
     fireEvent.click(toggle);
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(details?.hidden).toBe(true);
+  });
+
+  it("names every outcome in words next to its icon, in English and Dutch (Q-ACC-2)", () => {
+    const LOW: ResultRowElement = {
+      ...CUFF,
+      id: "e-3",
+      name: "Cuff colour",
+      outcome: "excluded",
+      result: elementResult([1, 2, 2, 3], DEFAULT_RULE),
+    };
+    const expected = {
+      en: ["In the archetype", "No consensus", "Not in this archetype"],
+      nl: ["In het archetype", "Geen consensus", "Niet in dit archetype"],
+    } as const;
+    for (const locale of ["en", "nl"] as const) {
+      overwriteGetLocale(() => locale);
+      render(<ResultsTable elements={[SYSTOLIC, CUFF, LOW]} />);
+      const [included, noConsensus, excluded] = expected[locale];
+      for (const [name, label] of [
+        ["Systolic pressure", included],
+        ["Cuff size", noConsensus],
+        ["Cuff colour", excluded],
+      ] as const) {
+        const badge = within(row(name)).getByText(label);
+        expect(badge.closest("[data-slot=badge]")?.querySelector("svg")).toBeTruthy();
+      }
+      cleanup();
+    }
   });
 
   it("says why no group shows when no group has 3 scores", () => {

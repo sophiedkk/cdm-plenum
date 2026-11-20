@@ -90,6 +90,7 @@ function RatePage() {
             {m.rounds_closes_at_short()} <LocalDateTime iso={round.closesAt} />
           </span>
         </p>
+        <p className="font-medium">{m.rounds_rate_question()}</p>
         <p className="text-sm text-muted-foreground">
           {m.rounds_rate_intro()}{" "}
           {m.rounds_rate_bands({

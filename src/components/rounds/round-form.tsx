@@ -297,6 +297,7 @@ export function RoundForm({
 
       <FieldSet>
         <FieldLegend>{m.rounds_rule_legend()}</FieldLegend>
+        <FieldDescription>{m.rounds_setup_question()}</FieldDescription>
         <FieldDescription>{m.rounds_rule_default_explained()}</FieldDescription>
         <div className="grid gap-4 sm:grid-cols-2">
           <form.AppField name="scaleMin">

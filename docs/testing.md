@@ -139,8 +139,8 @@ Sign in at <http://localhost:3000/sign-in> and open the link from Mailpit at
 2. Open the board. It has eight elements, such as Systolic, Cuff size and
    Comment. Add an element, merge two duplicates, and look up a CKM
    archetype (this calls the live CKM).
-3. Open the rounds. Round 1 is closed: 5 elements included, 1 excluded and
-   2 without consensus. Round 2 is open.
+3. Open the rounds. Round 1 is closed: 5 elements in the archetype, 1 not in
+   this archetype and 2 without consensus. Round 2 is open.
 4. Open the members page. Eight participants sit in five stakeholder groups:
    Nursing, Primary care, General medicine, Terminology and Architecture.
    Invite a new address and open the invitation from Mailpit in a private

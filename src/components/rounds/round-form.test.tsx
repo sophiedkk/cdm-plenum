@@ -60,10 +60,14 @@ describe("RoundForm", () => {
   it("explains the default rule in plain words", () => {
     renderForm(vi.fn());
     expect(
-      screen.getByText("Included when at least 70% score 7 to 9 and at most 15% score 1 to 3."),
+      screen.getByText(
+        "In the archetype when at least 70% score 7 to 9 and at most 15% score 1 to 3.",
+      ),
     ).toBeTruthy();
     expect(
-      screen.getByText("Excluded when at least 70% score 1 to 3 and at most 15% score 7 to 9."),
+      screen.getByText(
+        "Not in this archetype when at least 70% score 1 to 3 and at most 15% score 7 to 9.",
+      ),
     ).toBeTruthy();
   });
 
@@ -141,7 +145,7 @@ describe("RoundForm", () => {
     renderForm(vi.fn());
     expect(
       screen.getByText(
-        "Opgenomen als minstens 70% 7 tot en met 9 scoort en hoogstens 15% 1 tot en met 3.",
+        "In het archetype als minstens 70% 7 tot en met 9 scoort en hoogstens 15% 1 tot en met 3.",
       ),
     ).toBeTruthy();
   });
