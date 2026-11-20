@@ -307,14 +307,16 @@ async function boardElements(
     .where("element.merged_into", "is", null)
     .execute();
   const mergedLinks = await mergedCkmLinks(db, projectId);
-  const counts = await db
+  let countQuery = db
     .selectFrom("element_comment")
     .innerJoin("element", "element.id", "element_comment.element_id")
     .select(["element_comment.element_id", sql<number>`count(*)::int`.as("count")])
     .where("element.project_id", "=", projectId)
-    .where("element.merged_into", "is", null)
-    .groupBy("element_comment.element_id")
-    .execute();
+    .where("element.merged_into", "is", null);
+  if (onlyAuthor !== null && withImported) {
+    countQuery = countQuery.where("element_comment.author_member_id", "=", onlyAuthor);
+  }
+  const counts = await countQuery.groupBy("element_comment.element_id").execute();
   const sourcesOf = groupBy(sources);
   const valuesOf = groupBy(values);
   const countOf = new Map(counts.map((row) => [row.element_id, row.count]));
@@ -734,18 +736,18 @@ export async function listElementComments(
 ): Promise<ProjectResult<ElementComment[]>> {
   return readProject(db, userId, input.projectId, null, async (db, project) => {
     if (!boardVisible(project)) return refused("element_not_found");
-    const element = await activeElement(db, project.id, input.elementId, {
-      onlyAuthor: await visibleAuthor(db, project, userId),
-    });
+    const onlyAuthor = await visibleAuthor(db, project, userId);
+    const element = await activeElement(db, project.id, input.elementId, { onlyAuthor });
     if (!element) return refused("element_not_found");
     const self = await actorMemberId(db, project.id, userId);
-    const rows = await db
+    let query = db
       .selectFrom("element_comment")
       .select(["id", "body", "created_at", "author_member_id"])
-      .where("element_id", "=", element.id)
-      .orderBy("created_at")
-      .orderBy("id")
-      .execute();
+      .where("element_id", "=", element.id);
+    // NOTE: EL13, EL23. In the private step a participant also sees the elements from existing
+    // models, but not what others wrote under them: only their own comments.
+    if (onlyAuthor !== null) query = query.where("author_member_id", "=", onlyAuthor);
+    const rows = await query.orderBy("created_at").orderBy("id").execute();
     return done(
       rows.map((row) => ({
         id: row.id,

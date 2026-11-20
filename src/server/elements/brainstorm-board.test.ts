@@ -12,7 +12,7 @@ import { insertImportedElement, setPhase } from "../test-fixtures.ts";
 import { type ProjectMembers, personLeaks, projectWithMembers } from "../test-project-members.ts";
 import { revealBoard } from "./brainstorm.ts";
 import { brainstormBoard } from "./brainstorm-board.ts";
-import { addElement, listElements } from "./queries.ts";
+import { addElement, addElementComment, listElementComments, listElements } from "./queries.ts";
 import { addElementInput } from "./schemas.ts";
 
 let db: Kysely<DB>;
@@ -107,6 +107,36 @@ describe("the brainstorm board (EL23)", () => {
       ok: false,
       error: "phase_closed",
     });
+  });
+
+  it("shows a participant only their own comments under an element from a model, before the reveal", async () => {
+    const [systolic] = await db
+      .selectFrom("element")
+      .select("id")
+      .where("project_id", "=", m.projectId)
+      .where("name", "=", "Systolic")
+      .execute();
+    const elementId = systolic?.id ?? "";
+    for (const [userId, body] of [
+      [m.participant, "Mine"],
+      [m.otherParticipant, "Theirs"],
+    ] as const) {
+      const added = await addElementComment(db, userId, {
+        projectId: m.projectId,
+        elementId,
+        body,
+      });
+      expect(added.ok).toBe(true);
+    }
+    const comments = await listElementComments(db, m.participant, {
+      projectId: m.projectId,
+      elementId,
+    });
+    if (!comments.ok) throw new Error(comments.error);
+    expect(comments.value.map((comment) => comment.body)).toEqual(["Mine"]);
+    const list = await listElements(db, m.participant, m.projectId);
+    if (!list.ok) throw new Error(list.error);
+    expect(list.value.find((element) => element.id === elementId)?.commentCount).toBe(1);
   });
 
   it("lets a participant read the elements from existing models on the board in the private step", async () => {
