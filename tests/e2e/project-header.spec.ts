@@ -138,9 +138,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(page).toHaveURL(
         (url) => url.pathname === `/projects/${project.projectId}/rounds/${roundId}/rate`,
       );
-      // The rating screen opens on the first card (DE18), under the same header.
+      // The rating screen opens on the first card (DE18), under the same header, whose task
+      // line keeps its sentence but has no button to the page it is on.
       await expect(page.getByRole("region", { name: "Systolic pressure" })).toBeVisible();
-      await expect(page.getByRole("region", { name: text.projects_task_heading })).toBeVisible();
+      const onRating = page.getByRole("region", { name: text.projects_task_heading });
+      await expect(onRating).toContainText(fill(text.projects_task_rate, { number: 1 }));
+      await expect(onRating.getByRole("link")).toHaveCount(0);
       await expectAxeClean(page);
     });
 
@@ -175,9 +178,10 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         const task = page.getByRole("region", { name: text.projects_task_heading });
         await expect(task).toContainText(text.projects_task_discover);
         await expect(task).toContainText(text.projects_task_discover_one);
+        // The button leads to the brainstorm, so the brainstorm itself shows none.
         await expect(
           task.getByRole("link", { name: text.projects_task_discover_action }),
-        ).toBeVisible();
+        ).toHaveCount(step === "brainstorm" ? 0 : 1);
       }
       await expectAxeCleanInBothThemes(page);
 

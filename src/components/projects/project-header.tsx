@@ -5,7 +5,7 @@
 // scope, the phases as steps with the current one marked in text, and the task line with one
 // main button. The facilitator reads the status of the phase there and moves the phase after a
 // confirmation shown in the page.
-import { Link } from "@tanstack/react-router";
+import { Link, useMatchRoute } from "@tanstack/react-router";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -103,6 +103,9 @@ function ActionLink({
   children,
 }: Readonly<{ projectId: string; link: TaskLink; icon?: LucideIcon; children: ReactNode }>) {
   const params = "roundId" in link ? { projectId, roundId: link.roundId } : { projectId };
+  const matchRoute = useMatchRoute();
+  // A button to the page the person is on goes nowhere; the task sentence stays on its own.
+  if (matchRoute({ to: link.to, params })) return null;
   return (
     <Button asChild size="sm">
       <Link to={link.to} params={params}>
