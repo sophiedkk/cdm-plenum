@@ -4,7 +4,7 @@
 // NOTE: ADR 0005. The only module that reads the rating_code table, through exactly two queries:
 // the signed-in member's own code, and the facilitator's ratings by participant. anonymity.test.ts
 // fails when another module names the table.
-import type { Kysely } from "kysely";
+import { type Kysely, sql } from "kysely";
 import type { DB } from "../db/schema.gen.ts";
 
 /**
@@ -34,37 +34,65 @@ export interface ParticipantRatings {
   /** The stakeholder group the participant rated in; null when that group was removed. */
   groupName: string | null;
   ratings: { elementId: string; score: number | null; reason: string | null }[];
+  /** The ids of the elements the participant proposed in this round (DE16). */
+  proposalIds: string[];
 }
 
 /**
- * Query 2 of 2: who gave which rating in a round (DE4). The caller runs it only for the
- * facilitator of a round whose `facilitator_sees_raters` is true.
+ * Query 2 of 2: who gave which rating and who proposed which element in a round (DE4, DE16).
+ * The caller runs it only for the facilitator of a round whose `facilitator_sees_raters` is
+ * true. Ratings and proposals are one union, so the code-to-member table is read once.
  */
 export async function ratingsByParticipantQuery(
   db: Kysely<DB>,
   projectId: string,
   roundId: string,
 ): Promise<ParticipantRatings[]> {
-  const rows = await db
+  const entries = db
     .selectFrom("rating")
-    .innerJoin("rating_code", "rating_code.id", "rating.rating_code_id")
+    .select((eb) => [
+      "rating.rating_code_id as codeId",
+      "rating.team_id as teamId",
+      eb.ref("rating.element_id").$castTo<string | null>().as("elementId"),
+      "rating.score",
+      "rating.reason",
+      sql<string | null>`null::uuid`.as("proposalId"),
+    ])
+    .where("rating.round_id", "=", roundId)
+    .unionAll((eb) =>
+      eb
+        .selectFrom("round_proposal")
+        .select((eb) => [
+          "round_proposal.rating_code_id as codeId",
+          sql<string | null>`null::text`.as("teamId"),
+          sql<string | null>`null::uuid`.as("elementId"),
+          sql<number | null>`null::smallint`.as("score"),
+          sql<string | null>`null::text`.as("reason"),
+          eb.ref("round_proposal.id").$castTo<string | null>().as("proposalId"),
+        ])
+        .where("round_proposal.round_id", "=", roundId),
+    );
+  const rows = await db
+    .selectFrom(entries.as("entry"))
+    .innerJoin("rating_code", "rating_code.id", "entry.codeId")
     .innerJoin("member", "member.id", "rating_code.member_id")
     .innerJoin("user", "user.id", "member.userId")
-    .leftJoin("team", "team.id", "rating.team_id")
+    .leftJoin("team", "team.id", "entry.teamId")
     .select([
       "member.id as memberId",
       "user.name",
       "user.email",
       "team.name as groupName",
-      "rating.element_id as elementId",
-      "rating.score",
-      "rating.reason",
+      "entry.elementId",
+      "entry.score",
+      "entry.reason",
+      "entry.proposalId",
     ])
-    .where("rating.round_id", "=", roundId)
     .where("rating_code.project_id", "=", projectId)
     .orderBy("user.email")
     .orderBy("member.id")
-    .orderBy("rating.element_id")
+    .orderBy("entry.elementId")
+    .orderBy("entry.proposalId")
     .execute();
   const byMember = new Map<string, ParticipantRatings>();
   for (const row of rows) {
@@ -74,12 +102,18 @@ export async function ratingsByParticipantQuery(
         memberId: row.memberId,
         name: row.name,
         email: row.email,
-        groupName: row.groupName,
+        groupName: null,
         ratings: [],
+        proposalIds: [],
       };
       byMember.set(row.memberId, participant);
     }
-    participant.ratings.push({ elementId: row.elementId, score: row.score, reason: row.reason });
+    if (row.proposalId !== null) {
+      participant.proposalIds.push(row.proposalId);
+    } else if (row.elementId !== null) {
+      if (participant.ratings.length === 0) participant.groupName = row.groupName;
+      participant.ratings.push({ elementId: row.elementId, score: row.score, reason: row.reason });
+    }
   }
   return [...byMember.values()];
 }
