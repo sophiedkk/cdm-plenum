@@ -111,9 +111,9 @@ describe("RatingCards (DE18)", () => {
     expect(document.activeElement).toBe(heading("Overview of your ratings"));
     const rows = within(overview).getAllByRole("row").slice(1);
     expect(rows.map((row) => row.textContent)).toEqual([
-      "Systolic pressure8",
-      "Cuff sizeUnable to rate",
-      "PositionNot rated yet",
+      "Systolic pressure8None",
+      "Cuff sizeUnable to rateNone",
+      "PositionNot rated yetNone",
     ]);
     expect(overview.textContent).toContain("2 of 3 elements rated");
     expect(screen.getByText("The open question of round 1")).toBeTruthy();

@@ -192,17 +192,19 @@ export function RatingElement({
       className="flex flex-col gap-3 rounded-lg border p-4"
     >
       <div className="flex flex-col gap-1">
-        <p className="text-sm text-muted-foreground">
-          {m.rounds_card_position({ index: position.index, total: position.total })}
-        </p>
-        <h3
-          id={`${base}-heading`}
-          ref={headingRef}
-          tabIndex={-1}
-          className="text-lg font-semibold break-words outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {element.name}
-        </h3>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+          <h3
+            id={`${base}-heading`}
+            ref={headingRef}
+            tabIndex={-1}
+            className="min-w-0 text-lg font-semibold break-words outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {element.name}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {m.rounds_card_position({ index: position.index, total: position.total })}
+          </p>
+        </div>
         {element.description && <p className="break-words">{element.description}</p>}
       </div>
       {element.previous && <PreviousRound element={{ ...element, previous: element.previous }} />}
@@ -254,37 +256,41 @@ export function RatingElement({
             if (choice !== "" && reason !== savedReason.current) void saveChoice(choice, reason);
           }}
         />
-        <FieldDescription id={`${base}-reason-help`}>
-          {choice === ""
-            ? m.rounds_rate_reason_help_unrated()
-            : m.rounds_rate_reason_help({ max: RATING_REASON_MAX })}
-        </FieldDescription>
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        {editable && choice !== "" && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              if (await run(clear, "cleared")) {
-                setChoice("");
-                savedReason.current = "";
-                setReason("");
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <FieldDescription id={`${base}-reason-help`} className="min-w-60 flex-1">
+            {choice === ""
+              ? m.rounds_rate_reason_help_unrated()
+              : m.rounds_rate_reason_help({ max: RATING_REASON_MAX })}
+          </FieldDescription>
+          <div className="flex flex-wrap items-center gap-3">
+            {editable && choice !== "" && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (await run(clear, "cleared")) {
+                    setChoice("");
+                    savedReason.current = "";
+                    setReason("");
+                  }
+                }}
+              >
+                {m.rounds_rate_clear()}
+              </Button>
+            )}
+            <p
+              role="status"
+              className={
+                typeof state === "object"
+                  ? "text-sm text-destructive"
+                  : "text-sm text-muted-foreground"
               }
-            }}
-          >
-            {m.rounds_rate_clear()}
-          </Button>
-        )}
-        <p
-          role="status"
-          className={
-            typeof state === "object" ? "text-sm text-destructive" : "text-sm text-muted-foreground"
-          }
-        >
-          {statusText}
-        </p>
+            >
+              {statusText}
+            </p>
+          </div>
+        </div>
       </div>
       <ElementDetailsDisclosure
         details={details}

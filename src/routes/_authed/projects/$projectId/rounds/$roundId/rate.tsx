@@ -140,7 +140,7 @@ function RatePage() {
     remember(elementId, (item) => ({ ...item, own }));
 
   return (
-    <div className="flex max-w-4xl flex-col gap-3">
+    <div className="flex max-w-5xl flex-col gap-3">
       <div className="flex flex-col gap-1.5">
         <h2 className="text-xl font-semibold">{m.rounds_rate_title({ number: round.number })}</h2>
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">

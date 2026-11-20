@@ -195,26 +195,9 @@ function DetailRow({
     <>
       <dt className="font-medium">{detailLabel(kind)}</dt>
       <dd className="flex min-w-0 flex-col gap-1.5">
-        <span className="break-words">{detailValue(kind, details)}</span>
-        {flag && !editing && (
-          <p className="flex items-start gap-1.5 text-sm">
-            <FlagIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
-            <span className="break-words">{m.rounds_flag_yours({ reason: flag.reason })}</span>
-          </p>
-        )}
-        {editing ? (
-          <FlagForm
-            kind={kind}
-            initial={flag?.reason ?? ""}
-            save={save}
-            onDone={(saved) => {
-              refocus.current = true;
-              setStatus(saved ? { text: m.rounds_flag_saved(), error: false } : null);
-              setEditing(false);
-            }}
-          />
-        ) : (
-          editable && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          <span className="break-words">{detailValue(kind, details)}</span>
+          {editable && !editing && (
             <div className="flex flex-wrap gap-2">
               <Button
                 ref={action}
@@ -246,7 +229,25 @@ function DetailRow({
                 </Button>
               )}
             </div>
-          )
+          )}
+        </div>
+        {flag && !editing && (
+          <p className="flex items-start gap-1.5 text-sm">
+            <FlagIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
+            <span className="break-words">{m.rounds_flag_yours({ reason: flag.reason })}</span>
+          </p>
+        )}
+        {editing && (
+          <FlagForm
+            kind={kind}
+            initial={flag?.reason ?? ""}
+            save={save}
+            onDone={(saved) => {
+              refocus.current = true;
+              setStatus(saved ? { text: m.rounds_flag_saved(), error: false } : null);
+              setEditing(false);
+            }}
+          />
         )}
       </dd>
     </>

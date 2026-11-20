@@ -71,9 +71,13 @@ export function RatingOverview({
                 >
                   {ratingText(element.own)}
                 </td>
-                <td className="px-3 py-1.5">
+                <td
+                  className={
+                    element.flags.length === 0 ? "px-3 py-1.5 text-muted-foreground" : "px-3 py-1.5"
+                  }
+                >
                   {element.flags.length === 0
-                    ? ""
+                    ? m.rounds_overview_no_flags()
                     : element.flags.map((flag) => detailLabel(flag.kind)).join(", ")}
                 </td>
               </tr>
