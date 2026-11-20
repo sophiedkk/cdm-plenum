@@ -3,7 +3,7 @@
 
 # 0012. The discover phase: sources, a private-first brainstorm, an optional sort
 
-- Status: Proposed
+- Status: Proposed; step 3 (the participant sort) superseded by [0020](0020-discover-first-look-board-and-grouping.md)
 - Date: 2026-11-20
 - Deciders: owner (private first, a maximal common data model, standard-agnostic wording, sorting step after validation), maintainer (design)
 
