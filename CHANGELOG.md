@@ -9,6 +9,17 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The element board shows each element as one row of a table, with its
+  number, name, description, data type, cardinality, number of sources, CKM
+  link and number of comments. At 1280 by 800 pixels you see at least 10
+  elements without scrolling. Select an element's name to open its details
+  below the row: the full description, proposed values, sources, CKM link,
+  comments and the facilitator's actions (Edit, Edit values, Link to CKM).
+- "Merge duplicates" and "Import CSV" moved into the "More actions" menu
+  next to "Search CKM" on the element board.
+
 ## [0.1.0] - 2026-11-19
 
 The first release: scope, element board with the CKM reuse check, e-Delphi
