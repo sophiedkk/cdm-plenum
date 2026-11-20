@@ -20,8 +20,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { m } from "@/i18n/messages";
 import { formatCardinality } from "@/lib/cardinality";
 import { mayRate } from "@/lib/project-roles";
+import { headerCovers } from "@/lib/project-tasks";
 import type { BoardElement } from "@/server/elements/queries";
-import { projectKeys, projectQueryOptions } from "@/server/projects/query-options";
+import {
+  projectKeys,
+  projectOverviewQueryOptions,
+  projectQueryOptions,
+} from "@/server/projects/query-options";
 import type { OwnFlag } from "@/server/rounds/flags";
 import {
   addProposalFn,
@@ -107,7 +112,12 @@ function RatePage() {
   const { data } = useSuspenseQuery(myRatingsQueryOptions(projectId, roundId));
   const { data: boardResult } = useSuspenseQuery(roundBoardQueryOptions(projectId));
   const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
+  const { data: overview } = useSuspenseQuery(projectOverviewQueryOptions(projectId));
   const canRate = detail.ok && mayRate(detail.value.role, detail.value.ownGroupId);
+  // The header's task line may show the closing date and the count already; they show once.
+  const covered = overview.ok
+    ? headerCovers(overview.value, roundId)
+    : { rate: false, closesAt: false };
   const mine = valueOrNotFound(data);
   const board = valueOrNotFound(boardResult);
   const saveRating = useServerFn(saveRatingFn);
@@ -146,10 +156,14 @@ function RatePage() {
         <h2 className="text-xl font-semibold">{m.rounds_rate_title({ number: round.number })}</h2>
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <RoundStatusBadge status={round.status} />
-          <span>
-            {m.rounds_closes_at_short()} <DateTime value={round.closesAt} />
-          </span>
-          <span className="font-medium">{m.rounds_rate_progress({ rated, total })}</span>
+          {!covered.closesAt && (
+            <span>
+              {m.rounds_closes_at_short()} <DateTime value={round.closesAt} />
+            </span>
+          )}
+          {!covered.rate && (
+            <span className="font-medium">{m.rounds_rate_progress({ rated, total })}</span>
+          )}
           <span className="flex items-center gap-2">
             {round.facilitatorSeesRaters ? (
               <EyeIcon aria-hidden="true" className="size-4 shrink-0" />
@@ -266,7 +280,6 @@ function RatePage() {
         }
       />
       <p className="text-sm text-muted-foreground">
-        {round.facilitatorSeesRaters ? m.rounds_raters_visible() : m.rounds_raters_hidden()}{" "}
         {m.rounds_rate_autosave()}{" "}
         <Link
           to="/projects/$projectId/rounds"

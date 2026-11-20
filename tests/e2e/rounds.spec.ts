@@ -194,9 +194,13 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(cuff.getByRole("status").first()).toHaveText(
         fill(text.rounds_rate_saved_score, { score: 9 }),
       );
+      // The header's task line counts the ratings; the rating screen does not repeat it.
+      await expect(rater.getByRole("region", { name: text.projects_task_heading })).toContainText(
+        fill(text.projects_task_rated_count, { rated: 2, total: 2 }),
+      );
       await expect(
         rater.getByText(fill(text.rounds_rate_progress, { rated: 2, total: 2 })),
-      ).toBeVisible();
+      ).toHaveCount(0);
       await axeClean(rater);
 
       // The second participant cannot rate one element.

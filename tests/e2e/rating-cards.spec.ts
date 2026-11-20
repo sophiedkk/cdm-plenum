@@ -249,9 +249,13 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await next.click();
       await expect(heading(text.rounds_overview_heading)).toBeFocused();
       const overview = rater.getByRole("region", { name: text.rounds_overview_heading });
+      // The header's task line holds the count; the rating screen does not repeat it.
+      await expect(
+        rater.getByText(fill(text.projects_task_rated_count, { rated: 3, total: 3 })),
+      ).toHaveCount(1);
       await expect(
         rater.getByText(fill(text.rounds_rate_progress, { rated: 3, total: 3 })),
-      ).toHaveCount(1);
+      ).toHaveCount(0);
       const rows = overview.getByRole("row");
       await expect(rows.filter({ hasText: "Systolic pressure" })).toContainText("7");
       await expect(rows.filter({ hasText: "Systolic pressure" })).toContainText(

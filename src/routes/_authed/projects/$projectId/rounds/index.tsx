@@ -44,14 +44,12 @@ function RoundAction({
   canRate,
 }: Readonly<{ round: RoundSummary; projectId: string; canRate: boolean }>) {
   const params = { projectId, roundId: round.id };
+  // A plain link: the header's task line carries the main button to rate (PR11).
   if (round.status === "open" && canRate) {
     return (
-      <Button asChild size="sm">
-        <Link to="/projects/$projectId/rounds/$roundId/rate" params={params}>
-          <VoteIcon aria-hidden="true" />
-          {m.rounds_rate_now({ number: round.number })}
-        </Link>
-      </Button>
+      <Link to="/projects/$projectId/rounds/$roundId/rate" params={params} className={LINK}>
+        {m.rounds_rate_now({ number: round.number })}
+      </Link>
     );
   }
   if (round.status === "closed") {
