@@ -66,6 +66,8 @@ export const PARTICIPANT_WRITES = {
   scope_comment: { step: "scope", access: "comment" },
   element_add: { step: "brainstorm", access: "add" },
   element_comment: { step: "board", access: "comment" },
+  // NOTE: EL16. "I support this" and "same as" are light marks on the board, open with comments.
+  element_mark: { step: "board", access: "comment" },
   rate: { step: "rounds", access: "rate" },
 } as const satisfies Record<string, { step: ProjectStep; access: StepAccess }>;
 export type ParticipantWrite = keyof typeof PARTICIPANT_WRITES;
@@ -100,6 +102,9 @@ export function writeOpen(
 
 /** The phase in which the facilitator opens a round and keeps it open (PR10). */
 export const ROUND_PHASE: ProjectPhase = "decide";
+
+/** The phase in which every member, the facilitator too, marks elements after the reveal (EL16). */
+export const MARK_PHASE: ProjectPhase = "discover";
 
 /** The phase in which the facilitator reveals the board by hand (PR10, EL13). */
 export const REVEAL_PHASE: ProjectPhase = "discover";

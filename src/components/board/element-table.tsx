@@ -19,9 +19,11 @@ import {
 } from "@/components/ui/table";
 import { m } from "@/i18n/messages";
 import { formatCardinality } from "@/lib/cardinality";
+import type { Outcome } from "@/lib/forms/outcome";
 import { cn } from "@/lib/utils";
 import { dataTypeName } from "./data-type-text";
 import { type CardElement, ElementDetails } from "./element-details";
+import type { ElementMarkProps, MarkTarget } from "./element-marks";
 
 /** The data type in a few words: its plain name, or the RM type of a CKM link outside the list. */
 export function shortDataType(element: Pick<CardElement, "dataType" | "ckmLink">): string {
@@ -46,9 +48,48 @@ export interface ElementActions {
   onEdit: (element: CardElement) => void;
   onValues: (element: CardElement) => void;
   onLink: (element: CardElement) => void;
+  /** The member's own marks; left out when marks are closed (EL16). */
+  marks?: BoardMarks | undefined;
 }
 
-const COLUMN_COUNT = 8;
+/** The member's own "I support this" and "same as" marks on the board (EL16). */
+export interface BoardMarks {
+  supported: ReadonlySet<string>;
+  sameAs: readonly { elementId: string; sameAsId: string }[];
+  setSupport: (element: CardElement, supported: boolean) => Promise<Outcome<unknown>>;
+  addSameAs: (element: CardElement, other: MarkTarget) => Promise<Outcome<unknown>>;
+  removeSameAs: (element: CardElement, other: MarkTarget) => Promise<Outcome<unknown>>;
+  onChanged: (message: string) => Promise<void> | void;
+}
+
+/** An element as the mark controls name it: its number on the board and its name. */
+export function markTarget(
+  element: Pick<CardElement, "id" | "name">,
+  position: number,
+): MarkTarget {
+  return { id: element.id, name: `${position}. ${element.name}` };
+}
+
+function elementMarks(
+  element: CardElement,
+  targets: readonly MarkTarget[],
+  marks: BoardMarks,
+): ElementMarkProps {
+  const others = new Set<string>();
+  for (const pair of marks.sameAs) {
+    if (pair.elementId === element.id) others.add(pair.sameAsId);
+    if (pair.sameAsId === element.id) others.add(pair.elementId);
+  }
+  return {
+    supported: marks.supported.has(element.id),
+    sameAs: targets.filter((target) => others.has(target.id)),
+    candidates: targets.filter((target) => target.id !== element.id),
+    setSupport: (supported) => marks.setSupport(element, supported),
+    addSameAs: (other) => marks.addSameAs(element, other),
+    removeSameAs: (other) => marks.removeSameAs(element, other),
+    onChanged: marks.onChanged,
+  };
+}
 
 function ElementRows({
   projectId,
@@ -57,11 +98,18 @@ function ElementRows({
   isFacilitator,
   opened,
   actions,
+  targets,
+  supportCount,
+  columnCount,
 }: Readonly<{
   projectId: string;
   element: CardElement;
   position: number;
   isFacilitator: boolean;
+  targets: readonly MarkTarget[];
+  /** The number of supporters, in the facilitator's view only (EL16). */
+  supportCount: number | undefined;
+  columnCount: number;
   /** Open on arrival, from a link to this element (EL15). */
   opened: boolean;
   actions: ElementActions;
@@ -116,9 +164,12 @@ function ElementRows({
           <CkmStatus element={element} />
         </TableCell>
         <TableCell className="text-right tabular-nums">{element.commentCount}</TableCell>
+        {supportCount !== undefined && (
+          <TableCell className="text-right tabular-nums">{supportCount}</TableCell>
+        )}
       </TableRow>
       <TableRow id={detailsId} hidden={!expanded} className="hover:bg-transparent">
-        <TableCell colSpan={COLUMN_COUNT} className="px-4 pt-2 pb-6 whitespace-normal">
+        <TableCell colSpan={columnCount} className="px-4 pt-2 pb-6 whitespace-normal">
           {expanded && (
             // On a narrow screen the table scrolls sideways; the details stay within the screen.
             <section
@@ -134,6 +185,7 @@ function ElementRows({
                 onEdit={() => actions.onEdit(element)}
                 onValues={() => actions.onValues(element)}
                 onLink={() => actions.onLink(element)}
+                marks={actions.marks && elementMarks(element, targets, actions.marks)}
               />
             </section>
           )}
@@ -149,6 +201,7 @@ export function ElementTable({
   isFacilitator,
   openElementId,
   actions,
+  supportCounts,
 }: Readonly<{
   projectId: string;
   elements: readonly CardElement[];
@@ -156,7 +209,11 @@ export function ElementTable({
   /** The element whose details are open when the board loads. */
   openElementId?: string | undefined;
   actions: ElementActions;
+  /** The supporters per element id; the facilitator's board shows them as a column (EL16). */
+  supportCounts?: Readonly<Record<string, number>> | undefined;
 }>) {
+  const targets = elements.map((element, index) => markTarget(element, index + 1));
+  const columnCount = supportCounts === undefined ? 8 : 9;
   return (
     <Table aria-label={m.board_list_label()}>
       <TableHeader>
@@ -175,6 +232,11 @@ export function ElementTable({
           <TableHead scope="col" className="text-right">
             {m.board_column_comments()}
           </TableHead>
+          {supportCounts !== undefined && (
+            <TableHead scope="col" className="text-right">
+              {m.board_column_support()}
+            </TableHead>
+          )}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -187,6 +249,11 @@ export function ElementTable({
             isFacilitator={isFacilitator}
             opened={element.id === openElementId}
             actions={actions}
+            targets={targets}
+            supportCount={
+              supportCounts === undefined ? undefined : (supportCounts[element.id] ?? 0)
+            }
+            columnCount={columnCount}
           />
         ))}
       </TableBody>

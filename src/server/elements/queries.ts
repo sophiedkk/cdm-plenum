@@ -623,6 +623,20 @@ export async function mergeElements(
       .set({ element_id: into.id })
       .where("element_id", "in", input.fromIds)
       .execute();
+    // NOTE: EL16. A supporter of a duplicate supported the same idea, so the result counts them
+    // once; "same as" marks stay with the duplicates and leave the facilitator's list with them.
+    await trx
+      .insertInto("element_support")
+      .columns(["element_id", "member_id"])
+      .expression((eb) =>
+        eb
+          .selectFrom("element_support")
+          .select([sql<string>`${into.id}::uuid`.as("element_id"), "member_id"])
+          .distinct()
+          .where("element_id", "in", input.fromIds),
+      )
+      .onConflict((oc) => oc.columns(["element_id", "member_id"]).doNothing())
+      .execute();
     await trx.deleteFrom("element_value").where("element_id", "in", input.fromIds).execute();
     await writeValues(trx, into.id, values);
     const now = new Date();

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The details of one element on the board (EL1, EL4, EL5, EL6, EL9): its description, fields,
-// sources, CKM link and the links of merged duplicates, proposed values, comments and actions.
-// The author shows only in the facilitator's view (EL2).
+// sources, CKM link and the links of merged duplicates, proposed values, comments and actions,
+// and the member's own marks (EL16). The author shows only in the facilitator's view (EL2).
 import { useQuery } from "@tanstack/react-query";
 import {
   FileSpreadsheetIcon,
@@ -28,6 +28,7 @@ import { elementCommentsQueryOptions } from "@/server/elements/query-options";
 import type { Author } from "@/server/projects/member";
 import { CkmLinks } from "./ckm-links";
 import { dataTypeName, dataTypePair } from "./data-type-text";
+import { type ElementMarkProps, ElementMarks } from "./element-marks";
 
 export type CardElement = BoardElement & { author: Author | null };
 
@@ -83,6 +84,7 @@ export function ElementDetails({
   onEdit,
   onValues,
   onLink,
+  marks,
 }: Readonly<{
   projectId: string;
   element: CardElement;
@@ -93,6 +95,8 @@ export function ElementDetails({
   onEdit: () => void;
   onValues: () => void;
   onLink: () => void;
+  /** Left out when marks are closed: before the reveal or outside the discover phase (EL16). */
+  marks?: ElementMarkProps | undefined;
 }>) {
   const comments = useQuery(elementCommentsQueryOptions(projectId, element.id, isFacilitator));
   const coded = isCoded(element);
@@ -174,6 +178,7 @@ export function ElementDetails({
             </Button>
           </div>
         )}
+        {marks && <ElementMarks name={element.name} marks={marks} />}
       </div>
       <section aria-label={m.board_comments_label({ name: element.name })}>
         {comments.isPending && <p role="status">{m.common_loading()}</p>}

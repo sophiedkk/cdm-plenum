@@ -22,9 +22,10 @@ import {
   RevealButton,
 } from "@/components/board/brainstorm-panel";
 import { CkmPanel } from "@/components/board/ckm-panel";
+import { DuplicateList, type DuplicatePair } from "@/components/board/duplicate-list";
 import type { CardElement } from "@/components/board/element-details";
 import { ElementForm } from "@/components/board/element-form";
-import { ElementTable } from "@/components/board/element-table";
+import { type BoardMarks, ElementTable, markTarget } from "@/components/board/element-table";
 import { MergeForm } from "@/components/board/merge-form";
 import { ValuesForm } from "@/components/board/values-form";
 import { projectTitle } from "@/components/projects/project-title";
@@ -41,20 +42,25 @@ import { m } from "@/i18n/messages";
 import { isPrivateStep } from "@/lib/brainstorm";
 import { dataTypeByKey } from "@/lib/data-types";
 import { requireStep } from "@/lib/guards";
-import { REVEAL_PHASE, writeOpen } from "@/lib/phase-access";
+import { MARK_PHASE, REVEAL_PHASE, writeOpen } from "@/lib/phase-access";
 import { importArchetypeFn, linkElementFn, searchCkmFn } from "@/server/ckm/functions";
 import {
   addElementCommentFn,
   addElementFn,
+  addSameAsFn,
   mergeElementsFn,
+  removeSameAsFn,
   revealBoardFn,
   setElementValuesFn,
+  setSupportFn,
   updateElementFn,
 } from "@/server/elements/functions";
 import {
   boardQueryOptions,
   brainstormStatusQueryOptions,
   elementKeys,
+  markSummaryQueryOptions,
+  ownMarksQueryOptions,
 } from "@/server/elements/query-options";
 import { projectKeys, projectQueryOptions } from "@/server/projects/query-options";
 
@@ -71,6 +77,11 @@ export const Route = createFileRoute("/_authed/projects/$projectId/board")({
       boardQueryOptions(params.projectId, isFacilitator),
     );
     if (!board.ok) throw notFound();
+    // The marks only add to the board, so a refusal leaves the board as it is (EL16).
+    await Promise.all([
+      context.queryClient.prefetchQuery(ownMarksQueryOptions(params.projectId)),
+      isFacilitator && context.queryClient.prefetchQuery(markSummaryQueryOptions(params.projectId)),
+    ]);
   },
   head: ({ match }) => ({ meta: [{ title: projectTitle(match.context, m.board_title()) }] }),
   component: Board,
@@ -80,7 +91,7 @@ type DialogState =
   | { kind: "add" }
   | { kind: "edit"; element: CardElement }
   | { kind: "values"; element: CardElement }
-  | { kind: "merge" }
+  | { kind: "merge"; initial?: { intoId: string; fromIds: string[] } }
   | { kind: "ckm"; target: CardElement | null }
   | null;
 
@@ -96,6 +107,16 @@ function Board() {
   const { data: board } = useSuspenseQuery(boardQueryOptions(projectId, isFacilitator));
   const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
   const privateStep = detail.ok && isPrivateStep(detail.value);
+  // NOTE: EL16. Marks open after the reveal in the discover phase; the server checks it again.
+  const canMark =
+    !privateStep &&
+    project.phase === MARK_PHASE &&
+    writeOpen(project.role, project.phase, "element_mark");
+  const { data: ownMarks } = useQuery(ownMarksQueryOptions(projectId));
+  const { data: summary } = useQuery({
+    ...markSummaryQueryOptions(projectId),
+    enabled: isFacilitator,
+  });
   const { data: status } = useQuery({
     ...brainstormStatusQueryOptions(projectId),
     enabled: isFacilitator && privateStep,
@@ -112,16 +133,43 @@ function Board() {
   const linkElement = useServerFn(linkElementFn);
   const importArchetype = useServerFn(importArchetypeFn);
   const revealBoard = useServerFn(revealBoardFn);
+  const setSupport = useServerFn(setSupportFn);
+  const addSameAs = useServerFn(addSameAsFn);
+  const removeSameAs = useServerFn(removeSameAsFn);
 
   if (!board.ok) return null;
   const elements = board.value;
   const refreshBoard = () =>
     Promise.all(
-      [elementKeys.board, elementKeys.own, elementKeys.brainstorm].map((key) =>
+      [elementKeys.board, elementKeys.own, elementKeys.brainstorm, elementKeys.marks].map((key) =>
         queryClient.invalidateQueries({ queryKey: key(projectId) }),
       ),
     );
   const close = () => setDialog(null);
+  const targets = elements.map((element, index) => markTarget(element, index + 1));
+  const targetOf = new Map(targets.map((target) => [target.id, target]));
+  const duplicates: DuplicatePair[] = [];
+  for (const proposal of summary?.ok ? summary.value.duplicates : []) {
+    const [first, second] = proposal.elementIds.map((id) => targetOf.get(id));
+    if (first && second) duplicates.push({ first, second, count: proposal.count });
+  }
+  const marks: BoardMarks | undefined =
+    canMark && ownMarks?.ok
+      ? {
+          supported: new Set(ownMarks.value.supported),
+          sameAs: ownMarks.value.sameAs,
+          setSupport: (element, supported) =>
+            setSupport({ data: { projectId, elementId: element.id, supported } }),
+          addSameAs: (element, other) =>
+            addSameAs({ data: { projectId, elementId: element.id, sameAsId: other.id } }),
+          removeSameAs: (element, other) =>
+            removeSameAs({ data: { projectId, elementId: element.id, sameAsId: other.id } }),
+          onChanged: async (message) => {
+            await queryClient.invalidateQueries({ queryKey: elementKeys.marks(projectId) });
+            toast.success(message);
+          },
+        }
+      : undefined;
   const cancel = (
     <Button type="button" variant="outline" onClick={close}>
       {m.common_cancel()}
@@ -216,29 +264,45 @@ function Board() {
           description={m.board_empty_description()}
         />
       ) : (
-        <ElementTable
-          projectId={projectId}
-          elements={elements}
-          isFacilitator={isFacilitator}
-          openElementId={openElementId}
-          actions={{
-            addComment: canComment
-              ? (element, body) => addComment({ data: { projectId, elementId: element.id, body } })
-              : undefined,
-            onCommentAdded: async (element) => {
-              await Promise.all([
-                queryClient.invalidateQueries({
-                  queryKey: elementKeys.comments(projectId, element.id),
-                }),
-                refreshBoard(),
-              ]);
-              toast.success(m.common_comment_added());
-            },
-            onEdit: (element) => setDialog({ kind: "edit", element }),
-            onValues: (element) => setDialog({ kind: "values", element }),
-            onLink: (element) => setDialog({ kind: "ckm", target: element }),
-          }}
-        />
+        <>
+          {isFacilitator && (
+            <DuplicateList
+              pairs={duplicates}
+              onMerge={(pair) =>
+                setDialog({
+                  kind: "merge",
+                  initial: { intoId: pair.first.id, fromIds: [pair.second.id] },
+                })
+              }
+            />
+          )}
+          <ElementTable
+            projectId={projectId}
+            elements={elements}
+            isFacilitator={isFacilitator}
+            openElementId={openElementId}
+            supportCounts={isFacilitator && summary?.ok ? summary.value.support : undefined}
+            actions={{
+              addComment: canComment
+                ? (element, body) =>
+                    addComment({ data: { projectId, elementId: element.id, body } })
+                : undefined,
+              onCommentAdded: async (element) => {
+                await Promise.all([
+                  queryClient.invalidateQueries({
+                    queryKey: elementKeys.comments(projectId, element.id),
+                  }),
+                  refreshBoard(),
+                ]);
+                toast.success(m.common_comment_added());
+              },
+              onEdit: (element) => setDialog({ kind: "edit", element }),
+              onValues: (element) => setDialog({ kind: "values", element }),
+              onLink: (element) => setDialog({ kind: "ckm", target: element }),
+              marks,
+            }}
+          />
+        </>
       )}
 
       <BoardDialog
@@ -321,6 +385,8 @@ function Board() {
         description={m.board_merge_description()}
       >
         <MergeForm
+          key={dialog?.kind === "merge" ? JSON.stringify(dialog.initial ?? null) : "closed"}
+          initial={dialog?.kind === "merge" ? dialog.initial : undefined}
           candidates={elements.map((element, index) => ({
             id: element.id,
             name: `${index + 1}. ${element.name}`,

@@ -11,6 +11,14 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- After the reveal, in the discover phase, you can mark an element on the
+  board with "I support this", or say it is the same as another element with
+  "Same as…". Other participants never see your marks. The facilitator sees
+  a Support column with the number of supporters and a "Possible duplicates"
+  list with the number of marks per pair, never who marked; each pair opens
+  the merge with both elements chosen. A mark decides nothing by itself. When
+  a similar-name hint shows in the brainstorm, "Same as this" supports that
+  element instead of adding what you typed.
 - A theme switch next to the language switch: Light, Dark or System. System
   follows your device's setting, as before; the choice stays in your browser.
 - A new project starts with a private brainstorm: each participant sees only

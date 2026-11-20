@@ -72,6 +72,7 @@ describe("writeOpen", () => {
       ["scope_comment", ["scope"]],
       ["element_add", ["discover"]],
       ["element_comment", ["discover"]],
+      ["element_mark", ["discover"]],
       ["rate", ["decide"]],
     ]);
   });

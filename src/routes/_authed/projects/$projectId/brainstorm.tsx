@@ -14,7 +14,8 @@ import { m } from "@/i18n/messages";
 import { ELEMENT_PROMPTS, type ElementPrompt, isPrivateStep } from "@/lib/brainstorm";
 import { requireStep } from "@/lib/guards";
 import { promptQuestion } from "@/lib/i18n/labels";
-import { addElementFn } from "@/server/elements/functions";
+import { MARK_PHASE, writeOpen } from "@/lib/phase-access";
+import { addElementFn, setSupportFn } from "@/server/elements/functions";
 import type { BoardElement } from "@/server/elements/queries";
 import {
   boardQueryOptions,
@@ -100,12 +101,18 @@ function Brainstorm() {
   // element of another participant.
   const board = useQuery({ ...boardQueryOptions(projectId, isFacilitator), enabled: shared });
   const addElement = useServerFn(addElementFn);
+  const setSupport = useServerFn(setSupportFn);
   if (!detail.ok || !own.ok || !scope.ok) return <NotFoundState />;
 
   const hintSource = shared ? (board.data?.ok ? board.data.value : []) : null;
   const byPrompt = (prompt: ElementPrompt | null) =>
     own.value.filter((element) => element.prompt === prompt);
   const concept = scope.value.concept.trim();
+  // NOTE: EL15, EL16. A hint marks the element on the board instead of adding a duplicate, once
+  // marks are open: after the reveal, in the discover phase. The server checks it again.
+  const role = detail.value.role;
+  const phase = detail.value.phase;
+  const canMark = shared && phase === MARK_PHASE && writeOpen(role, phase, "element_mark");
 
   return (
     <>
@@ -146,6 +153,16 @@ function Brainstorm() {
               </Link>
             )}
             submit={(fields) => addElement({ data: { projectId, ...fields, prompt } })}
+            markSame={
+              canMark
+                ? (element) =>
+                    setSupport({ data: { projectId, elementId: element.id, supported: true } })
+                : undefined
+            }
+            onMarkedSame={async (element) => {
+              await queryClient.invalidateQueries({ queryKey: elementKeys.marks(projectId) });
+              toast.success(m.board_hints_marked_same({ name: element.name }));
+            }}
             onAdded={async (name) => {
               await queryClient.invalidateQueries({ queryKey: elementKeys.all(projectId) });
               toast.success(m.board_added({ name }));

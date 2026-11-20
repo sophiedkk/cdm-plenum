@@ -272,6 +272,80 @@ describe("ElementTable", () => {
     expect(within(region).queryByLabelText("Your comment")).toBeNull();
   });
 
+  it("gives the facilitator a support column with the count per element (EL16)", () => {
+    commentsAnswer.mockResolvedValue({ ok: true, value: [] });
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <ElementTable
+          projectId="p1"
+          elements={[SYSTOLIC, POSITION]}
+          isFacilitator
+          actions={{ onCommentAdded: vi.fn(), onEdit: vi.fn(), onValues: vi.fn(), onLink: vi.fn() }}
+          supportCounts={{ [SYSTOLIC.id]: 2 }}
+        />
+      </QueryClientProvider>,
+    );
+    const table = screen.getByRole("table", { name: "Elements on the board" });
+    expect(within(table).getAllByRole("columnheader").at(-1)?.textContent).toBe("Support");
+    const last = (name: string) => within(summaryRow(name)).getAllByRole("cell").at(-1);
+    expect(last("Systolic")?.textContent).toBe("2");
+    expect(last("Position")?.textContent).toBe("0");
+  });
+
+  it("shows no support column without counts", () => {
+    renderTable(false);
+    expect(screen.queryByRole("columnheader", { name: "Support" })).toBeNull();
+  });
+
+  it("shows the member's own marks in the details, with the other elements to choose (EL16)", async () => {
+    commentsAnswer.mockResolvedValue({ ok: true, value: [] });
+    const setSupport = vi.fn(async () => ({ ok: true, value: null }) as const);
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <ElementTable
+          projectId="p1"
+          elements={[SYSTOLIC, POSITION, UNDECIDED]}
+          isFacilitator={false}
+          actions={{
+            onCommentAdded: vi.fn(),
+            onEdit: vi.fn(),
+            onValues: vi.fn(),
+            onLink: vi.fn(),
+            marks: {
+              supported: new Set([SYSTOLIC.id]),
+              sameAs: [{ elementId: UNDECIDED.id, sameAsId: SYSTOLIC.id }],
+              setSupport,
+              addSameAs: vi.fn(),
+              removeSameAs: vi.fn(),
+              onChanged: vi.fn(),
+            },
+          }}
+        />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Systolic" }));
+    const marks = screen.getByRole("region", { name: "Your marks on Systolic" });
+    const toggle = within(marks).getByRole("button", { name: "I support this" });
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+    expect(within(marks).getByText("3. Cuff size")).toBeTruthy();
+    const select = within(marks).getByLabelText("Same as…") as HTMLSelectElement;
+    expect([...select.options].map((option) => option.text)).toEqual([
+      "Choose an element",
+      "2. Position",
+    ]);
+    fireEvent.click(toggle);
+    await waitFor(() => expect(setSupport).toHaveBeenCalledWith(SYSTOLIC, false));
+  });
+
+  it("shows no marks when marks are closed", () => {
+    commentsAnswer.mockResolvedValue({ ok: true, value: [] });
+    renderTable(false);
+    fireEvent.click(screen.getByRole("button", { name: "Systolic" }));
+    expect(screen.queryByRole("region", { name: "Your marks on Systolic" })).toBeNull();
+  });
+
   it("shows a refused comment list as a translated message", async () => {
     commentsAnswer.mockResolvedValue({ ok: false, error: "not_found" });
     renderTable(false);

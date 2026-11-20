@@ -42,6 +42,24 @@ describe("MergeForm", () => {
     expect(onMerged).toHaveBeenCalledWith(CANDIDATES[0]);
   });
 
+  it("starts from a chosen pair of possible duplicates (EL16)", async () => {
+    const merge = vi.fn(async () => ({ ok: true }) as const);
+    render(
+      <MergeForm
+        candidates={CANDIDATES}
+        merge={merge}
+        onMerged={vi.fn()}
+        initial={{ intoId: "e1", fromIds: ["e2"] }}
+      />,
+    );
+    expect((screen.getByLabelText("Element to keep") as HTMLSelectElement).value).toBe("e1");
+    expect(
+      (screen.getByRole("checkbox", { name: "2. Systolic pressure" }) as HTMLInputElement).checked,
+    ).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Merge" }));
+    await waitFor(() => expect(merge).toHaveBeenCalledWith("e1", ["e2"]));
+  });
+
   it.each([
     ["element_in_round", "One of these elements is in a rating round"],
     ["merge_values_conflict", "The proposed values do not fit the data type"],

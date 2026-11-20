@@ -10,6 +10,7 @@ import { requireSession } from "../middleware.ts";
 import { projectInput } from "../projects/schemas.ts";
 import { brainstormStatus, revealBoard, setPrivateBrainstorm } from "./brainstorm.ts";
 import { importCsv, previewCsvImport } from "./import.ts";
+import { addSameAs, listOwnMarks, markSummary, removeSameAs, setSupport } from "./marks.ts";
 import {
   addElement,
   addElementComment,
@@ -29,7 +30,9 @@ import {
   elementInput,
   mergeElementsInput,
   privateBrainstormInput,
+  sameAsInput,
   setElementValuesInput,
+  setSupportInput,
   updateElementInput,
 } from "./schemas.ts";
 
@@ -108,3 +111,28 @@ export const setPrivateBrainstormFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(privateBrainstormInput)
   .handler(({ data, context }) => setPrivateBrainstorm(getDb(), context.userId, data));
+
+export const setSupportFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(setSupportInput)
+  .handler(({ data, context }) => setSupport(getDb(), context.userId, data));
+
+export const addSameAsFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(sameAsInput)
+  .handler(({ data, context }) => addSameAs(getDb(), context.userId, data));
+
+export const removeSameAsFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(sameAsInput)
+  .handler(({ data, context }) => removeSameAs(getDb(), context.userId, data));
+
+export const listOwnMarksFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => listOwnMarks(getDb(), context.userId, data.projectId));
+
+export const markSummaryFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => markSummary(getDb(), context.userId, data.projectId));

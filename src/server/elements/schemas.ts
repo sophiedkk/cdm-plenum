@@ -108,3 +108,22 @@ export type CsvImportInput = z.infer<typeof csvImportInput>;
 /** The private-first brainstorm on or off (EL13). */
 export const privateBrainstormInput = z.object({ projectId: idSchema, enabled: z.boolean() });
 export type PrivateBrainstormInput = z.infer<typeof privateBrainstormInput>;
+
+/** "I support this" on or off for the member's own mark (EL16). */
+export const setSupportInput = z.object({
+  projectId: idSchema,
+  elementId: idSchema,
+  supported: z.boolean(),
+});
+export type SetSupportInput = z.infer<typeof setSupportInput>;
+
+/**
+ * The member's mark that `elementId` is the same as `sameAsId` (EL16). An element the same as
+ * itself is refused by the query (`same_as_itself`), so the screen can show why.
+ */
+export const sameAsInput = z.object({
+  projectId: idSchema,
+  elementId: idSchema,
+  sameAsId: idSchema,
+});
+export type SameAsInput = z.infer<typeof sameAsInput>;

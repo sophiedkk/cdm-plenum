@@ -90,12 +90,26 @@ export interface ElementComment {
   id: Generated<string>;
 }
 
+export interface ElementSameAs {
+  created_at: Generated<Timestamp>;
+  element_id: string;
+  id: Generated<string>;
+  member_id: string;
+  same_as_id: string;
+}
+
 export interface ElementSource {
   created_at: Generated<Timestamp>;
   element_id: string;
   id: Generated<string>;
   kind: string;
   label: string;
+}
+
+export interface ElementSupport {
+  created_at: Generated<Timestamp>;
+  element_id: string;
+  member_id: string;
 }
 
 export interface ElementValue {
@@ -292,7 +306,9 @@ export interface DB {
   element: Element;
   element_ckm_link: ElementCkmLink;
   element_comment: ElementComment;
+  element_same_as: ElementSameAs;
   element_source: ElementSource;
+  element_support: ElementSupport;
   element_value: ElementValue;
   invitation: Invitation;
   member: Member;

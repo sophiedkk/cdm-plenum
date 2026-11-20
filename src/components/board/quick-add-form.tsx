@@ -4,11 +4,13 @@
 // One brainstorm question with its quick-add form (EL14, EL15): a name and an optional line,
 // Enter adds. After the reveal the form lists elements with a similar name while the participant
 // types; before it, `hintSource` is null and the form shows none, so nothing of others leaks.
+// "Same as this" next to a hint supports that element instead of adding the typed one (EL16).
 import { revalidateLogic, useStore } from "@tanstack/react-form";
-import { PlusIcon } from "lucide-react";
+import { CopyIcon, PlusIcon } from "lucide-react";
 import { type ReactNode, useId, useRef } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
+import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import { similarElements } from "@/lib/brainstorm";
 import { ELEMENT_DESCRIPTION_MAX, ELEMENT_NAME_MAX } from "@/lib/elements";
@@ -41,6 +43,8 @@ export function QuickAddForm({
   hintLink,
   submit,
   onAdded,
+  markSame,
+  onMarkedSame,
   children,
 }: Readonly<{
   question: string;
@@ -50,6 +54,9 @@ export function QuickAddForm({
   hintLink: (element: HintElement) => ReactNode;
   submit: (fields: { name: string; description: string }) => Promise<Outcome<unknown>>;
   onAdded: (name: string) => Promise<void> | void;
+  /** Supports a hinted element; left out when marks are closed (EL16). */
+  markSame?: ((element: HintElement) => Promise<Outcome<unknown>>) | undefined;
+  onMarkedSame?: (element: HintElement) => Promise<void> | void;
   /** The participant's own elements for this question, under the form. */
   children?: ReactNode;
 }>) {
@@ -79,6 +86,24 @@ export function QuickAddForm({
   });
   const typed = useStore(form.store, (state) => state.values.name);
   const hints = hintSource === null ? [] : similarElements(typed, hintSource);
+
+  async function sameAs(element: HintElement) {
+    if (!markSame) return;
+    try {
+      const outcome = await markSame(element);
+      if (!outcome.ok) {
+        applyServerRefusal(form, { form: refusalMessage(outcome.error) });
+        return;
+      }
+    } catch {
+      applyServerRefusal(form, { form: m.common_error_unexpected() });
+      return;
+    }
+    // The typed element is not added: the participant chose the one on the board.
+    form.reset();
+    await onMarkedSame?.(element);
+    formRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+  }
 
   return (
     <section aria-labelledby={`${id}question`} className="flex flex-col gap-3 border-b pb-6">
@@ -130,14 +155,30 @@ export function QuickAddForm({
           {hints.length > 0 && (
             <div className="flex flex-col gap-1">
               <p className="font-medium">{m.board_hints_title({ count: hints.length })}</p>
-              <p className="text-muted-foreground">{m.board_hints_help()}</p>
+              <p className="text-muted-foreground">
+                {markSame ? m.board_hints_help_same() : m.board_hints_help()}
+              </p>
             </div>
           )}
         </div>
         {hints.length > 0 && (
-          <ul aria-label={m.board_hints_list_label()} className="list-disc pl-5 text-sm">
+          <ul aria-label={m.board_hints_list_label()} className="flex flex-col gap-1 text-sm">
             {hints.map((element) => (
-              <li key={element.id}>{hintLink(element)}</li>
+              <li key={element.id} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                {hintLink(element)}
+                {markSame && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void sameAs(element)}
+                  >
+                    <CopyIcon aria-hidden="true" data-icon="inline-start" />
+                    {m.board_hints_same()}
+                    <span className="sr-only">: {element.name}</span>
+                  </Button>
+                )}
+              </li>
             ))}
           </ul>
         )}

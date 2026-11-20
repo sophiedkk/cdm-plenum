@@ -45,6 +45,8 @@ export const PROJECT_ACTION_ERRORS = [
   "phase_closed",
   "reveal_outside_discover",
   "round_still_open",
+  "marks_before_reveal",
+  "same_as_itself",
 ] as const;
 export type ProjectActionError = (typeof PROJECT_ACTION_ERRORS)[number];
 
