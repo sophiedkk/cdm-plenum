@@ -4,7 +4,7 @@
 // Which project steps a participant sees and may write to in each phase (PR9), and what the
 // facilitator may do ahead of the phase (PR10). The tabs, the route guards and the server read
 // this one table, so a new phase is one new row.
-import type { ProjectPhase } from "./project-phases.ts";
+import { PROJECT_PHASES, type ProjectPhase } from "./project-phases.ts";
 import type { ProjectRole } from "./project-roles.ts";
 
 /** The steps of a project, one per tab. The export is the facilitator's and outside the rule. */
@@ -69,6 +69,9 @@ export const PARTICIPANT_WRITES = {
   // NOTE: EL16. "I support this" and "same as" are light marks on the board, open with comments.
   element_mark: { step: "board", access: "comment" },
   rate: { step: "rounds", access: "rate" },
+  // NOTE: EL12, owner decision 2026-11-20. A participant suggests a source model while the
+  // brainstorm takes elements; only the facilitator adds and imports one.
+  source_suggest: { step: "brainstorm", access: "add" },
 } as const satisfies Record<string, { step: ProjectStep; access: StepAccess }>;
 export type ParticipantWrite = keyof typeof PARTICIPANT_WRITES;
 
@@ -108,3 +111,14 @@ export const MARK_PHASE: ProjectPhase = "discover";
 
 /** The phase in which the facilitator reveals the board by hand (PR10, EL13). */
 export const REVEAL_PHASE: ProjectPhase = "discover";
+
+/** The phase the source models seed: discover starts from existing models (EL12, ADR 0016). */
+export const SOURCE_PHASE: ProjectPhase = "discover";
+
+/**
+ * Whether the facilitator may still prepare for `target` during `phase`: before it, ahead of
+ * the participants (PR10), or in it; not once the project has moved past it.
+ */
+export function preparesAhead(phase: ProjectPhase, target: ProjectPhase): boolean {
+  return PROJECT_PHASES.indexOf(phase) <= PROJECT_PHASES.indexOf(target);
+}

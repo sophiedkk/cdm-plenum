@@ -28,6 +28,7 @@ readable by its owner only (`chmod 600 .env`) and never commit it.
 | `SMTP_URL` | The SMTP server, as `smtps://user:password@smtp.example.org:465` or `smtp://...:587`. Escape special characters in the password with percent-encoding. |
 | `MAIL_FROM` | The sender address. Required when `SMTP_URL` is set. |
 | `CKM_BASE_URL` | The CKM REST API. Leave it empty for the international CKM. |
+| `FHIR_REGISTRY_URL` | The FHIR package registry. Leave it empty for `https://packages.fhir.org`. |
 | `CDM_PLENUM_PORT` | The loopback port the proxy forwards to. The default is 3000. |
 | `CDM_PLENUM_IMAGE` | The app image. The default is `localhost/cdm-plenum:latest`, which `podman compose build` makes. |
 

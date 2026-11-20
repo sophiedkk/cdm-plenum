@@ -7,8 +7,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { baseLocale, overwriteGetLocale } from "@/i18n/runtime";
 import { ADMIN_ACTION_ERRORS } from "@/server/admin/queries";
 import { CKM_ACTION_ERRORS } from "@/server/ckm/queries";
+import { FHIR_ACTION_ERRORS } from "@/server/fhir/queries";
 import { PROJECT_ACTION_ERRORS } from "@/server/projects/access";
 import { ROUND_ACTION_ERRORS } from "@/server/rounds/access";
+import { SOURCE_ACTION_ERRORS } from "@/server/sources/queries";
 import { AUTH_REFUSALS, REFUSAL_MESSAGE_KEYS, refusalMessage } from "./refusals.ts";
 import { loadCatalogue } from "./test-catalogue.ts";
 
@@ -17,6 +19,8 @@ const SERVER_CODES = [
     ...PROJECT_ACTION_ERRORS,
     ...ROUND_ACTION_ERRORS,
     ...CKM_ACTION_ERRORS,
+    ...FHIR_ACTION_ERRORS,
+    ...SOURCE_ACTION_ERRORS,
     ...ADMIN_ACTION_ERRORS,
     ...AUTH_REFUSALS,
   ]),

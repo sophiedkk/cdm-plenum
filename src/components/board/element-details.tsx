@@ -37,6 +37,8 @@ const SOURCE_ICONS: Record<ElementSourceKind, LucideIcon> = {
   csv: FileSpreadsheetIcon,
   ckm: LinkIcon,
   delphi: VoteIcon,
+  fhir: LinkIcon,
+  zib: LinkIcon,
 };
 
 /** A source in words; the label of a `delphi` source is the round number (DE16). */
@@ -45,6 +47,8 @@ const SOURCE_LABELS: Record<ElementSourceKind, (label: string) => string> = {
   csv: (label) => withLabel(m.board_source_kind_csv(), label),
   ckm: (label) => withLabel(m.board_source_kind_ckm(), label),
   delphi: (label) => m.board_source_kind_delphi({ number: label }),
+  fhir: (label) => withLabel(m.board_source_kind_fhir(), label),
+  zib: (label) => withLabel(m.board_source_kind_zib(), label),
 };
 
 function withLabel(kind: string, label: string): string {

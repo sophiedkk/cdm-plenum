@@ -7,6 +7,8 @@ import {
   PARTICIPANT_WRITES,
   PROJECT_STEPS,
   participantAccess,
+  preparesAhead,
+  SOURCE_PHASE,
   stepVisible,
   writeOpen,
 } from "./phase-access.ts";
@@ -74,6 +76,7 @@ describe("writeOpen", () => {
       ["element_comment", ["discover"]],
       ["element_mark", ["discover"]],
       ["rate", ["decide"]],
+      ["source_suggest", ["discover"]],
     ]);
   });
 
@@ -85,5 +88,14 @@ describe("writeOpen", () => {
         );
       }
     }
+  });
+});
+
+describe("preparesAhead", () => {
+  it("lets the facilitator prepare the source models before and during discover only", () => {
+    expect(PROJECT_PHASES.filter((phase) => preparesAhead(phase, SOURCE_PHASE))).toEqual([
+      "scope",
+      "discover",
+    ]);
   });
 });

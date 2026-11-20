@@ -13,6 +13,7 @@ Docker) with compose and nothing else on your machine.
 | Components | Vitest with jsdom | React components with logic of their own, such as the CSV import and the CKM panel | part of `test` |
 | End to end | Playwright with Chromium and axe | Every page, in English and Dutch, against the production build: sign-in through Mailpit, invitations, scope, board, rounds, members, admin and export, with an accessibility check on each page | `scripts/dev/e2e.sh` |
 | CKM contract | Vitest | The calls the CKM client makes, against the live CKM | `scripts/dev/pnpm.sh test:ckm` |
+| FHIR contract | Vitest | The calls the FHIR package client makes, against the live registry | `scripts/dev/pnpm.sh test:fhir` |
 
 ## Before you start
 
@@ -95,6 +96,16 @@ contract test checks that the live API still answers the way the client
 expects. Vitest skips it unless you run it on purpose, so a normal run shows
 4 skipped tests. Run it locally with `scripts/dev/pnpm.sh test:ckm`; the
 `ckm-contract` workflow runs it every Monday.
+
+## The FHIR contract test
+
+The unit tests never call the live FHIR package registry: they build the
+synthetic package in `src/server/fhir/fixtures/` into a tarball and serve it
+from a local stub. The contract test reads the Nictiz zib2020 package and
+zib BloodPressure from the live registry. Vitest skips it unless you run it on
+purpose, so a normal run shows 4 more skipped tests. Run it locally with
+`scripts/dev/pnpm.sh test:fhir`; the `fhir-contract` workflow runs it every
+Monday.
 
 ## Continuous integration
 

@@ -286,15 +286,22 @@ mirror on GitHub (<https://github.com/openEHR/CKM-mirror>), which openEHR
 keeps in sync with the international CKM.
 
 The FHIR package registry at `https://packages.fhir.org` (EL10, EL11) answers
-without sign-in. These calls were checked on 2026-11-19; the package format
-is the FHIR NPM package specification
-(<https://hl7.org/fhir/packages.html>):
+without sign-in. The package format is the FHIR NPM package specification
+(<https://hl7.org/fhir/packages.html>). `src/server/fhir/` makes these calls,
+checked on 2026-11-20 by its contract test (`pnpm test:fhir`):
 
 | Need | Call |
 |---|---|
-| Search packages | `GET catalog?name=…&fhirversion=R4` returns a JSON array with `Name`, `Description` and `FhirVersion`; a search for `nictiz` lists the Nictiz packages. |
-| Versions of a package | `GET {package}` returns the package's versions, for example `nictiz.fhir.nl.r4.zib2020` up to `0.9.0-beta.1`. |
-| Contents | Each version is an NPM tarball with the package's StructureDefinitions; which packages hold logical models (for example the zibs) is not yet checked. |
+| Search packages (EL10) | `GET catalog?name=…&fhirversion=R4` returns a JSON array with `Name`, `Description` and `FhirVersion`; a search for `nictiz` lists the Nictiz packages. |
+| Versions of a package (EL10) | `GET {package}` returns `versions`, an object with one entry per version and its `fhirVersion`. The versions are not in order; the client sorts them by semantic version. |
+| Contents of a version (EL10, EL11, EL12) | `GET {package}/{version}` returns the version as a gzipped tarball (`application/tar+gzip`). `package/package.json` names the package, version and `fhirVersions`; `package/.index.json` lists each file with its `resourceType`, `url`, `kind` and `type`. Each StructureDefinition is a JSON file in `package/` with its snapshot. The client refuses a tarball over 32 MiB, or one that unpacks to more than 160 MiB; `hl7.fhir.r4.core` 4.0.1 is about 13 MB packed and 49 MB unpacked. |
+
+The zib FHIR profiles of `nictiz.fhir.nl.r4.zib2020` are profiles
+(`kind = resource`), not logical models. Each names its zib in a
+StructureDefinition mapping whose `uri` is the zib's page on zibs.nl, and maps
+elements to their zib concept with a mapping whose `map` is the NL-CM id. They
+state a component's LOINC or SNOMED CT code as a `patternCodeableConcept` on
+its `code` element, not in `ElementDefinition.code`.
 
 ## Open questions
 

@@ -1,0 +1,317 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "example-BloodPressure",
+  "url": "http://example.org/fhir/StructureDefinition/example-BloodPressure",
+  "version": "1.0.0",
+  "name": "ExampleBloodPressure",
+  "title": "Example BloodPressure",
+  "status": "draft",
+  "fhirVersion": "4.0.1",
+  "mapping": [
+    {
+      "identity": "zib-bloodpressure-v3.2.1-2020EN",
+      "uri": "https://zibs.nl/wiki/BloodPressure-v3.2.1(2020EN)",
+      "name": "zib BloodPressure-v3.2.1(2020EN)"
+    }
+  ],
+  "kind": "resource",
+  "abstract": false,
+  "type": "Observation",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+  "derivation": "constraint",
+  "snapshot": {
+    "element": [
+      {
+        "id": "Observation",
+        "path": "Observation",
+        "short": "BloodPressure",
+        "definition": "Blood pressure of a patient, measured in the arteries.",
+        "min": 0,
+        "max": "*",
+        "mapping": [{ "identity": "zib-bloodpressure-v3.2.1-2020EN", "map": "NL-CM:12.4.1" }]
+      },
+      {
+        "id": "Observation.id",
+        "path": "Observation.id",
+        "short": "Logical id of this artifact",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "string" }]
+      },
+      {
+        "id": "Observation.meta",
+        "path": "Observation.meta",
+        "short": "Metadata about the resource",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "Meta" }]
+      },
+      {
+        "id": "Observation.meta.versionId",
+        "path": "Observation.meta.versionId",
+        "short": "Version specific identifier",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "id" }]
+      },
+      {
+        "id": "Observation.implicitRules",
+        "path": "Observation.implicitRules",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "uri" }]
+      },
+      {
+        "id": "Observation.language",
+        "path": "Observation.language",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "code" }],
+        "binding": { "strength": "preferred", "valueSet": "http://hl7.org/fhir/ValueSet/languages" }
+      },
+      {
+        "id": "Observation.text",
+        "path": "Observation.text",
+        "short": "Text summary of the resource",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "Narrative" }]
+      },
+      {
+        "id": "Observation.contained",
+        "path": "Observation.contained",
+        "min": 0,
+        "max": "*",
+        "type": [{ "code": "Resource" }]
+      },
+      {
+        "id": "Observation.extension",
+        "path": "Observation.extension",
+        "min": 0,
+        "max": "*",
+        "type": [{ "code": "Extension" }]
+      },
+      {
+        "id": "Observation.extension:position",
+        "path": "Observation.extension",
+        "sliceName": "position",
+        "short": "BodyPosition",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "Extension" }],
+        "mapping": [{ "identity": "zib-bloodpressure-v3.2.1-2020EN", "map": "NL-CM:12.4.6" }]
+      },
+      {
+        "id": "Observation.modifierExtension",
+        "path": "Observation.modifierExtension",
+        "min": 0,
+        "max": "*",
+        "type": [{ "code": "Extension" }]
+      },
+      {
+        "id": "Observation.status",
+        "path": "Observation.status",
+        "short": "registered | preliminary | final | amended +",
+        "definition": "The status of the result value.",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "code" }],
+        "binding": {
+          "strength": "required",
+          "valueSet": "http://hl7.org/fhir/ValueSet/observation-status|4.0.1"
+        }
+      },
+      {
+        "id": "Observation.code",
+        "path": "Observation.code",
+        "short": "Type of observation (code / type)",
+        "definition": "Describes what was observed.",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "CodeableConcept" }],
+        "patternCodeableConcept": {
+          "coding": [{ "system": "http://loinc.org", "code": "85354-9" }]
+        },
+        "binding": {
+          "strength": "example",
+          "valueSet": "http://hl7.org/fhir/ValueSet/observation-codes"
+        }
+      },
+      {
+        "id": "Observation.focus",
+        "path": "Observation.focus",
+        "short": "What the observation is about, when it is not about the subject of record",
+        "min": 0,
+        "max": "0",
+        "type": [{ "code": "Reference" }]
+      },
+      {
+        "id": "Observation.focus.display",
+        "path": "Observation.focus.display",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "string" }]
+      },
+      {
+        "id": "Observation.effective[x]",
+        "path": "Observation.effective[x]",
+        "short": "Clinically relevant time/time-period for observation",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "dateTime" }, { "code": "Period" }]
+      },
+      {
+        "id": "Observation.effective[x]:effectiveDateTime",
+        "path": "Observation.effective[x]",
+        "sliceName": "effectiveDateTime",
+        "short": "BloodPressureDateTime",
+        "definition": "Date and time of the blood pressure measurement.",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "dateTime" }],
+        "mapping": [{ "identity": "zib-bloodpressure-v3.2.1-2020EN", "map": "NL-CM:12.4.5" }]
+      },
+      {
+        "id": "Observation.note",
+        "path": "Observation.note",
+        "short": "Comment",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "Annotation" }],
+        "mapping": [{ "identity": "zib-bloodpressure-v3.2.1-2020EN", "map": "NL-CM:12.4.13" }]
+      },
+      {
+        "id": "Observation.note.id",
+        "path": "Observation.note.id",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "string" }]
+      },
+      {
+        "id": "Observation.note.text",
+        "path": "Observation.note.text",
+        "short": "The annotation - text content (as markdown)",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "markdown" }]
+      },
+      {
+        "id": "Observation.bodySite",
+        "path": "Observation.bodySite",
+        "short": "MeasuringLocation",
+        "definition": "Anatomical location where the blood pressure was measured.",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "CodeableConcept" }],
+        "binding": {
+          "strength": "extensible",
+          "valueSet": "http://example.org/fhir/ValueSet/MeasuringLocationCodelist"
+        },
+        "mapping": [{ "identity": "zib-bloodpressure-v3.2.1-2020EN", "map": "NL-CM:12.4.10" }]
+      },
+      {
+        "id": "Observation.component",
+        "path": "Observation.component",
+        "short": "Component results",
+        "min": 2,
+        "max": "*",
+        "type": [{ "code": "BackboneElement" }]
+      },
+      {
+        "id": "Observation.component.id",
+        "path": "Observation.component.id",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "string" }]
+      },
+      {
+        "id": "Observation.component.modifierExtension",
+        "path": "Observation.component.modifierExtension",
+        "min": 0,
+        "max": "*",
+        "type": [{ "code": "Extension" }]
+      },
+      {
+        "id": "Observation.component:systolic",
+        "path": "Observation.component",
+        "sliceName": "systolic",
+        "short": "SystolicBloodPressure",
+        "definition": "The systolic blood pressure.",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "BackboneElement" }],
+        "code": [
+          { "system": "http://loinc.org", "code": "8480-6", "display": "Systolic blood pressure" }
+        ]
+      },
+      {
+        "id": "Observation.component:systolic.code",
+        "path": "Observation.component.code",
+        "short": "Type of component observation (code / type)",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "CodeableConcept" }],
+        "patternCodeableConcept": {
+          "coding": [{ "system": "http://loinc.org", "code": "8480-6" }]
+        }
+      },
+      {
+        "id": "Observation.component:systolic.value[x]",
+        "path": "Observation.component.value[x]",
+        "short": "SystolicBloodPressure",
+        "definition": "Systolic blood pressure in mm[Hg].",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "Quantity" }],
+        "mapping": [{ "identity": "zib-bloodpressure-v3.2.1-2020EN", "map": "NL-CM:12.4.2" }]
+      },
+      {
+        "id": "Observation.component:systolic/arm",
+        "path": "Observation.component",
+        "sliceName": "systolic/arm",
+        "short": "Systolic pressure on the arm",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "BackboneElement" }]
+      },
+      {
+        "id": "Observation.component:systolic/arm.value[x]",
+        "path": "Observation.component.value[x]",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "Quantity" }]
+      },
+      {
+        "id": "Observation.component:diastolic",
+        "path": "Observation.component",
+        "sliceName": "diastolic",
+        "short": "DiastolicBloodPressure",
+        "definition": "The diastolic blood pressure.",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "BackboneElement" }]
+      },
+      {
+        "id": "Observation.component:diastolic.code",
+        "path": "Observation.component.code",
+        "short": "Type of component observation (code / type)",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "CodeableConcept" }],
+        "patternCodeableConcept": {
+          "coding": [{ "system": "http://loinc.org", "code": "8462-4" }]
+        }
+      },
+      {
+        "id": "Observation.component:diastolic.value[x]",
+        "path": "Observation.component.value[x]",
+        "short": "DiastolicBloodPressure",
+        "definition": "Diastolic blood pressure in mm[Hg].",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "Quantity" }],
+        "mapping": [{ "identity": "zib-bloodpressure-v3.2.1-2020EN", "map": "NL-CM:12.4.3" }]
+      }
+    ]
+  }
+}

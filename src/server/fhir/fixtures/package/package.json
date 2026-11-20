@@ -1,0 +1,12 @@
+{
+  "name": "example.fhir.bp",
+  "version": "1.0.0",
+  "description": "Invented test package: one blood pressure profile and one logical model, in the style of the zib BloodPressure profile.",
+  "fhirVersions": [
+    "4.0.1"
+  ],
+  "dependencies": {
+    "hl7.fhir.r4.core": "4.0.1"
+  },
+  "license": "CC0-1.0"
+}
