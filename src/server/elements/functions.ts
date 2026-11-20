@@ -8,6 +8,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getDb } from "../db/index.ts";
 import { requireSession } from "../middleware.ts";
 import { projectInput } from "../projects/schemas.ts";
+import { brainstormStatus, revealBoard, setPrivateBrainstorm } from "./brainstorm.ts";
 import { importCsv, previewCsvImport } from "./import.ts";
 import {
   addElement,
@@ -16,6 +17,7 @@ import {
   listElementCommentsWithAuthors,
   listElements,
   listElementsWithAuthors,
+  listOwnElements,
   mergeElements,
   setElementValues,
   updateElement,
@@ -26,6 +28,7 @@ import {
   csvImportInput,
   elementInput,
   mergeElementsInput,
+  privateBrainstormInput,
   setElementValuesInput,
   updateElementInput,
 } from "./schemas.ts";
@@ -85,3 +88,23 @@ export const importCsvFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(csvImportInput)
   .handler(({ data, context }) => importCsv(getDb(), context.userId, data));
+
+export const listOwnElementsFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => listOwnElements(getDb(), context.userId, data.projectId));
+
+export const brainstormStatusFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => brainstormStatus(getDb(), context.userId, data.projectId));
+
+export const revealBoardFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => revealBoard(getDb(), context.userId, data.projectId));
+
+export const setPrivateBrainstormFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(privateBrainstormInput)
+  .handler(({ data, context }) => setPrivateBrainstorm(getDb(), context.userId, data));

@@ -5,7 +5,11 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { GroupNamesForm, RaterGroupForm } from "@/components/members/facilitator-settings";
+import {
+  GroupNamesForm,
+  PrivateBrainstormForm,
+  RaterGroupForm,
+} from "@/components/members/facilitator-settings";
 import {
   NewGroupForm,
   RemoveGroupDialog,
@@ -19,6 +23,8 @@ import { projectTitle } from "@/components/projects/project-title";
 import { NotFoundState, PageHeader } from "@/components/shell/route-states";
 import { Separator } from "@/components/ui/separator";
 import { m } from "@/i18n/messages";
+import { setPrivateBrainstormFn } from "@/server/elements/functions";
+import { elementKeys } from "@/server/elements/query-options";
 import { inviteFn, revokeInvitationFn } from "@/server/invitations/functions";
 import { INVITATION_LIFETIME_SECONDS } from "@/server/invitations/lifetime";
 import { invitationKeys, invitationsQueryOptions } from "@/server/invitations/query-options";
@@ -93,6 +99,7 @@ function FacilitatorMembers({ projectId }: Readonly<{ projectId: string }>) {
   const queryClient = useQueryClient();
   const setGroupNamesVisible = useServerFn(setGroupNamesVisibleFn);
   const setRaterGroup = useServerFn(setRaterGroupFn);
+  const setPrivateBrainstorm = useServerFn(setPrivateBrainstormFn);
   const createGroup = useServerFn(createGroupFn);
   const renameGroup = useServerFn(renameGroupFn);
   const removeGroup = useServerFn(removeGroupFn);
@@ -151,15 +158,30 @@ function FacilitatorMembers({ projectId }: Readonly<{ projectId: string }>) {
       </section>
       <Separator />
       <div className="grid gap-10 lg:grid-cols-2">
-        <GroupNamesForm
-          key={String(detail.value.groupNamesVisible)}
-          visible={detail.value.groupNamesVisible}
-          save={(visible) => setGroupNamesVisible({ data: { projectId, visible } })}
-          onSaved={async (visible) => {
-            toast.success(visible ? m.members_names_shown() : m.members_names_hidden());
-            await queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
-          }}
-        />
+        <div className="flex flex-col gap-10">
+          <GroupNamesForm
+            key={String(detail.value.groupNamesVisible)}
+            visible={detail.value.groupNamesVisible}
+            save={(visible) => setGroupNamesVisible({ data: { projectId, visible } })}
+            onSaved={async (visible) => {
+              toast.success(visible ? m.members_names_shown() : m.members_names_hidden());
+              await queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
+            }}
+          />
+          <PrivateBrainstormForm
+            key={`${detail.value.privateBrainstorm}-${detail.value.boardRevealed}`}
+            enabled={detail.value.privateBrainstorm}
+            revealed={detail.value.boardRevealed}
+            save={(enabled) => setPrivateBrainstorm({ data: { projectId, enabled } })}
+            onSaved={async (enabled) => {
+              toast.success(enabled ? m.members_private_on() : m.members_private_off());
+              await Promise.all([
+                queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) }),
+                queryClient.invalidateQueries({ queryKey: elementKeys.all(projectId) }),
+              ]);
+            }}
+          />
+        </div>
         <RaterGroupForm
           key={detail.value.ownGroupId ?? "none"}
           groups={groups.value}

@@ -35,6 +35,8 @@ export const PROJECT_ACTION_ERRORS = [
   "value_number_not_integer",
   "merge_values_conflict",
   "rater_group_locked",
+  "board_already_revealed",
+  "merge_before_reveal",
 ] as const;
 export type ProjectActionError = (typeof PROJECT_ACTION_ERRORS)[number];
 

@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ChevronDownIcon,
@@ -14,7 +14,13 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { BoardDialog } from "@/components/board/board-dialog";
+import {
+  PrivateStepNote,
+  PrivateStepStatus,
+  RevealButton,
+} from "@/components/board/brainstorm-panel";
 import { CkmPanel } from "@/components/board/ckm-panel";
 import type { CardElement } from "@/components/board/element-details";
 import { ElementForm } from "@/components/board/element-form";
@@ -31,19 +37,30 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { m } from "@/i18n/messages";
+import { isPrivateStep } from "@/lib/brainstorm";
 import { dataTypeByKey } from "@/lib/data-types";
 import { importArchetypeFn, linkElementFn, searchCkmFn } from "@/server/ckm/functions";
 import {
   addElementCommentFn,
   addElementFn,
   mergeElementsFn,
+  revealBoardFn,
   setElementValuesFn,
   updateElementFn,
 } from "@/server/elements/functions";
-import { boardQueryOptions, elementKeys } from "@/server/elements/query-options";
+import {
+  boardQueryOptions,
+  brainstormStatusQueryOptions,
+  elementKeys,
+} from "@/server/elements/query-options";
+import { projectKeys, projectQueryOptions } from "@/server/projects/query-options";
 
-/** The element board of the project (EL1 to EL7, EL9). */
+/**
+ * The element board of the project (EL1 to EL7, EL9). In the private step of the brainstorm the
+ * facilitator follows it and reveals the board here (EL13). `element` opens that element's row.
+ */
 export const Route = createFileRoute("/_authed/projects/$projectId/board")({
+  validateSearch: z.object({ element: z.string().max(64).optional() }),
   loader: async ({ context, params }) => {
     const isFacilitator = context.project.role === "facilitator";
     const board = await context.queryClient.ensureQueryData(
@@ -68,7 +85,15 @@ function Board() {
   const { project } = Route.useRouteContext();
   const isFacilitator = project.role === "facilitator";
   const queryClient = useQueryClient();
+  const { element: openElementId } = Route.useSearch();
   const { data: board } = useSuspenseQuery(boardQueryOptions(projectId, isFacilitator));
+  const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
+  const privateStep = detail.ok && isPrivateStep(detail.value);
+  const { data: status } = useQuery({
+    ...brainstormStatusQueryOptions(projectId),
+    enabled: isFacilitator && privateStep,
+  });
+  const router = useRouter();
   const [dialog, setDialog] = useState<DialogState>(null);
 
   const addElement = useServerFn(addElementFn);
@@ -79,11 +104,16 @@ function Board() {
   const searchCkm = useServerFn(searchCkmFn);
   const linkElement = useServerFn(linkElementFn);
   const importArchetype = useServerFn(importArchetypeFn);
+  const revealBoard = useServerFn(revealBoardFn);
 
   if (!board.ok) return null;
   const elements = board.value;
   const refreshBoard = () =>
-    queryClient.invalidateQueries({ queryKey: elementKeys.board(projectId) });
+    Promise.all(
+      [elementKeys.board, elementKeys.own, elementKeys.brainstorm].map((key) =>
+        queryClient.invalidateQueries({ queryKey: key(projectId) }),
+      ),
+    );
   const close = () => setDialog(null);
   const cancel = (
     <Button type="button" variant="outline" onClick={close}>
@@ -146,6 +176,26 @@ function Board() {
         }
       />
 
+      {privateStep && !isFacilitator && <PrivateStepNote />}
+      {privateStep && isFacilitator && status?.ok && (
+        <PrivateStepStatus
+          participants={status.value.participants}
+          action={
+            <RevealButton
+              participants={status.value.participants}
+              reveal={() => revealBoard({ data: { projectId } })}
+              onRevealed={async () => {
+                await Promise.all([
+                  queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) }),
+                  queryClient.invalidateQueries({ queryKey: elementKeys.all(projectId) }),
+                ]);
+                await router.invalidate();
+              }}
+            />
+          }
+        />
+      )}
+
       {elements.length === 0 ? (
         <EmptyState
           icon={<LayoutGridIcon aria-hidden="true" />}
@@ -157,6 +207,7 @@ function Board() {
           projectId={projectId}
           elements={elements}
           isFacilitator={isFacilitator}
+          openElementId={openElementId}
           actions={{
             addComment: (element, body) =>
               addComment({ data: { projectId, elementId: element.id, body } }),

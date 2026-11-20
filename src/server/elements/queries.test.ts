@@ -11,6 +11,7 @@ import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
 import { facilitatorWithProject } from "../test-fixtures.ts";
 import { type ProjectMembers, personLeaks, projectWithMembers } from "../test-project-members.ts";
+import { revealBoard } from "./brainstorm.ts";
 import { importCsv, previewCsvImport } from "./import.ts";
 import {
   addElement,
@@ -38,6 +39,10 @@ let m: ProjectMembers;
 beforeEach(async () => {
   db = await createTestDb();
   m = await projectWithMembers(db);
+  // These tests cover the shared board after the reveal; brainstorm.test.ts covers the private
+  // step before it (EL13).
+  const revealed = await revealBoard(db, m.facilitator, m.projectId);
+  if (!revealed.ok) throw new Error(revealed.error);
 });
 
 afterEach(async () => {
@@ -93,6 +98,7 @@ describe("addElement (EL1)", () => {
         values: [],
         ckmLink: null,
         mergedCkmLinks: [],
+        prompt: null,
         commentCount: 0,
         createdAt: expect.any(String),
       },
