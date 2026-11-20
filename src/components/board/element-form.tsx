@@ -8,11 +8,7 @@ import { useAppForm } from "@/components/form/app-form";
 import { m } from "@/i18n/messages";
 import type { Cardinality } from "@/lib/cardinality";
 import { type DataTypeKey, isDataTypeKey } from "@/lib/data-types";
-import {
-  ELEMENT_DESCRIPTION_MAX,
-  ELEMENT_NAME_MAX,
-  ELEMENT_SOURCE_LABEL_MAX,
-} from "@/lib/elements";
+import { ELEMENT_DESCRIPTION_MAX, ELEMENT_NAME_MAX } from "@/lib/elements";
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
 import { type RefusalCode, refusalMessage } from "@/lib/i18n/refusals";
 import { DataTypeField, SelectField } from "./element-fields";
@@ -23,8 +19,6 @@ export interface ElementFields {
   description: string;
   dataType: DataTypeKey | null;
   cardinality: Cardinality | null;
-  /** Only when adding (EL1). */
-  source?: string;
 }
 
 export type ElementOutcome = { ok: true } | { ok: false; error: RefusalCode };
@@ -32,7 +26,6 @@ export type ElementOutcome = { ok: true } | { ok: false; error: RefusalCode };
 interface FormValues {
   name: string;
   description: string;
-  source: string;
   dataType: string;
   minOccurs: string;
   maxKind: string;
@@ -56,7 +49,6 @@ export function elementFormSchema() {
         .min(1, { error: () => m.board_name_required() })
         .max(ELEMENT_NAME_MAX, { error: () => m.board_text_too_long({ max: ELEMENT_NAME_MAX }) }),
       description: textLimit(ELEMENT_DESCRIPTION_MAX),
-      source: textLimit(ELEMENT_SOURCE_LABEL_MAX),
       dataType: z.string(),
       minOccurs: z.string(),
       maxKind: z.string(),
@@ -97,19 +89,20 @@ function fromCardinality(cardinality: Cardinality | null) {
 }
 
 /**
- * The element form: add (EL1, with a source note) or edit (EL5). A refusal from the server shows
- * at the top of the form; a failed call shows the general error there.
+ * The element form. Adding asks for a name and a description only (EL1, EL21); editing (EL5, the
+ * facilitator's) also sets the data type and the cardinality, in any phase. A refusal from the
+ * server shows at the top of the form; a failed call shows the general error there.
  */
 export function ElementForm({
   initial,
-  withSource,
+  mode,
   submitLabel,
   submit,
   onDone,
   actions,
 }: Readonly<{
-  initial?: Omit<ElementFields, "source">;
-  withSource: boolean;
+  initial?: ElementFields;
+  mode: "add" | "edit";
   submitLabel: string;
   submit: (fields: ElementFields) => Promise<ElementOutcome>;
   onDone: (fields: ElementFields) => Promise<void> | void;
@@ -119,7 +112,6 @@ export function ElementForm({
     defaultValues: {
       name: initial?.name ?? "",
       description: initial?.description ?? "",
-      source: "",
       dataType: initial?.dataType ?? "",
       ...fromCardinality(initial?.cardinality ?? null),
     } satisfies FormValues as FormValues,
@@ -131,7 +123,6 @@ export function ElementForm({
         description: value.description.trim(),
         dataType: isDataTypeKey(value.dataType) ? value.dataType : null,
         cardinality: toCardinality(value),
-        ...(withSource ? { source: value.source.trim() } : {}),
       };
       let outcome: ElementOutcome;
       try {
@@ -179,63 +170,56 @@ export function ElementForm({
           />
         )}
       </form.AppField>
-      <form.AppField name="dataType">{() => <DataTypeField />}</form.AppField>
-      <fieldset className="flex flex-col gap-3">
-        <legend className="mb-1 font-medium">{m.board_cardinality_legend()}</legend>
-        <p className="text-sm text-muted-foreground">{m.board_cardinality_hint()}</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <form.AppField name="minOccurs">
-            {() => (
-              <SelectField
-                label={m.board_min_label()}
-                options={[
-                  { value: "", label: m.board_not_decided() },
-                  { value: "0", label: m.board_min_0() },
-                  { value: "1", label: m.board_min_1() },
-                ]}
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="maxKind">
-            {() => (
-              <SelectField
-                label={m.board_max_label()}
-                options={[
-                  { value: "", label: m.board_not_decided() },
-                  { value: "1", label: m.board_max_1() },
-                  { value: "many", label: m.board_max_many() },
-                  { value: "number", label: m.board_max_number() },
-                ]}
-              />
-            )}
-          </form.AppField>
-        </div>
-        <form.Subscribe selector={(state) => state.values.maxKind}>
-          {(maxKind) =>
-            maxKind === "number" && (
-              <form.AppField name="maxNumber">
-                {(field) => (
-                  <field.TextField
-                    label={m.board_max_number_label()}
-                    inputMode="numeric"
-                    autoComplete="off"
+      {mode === "edit" && (
+        <>
+          <form.AppField name="dataType">{() => <DataTypeField />}</form.AppField>
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-1 font-medium">{m.board_cardinality_legend()}</legend>
+            <p className="text-sm text-muted-foreground">{m.board_cardinality_hint()}</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <form.AppField name="minOccurs">
+                {() => (
+                  <SelectField
+                    label={m.board_min_label()}
+                    options={[
+                      { value: "", label: m.board_not_decided() },
+                      { value: "0", label: m.board_min_0() },
+                      { value: "1", label: m.board_min_1() },
+                    ]}
                   />
                 )}
               </form.AppField>
-            )
-          }
-        </form.Subscribe>
-      </fieldset>
-      {withSource && (
-        <form.AppField name="source">
-          {(field) => (
-            <field.TextField
-              label={m.board_source_label()}
-              description={m.board_source_description({ max: ELEMENT_SOURCE_LABEL_MAX })}
-              autoComplete="off"
-            />
-          )}
-        </form.AppField>
+              <form.AppField name="maxKind">
+                {() => (
+                  <SelectField
+                    label={m.board_max_label()}
+                    options={[
+                      { value: "", label: m.board_not_decided() },
+                      { value: "1", label: m.board_max_1() },
+                      { value: "many", label: m.board_max_many() },
+                      { value: "number", label: m.board_max_number() },
+                    ]}
+                  />
+                )}
+              </form.AppField>
+            </div>
+            <form.Subscribe selector={(state) => state.values.maxKind}>
+              {(maxKind) =>
+                maxKind === "number" && (
+                  <form.AppField name="maxNumber">
+                    {(field) => (
+                      <field.TextField
+                        label={m.board_max_number_label()}
+                        inputMode="numeric"
+                        autoComplete="off"
+                      />
+                    )}
+                  </form.AppField>
+                )
+              }
+            </form.Subscribe>
+          </fieldset>
+        </>
       )}
       <div className="flex flex-wrap gap-2">
         <form.AppForm>

@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The compact board (Q-USE-1): one row per element, a disclosure button that opens the details,
-// the author and the actions for the facilitator only (EL2), and the comment refusals.
+// the author and the actions for the facilitator only (EL2), and the comment refusals. Data type,
+// cardinality and values show from the phase that decides them (EL21).
 import { QueryClient, QueryClientProvider, queryOptions } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -87,6 +88,7 @@ function renderTable(
   isFacilitator: boolean,
   elements = [SYSTOLIC, POSITION, UNDECIDED],
   openElementId?: string,
+  detailFields = true,
 ) {
   const actions: ElementActions = {
     addComment: vi.fn(async (): Promise<CommentOutcome> => ({ ok: true })),
@@ -102,6 +104,7 @@ function renderTable(
         projectId="p1"
         elements={elements}
         isFacilitator={isFacilitator}
+        detailFields={detailFields}
         openElementId={openElementId}
         actions={actions}
       />
@@ -180,6 +183,48 @@ describe("ElementTable", () => {
       "0",
     ]);
     expect(commentsAnswer).not.toHaveBeenCalled();
+  });
+
+  it("shows the brainstorm question instead of data type, cardinality and CKM in discover (EL21)", () => {
+    commentsAnswer.mockResolvedValue({ ok: true, value: [] });
+    renderTable(false, [SYSTOLIC, POSITION], undefined, false);
+    const table = screen.getByRole("table", { name: "Elements on the board" });
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((cell) => cell.textContent),
+    ).toEqual(["No.", "Name", "Description", "Question", "Sources", "Comments"]);
+    const cells = (name: string) =>
+      within(summaryRow(name))
+        .getAllByRole("cell")
+        .map((cell) => cell.textContent);
+    expect(cells("Systolic")).toEqual([
+      "1",
+      "The peak arterial pressure.",
+      "What is recorded",
+      "2",
+      "3",
+    ]);
+    expect(cells("Position")).toEqual(["2", "", "Other", "1", "0"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Position" }));
+    const region = screen.getByRole("region", { name: "Details of Position" });
+    expect(within(region).queryByText("Data type")).toBeNull();
+    expect(within(region).queryByText("Cardinality")).toBeNull();
+    expect(within(region).queryByText("Sitting")).toBeNull();
+    expect(within(region).getByText("Question")).toBeTruthy();
+  });
+
+  it("keeps the facilitator's edit actions for those fields in discover (EL21)", () => {
+    commentsAnswer.mockResolvedValue({ ok: true, value: [] });
+    const actions = renderTable(true, [POSITION], undefined, false);
+    fireEvent.click(screen.getByRole("button", { name: "Position" }));
+    const region = screen.getByRole("region", { name: "Details of Position" });
+    expect(within(region).queryByText("Data type")).toBeNull();
+    fireEvent.click(within(region).getByRole("button", { name: "Edit: Position" }));
+    fireEvent.click(within(region).getByRole("button", { name: "Edit values: Position" }));
+    expect(actions.onEdit).toHaveBeenCalledWith(POSITION);
+    expect(actions.onValues).toHaveBeenCalledWith(POSITION);
   });
 
   it("shows the RM type of a CKM link outside the data type list", () => {
@@ -261,6 +306,7 @@ describe("ElementTable", () => {
           projectId="p1"
           elements={[SYSTOLIC]}
           isFacilitator={false}
+          detailFields
           actions={{ onCommentAdded: vi.fn(), onEdit: vi.fn(), onValues: vi.fn(), onLink: vi.fn() }}
         />
       </QueryClientProvider>,
@@ -281,6 +327,7 @@ describe("ElementTable", () => {
           projectId="p1"
           elements={[SYSTOLIC, POSITION]}
           isFacilitator
+          detailFields
           actions={{ onCommentAdded: vi.fn(), onEdit: vi.fn(), onValues: vi.fn(), onLink: vi.fn() }}
           supportCounts={{ [SYSTOLIC.id]: 2 }}
         />
@@ -308,6 +355,7 @@ describe("ElementTable", () => {
           projectId="p1"
           elements={[SYSTOLIC, POSITION, UNDECIDED]}
           isFacilitator={false}
+          detailFields
           actions={{
             onCommentAdded: vi.fn(),
             onEdit: vi.fn(),
