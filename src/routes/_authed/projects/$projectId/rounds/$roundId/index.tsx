@@ -16,10 +16,11 @@ import { OpenRoundDialog } from "@/components/rounds/open-round-dialog";
 import { PanelTable } from "@/components/rounds/panel-setup";
 import { ProposalList } from "@/components/rounds/proposals";
 import { valueOrNotFound } from "@/components/rounds/result-value";
-import { LocalDateTime, RoundStatusBadge } from "@/components/rounds/round-badges";
+import { RoundStatusBadge } from "@/components/rounds/round-badges";
 import { RoundForm, ruleSentences } from "@/components/rounds/round-form";
 import { RatingsByParticipantTable, ResponseRateTable } from "@/components/rounds/round-tables";
 import { NotFoundState } from "@/components/shell/route-states";
+import { DateTime } from "@/components/status/date-time";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -150,7 +151,7 @@ function RoundFacts({ round }: Readonly<{ round: RoundDetail }>) {
       <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
         <RoundStatusBadge status={round.status} />
         <span>
-          {m.rounds_closes_at_short()} <LocalDateTime iso={round.closesAt} />
+          {m.rounds_closes_at_short()} <DateTime value={round.closesAt} />
         </span>
         <span>{m.rounds_summary_element_count({ count: round.elements.length })}</span>
       </p>

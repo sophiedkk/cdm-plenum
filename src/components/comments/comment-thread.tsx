@@ -8,9 +8,9 @@ import { revalidateLogic } from "@tanstack/react-form";
 import { useRef } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
+import { DateTime } from "@/components/status/date-time";
 import { StepClosedNote } from "@/components/status/step-closed-note";
 import { m } from "@/i18n/messages";
-import { getLocale } from "@/i18n/runtime";
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
 import { type RefusalCode, refusalMessage } from "@/lib/i18n/refusals";
 
@@ -23,19 +23,6 @@ export interface ThreadComment {
 }
 
 export type CommentOutcome = { ok: true } | { ok: false; error: RefusalCode };
-
-// NOTE: no requirement sets the time zone; our own design. A fixed zone renders the same text on
-// the server and in the browser, and the first users work in the Netherlands.
-const TIME_ZONE = "Europe/Amsterdam";
-
-/** A date and time in the active locale, such as "19 Nov 2026, 14:05". */
-export function formatDateTime(iso: string): string {
-  return new Intl.DateTimeFormat(getLocale(), {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: TIME_ZONE,
-  }).format(new Date(iso));
-}
 
 /** The limits of `addScopeCommentInput` and `addElementCommentInput`, with translated messages. */
 export function commentSchema(max: number) {
@@ -107,7 +94,7 @@ export function CommentThread({
                 <p className="whitespace-pre-wrap">{comment.body}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {author && <span>{author}, </span>}
-                  <time dateTime={comment.createdAt}>{formatDateTime(comment.createdAt)}</time>
+                  <DateTime value={comment.createdAt} />
                 </p>
               </li>
             );

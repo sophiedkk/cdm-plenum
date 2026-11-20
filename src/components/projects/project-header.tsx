@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
 import { toast } from "sonner";
-import { LocalDateTime } from "@/components/rounds/round-badges";
+import { DateTime } from "@/components/status/date-time";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import type { Outcome } from "@/lib/forms/outcome";
@@ -189,7 +189,7 @@ const LINE = "flex flex-wrap items-center gap-x-3 gap-y-1 text-sm";
 function Closes({ iso }: Readonly<{ iso: string }>) {
   return (
     <span className="text-muted-foreground">
-      {m.projects_task_closes()}: <LocalDateTime iso={iso} />
+      {m.projects_task_closes()}: <DateTime value={iso} />
     </span>
   );
 }

@@ -13,8 +13,9 @@ import { ProposeSection } from "@/components/rounds/proposals";
 import { RatingCards, shownCard } from "@/components/rounds/rating-cards";
 import { RatingElement } from "@/components/rounds/rating-element";
 import { valueOrNotFound } from "@/components/rounds/result-value";
-import { LocalDateTime, RoundStatusBadge } from "@/components/rounds/round-badges";
+import { RoundStatusBadge } from "@/components/rounds/round-badges";
 import { NotFoundState } from "@/components/shell/route-states";
+import { DateTime } from "@/components/status/date-time";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { m } from "@/i18n/messages";
 import { formatCardinality } from "@/lib/cardinality";
@@ -146,7 +147,7 @@ function RatePage() {
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <RoundStatusBadge status={round.status} />
           <span>
-            {m.rounds_closes_at_short()} <LocalDateTime iso={round.closesAt} />
+            {m.rounds_closes_at_short()} <DateTime value={round.closesAt} />
           </span>
           <span className="font-medium">{m.rounds_rate_progress({ rated, total })}</span>
           <span className="flex items-center gap-2">

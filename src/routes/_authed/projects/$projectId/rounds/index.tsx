@@ -6,8 +6,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { PlusIcon, VoteIcon } from "lucide-react";
 import { projectTitle } from "@/components/projects/project-title";
 import { valueOrNotFound } from "@/components/rounds/result-value";
-import { LocalDateTime, RoundStatusBadge } from "@/components/rounds/round-badges";
+import { RoundStatusBadge } from "@/components/rounds/round-badges";
 import { EmptyState, PageHeader } from "@/components/shell/route-states";
+import { DateTime } from "@/components/status/date-time";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -149,7 +150,7 @@ function Rounds() {
                     <RoundStatusBadge status={round.status} />
                   </TableCell>
                   <TableCell>
-                    <LocalDateTime iso={round.closesAt} />
+                    <DateTime value={round.closesAt} />
                   </TableCell>
                   <TableCell>
                     <RoundAction round={round} projectId={projectId} canRate={canRate} />

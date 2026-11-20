@@ -44,6 +44,13 @@ describe("CommentThread", () => {
     expect(list.textContent).not.toMatch(/By /);
   });
 
+  it("names the time zone of a comment's moment, as the rounds do", () => {
+    renderThread([{ id: "c1", body: "A", createdAt: AT }]);
+    const time = screen.getByRole("list", { name: "Comments" }).querySelector("time");
+    expect(time?.getAttribute("dateTime")).toBe(AT);
+    expect(time?.textContent).toMatch(/^November \d+, 2026.* \d{2}:\d{2} [A-Z][\w+:-]*$/);
+  });
+
   it("shows the author, or a former member, in the facilitator's list", () => {
     renderThread([
       { id: "c1", body: "A", createdAt: AT, author: { name: "", email: "anna@example.test" } },
