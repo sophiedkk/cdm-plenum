@@ -111,12 +111,36 @@ describe("seedDemo", () => {
     expect(project.board_revealed_at).toBeNull();
     const elements = await db
       .selectFrom("element")
-      .select(["author_member_id", "prompt"])
+      .select((eb) => [
+        "author_member_id",
+        "prompt",
+        "group_id",
+        eb
+          .exists(
+            eb
+              .selectFrom("element_source_link")
+              .select("element_source_link.element_id")
+              .whereRef("element_source_link.element_id", "=", "element.id"),
+          )
+          .as("imported"),
+      ])
       .where("project_id", "=", projectId)
       .execute();
-    expect(elements).toHaveLength(DEMO_BRAINSTORM.length);
-    expect(new Set(elements.map((e) => e.author_member_id)).size).toBe(5);
-    expect(elements.every((e) => e.prompt !== null)).toBe(true);
+    const brainstormed = elements.filter((e) => !e.imported);
+    expect(brainstormed).toHaveLength(DEMO_BRAINSTORM.length);
+    expect(new Set(brainstormed.map((e) => e.author_member_id)).size).toBe(5);
+    expect(brainstormed.every((e) => e.prompt !== null && e.group_id !== null)).toBe(true);
+    // The pulse archetype is on the list, each element placed in a group (ADR 0020).
+    const imported = elements.filter((e) => e.imported);
+    expect(imported.length).toBeGreaterThan(5);
+    expect(imported.filter((e) => e.group_id !== null).length).toBeGreaterThan(5);
+    const answers = await db
+      .selectFrom("first_look_answer")
+      .innerJoin("element", "element.id", "first_look_answer.element_id")
+      .select("first_look_answer.member_id")
+      .where("element.project_id", "=", projectId)
+      .execute();
+    expect(new Set(answers.map((a) => a.member_id)).size).toBe(3);
     expect(await roundsOf(projectId)).toHaveLength(0);
   });
 
@@ -129,6 +153,14 @@ describe("seedDemo", () => {
       .where("project_id", "=", projectId)
       .execute();
     expect(elements).toHaveLength(DEMO_ELEMENTS.length);
+    // Every element sits in the group of its question, the headings of the round (DE19).
+    const grouped = await db
+      .selectFrom("element")
+      .select("group_id")
+      .where("project_id", "=", projectId)
+      .where("group_id", "is not", null)
+      .execute();
+    expect(grouped).toHaveLength(DEMO_ELEMENTS.length);
     const rounds = await roundsOf(projectId);
     expect(rounds.map((r) => [r.number, r.opened_at !== null, r.closed_at !== null])).toEqual([
       [1, true, true],
