@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The project overview (PR4, PR8): the steps carry their state in words, the participant card
-// has one main link, and the facilitator confirms a phase move in the page.
+// The project header (PR4, PR8, PR11): the name and one line of the scope, the steps with their
+// state in words, the participant's task line with one main link, and the facilitator's status
+// line with the phase move confirmed in the page.
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -11,7 +12,12 @@ import { baseLocale, overwriteGetLocale } from "@/i18n/runtime";
 import { PROJECT_STEPS, type ProjectStep, stepVisible } from "@/lib/phase-access";
 import { PROJECT_PHASES } from "@/lib/project-phases";
 import type { ProjectOverview } from "@/lib/project-tasks";
-import { FacilitatorPhasePanel, ParticipantTaskCard, PhaseSteps } from "./project-overview";
+import {
+  FacilitatorStatusLine,
+  ParticipantTaskLine,
+  PhaseSteps,
+  ProjectHeader,
+} from "./project-header";
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
@@ -51,6 +57,7 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
   return {
     phase: "decide",
     role: "participant",
+    concept: "The pressure of the blood in the arteries",
     elements: 40,
     ownElements: 3,
     round: {
@@ -74,17 +81,69 @@ describe("PhaseSteps", () => {
     const steps = within(screen.getByRole("list", { name: "Phases of the project" }))
       .getAllByRole("listitem")
       .map((item) => item.textContent);
-    expect(steps).toEqual(["Scope(done)", "Discover(now)", "Decide(next)", "Hand-off(later)"]);
+    expect(steps).toEqual(["Scopedone", "Discovernow", "Decidelater", "Hand-offlater"]);
     expect(screen.getByText("Discover").closest("li")?.getAttribute("aria-current")).toBe("step");
+  });
+
+  it("shows one step per phase of the list, whatever its length", () => {
+    render(<PhaseSteps phase="scope" />);
+    expect(screen.getAllByRole("listitem")).toHaveLength(PROJECT_PHASES.length);
+  });
+
+  it("says later to a screen reader only, so the row stays short", () => {
+    render(<PhaseSteps phase="scope" />);
+    for (const later of screen.getAllByText("later")) {
+      expect(later.className).toContain("sr-only");
+    }
+    expect(screen.getByText("now").className).not.toContain("sr-only");
   });
 });
 
-describe("ParticipantTaskCard", () => {
+describe("ProjectHeader", () => {
+  const props = { projectId: "p1", name: "Blood pressure", move: vi.fn(), onMoved: vi.fn() };
+
+  it("shows the name as the page heading and one line of the scope", () => {
+    render(
+      <ProjectHeader {...props} overview={overview({ concept: "  The pressure\nof blood " })} />,
+    );
+    expect(screen.getByRole("heading", { level: 1, name: "Blood pressure" })).toBeTruthy();
+    const line = screen.getByTestId("project-scope-line");
+    expect(line.textContent).toBe("The pressure of blood");
+    expect(line.getAttribute("title")).toBe("The pressure of blood");
+    expect(line.className).toContain("truncate");
+  });
+
+  it("says when the scope is not written yet", () => {
+    render(<ProjectHeader {...props} overview={overview({ concept: "" })} />);
+    expect(screen.getByTestId("project-scope-line").textContent).toBe(
+      "The scope is not written yet.",
+    );
+  });
+
+  it("shows a participant the task line and a facilitator the status line", () => {
+    render(<ProjectHeader {...props} overview={overview()} />);
+    expect(screen.getByRole("region", { name: "Your task now" })).toBeTruthy();
+    cleanup();
+    render(
+      <ProjectHeader
+        {...props}
+        overview={overview({
+          role: "facilitator",
+          round: { ...facilitatorRound(), completed: 1, raters: 2 },
+        })}
+      />,
+    );
+    expect(screen.getByRole("region", { name: "Status of this phase" })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Your task now" })).toBeNull();
+  });
+});
+
+describe("ParticipantTaskLine", () => {
   it("shows the rating task with the count, the closing date and one main link", () => {
-    render(<ParticipantTaskCard projectId="p1" overview={overview()} />);
-    expect(screen.getByRole("heading", { name: "Your task now" })).toBeTruthy();
+    render(<ParticipantTaskLine projectId="p1" overview={overview()} />);
+    expect(screen.getByRole("region", { name: "Your task now" })).toBeTruthy();
     expect(screen.getByText("12 of 40 rated")).toBeTruthy();
-    expect(screen.getByText("Round closes")).toBeTruthy();
+    expect(screen.getByText(/Round closes/)).toBeTruthy();
     const links = screen.getAllByRole("link");
     expect(links.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
       ["Rate round 2", "/projects/p1/rounds/round-2/rate"],
@@ -92,7 +151,7 @@ describe("ParticipantTaskCard", () => {
   });
 
   it("counts the participant's own elements while discovering", () => {
-    render(<ParticipantTaskCard projectId="p1" overview={overview({ phase: "discover" })} />);
+    render(<ParticipantTaskLine projectId="p1" overview={overview({ phase: "discover" })} />);
     expect(screen.getByText("You added 3 elements.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Add elements" }).getAttribute("href")).toBe(
       "/projects/p1/brainstorm",
@@ -100,7 +159,7 @@ describe("ParticipantTaskCard", () => {
   });
 
   it("says there is nothing to do, without a button, while no round is open", () => {
-    render(<ParticipantTaskCard projectId="p1" overview={overview({ round: null })} />);
+    render(<ParticipantTaskLine projectId="p1" overview={overview({ round: null })} />);
     expect(screen.getByText(/There is nothing for you to do now/)).toBeTruthy();
     expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
@@ -109,12 +168,11 @@ describe("ParticipantTaskCard", () => {
     "links only to a step the %s phase shows a participant (PR9)",
     (phase) => {
       const round = phase === "decide" ? {} : { round: null };
-      render(<ParticipantTaskCard projectId="p1" overview={overview({ phase, ...round })} />);
+      render(<ParticipantTaskLine projectId="p1" overview={overview({ phase, ...round })} />);
       const links = screen.getAllByRole("link").map((link) => link.getAttribute("href") ?? "");
       expect(links).toHaveLength(1);
       for (const href of links) {
-        const segment = href.split("/")[3];
-        const step = (segment === undefined ? "overview" : segment) as ProjectStep;
+        const step = href.split("/")[3] as ProjectStep;
         expect(PROJECT_STEPS).toContain(step);
         expect(stepVisible("participant", phase, step)).toBe(true);
       }
@@ -123,13 +181,13 @@ describe("ParticipantTaskCard", () => {
 
   it("speaks Dutch when the locale is Dutch", () => {
     overwriteGetLocale(() => "nl");
-    render(<ParticipantTaskCard projectId="p1" overview={overview()} />);
+    render(<ParticipantTaskLine projectId="p1" overview={overview()} />);
     expect(screen.getByText("12 van 40 beoordeeld")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Ronde 2 beoordelen" })).toBeTruthy();
   });
 });
 
-describe("FacilitatorPhasePanel", () => {
+describe("FacilitatorStatusLine", () => {
   const facilitator = overview({
     phase: "discover",
     role: "facilitator",
@@ -141,7 +199,7 @@ describe("FacilitatorPhasePanel", () => {
     const move = vi.fn().mockResolvedValue({ ok: true, value: { phase: "decide" } });
     const onMoved = vi.fn();
     render(
-      <FacilitatorPhasePanel projectId="p1" overview={facilitator} move={move} onMoved={onMoved} />,
+      <FacilitatorStatusLine projectId="p1" overview={facilitator} move={move} onMoved={onMoved} />,
     );
     expect(screen.getByText("8 elements on the board.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Go on to Decide" }));
@@ -156,7 +214,7 @@ describe("FacilitatorPhasePanel", () => {
   it("cancels without a move and returns focus to the button", async () => {
     const move = vi.fn();
     render(
-      <FacilitatorPhasePanel projectId="p1" overview={facilitator} move={move} onMoved={vi.fn()} />,
+      <FacilitatorStatusLine projectId="p1" overview={facilitator} move={move} onMoved={vi.fn()} />,
     );
     const back = screen.getByRole("button", { name: "Back to Scope" });
     fireEvent.click(back);
@@ -171,7 +229,7 @@ describe("FacilitatorPhasePanel", () => {
     const move = vi.fn().mockResolvedValue({ ok: false, error: "phase_changed" });
     const onMoved = vi.fn();
     render(
-      <FacilitatorPhasePanel projectId="p1" overview={facilitator} move={move} onMoved={onMoved} />,
+      <FacilitatorStatusLine projectId="p1" overview={facilitator} move={move} onMoved={onMoved} />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Go on to Decide" }));
     fireEvent.click(screen.getByRole("button", { name: "Yes, move to Decide" }));
@@ -186,7 +244,7 @@ describe("FacilitatorPhasePanel", () => {
 
   it("offers no move on from the last phase", () => {
     render(
-      <FacilitatorPhasePanel
+      <FacilitatorStatusLine
         projectId="p1"
         overview={{ ...facilitator, phase: "handoff" }}
         move={vi.fn()}
@@ -200,7 +258,7 @@ describe("FacilitatorPhasePanel", () => {
 
   it("shows the open round's response while deciding", () => {
     render(
-      <FacilitatorPhasePanel
+      <FacilitatorStatusLine
         projectId="p1"
         overview={overview({
           role: "facilitator",
@@ -210,7 +268,7 @@ describe("FacilitatorPhasePanel", () => {
         onMoved={vi.fn()}
       />,
     );
-    expect(screen.getByText("Round 2: 5 of 8 completed")).toBeTruthy();
+    expect(screen.getByText(/Round 2: 5 of 8 completed/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Go to round 2" }).getAttribute("href")).toBe(
       "/projects/p1/rounds/round-2",
     );

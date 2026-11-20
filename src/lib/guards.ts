@@ -31,8 +31,8 @@ export function requireAppRole(role: AppRole) {
 }
 
 /**
- * Sends a member to the project overview when the phase hides `step` from them (PR9). The
- * facilitator sees every step (PR10). The server functions check the phase again.
+ * Sends a member to the project, which opens on their current step, when the phase hides `step`
+ * from them (PR9, PR11). The facilitator sees every step (PR10). The server checks again.
  */
 export function requireStep(step: ProjectStep) {
   return ({

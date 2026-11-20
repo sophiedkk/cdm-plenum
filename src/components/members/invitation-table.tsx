@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The invitations of a project for the facilitator (PR3): status, expiry, the link to copy and
-// pass on (the app works without SMTP, ADR 0004) and revoking an open invitation.
-import { CopyIcon, MailIcon, XIcon } from "lucide-react";
+// pass on (the app works without SMTP, ADR 0004) and revoking an open invitation. Only the open
+// ones are listed; accepted, expired and revoked ones wait behind a disclosure (ADR 0018).
+import { CopyIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { EmptyState } from "@/components/shell/route-states";
 import { DateTime } from "@/components/status/date-time";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,47 +34,20 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export function InvitationTable({
+function InvitationRows({
   invitations,
-  revoke,
-  onRevoked,
+  caption,
+  busy,
+  onRevoke,
 }: Readonly<{
   invitations: readonly InvitationRow[];
-  revoke: (invitationId: string) => Promise<Outcome<unknown>>;
-  onRevoked: () => Promise<void> | void;
+  caption: string;
+  busy: string | null;
+  onRevoke: (invitation: InvitationRow) => void;
 }>) {
-  const [busy, setBusy] = useState<string | null>(null);
-
-  if (invitations.length === 0) {
-    return (
-      <EmptyState
-        icon={<MailIcon aria-hidden="true" />}
-        title={m.members_invitations_empty_title()}
-        description={m.members_invitations_empty()}
-      />
-    );
-  }
-
-  async function onRevoke(invitation: InvitationRow) {
-    setBusy(invitation.id);
-    try {
-      const outcome = await revoke(invitation.id);
-      if (outcome.ok) {
-        toast.success(m.members_invitation_revoked({ email: invitation.email }));
-        await onRevoked();
-      } else {
-        toast.error(refusalMessage(outcome.error));
-      }
-    } catch {
-      toast.error(m.common_error_unexpected());
-    } finally {
-      setBusy(null);
-    }
-  }
-
   return (
     <Table>
-      <TableCaption className="sr-only">{m.members_invitations_caption()}</TableCaption>
+      <TableCaption className="sr-only">{caption}</TableCaption>
       <TableHeader>
         <TableRow>
           <TableHead scope="col">{m.members_column_email()}</TableHead>
@@ -118,7 +91,7 @@ export function InvitationTable({
                     size="sm"
                     disabled={busy === invitation.id}
                     aria-label={m.members_revoke_label({ email: invitation.email })}
-                    onClick={() => void onRevoke(invitation)}
+                    onClick={() => onRevoke(invitation)}
                   >
                     <XIcon aria-hidden="true" data-icon="inline-start" />
                     {m.members_revoke()}
@@ -130,5 +103,66 @@ export function InvitationTable({
         ))}
       </TableBody>
     </Table>
+  );
+}
+
+export function InvitationTable({
+  invitations,
+  revoke,
+  onRevoked,
+}: Readonly<{
+  invitations: readonly InvitationRow[];
+  revoke: (invitationId: string) => Promise<Outcome<unknown>>;
+  onRevoked: () => Promise<void> | void;
+}>) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const open = invitations.filter((invitation) => invitation.status === "pending");
+  const earlier = invitations.filter((invitation) => invitation.status !== "pending");
+
+  async function onRevoke(invitation: InvitationRow) {
+    setBusy(invitation.id);
+    try {
+      const outcome = await revoke(invitation.id);
+      if (outcome.ok) {
+        toast.success(m.members_invitation_revoked({ email: invitation.email }));
+        await onRevoked();
+      } else {
+        toast.error(refusalMessage(outcome.error));
+      }
+    } catch {
+      toast.error(m.common_error_unexpected());
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {open.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{m.members_invitations_none_open()}</p>
+      ) : (
+        <InvitationRows
+          invitations={open}
+          caption={m.members_invitations_caption()}
+          busy={busy}
+          onRevoke={(invitation) => void onRevoke(invitation)}
+        />
+      )}
+      {earlier.length > 0 && (
+        <details className="text-sm">
+          <summary className="cursor-pointer font-medium">
+            {m.members_invitations_earlier({ count: earlier.length })}
+          </summary>
+          <div className="mt-2">
+            <InvitationRows
+              invitations={earlier}
+              caption={m.members_invitations_earlier_caption()}
+              busy={busy}
+              onRevoke={(invitation) => void onRevoke(invitation)}
+            />
+          </div>
+        </details>
+      )}
+    </div>
   );
 }

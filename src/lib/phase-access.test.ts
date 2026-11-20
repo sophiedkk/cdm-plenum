@@ -3,11 +3,15 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  detailFieldsShown,
+  mainStep,
   PARTICIPANT_ACCESS,
   PARTICIPANT_WRITES,
   PROJECT_STEPS,
   participantAccess,
+  STEP_ORDER,
   stepVisible,
+  visibleSteps,
   writeOpen,
 } from "./phase-access.ts";
 import { PROJECT_PHASES } from "./project-phases.ts";
@@ -25,20 +29,27 @@ describe("the phase table (PR9)", () => {
       phase,
       PROJECT_STEPS.map((step) => participantAccess(phase, step)),
     ]);
-    // Steps in order: overview, scope, brainstorm, board, rounds, members.
+    // Steps in order: scope, brainstorm, board, rounds, export, members, settings.
     expect(table).toEqual([
-      ["scope", ["read", "comment", "hidden", "hidden", "hidden", "read"]],
-      ["discover", ["read", "read", "add", "comment", "hidden", "read"]],
-      ["decide", ["read", "read", "hidden", "read", "rate", "read"]],
-      ["handoff", ["read", "read", "hidden", "read", "read", "read"]],
+      ["scope", ["comment", "hidden", "hidden", "hidden", "hidden", "read", "hidden"]],
+      ["discover", ["read", "add", "comment", "hidden", "hidden", "read", "hidden"]],
+      ["decide", ["read", "hidden", "read", "rate", "hidden", "read", "hidden"]],
+      ["handoff", ["read", "hidden", "read", "read", "hidden", "read", "hidden"]],
     ]);
   });
 
-  it("keeps the overview, the scope and the members visible to a participant in every phase", () => {
+  it("keeps the scope and the members visible to a participant in every phase", () => {
     for (const phase of PROJECT_PHASES) {
-      for (const step of ["overview", "scope", "members"] as const) {
+      for (const step of ["scope", "members"] as const) {
         expect(stepVisible("participant", phase, step)).toBe(true);
       }
+    }
+  });
+
+  it("keeps the export and the settings from a participant in every phase (PR12)", () => {
+    for (const phase of PROJECT_PHASES) {
+      expect(stepVisible("participant", phase, "export")).toBe(false);
+      expect(stepVisible("participant", phase, "settings")).toBe(false);
     }
   });
 
@@ -57,6 +68,56 @@ describe("the phase table (PR9)", () => {
         expect(stepVisible("facilitator", phase, step)).toBe(true);
       }
     }
+  });
+});
+
+describe("tab order and the page a project opens on (PR11)", () => {
+  it("orders every step once per phase, with members and settings last", () => {
+    for (const phase of PROJECT_PHASES) {
+      expect([...STEP_ORDER[phase]].sort()).toEqual([...PROJECT_STEPS].sort());
+      expect(STEP_ORDER[phase].slice(-2)).toEqual(["members", "settings"]);
+    }
+  });
+
+  it("puts the work of the phase first and follows the phase table for a participant", () => {
+    expect(visibleSteps("participant", "scope")).toEqual(["scope", "members"]);
+    expect(visibleSteps("participant", "discover")).toEqual([
+      "brainstorm",
+      "board",
+      "scope",
+      "members",
+    ]);
+    expect(visibleSteps("participant", "decide")).toEqual(["rounds", "board", "scope", "members"]);
+    expect(visibleSteps("facilitator", "discover")).toEqual([
+      "brainstorm",
+      "board",
+      "scope",
+      "rounds",
+      "export",
+      "members",
+      "settings",
+    ]);
+  });
+
+  it("opens the project on a step the role sees in that phase", () => {
+    for (const phase of PROJECT_PHASES) {
+      for (const role of ["participant", "facilitator"] as const) {
+        expect(stepVisible(role, phase, mainStep(role, phase))).toBe(true);
+      }
+    }
+    expect(mainStep("participant", "discover")).toBe("brainstorm");
+    expect(mainStep("facilitator", "discover")).toBe("board");
+  });
+});
+
+describe("detailFieldsShown (EL21)", () => {
+  it("hides data type, cardinality and values before the decide phase", () => {
+    expect(PROJECT_PHASES.map((phase) => [phase, detailFieldsShown(phase)])).toEqual([
+      ["scope", false],
+      ["discover", false],
+      ["decide", true],
+      ["handoff", true],
+    ]);
   });
 });
 

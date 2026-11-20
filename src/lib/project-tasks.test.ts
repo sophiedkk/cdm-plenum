@@ -15,6 +15,7 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
   return {
     phase: "scope",
     role: "participant",
+    concept: "",
     elements: 8,
     ownElements: 3,
     round: null,

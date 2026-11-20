@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { DownloadIcon, Loader2Icon } from "lucide-react";
 import { useState } from "react";
@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/shell/route-states";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
+import { requireStep } from "@/lib/guards";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import {
   exportElementsCsvFn,
@@ -20,11 +21,7 @@ import {
 
 /** The exports of the project (EX1, EX2, EX4), for its facilitator only. */
 export const Route = createFileRoute("/_authed/projects/$projectId/export")({
-  beforeLoad: ({ context, params }) => {
-    if (context.project.role !== "facilitator") {
-      throw redirect({ to: "/projects/$projectId/scope", params });
-    }
-  },
+  beforeLoad: requireStep("export"),
   head: ({ match }) => ({ meta: [{ title: projectTitle(match.context, m.export_title()) }] }),
   component: Export,
 });

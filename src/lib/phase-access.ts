@@ -4,17 +4,21 @@
 // Which project steps a participant sees and may write to in each phase (PR9), and what the
 // facilitator may do ahead of the phase (PR10). The tabs, the route guards and the server read
 // this one table, so a new phase is one new row.
-import type { ProjectPhase } from "./project-phases.ts";
+import { PROJECT_PHASES, type ProjectPhase } from "./project-phases.ts";
 import type { ProjectRole } from "./project-roles.ts";
 
-/** The steps of a project, one per tab. The export is the facilitator's and outside the rule. */
+/**
+ * The steps of a project, one per tab. The export and the settings are the facilitator's, so
+ * the table hides them from a participant in every phase (PR12).
+ */
 export const PROJECT_STEPS = [
-  "overview",
   "scope",
   "brainstorm",
   "board",
   "rounds",
+  "export",
   "members",
+  "settings",
 ] as const;
 export type ProjectStep = (typeof PROJECT_STEPS)[number];
 
@@ -28,36 +32,40 @@ export type StepAccess = "hidden" | "read" | "comment" | "add" | "rate";
 // there follows the brainstorm's `add`, so both forms open and close together.
 export const PARTICIPANT_ACCESS = {
   scope: {
-    overview: "read",
     scope: "comment",
     brainstorm: "hidden",
     board: "hidden",
     rounds: "hidden",
+    export: "hidden",
     members: "read",
+    settings: "hidden",
   },
   discover: {
-    overview: "read",
     scope: "read",
     brainstorm: "add",
     board: "comment",
     rounds: "hidden",
+    export: "hidden",
     members: "read",
+    settings: "hidden",
   },
   decide: {
-    overview: "read",
     scope: "read",
     brainstorm: "hidden",
     board: "read",
     rounds: "rate",
+    export: "hidden",
     members: "read",
+    settings: "hidden",
   },
   handoff: {
-    overview: "read",
     scope: "read",
     brainstorm: "hidden",
     board: "read",
     rounds: "read",
+    export: "hidden",
     members: "read",
+    settings: "hidden",
   },
 } as const satisfies Record<ProjectPhase, Record<ProjectStep, StepAccess>>;
 
@@ -98,6 +106,48 @@ export function writeOpen(
   if (role === "facilitator") return true;
   const { step, access } = PARTICIPANT_WRITES[write];
   return participantAccess(phase, step) === access;
+}
+
+/**
+ * The order of the tabs in each phase: the work of the phase first, then the other steps (PR11,
+ * ADR 0018). Members and settings always come last.
+ */
+export const STEP_ORDER = {
+  scope: ["scope", "brainstorm", "board", "rounds", "export", "members", "settings"],
+  discover: ["brainstorm", "board", "scope", "rounds", "export", "members", "settings"],
+  decide: ["rounds", "board", "scope", "brainstorm", "export", "members", "settings"],
+  handoff: ["export", "rounds", "board", "scope", "brainstorm", "members", "settings"],
+} as const satisfies Record<ProjectPhase, readonly ProjectStep[]>;
+
+/** The steps the member sees during `phase`, in tab order. */
+export function visibleSteps(role: ProjectRole, phase: ProjectPhase): ProjectStep[] {
+  return STEP_ORDER[phase].filter((step) => stepVisible(role, phase, step));
+}
+
+/**
+ * The page a project opens on (PR11): for a participant the step of their task, for the
+ * facilitator the main page of the phase. Each is visible to that role in that phase.
+ */
+export const MAIN_STEP = {
+  participant: { scope: "scope", discover: "brainstorm", decide: "rounds", handoff: "rounds" },
+  facilitator: { scope: "scope", discover: "board", decide: "rounds", handoff: "export" },
+} as const satisfies Record<ProjectRole, Record<ProjectPhase, ProjectStep>>;
+
+/** The step the project opens on for `role` during `phase`. */
+export function mainStep(role: ProjectRole, phase: ProjectPhase): ProjectStep {
+  return MAIN_STEP[role][phase];
+}
+
+// NOTE: EL21, ADR 0018. Data type, cardinality and values belong to the detail phase; until
+// that phase exists they show from decide on. The detail phase changes only this constant.
+export const DETAIL_FIELDS_PHASE: ProjectPhase = "decide";
+
+/**
+ * Whether the board and an element's details show data type, cardinality and values during
+ * `phase` (EL21). The facilitator keeps the edit actions for them in every phase.
+ */
+export function detailFieldsShown(phase: ProjectPhase): boolean {
+  return PROJECT_PHASES.indexOf(phase) >= PROJECT_PHASES.indexOf(DETAIL_FIELDS_PHASE);
 }
 
 /** The phase in which the facilitator opens a round and keeps it open (PR10). */

@@ -169,11 +169,11 @@ function RatePage() {
             <p>
               {m.rounds_rate_no_group()}{" "}
               <Link
-                to="/projects/$projectId/members"
+                to="/projects/$projectId/settings"
                 params={{ projectId }}
                 className="underline underline-offset-4"
               >
-                {m.rounds_rate_members_link()}
+                {m.rounds_rate_settings_link()}
               </Link>
             </p>
           </AlertDescription>
