@@ -148,9 +148,12 @@ page from these patterns; each has a real use and a test you can copy.
   sees and writes in per phase (PR9, PR10); a step page uses `requireStep`,
   `writeOpen` and `StepClosedNote`, its server function `phaseOpenFor`; a
   hidden step's URL sends a participant to the project home. The same file
-  holds the phase from which the board shows data type, cardinality and
-  values (`detailFieldsShown`, EL21). A new step is a new column in the
-  table.
+  holds the one switch for data type, cardinality and values in the UI
+  (`DETAIL_FIELDS_PHASE`, `detailFieldsShown`, EL21): off in every phase
+  until the detail phase exists (owner decision 2026-11-20). The board, the
+  element form, the rating card, its overview and the round page all read
+  it; the database, the server and the export keep the fields. A new step
+  is a new column in the table.
 - **Data:** each area keeps a key factory and query options in
   `src/server/<area>/query-options.ts` (example:
   `src/server/projects/query-options.ts`, staleness in

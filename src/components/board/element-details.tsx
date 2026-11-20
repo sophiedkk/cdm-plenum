@@ -182,7 +182,7 @@ export function ElementDetails({
               {m.board_edit()}
               <span className="sr-only">: {element.name}</span>
             </Button>
-            {coded && (
+            {detailFields && coded && (
               <Button type="button" variant="outline" size="sm" onClick={onValues}>
                 <ListOrderedIcon aria-hidden="true" data-icon="inline-start" />
                 {m.board_values_edit()}

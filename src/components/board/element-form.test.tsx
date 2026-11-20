@@ -3,8 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The element form (EL1, EL5, EL21): adding asks for a name and a description only; editing has
-// the data type picker with both type names and its help text, the two-part cardinality, the
-// client checks and the server refusals.
+// the data type picker with both type names and its help text and the two-part cardinality while
+// the phase shows them, and keeps their saved values otherwise; the client checks and the server
+// refusals.
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { baseLocale, overwriteGetLocale } from "@/i18n/runtime";
@@ -25,11 +26,13 @@ function renderForm(
   ),
   initial: ElementFields = EMPTY,
   mode: "add" | "edit" = "edit",
+  detailFields = true,
 ) {
   const onDone = vi.fn();
   render(
     <ElementForm
       mode={mode}
+      detailFields={detailFields}
       initial={initial}
       submitLabel="Add element"
       submit={submit}
@@ -132,6 +135,22 @@ describe("ElementForm", () => {
         cardinality: { min: 0, max: 3 },
       }),
     );
+  });
+
+  it("asks only for a name and a description while the phase hides the details, and keeps them (EL21)", async () => {
+    const submit = vi.fn(async () => ({ ok: true }) as const);
+    const initial: ElementFields = {
+      name: "Count",
+      description: "",
+      dataType: "count",
+      cardinality: { min: 0, max: 3 },
+    };
+    renderForm(submit, initial, "edit", false);
+    expect(screen.getAllByRole("textbox")).toHaveLength(2);
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.queryByText("Cardinality")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Add element" }));
+    await waitFor(() => expect(submit).toHaveBeenCalledWith(initial));
   });
 
   it("shows a server refusal at the top of the form, translated", async () => {

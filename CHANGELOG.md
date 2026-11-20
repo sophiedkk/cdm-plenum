@@ -20,6 +20,12 @@ the project uses [Semantic Versioning](https://semver.org/).
   the project home, which now also links to the scope and the element board
   under "In this project"; the newest round results stay linked from
   "Decided so far".
+- Data type, cardinality and values no longer show anywhere until the detail
+  phase, where you will set them: not on the element board or in an
+  element's details, not in the facilitator's edit form, and not on the
+  rating card. Participants can no longer flag those details while rating,
+  and a round's page no longer lists flagged details. Values you entered
+  before are kept and come back with the detail phase.
 
 ## [0.2.0] - 2026-11-20
 
