@@ -4,7 +4,7 @@
 // The element board (EL1 to EL7): a participant adds an element with the keyboard and never sees
 // an author (EL2, Q-ANON-1); the facilitator merges duplicates, imports a CSV file and uses CKM
 // through the stub (tests/e2e/ckm-stub.ts); every page and dialog is axe-clean in English and
-// Dutch (Q-ACC-1, Q-I18N-1).
+// Dutch (Q-ACC-1, Q-I18N-1); 10 elements fit on the first screen at 1280 by 800 (Q-USE-1).
 import type { Page } from "@playwright/test";
 import { seedElement, signInTo, userIdOf } from "./board-seed.ts";
 import {
@@ -31,13 +31,33 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+type Text = (typeof MESSAGES)[Locale];
+
+/** Opens the details of the element `name` on the board, unless open, and returns them. */
+async function openDetails(page: Page, text: Text, name: string) {
+  const toggle = page.getByRole("button", { name, exact: true });
+  await expectHydrated(toggle);
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  return page.getByRole("region", { name: fill(text.board_details_label, { name }) });
+}
+
+/** The name cells of the board, one per element. */
+function boardRows(page: Page, text: Text) {
+  return page.getByRole("table", { name: text.board_list_label }).getByRole("rowheader");
+}
+
+/** Chooses `item` in the facilitator's "More actions" menu. */
+async function chooseMoreAction(page: Page, text: Text, item: string): Promise<void> {
+  const more = page.getByRole("button", { name: text.board_more_actions });
+  await expectHydrated(more);
+  await more.click();
+  await page.getByRole("menuitem", { name: item }).click();
+}
+
 /** Links the element `name` to the first blood pressure element called `ckmName`, via the stub. */
-async function linkToCkm(
-  page: Page,
-  text: (typeof MESSAGES)[Locale],
-  name: string,
-  ckmName: string,
-): Promise<void> {
+async function linkToCkm(page: Page, text: Text, name: string, ckmName: string): Promise<void> {
+  await openDetails(page, text, name);
   const link = page.getByRole("button", {
     name: new RegExp(`${escapeRegExp(text.board_link_ckm)}.*${escapeRegExp(name)}`),
   });
@@ -78,8 +98,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
           bodies.push(await response.text().catch(() => ""));
       });
       await signInTo(page, participant, locale, `/projects/${project.projectId}/board`);
-      await expect(page.getByRole("heading", { level: 3, name: /Diastolic/ })).toBeVisible();
-      await expect(page.getByRole("button", { name: text.board_merge })).toHaveCount(0);
+      await expect(page.getByRole("rowheader", { name: "Diastolic" })).toBeVisible();
+      await expect(page.getByRole("button", { name: text.board_more_actions })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: text.board_ckm_search })).toHaveCount(0);
       await expectAxeClean(page);
 
       const add = page.getByRole("button", { name: text.board_add });
@@ -103,8 +124,20 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await page.keyboard.press("Enter");
       await expect(dialog).toHaveCount(0);
 
-      const card = page.getByRole("article", { name: /Systolic/ });
-      await expect(card).toContainText("DV_QUANTITY / Quantity");
+      const row = page
+        .getByRole("row")
+        .filter({ has: page.getByRole("rowheader", { name: "Systolic" }) });
+      await expect(row).toContainText(text.board_type_quantity_name);
+      // The disclosure opens with the keyboard as well.
+      const toggle = page.getByRole("button", { name: "Systolic", exact: true });
+      await toggle.focus();
+      await page.keyboard.press("Enter");
+      await expect(toggle).toHaveAttribute("aria-expanded", "true");
+      const details = page.getByRole("region", {
+        name: fill(text.board_details_label, { name: "Systolic" }),
+      });
+      await expect(details).toContainText("DV_QUANTITY / Quantity");
+      await expect(details).toContainText("Highest pressure in the cycle.");
       await expect(page.getByText(text.board_field_author)).toHaveCount(0);
       await expectAxeClean(page);
       for (const body of [...bodies, await page.content()]) {
@@ -127,22 +160,18 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         locale,
         `/projects/${project.projectId}/board`,
       );
-      await expect(page.getByRole("article", { name: /Systolic pressure/ })).toContainText(
-        participant,
-      );
+      await expect(await openDetails(page, text, "Systolic pressure")).toContainText(participant);
       await expectAxeClean(page);
 
-      const merge = page.getByRole("button", { name: text.board_merge });
-      await expectHydrated(merge);
-      await merge.click();
+      await chooseMoreAction(page, text, text.board_merge);
       const dialog = page.getByRole("dialog", { name: text.board_merge_title });
       await dialog.getByLabel(text.board_merge_into_label).selectOption({ label: "1. Systolic" });
       await dialog.getByRole("checkbox", { name: "2. Systolic pressure" }).check();
       await expectAxeClean(page);
       await dialog.getByRole("button", { name: text.board_merge_submit }).click();
       await expect(dialog).toHaveCount(0);
-      await expect(page.getByRole("article")).toHaveCount(1);
-      const kept = page.getByRole("article", { name: /Systolic/ });
+      await expect(boardRows(page, text)).toHaveCount(1);
+      const kept = await openDetails(page, text, "Systolic");
       await expect(kept).toContainText("Peak");
       await expect(kept).toContainText("Highest");
     });
@@ -164,7 +193,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await linkToCkm(page, text, "Top pressure", "Systolic");
       await linkToCkm(page, text, "Bottom pressure", "Diastolic");
 
-      await page.getByRole("button", { name: text.board_merge }).click();
+      await chooseMoreAction(page, text, text.board_merge);
       const dialog = page.getByRole("dialog", { name: text.board_merge_title });
       await dialog
         .getByLabel(text.board_merge_into_label)
@@ -172,9 +201,13 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await dialog.getByRole("checkbox", { name: "2. Bottom pressure" }).check();
       await dialog.getByRole("button", { name: text.board_merge_submit }).click();
       await expect(dialog).toHaveCount(0);
-      await expect(page.getByRole("article")).toHaveCount(1);
+      await expect(boardRows(page, text)).toHaveCount(1);
+      const row = page
+        .getByRole("row")
+        .filter({ has: page.getByRole("rowheader", { name: "Top pressure" }) });
+      await expect(row).toContainText(text.board_ckm_status_linked);
 
-      const kept = page.getByRole("article", { name: /Top pressure/ });
+      const kept = await openDetails(page, text, "Top pressure");
       await expect(kept).toContainText(text.board_ckm_linked_badge);
       await expect(kept).toContainText(new RegExp(`${escapeRegExp(BP_ID)}.*at0004`));
       const provenance = kept.getByRole("list", { name: text.board_ckm_merged_badge });
@@ -226,10 +259,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await tabTo(page, submit, 10);
       await page.keyboard.press("Enter");
       await expect(page).toHaveURL((url) => url.pathname.endsWith("/board"));
-      await expect(page.getByRole("article")).toHaveCount(2);
-      await expect(page.getByRole("article", { name: /Rhythm/ })).toContainText(
-        "CSV: elements.csv",
-      );
+      await expect(boardRows(page, text)).toHaveCount(2);
+      await expect(await openDetails(page, text, "Rhythm")).toContainText("CSV: elements.csv");
     });
 
     test("the facilitator imports a CKM archetype, and a CKM failure leaves the board usable", async ({
@@ -266,9 +297,47 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expectAxeClean(page);
       await dialog.getByRole("button", { name: text.board_ckm_import }).click();
       await expect(dialog).toHaveCount(0);
-      const systolic = page.getByRole("article", { name: /^\d+\. ?Systolic$/ });
+      const systolic = await openDetails(page, text, "Systolic");
       await expect(systolic).toContainText(text.board_ckm_linked_badge);
       await expect(systolic).toContainText(`${BP_ID}`);
+      await expectAxeClean(page);
+    });
+  });
+
+  test.describe(`compact board in ${locale}`, () => {
+    test.use({
+      locale: BROWSER_LOCALE[locale],
+      reducedMotion: "reduce",
+      viewport: { width: 1280, height: 800 },
+    });
+    const text = MESSAGES[locale];
+
+    test("shows 10 elements on the first screen at 1280 by 800 (Q-USE-1)", async ({ page, db }) => {
+      const project = await seedProject(db);
+      for (let index = 1; index <= 10; index++) {
+        await seedElement(db, project.facilitator.userId, project.projectId, {
+          name: `Element ${index}`,
+          description: `What element ${index} records, written as a description long enough to be cut off in its column.`,
+        });
+      }
+      await signInTo(
+        page,
+        project.facilitator.email,
+        locale,
+        `/projects/${project.projectId}/board`,
+      );
+      const tenth = page.getByRole("rowheader", { name: "Element 10" });
+      await expect(tenth).toBeVisible();
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      const box = await page.getByRole("row").filter({ has: tenth }).boundingBox();
+      expect(box).not.toBeNull();
+      expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(800);
+      await expectAxeClean(page);
+
+      await openDetails(page, text, "Element 10");
+      await expectAxeClean(page);
+      await page.getByRole("button", { name: text.board_more_actions }).click();
+      await expect(page.getByRole("menuitem", { name: text.board_merge })).toBeVisible();
       await expectAxeClean(page);
     });
   });
@@ -279,6 +348,7 @@ test("the facilitator links an element to a CKM archetype element", async ({ pag
   const project = await seedProject(db);
   await seedElement(db, project.facilitator.userId, project.projectId, { name: "Top pressure" });
   await signInTo(page, project.facilitator.email, "en", `/projects/${project.projectId}/board`);
+  const card = await openDetails(page, text, "Top pressure");
   const link = page.getByRole("button", {
     name: new RegExp(`${text.board_link_ckm}.*Top pressure`),
   });
@@ -298,7 +368,6 @@ test("the facilitator links an element to a CKM archetype element", async ({ pag
     .first()
     .click();
   await expect(dialog).toHaveCount(0);
-  const card = page.getByRole("article", { name: /Top pressure/ });
   await expect(card).toContainText(
     new RegExp(`${escapeRegExp(BP_ID)}, revision 2\\.0\\.17, element at0004`),
   );
