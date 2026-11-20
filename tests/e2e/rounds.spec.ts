@@ -147,6 +147,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await dialog.getByRole("button", { name: text.rounds_open_with_reason }).click();
       await expect(dialog).toBeHidden();
       await expect(page.getByText(text.rounds_status_open, { exact: true }).first()).toBeVisible();
+      // The panel at opening and the reason sit behind the setup disclosure.
+      await page.getByText(text.rounds_setup_details).click();
       await expect(page.getByText("A teaching group of two")).toBeVisible();
       await axeClean(page);
 
@@ -218,14 +220,19 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       // Systolic: one score of 8, one unable to rate: included. Cuff size: 9 and 2: no consensus.
       const results = page.getByRole("region", { name: text.rounds_results_heading });
       await expect(results).toBeVisible();
-      const systolicResult = results.getByRole("article").filter({ hasText: "Systolic pressure" });
+      const systolicResult = results.getByRole("row").filter({ hasText: "Systolic pressure" });
       await expect(systolicResult).toContainText(text.rounds_outcome_included);
+      const details = systolicResult.getByRole("button", {
+        name: fill(text.rounds_result_details_for, { name: "Systolic pressure" }),
+      });
+      await expectHydrated(details);
+      await details.click();
       await expect(
-        systolicResult.getByRole("table", {
+        results.getByRole("table", {
           name: fill(text.rounds_result_distribution, { name: "Systolic pressure" }),
         }),
       ).toBeVisible();
-      await expect(results.getByRole("article").filter({ hasText: "Cuff size" })).toContainText(
+      await expect(results.getByRole("row").filter({ hasText: "Cuff size" })).toContainText(
         text.rounds_outcome_no_consensus,
       );
       await axeClean(page);
