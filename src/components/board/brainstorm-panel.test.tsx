@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The facilitator's view of the private step (EL13): the counts, and a reveal only after a
-// confirmation on the page; a refusal is shown, translated.
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+// The facilitator's view of the private step (EL13): one status line with the counts, and a
+// reveal only after a confirmation on the page that lists the elements per participant; a
+// refusal is shown, translated.
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { baseLocale, overwriteGetLocale } from "@/i18n/runtime";
 import type { Outcome } from "@/lib/forms/outcome";
-import { type ParticipantCount, RevealPanel } from "./brainstorm-panel";
+import { type ParticipantCount, PrivateStepStatus, RevealButton } from "./brainstorm-panel";
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
@@ -27,17 +28,30 @@ const PARTICIPANTS: ParticipantCount[] = [
 
 function renderPanel(reveal: () => Promise<Outcome<unknown>>) {
   const onRevealed = vi.fn();
-  render(<RevealPanel participants={PARTICIPANTS} reveal={reveal} onRevealed={onRevealed} />);
+  render(
+    <PrivateStepStatus
+      participants={PARTICIPANTS}
+      action={<RevealButton participants={PARTICIPANTS} reveal={reveal} onRevealed={onRevealed} />}
+    />,
+  );
   return { onRevealed };
 }
 
-describe("RevealPanel", () => {
-  it("says how many participants added how many elements, and lists them", () => {
+describe("PrivateStepStatus and RevealButton", () => {
+  it("says how many participants added how many elements", () => {
     renderPanel(vi.fn());
     expect(screen.getByTestId("private-step-status").textContent).toBe(
-      "Participants see only their own elements. Elements added by participants: 5, by 2 of 3 participants.",
+      "Private step: participants see only their own elements. Participants with elements: 2 of 3. Elements: 5.",
     );
-    const rows = screen.getAllByRole("row").map((row) => row.textContent);
+  });
+
+  it("lists the elements per participant in the confirmation", () => {
+    renderPanel(vi.fn());
+    fireEvent.click(screen.getByRole("button", { name: "Reveal the board" }));
+    const table = screen.getByRole("table", { name: "Elements per participant" });
+    const rows = within(table)
+      .getAllByRole("row")
+      .map((row) => row.textContent);
     expect(rows).toEqual([
       "ParticipantElements",
       "Invented Nurse3",

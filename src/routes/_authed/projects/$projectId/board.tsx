@@ -16,7 +16,11 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { BoardDialog } from "@/components/board/board-dialog";
-import { PrivateStepNote, RevealPanel } from "@/components/board/brainstorm-panel";
+import {
+  PrivateStepNote,
+  PrivateStepStatus,
+  RevealButton,
+} from "@/components/board/brainstorm-panel";
 import { CkmPanel } from "@/components/board/ckm-panel";
 import type { CardElement } from "@/components/board/element-details";
 import { ElementForm } from "@/components/board/element-form";
@@ -174,16 +178,21 @@ function Board() {
 
       {privateStep && !isFacilitator && <PrivateStepNote />}
       {privateStep && isFacilitator && status?.ok && (
-        <RevealPanel
+        <PrivateStepStatus
           participants={status.value.participants}
-          reveal={() => revealBoard({ data: { projectId } })}
-          onRevealed={async () => {
-            await Promise.all([
-              queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) }),
-              queryClient.invalidateQueries({ queryKey: elementKeys.all(projectId) }),
-            ]);
-            await router.invalidate();
-          }}
+          action={
+            <RevealButton
+              participants={status.value.participants}
+              reveal={() => revealBoard({ data: { projectId } })}
+              onRevealed={async () => {
+                await Promise.all([
+                  queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) }),
+                  queryClient.invalidateQueries({ queryKey: elementKeys.all(projectId) }),
+                ]);
+                await router.invalidate();
+              }}
+            />
+          }
         />
       )}
 

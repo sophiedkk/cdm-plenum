@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The private step of the brainstorm on the board (EL13): the facilitator sees how many
-// participants added elements and reveals the board after a confirmation; a participant sees
-// that only their own elements are shown.
+// The private step of the brainstorm on the board (EL13). The facilitator reads one status line
+// and reveals the board from it, after a confirmation that lists the elements per participant; a
+// participant reads that only their own elements are shown. One line each, so 10 elements still
+// fit on the first screen (Q-USE-1).
 import { EyeIcon, EyeOffIcon } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -37,8 +38,42 @@ export interface ParticipantCount {
   elements: number;
 }
 
-/** The status line, the elements per participant and the reveal button (facilitator only). */
-export function RevealPanel({
+const LINE = "-mt-3 mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm";
+
+/** The facilitator's status line: how many participants added how many elements, and `action`. */
+export function PrivateStepStatus({
+  participants,
+  action,
+}: Readonly<{ participants: readonly ParticipantCount[]; action: ReactNode }>) {
+  const contributors = participants.filter((participant) => participant.elements > 0).length;
+  const elements = participants.reduce((sum, participant) => sum + participant.elements, 0);
+  return (
+    <p className={LINE}>
+      <EyeOffIcon aria-hidden="true" className="size-4 shrink-0" />
+      <span data-testid="private-step-status">
+        {m.board_private_status({
+          elements,
+          participants: contributors,
+          total: participants.length,
+        })}
+      </span>
+      {action}
+    </p>
+  );
+}
+
+/** What a participant reads above the board in the private step. */
+export function PrivateStepNote() {
+  return (
+    <p className={LINE}>
+      <EyeOffIcon aria-hidden="true" className="size-4 shrink-0" />
+      {m.board_private_participant_note()}
+    </p>
+  );
+}
+
+/** The reveal button; the confirmation shows the elements per participant (facilitator only). */
+export function RevealButton({
   participants,
   reveal,
   onRevealed,
@@ -49,8 +84,6 @@ export function RevealPanel({
 }>) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
-  const contributors = participants.filter((participant) => participant.elements > 0).length;
-  const elements = participants.reduce((sum, participant) => sum + participant.elements, 0);
 
   async function confirm() {
     setPending(true);
@@ -71,27 +104,20 @@ export function RevealPanel({
   }
 
   return (
-    <section
-      aria-labelledby="private-step-title"
-      className="mb-6 flex flex-col gap-3 rounded-lg border p-4"
-    >
-      <h3 id="private-step-title" className="flex items-center gap-2 font-semibold">
-        <EyeOffIcon aria-hidden="true" className="size-4" />
-        {m.board_private_title()}
-      </h3>
-      <p data-testid="private-step-status">
-        {m.board_private_status({
-          elements,
-          participants: contributors,
-          total: participants.length,
-        })}
-      </p>
-      {participants.length > 0 && (
-        <details>
-          <summary className="cursor-pointer text-sm font-medium">
-            {m.board_private_counts()}
-          </summary>
-          <Table className="mt-2 w-auto">
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        <Button type="button" variant="outline" size="sm">
+          <EyeIcon aria-hidden="true" data-icon="inline-start" />
+          {m.board_reveal()}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{m.board_reveal_confirm_title()}</AlertDialogTitle>
+          <AlertDialogDescription>{m.board_reveal_confirm_description()}</AlertDialogDescription>
+        </AlertDialogHeader>
+        {participants.length > 0 && (
+          <Table aria-label={m.board_private_counts()}>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead scope="col">{m.board_private_column_participant()}</TableHead>
@@ -109,47 +135,19 @@ export function RevealPanel({
               ))}
             </TableBody>
           </Table>
-        </details>
-      )}
-      <div>
-        <AlertDialog open={open} onOpenChange={setOpen}>
-          <AlertDialogTrigger asChild>
-            <Button type="button">
-              <EyeIcon aria-hidden="true" data-icon="inline-start" />
-              {m.board_reveal()}
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{m.board_reveal_confirm_title()}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {m.board_reveal_confirm_description()}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{m.common_cancel()}</AlertDialogCancel>
-              <Button
-                type="button"
-                disabled={pending}
-                aria-busy={pending}
-                onClick={() => void confirm()}
-              >
-                {m.board_reveal_confirm()}
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-    </section>
-  );
-}
-
-/** What a participant reads above the board in the private step. */
-export function PrivateStepNote() {
-  return (
-    <p className="mb-6 flex items-center gap-2 rounded-lg border p-3 text-sm">
-      <EyeOffIcon aria-hidden="true" className="size-4 shrink-0" />
-      {m.board_private_participant_note()}
-    </p>
+        )}
+        <AlertDialogFooter>
+          <AlertDialogCancel>{m.common_cancel()}</AlertDialogCancel>
+          <Button
+            type="button"
+            disabled={pending}
+            aria-busy={pending}
+            onClick={() => void confirm()}
+          >
+            {m.board_reveal_confirm()}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
