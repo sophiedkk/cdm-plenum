@@ -46,6 +46,16 @@ export interface AppRole {
   role: string;
 }
 
+export interface DetailFlag {
+  element_id: string;
+  id: Generated<string>;
+  kind: string;
+  rating_code_id: string;
+  reason: string;
+  round_id: string;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface Element {
   author_member_id: string | null;
   created_at: Generated<Timestamp>;
@@ -278,6 +288,7 @@ export interface DB {
   account: Account;
   activity_log: ActivityLog;
   app_role: AppRole;
+  detail_flag: DetailFlag;
   element: Element;
   element_ckm_link: ElementCkmLink;
   element_comment: ElementComment;

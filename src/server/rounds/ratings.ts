@@ -8,6 +8,7 @@ import type { Kysely } from "kysely";
 import type { DB } from "../db/schema.gen.ts";
 import { log, ownGroupId } from "../projects/queries.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
+import { type OwnFlag, ownFlags } from "./flags.ts";
 import { ownRatingCode, type ParticipantRatings, ratingsByParticipantQuery } from "./rater-link.ts";
 import {
   type ElementOutcome,
@@ -147,6 +148,8 @@ export interface MyElement {
   name: string;
   description: string;
   own: OwnRating;
+  /** The participant's own flags on the element's details, in kind order (DE17). */
+  flags: OwnFlag[];
   /** The same element in the previous round, when it was rated there (DE7). */
   previous: PreviousRound | null;
 }
@@ -193,7 +196,7 @@ async function reasonsOf(db: Kysely<DB>, roundId: string): Promise<Map<string, s
 
 /**
  * The signed-in member's own ratings in an opened round, and for each element their own rating,
- * the group result and the anonymous reasons of the previous round (DE7, DE8).
+ * their own detail flags (DE17), the group result and the anonymous reasons of the previous round (DE7, DE8).
  */
 export async function myRatings(
   db: Kysely<DB>,
@@ -209,6 +212,7 @@ export async function myRatings(
     }
     const code = await ownRatingCode(trx, input.projectId, userId);
     const own = await ownRatings(trx, round.id, code);
+    const flags = await ownFlags(trx, round.id, code);
     const previousRound = await trx
       .selectFrom("round")
       .selectAll()
@@ -239,6 +243,7 @@ export async function myRatings(
       name: element.name,
       description: element.description,
       own: own.get(element.id) ?? NOT_RATED,
+      flags: flags.get(element.id) ?? [],
       previous: previous?.(element.id) ?? null,
     }));
     return done({ round: summaryOf(round, deps.now), elements });

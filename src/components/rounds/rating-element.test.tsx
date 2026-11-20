@@ -22,6 +22,7 @@ const ELEMENT: MyElement = {
   name: "Systolic pressure",
   description: "The highest pressure in the cycle",
   own: { rated: false, score: null, reason: null },
+  flags: [],
   previous: null,
 };
 

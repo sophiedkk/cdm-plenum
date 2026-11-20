@@ -13,6 +13,8 @@ import { createAuth } from "../auth.ts";
 import { ELEMENT_SOURCE_KINDS } from "../elements/queries.ts";
 import { parseEnv } from "../env.ts";
 import {
+  DETAIL_FLAG_KINDS,
+  DETAIL_FLAG_REASON_MAX,
   PROPOSAL_DESCRIPTION_MAX,
   PROPOSAL_NAME_MAX,
   PROPOSAL_RULE_MAX,
@@ -24,6 +26,7 @@ import { CHANGE_CLASS_KEYS } from "./migrations/0004_panel.ts";
 import { PANEL_MINIMUM_REASON_MAX } from "./migrations/0006_group_names_and_raters.ts";
 import { ELEMENT_PROMPT_KEYS } from "./migrations/0007_private_brainstorm.ts";
 import * as proposals from "./migrations/0008_round_proposals.ts";
+import * as flags from "./migrations/0009_detail_flags.ts";
 import { migrations } from "./migrations/index.ts";
 import { baseTestDatabaseUrl, createTestDb } from "./test-db.ts";
 import { createRunDatabase, dropRunDatabase } from "./test-run-database.ts";
@@ -94,6 +97,11 @@ describe("migrations", () => {
     expect(proposals.PROPOSAL_RULE_MAX).toBe(PROPOSAL_RULE_MAX);
     expect(proposals.PROPOSAL_NAME_MAX).toBe(PROPOSAL_NAME_MAX);
     expect(proposals.PROPOSAL_DESCRIPTION_MAX).toBe(PROPOSAL_DESCRIPTION_MAX);
+  });
+
+  it("allow exactly the DE17 flag kinds and reason length the round validators take", () => {
+    expect([...flags.DETAIL_FLAG_KINDS]).toEqual([...DETAIL_FLAG_KINDS]);
+    expect(flags.DETAIL_FLAG_REASON_MAX).toBe(DETAIL_FLAG_REASON_MAX);
   });
 
   it("allow exactly the element source kinds the board knows", () => {

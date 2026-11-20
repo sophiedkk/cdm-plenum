@@ -120,3 +120,18 @@ export type AddProposalInput = z.infer<typeof addProposalInput>;
 
 export const proposalInput = roundInput.extend({ proposalId: z.uuid() });
 export type ProposalInput = z.infer<typeof proposalInput>;
+
+/** The details of an element a participant can flag as wrong (DE17); migration 0009 agrees. */
+export const DETAIL_FLAG_KINDS = ["data_type", "cardinality", "values"] as const;
+export type DetailFlagKind = (typeof DETAIL_FLAG_KINDS)[number];
+/** The longest flag reason, the same as a rating reason; migration 0009 agrees. */
+export const DETAIL_FLAG_REASON_MAX = RATING_REASON_MAX;
+
+export const detailFlagInput = ratingInput.extend({ kind: z.enum(DETAIL_FLAG_KINDS) });
+export type DetailFlagInput = z.infer<typeof detailFlagInput>;
+
+/** A flag on one detail of an element, with the reason it is wrong (DE17). */
+export const saveDetailFlagInput = detailFlagInput.extend({
+  reason: z.string().trim().min(1).max(DETAIL_FLAG_REASON_MAX),
+});
+export type SaveDetailFlagInput = z.infer<typeof saveDetailFlagInput>;

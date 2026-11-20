@@ -7,6 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getDb } from "../db/index.ts";
 import { requireSession } from "../middleware.ts";
 import { projectInput } from "../projects/schemas.ts";
+import { removeDetailFlag, roundFlags, saveDetailFlag } from "./flags.ts";
 import {
   addProposal,
   addProposalToBoard,
@@ -31,11 +32,13 @@ import {
   addProposalInput,
   changeClassInput,
   createRoundInput,
+  detailFlagInput,
   openRoundInput,
   panelMinimumsInput,
   proposalInput,
   ratingInput,
   roundInput,
+  saveDetailFlagInput,
   saveRatingInput,
   updateRoundInput,
 } from "./schemas.ts";
@@ -116,6 +119,21 @@ export const ratingsByParticipantFn = createServerFn({ method: "GET" })
   .middleware([requireSession])
   .validator(roundInput)
   .handler(({ data, context }) => ratingsByParticipant(getDb(), context.userId, data));
+
+export const saveDetailFlagFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(saveDetailFlagInput)
+  .handler(({ data, context }) => saveDetailFlag(getDb(), context.userId, data));
+
+export const removeDetailFlagFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(detailFlagInput)
+  .handler(({ data, context }) => removeDetailFlag(getDb(), context.userId, data));
+
+export const roundFlagsFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(roundInput)
+  .handler(({ data, context }) => roundFlags(getDb(), context.userId, data));
 
 export const addProposalFn = createServerFn({ method: "POST" })
   .middleware([requireSession])

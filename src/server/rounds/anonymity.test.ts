@@ -13,6 +13,7 @@ import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
 import { setGroupNamesVisible, setRaterGroup } from "../projects/queries.ts";
 import { groupId } from "../test-fixtures.ts";
+import { removeDetailFlag, roundFlags, saveDetailFlag } from "./flags.ts";
 import { addProposal, myProposals, roundProposals } from "./proposals.ts";
 import {
   closeRound,
@@ -116,7 +117,10 @@ describe("responses with the rater setting off (DE4, Q-ANON-1)", () => {
     return forbidden.filter((value) => text.includes(value));
   }
 
-  /** A full round: setup, opening, ratings with reasons, closing, and round 2 opened. */
+  /**
+   * A full round: setup, opening, ratings with reasons, detail flags (DE17), proposals, closing,
+   * and round 2 opened.
+   */
   async function fullRound(responses: unknown[]) {
     const f = p.facilitator;
     const projectId = p.projectId;
@@ -148,7 +152,27 @@ describe("responses with the rater setting off (DE4, Q-ANON-1)", () => {
         await addProposal(db, rater, { ...input, name: `Proposal ${name}`, description: "" }),
       );
     }
+    for (const [name, rater] of Object.entries(p.raters)) {
+      for (const kind of ["data_type", "values"] as const) {
+        responses.push(
+          await saveDetailFlag(db, rater, {
+            ...input,
+            elementId: p.elements[0],
+            kind,
+            reason: `Invented flag ${name} ${kind}`,
+          }),
+        );
+      }
+    }
+    responses.push(
+      await removeDetailFlag(db, p.raters.a2, {
+        ...input,
+        elementId: p.elements[0],
+        kind: "values",
+      }),
+    );
     responses.push(await roundProposals(db, f, input));
+    responses.push(await roundFlags(db, f, input));
     responses.push(await responseRate(db, f, input, t()));
     responses.push(await ratingsByParticipant(db, f, input));
     responses.push(await closeRound(db, f, input, { now: inDays(2) }));
@@ -172,6 +196,7 @@ describe("responses with the rater setting off (DE4, Q-ANON-1)", () => {
         await responseRate(db, f, round, t),
         await ratingsByParticipant(db, f, round),
         await roundProposals(db, f, round),
+        await roundFlags(db, f, round),
       );
     }
     facilitatorResponses.push(await listRounds(db, f, p.projectId, t));
@@ -201,6 +226,10 @@ describe("responses with the rater setting off (DE4, Q-ANON-1)", () => {
     // A participant sees their own proposal only (DE16).
     expect(JSON.stringify(own)).toContain("Proposal n1");
     expect(leaks(own, ["Proposal n2", "Proposal t1", "Proposal a1", "Proposal a2"])).toEqual([]);
+    // A participant sees their own detail flags only, and cannot read the round's (DE17).
+    expect(JSON.stringify(own)).toContain("Invented flag n1 data_type");
+    expect(leaks(own, ["Invented flag n2", "Invented flag t1", "Invented flag a1"])).toEqual([]);
+    expect(await roundFlags(db, p.raters.n1, input)).toEqual({ ok: false, error: "forbidden" });
     // The reasons of round 1 come without author (DE8).
     const mine = await myRatings(db, p.raters.n1, nextInput, t);
     expect(mine.ok && mine.value.elements.some((e) => (e.previous?.reasons.length ?? 0) > 0)).toBe(
@@ -248,11 +277,13 @@ describe("responses with the rater setting off (DE4, Q-ANON-1)", () => {
     await fullRound([]);
     const rows = await db.selectFrom("activity_log").selectAll().execute();
     expect(rows.some((row) => row.action === "rating_saved")).toBe(true);
+    expect(rows.some((row) => row.action === "detail_flag_saved")).toBe(true);
     const text = JSON.stringify(rows);
     const elementNames = await db.selectFrom("element").select("name").execute();
     const users = await db.selectFrom("user").select(["email", "name"]).execute();
     const forbidden = [
       "Invented reason",
+      "Invented flag",
       ...elementNames.map((e) => e.name),
       ...users.flatMap((u) => [u.email, u.name]).filter((v) => v !== ""),
     ];
