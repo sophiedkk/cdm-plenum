@@ -4,6 +4,7 @@
 // The input of the round server functions, checked before any handler runs. The rule's own
 // consistency (bands inside the scale, agreement above half) is `ruleError` in the query.
 import { z } from "zod";
+import { ELEMENT_NAME_MAX } from "@/lib/elements";
 import { CHANGE_CLASSES, type EXPERT_TYPES } from "@/lib/panel";
 import { idSchema } from "../projects/schemas.ts";
 
@@ -12,6 +13,10 @@ export const RATING_REASON_MAX = 2000;
 export const BELOW_MINIMUM_REASON_MAX = 500;
 /** The longest reason for the project's own minimum panel (DE13); migration 0006 agrees. */
 export const PANEL_MINIMUM_REASON_MAX = 500;
+/** The longest proposal rule, name and description (DE16); migration 0008 agrees. */
+export const PROPOSAL_RULE_MAX = 500;
+export const PROPOSAL_NAME_MAX = ELEMENT_NAME_MAX;
+export const PROPOSAL_DESCRIPTION_MAX = 500;
 
 /** The scores a scale may use; the database stores them as smallint. */
 const score = z.int().min(0).max(100);
@@ -62,12 +67,16 @@ export type PanelMinimumsInput = z.infer<typeof panelMinimumsInput>;
 
 const elementIds = z.array(z.uuid()).max(1000);
 
+/** The rule for adding proposed elements (DE16); null or blank means none. Round 1 only. */
+const proposalRule = z.string().max(PROPOSAL_RULE_MAX).nullable();
+
 export const createRoundInput = z.object({
   projectId: idSchema,
   /** Left out: every element without consensus in the previous round, or every element. */
   elementIds: elementIds.optional(),
   rule: ruleInput.optional(),
   facilitatorSeesRaters: z.boolean().optional(),
+  proposalRule: proposalRule.optional(),
   closesAt: instant,
 });
 export type CreateRoundInput = z.output<typeof createRoundInput>;
@@ -78,6 +87,7 @@ export const updateRoundInput = z.object({
   elementIds: elementIds.optional(),
   rule: ruleInput.optional(),
   facilitatorSeesRaters: z.boolean().optional(),
+  proposalRule: proposalRule.optional(),
   closesAt: instant.optional(),
 });
 export type UpdateRoundInput = z.output<typeof updateRoundInput>;
@@ -100,3 +110,13 @@ export type SaveRatingInput = z.infer<typeof saveRatingInput>;
 
 export const ratingInput = roundInput.extend({ elementId: z.uuid() });
 export type RatingInput = z.infer<typeof ratingInput>;
+
+/** A proposal for an element missing from round 1 (DE16). */
+export const addProposalInput = roundInput.extend({
+  name: z.string().trim().min(1).max(PROPOSAL_NAME_MAX),
+  description: z.string().trim().max(PROPOSAL_DESCRIPTION_MAX),
+});
+export type AddProposalInput = z.infer<typeof addProposalInput>;
+
+export const proposalInput = roundInput.extend({ proposalId: z.uuid() });
+export type ProposalInput = z.infer<typeof proposalInput>;

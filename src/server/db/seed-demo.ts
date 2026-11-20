@@ -9,10 +9,13 @@ import { randomUUID } from "node:crypto";
 import { parseArgs } from "node:util";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import pg from "pg";
+import type { ElementPrompt } from "@/lib/brainstorm";
 import { grantAppRole, normalizeEmail } from "../admin/app-roles.ts";
+import { revealBoard } from "../elements/brainstorm.ts";
 import { addElement, addElementComment, setElementValues } from "../elements/queries.ts";
 import { acceptInvitationsOnSignIn } from "../invitations/acceptance.ts";
 import { invite } from "../invitations/queries.ts";
+import { movePhase } from "../projects/phase.ts";
 import { createProject } from "../projects/queries.ts";
 import { closeRound, createRound, openRound } from "../rounds/queries.ts";
 import { saveRating } from "../rounds/ratings.ts";
@@ -43,6 +46,8 @@ export const DEMO_PARTICIPANTS = [
 type Cardinality = { min: 0 | 1; max: number | null };
 interface DemoElement {
   name: string;
+  /** The brainstorm question the element answers (EL14). */
+  prompt: ElementPrompt;
   description: string;
   dataType: "quantity" | "coded_text" | "text";
   cardinality: Cardinality;
@@ -56,6 +61,7 @@ interface DemoElement {
 export const DEMO_ELEMENTS: DemoElement[] = [
   {
     name: "Systolic",
+    prompt: "recorded",
     description: "The peak arterial pressure during contraction of the left ventricle.",
     dataType: "quantity",
     cardinality: { min: 1, max: 1 },
@@ -63,6 +69,7 @@ export const DEMO_ELEMENTS: DemoElement[] = [
   },
   {
     name: "Diastolic",
+    prompt: "recorded",
     description: "The lowest arterial pressure, during relaxation of the heart.",
     dataType: "quantity",
     cardinality: { min: 1, max: 1 },
@@ -70,6 +77,7 @@ export const DEMO_ELEMENTS: DemoElement[] = [
   },
   {
     name: "Position",
+    prompt: "patient_state",
     description: "The body position of the person during the measurement.",
     dataType: "coded_text",
     cardinality: { min: 0, max: 1 },
@@ -78,6 +86,7 @@ export const DEMO_ELEMENTS: DemoElement[] = [
   },
   {
     name: "Location of measurement",
+    prompt: "method",
     description: "Where on the body the blood pressure was measured.",
     dataType: "coded_text",
     cardinality: { min: 0, max: 1 },
@@ -86,6 +95,7 @@ export const DEMO_ELEMENTS: DemoElement[] = [
   },
   {
     name: "Mean arterial pressure",
+    prompt: "recorded",
     description: "The average arterial pressure over one cardiac cycle.",
     dataType: "quantity",
     cardinality: { min: 0, max: 1 },
@@ -93,6 +103,7 @@ export const DEMO_ELEMENTS: DemoElement[] = [
   },
   {
     name: "Cuff size",
+    prompt: "method",
     description: "The size of the cuff used for the measurement.",
     dataType: "coded_text",
     cardinality: { min: 0, max: 1 },
@@ -101,6 +112,7 @@ export const DEMO_ELEMENTS: DemoElement[] = [
   },
   {
     name: "Pulse pressure",
+    prompt: "recorded",
     description: "The difference between the systolic and the diastolic pressure.",
     dataType: "quantity",
     cardinality: { min: 0, max: 1 },
@@ -108,6 +120,7 @@ export const DEMO_ELEMENTS: DemoElement[] = [
   },
   {
     name: "Comment",
+    prompt: "context",
     description: "Anything about the measurement not captured in the other elements.",
     dataType: "text",
     cardinality: { min: 0, max: 1 },
@@ -232,6 +245,10 @@ export async function seedDemo(
     }),
   );
 
+  must(
+    "phase discover",
+    await movePhase(db, facilitatorId, { projectId, from: "scope", direction: "next" }),
+  );
   const elementIds: string[] = [];
   for (const [index, element] of DEMO_ELEMENTS.entries()) {
     const author = raterIds[index % raterIds.length] ?? facilitatorId;
@@ -244,6 +261,7 @@ export async function seedDemo(
         dataType: element.dataType,
         cardinality: element.cardinality,
         source: index < 4 ? "Outpatient form" : "",
+        prompt: element.prompt,
       }),
     );
     if (element.values) {
@@ -258,6 +276,9 @@ export async function seedDemo(
     }
     elementIds.push(elementId);
   }
+  // The demo is past the brainstorm: the board is revealed, as a facilitator would (EL13).
+  must("reveal board", await revealBoard(db, facilitatorId, projectId));
+
   const cuffSize = elementIds[5];
   if (cuffSize) {
     must(
@@ -270,6 +291,10 @@ export async function seedDemo(
     );
   }
 
+  must(
+    "phase decide",
+    await movePhase(db, facilitatorId, { projectId, from: "discover", direction: "next" }),
+  );
   // Round 1: rated by everyone, then closed, so results exist.
   const oneDay = 24 * 60 * 60 * 1000;
   const round1 = must(

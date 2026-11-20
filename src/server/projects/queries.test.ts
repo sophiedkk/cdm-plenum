@@ -301,6 +301,8 @@ describe("getProject", () => {
         role: "facilitator",
         groupNamesVisible: false,
         ownGroupId: null,
+        privateBrainstorm: true,
+        boardRevealed: false,
       },
     });
     const seen = await getProject(db, participant, projectId);

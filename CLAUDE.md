@@ -2,8 +2,9 @@
 
 **cdm-plenum** guides a group of clinicians, information modellers and
 terminologists from the scope of a clinical concept to an agreed list of data
-elements, with an element board, a CKM reuse check and e-Delphi rating
-rounds, before anyone authors an openEHR archetype. Its first users are
+elements: a common data model of the concept, before anyone writes it down in
+a standard such as an openEHR archetype or a FHIR profile. It uses an element
+board, a CKM reuse check and e-Delphi rating rounds. Its first users are
 research and teaching groups. The released state is in `CHANGELOG.md`.
 The design is `docs/architecture.md` with the records in `docs/adr/`; the
 requirements draft is `docs/requirements.md`. The stack and working
@@ -131,10 +132,20 @@ page from these patterns; each has a real use and a test you can copy.
   shows its text; colour and icon only add to it (Q-ACC-2). Example:
   `PhaseBadge` and `RoleBadge` in `src/components/projects/project-badges.tsx`,
   with labels from `src/lib/i18n/labels.ts`.
+- **Project overview:** a project opens on `/projects/$projectId/`
+  (`src/components/projects/project-overview.tsx`), whose task and status
+  come from `src/lib/project-tasks.ts`. A new phase task goes there with a
+  test. The overview query is always revalidated (`STALE_TIME.overview`),
+  so a board or rating mutation need not invalidate it.
 - **Route states:** `src/components/shell/route-states.tsx` has
   `PageSkeleton` (the router's default pending state), `EmptyState`,
   `RouteErrorState` (the default error state, with a retry) and
   `NotFoundState`. A loader that gets `not_found` throws `notFound()`.
+- **Standard-agnostic wording:** the tool builds a common data model of a
+  concept, whatever standard implements it later. UI text, requirements and
+  docs say "the model" or "the data model", not "the archetype"; name openEHR,
+  FHIR or zib only where a feature is specific to it, such as the CKM reuse
+  check or the RM data types (owner decision 2026-11-20).
 - **Message keys:** every new key starts with its area: `shell_`,
   `projects_`, `scope_`, `board_`, `rounds_`, `members_`, `admin_`,
   `export_` or `common_` (shared text and the `common_refusal_*` messages).

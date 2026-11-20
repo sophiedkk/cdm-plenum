@@ -7,6 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getLocale } from "@/i18n/runtime";
 import { getDb } from "../db/index.ts";
 import { requireSession } from "../middleware.ts";
+import { movePhase, projectOverview } from "./phase.ts";
 import {
   createGroup,
   createProject,
@@ -25,6 +26,7 @@ import {
   createProjectInput,
   groupInput,
   groupNamesVisibleInput,
+  movePhaseInput,
   projectInput,
   raterGroupInput,
   renameGroupInput,
@@ -83,3 +85,15 @@ export const setRaterGroupFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(raterGroupInput)
   .handler(({ data, context }) => setRaterGroup(getDb(), context.userId, data));
+
+export const projectOverviewFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) =>
+    projectOverview(getDb(), context.userId, data.projectId, { now: new Date() }),
+  );
+
+export const movePhaseFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(movePhaseInput)
+  .handler(({ data, context }) => movePhase(getDb(), context.userId, data));

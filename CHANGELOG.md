@@ -9,6 +9,83 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A new project starts with a private brainstorm: each participant sees only
+  the elements they added, until the facilitator selects "Reveal the board"
+  on the element board. Until then the board shows the facilitator how many
+  participants added elements, and the confirmation lists the count per
+  participant. After the reveal everyone sees every element, still without
+  the name of who added it. The facilitator can switch the private step off
+  on the members page, before the reveal only. Elements added by different
+  people can be merged only after the reveal. Existing projects keep their
+  shared board.
+- The Brainstorm tab asks four questions: what you record or measure, what
+  about the patient you need to know to interpret it, how it was measured,
+  and in which situation it is recorded. Under each question you add an
+  element with a name and one optional line; press Enter to add the next one.
+  Data type, cardinality and values stay on the element board, which "More
+  details" opens at that element.
+- After the reveal, the Brainstorm tab lists up to 5 elements with a similar
+  name while you type, each with a link to the element on the board, so you
+  can comment there instead of adding a duplicate.
+- Round 1 ends with an open question: "Is an element missing? Propose it".
+  You give a name and a one-line description, can propose several elements
+  and delete your own until the round closes. Other participants never see
+  your proposals. The facilitator sees them on the round page, with your
+  name only when the round lets the facilitator see who rated what.
+- When setting up round 1, the facilitator writes the rule for adding
+  proposed elements, prefilled with "Proposed by at least two
+  participants". Participants see the rule on the rating screen, and it
+  cannot change once the round is open.
+- On the round page the facilitator adds a proposal to the board with "Add
+  to the board". The new element shows the source "Round 1 proposal".
+- A project now opens on an overview. It shows the four phases as steps,
+  with the current one marked "now". As a participant you see one task for
+  the current phase, such as "Rate round 2" with "12 of 40 rated" and the
+  closing date in your time zone, and one button that takes you there. When
+  there is nothing to do, the overview says so.
+- As a facilitator you move the project to the next or the previous phase
+  from the overview, after a confirmation. The overview also shows the
+  number of elements on the board, or how many raters completed the open
+  round.
+
+### Changed
+
+- The element board shows each element as one row of a table, with its
+  number, name, description, data type, cardinality, number of sources, CKM
+  link and number of comments. At 1280 by 800 pixels you see at least 10
+  elements without scrolling. Select an element's name to open its details
+  below the row: the full description, proposed values, sources, CKM link,
+  comments and the facilitator's actions (Edit, Edit values, Link to CKM).
+- "Merge duplicates" and "Import CSV" moved into the "More actions" menu
+  next to "Search CKM" on the element board.
+- The rating question now asks whether an element belongs in the data
+  model, for any use case in scope: the model holds every element that one of
+  those use cases needs, whichever standard implements it later. The scale
+  reads 1 to 3 "does not belong in the model", 4 to 6 "unsure" and 7 to 9
+  "belongs in the model". The scale and the consensus rule stay the same.
+- The outcomes of a round read "In the model", "Not in the model" and "No
+  consensus". An element that is not in the model stays on the board and in
+  the elements CSV.
+- The results of a round show one row per element: the outcome, the median,
+  a small chart of the scores and the number of answers. "Details" opens
+  every score, the share in each band and the result per stakeholder group.
+  Eight elements fit on a 1280 by 800 screen.
+- When you rate a later round, each element shows your own score from the
+  previous round and the scores of everyone and of each stakeholder group of
+  3 or more, in one line above the scale. The median, the bands and the
+  reasons are under "Details and reasons". The rating screen no longer shows
+  whether an element was included, excluded or without consensus in the
+  previous round, so that label does not push your rating.
+- The page of an open round starts with your progress and the "Rate round N
+  now" button, followed by the rule and the anonymity statement in short.
+  The full setup and the panel at opening are under "Setup of this round".
+  The facilitator sees the response as one line, with the table per
+  stakeholder group under a disclosure.
+- The demo project of `pnpm db:seed-demo` is now in the decide phase, since
+  its second round is open.
+
 ## [0.1.0] - 2026-11-19
 
 The first release: scope, element board with the CKM reuse check, e-Delphi

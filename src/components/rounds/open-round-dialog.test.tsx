@@ -38,6 +38,16 @@ describe("OpenRoundDialog", () => {
     expect(open).toHaveBeenCalledWith();
   });
 
+  it("warns that opening reveals the board only while the private step runs (ADR 0012)", () => {
+    const open = vi.fn(async () => ({ ok: true, value: { status: "complete" } }) as const);
+    render(<OpenRoundDialog number={1} revealsBoard open={open} onOpened={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open round" }));
+    expect(screen.getByRole("dialog").textContent).toContain("also reveals the board");
+    cleanup();
+    openDialog(open);
+    expect(screen.getByRole("dialog").textContent).not.toContain("reveals the board");
+  });
+
   it("asks for a reason with the shortfall when the server requires one", async () => {
     const open = vi.fn(async (reason?: string) =>
       reason === undefined ? SHORT : ({ ok: true, value: { status: "below_minimum" } } as const),

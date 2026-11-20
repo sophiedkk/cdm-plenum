@@ -3,6 +3,7 @@
 
 // The input of the project server functions, checked before any handler runs.
 import { z } from "zod";
+import { PHASE_DIRECTIONS, PROJECT_PHASES } from "@/lib/project-phases";
 import { EXPERT_TYPES, GROUP_NAME_MAX, PROJECT_NAME_MAX } from "@/lib/project-roles";
 
 /** better-auth and cdm-plenum ids: UUIDs or 32 URL-safe characters. */
@@ -34,6 +35,17 @@ export type GroupInput = z.infer<typeof groupInput>;
 
 export const groupNamesVisibleInput = z.object({ projectId: idSchema, visible: z.boolean() });
 export type GroupNamesVisibleInput = z.infer<typeof groupNamesVisibleInput>;
+
+/**
+ * Moves the project one phase on or back (PR4). `from` is the phase the facilitator saw, so a
+ * second click or another facilitator's move in between is refused instead of skipping a phase.
+ */
+export const movePhaseInput = z.object({
+  projectId: idSchema,
+  from: z.enum(PROJECT_PHASES),
+  direction: z.enum(PHASE_DIRECTIONS),
+});
+export type MovePhaseInput = z.infer<typeof movePhaseInput>;
 
 /** A null group takes the facilitator out of the group they rate in (DE14). */
 export const raterGroupInput = z.object({ projectId: idSchema, groupId: idSchema.nullable() });

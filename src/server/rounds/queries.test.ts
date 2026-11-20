@@ -8,6 +8,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DEFAULT_RULE } from "@/lib/consensus";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
+import { listElements } from "../elements/queries.ts";
+import { exportElementsCsv } from "../exports/queries.ts";
 import { facilitatorWithProject, insertElement, joinedParticipant } from "../test-fixtures.ts";
 import {
   closeRound,
@@ -395,6 +397,48 @@ describe("updateRound (DE1, DE2)", () => {
   });
 });
 
+describe("openRound and the private brainstorm (EL13, ADR 0012)", () => {
+  async function revealState() {
+    const project = await db
+      .selectFrom("project")
+      .select(["private_brainstorm", "board_revealed_at"])
+      .where("id", "=", p.projectId)
+      .executeTakeFirstOrThrow();
+    const logged = await db
+      .selectFrom("activity_log")
+      .select("id")
+      .where("project_id", "=", p.projectId)
+      .where("action", "=", "board_revealed")
+      .execute();
+    return { project, reveals: logged.length };
+  }
+
+  it("reveals the board of a project still in its private step, and logs it once", async () => {
+    const before = await revealState();
+    expect(before.project.private_brainstorm).toBe(true);
+    expect(before.project.board_revealed_at).toBeNull();
+    const { roundId } = await draft({});
+    ok(await openRound(db, p.facilitator, { projectId: p.projectId, roundId }, now()));
+    const after = await revealState();
+    expect(after.project.board_revealed_at).not.toBeNull();
+    expect(after.reveals).toBe(1);
+  });
+
+  it("leaves an already revealed board alone", async () => {
+    const revealedAt = new Date("2026-11-01T10:00:00Z");
+    await db
+      .updateTable("project")
+      .set({ board_revealed_at: revealedAt })
+      .where("id", "=", p.projectId)
+      .execute();
+    const { roundId } = await draft({});
+    ok(await openRound(db, p.facilitator, { projectId: p.projectId, roundId }, now()));
+    const after = await revealState();
+    expect(after.project.board_revealed_at).toEqual(revealedAt);
+    expect(after.reveals).toBe(0);
+  });
+});
+
 describe("openRound (DE11, DE12)", () => {
   it("opens with a complete panel and stores the panel and minimum without a reason", async () => {
     const { roundId } = await draft({});
@@ -538,6 +582,25 @@ describe("closeRound (DE5)", () => {
       error: "round_not_open",
     });
     expect(await actions(draftId)).toEqual(["round_created", "round_opened", "round_closed"]);
+  });
+
+  it("keeps an element that is not in the model on the board and in the export (DE1)", async () => {
+    const roundId = await openedRound(db, p.facilitator, p.projectId);
+    const cuff = p.elements[2];
+    for (const rater of Object.values(p.raters)) {
+      ok(
+        await saveRating(db, rater, { projectId: p.projectId, roundId, elementId: cuff, score: 1 }),
+      );
+    }
+    expect(await closedNow(db, p.facilitator, p.projectId, roundId)).toMatchObject({
+      excluded: 1,
+    });
+    const board = await listElements(db, p.raters.n1, p.projectId);
+    expect(board.ok && board.value.map((element) => element.name)).toContain("Cuff size");
+    const file = await exportElementsCsv(db, p.facilitator, p.projectId);
+    if (!file.ok) throw new Error(file.error);
+    const row = file.value.content.split("\r\n").find((line) => line.includes("Cuff size"));
+    expect(row).toContain("excluded");
   });
 
   it("refuses a participant (forbidden) and a non-member (not_found)", async () => {

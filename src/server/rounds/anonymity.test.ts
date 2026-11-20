@@ -13,6 +13,7 @@ import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
 import { setGroupNamesVisible, setRaterGroup } from "../projects/queries.ts";
 import { groupId } from "../test-fixtures.ts";
+import { addProposal, myProposals, roundProposals } from "./proposals.ts";
 import {
   closeRound,
   createRound,
@@ -142,6 +143,12 @@ describe("responses with the rater setting off (DE4, Q-ANON-1)", () => {
       }
     }
     responses.push(await clearRating(db, p.raters.a2, { ...input, elementId: p.elements[2] }));
+    for (const [name, rater] of Object.entries(p.raters)) {
+      responses.push(
+        await addProposal(db, rater, { ...input, name: `Proposal ${name}`, description: "" }),
+      );
+    }
+    responses.push(await roundProposals(db, f, input));
     responses.push(await responseRate(db, f, input, t()));
     responses.push(await ratingsByParticipant(db, f, input));
     responses.push(await closeRound(db, f, input, { now: inDays(2) }));
@@ -164,6 +171,7 @@ describe("responses with the rater setting off (DE4, Q-ANON-1)", () => {
         await myRatings(db, f, round, t),
         await responseRate(db, f, round, t),
         await ratingsByParticipant(db, f, round),
+        await roundProposals(db, f, round),
       );
     }
     facilitatorResponses.push(await listRounds(db, f, p.projectId, t));
@@ -184,11 +192,15 @@ describe("responses with the rater setting off (DE4, Q-ANON-1)", () => {
       own.push(
         await getRound(db, p.raters.n1, round, t),
         await myRatings(db, p.raters.n1, round, t),
+        await myProposals(db, p.raters.n1, round),
       );
     }
     own.push(await roundResults(db, p.raters.n1, input, t));
     own.push(await listRounds(db, p.raters.n1, p.projectId, t));
     expect(leaks(own, await identifiers())).toEqual([]);
+    // A participant sees their own proposal only (DE16).
+    expect(JSON.stringify(own)).toContain("Proposal n1");
+    expect(leaks(own, ["Proposal n2", "Proposal t1", "Proposal a1", "Proposal a2"])).toEqual([]);
     // The reasons of round 1 come without author (DE8).
     const mine = await myRatings(db, p.raters.n1, nextInput, t);
     expect(mine.ok && mine.value.elements.some((e) => (e.previous?.reasons.length ?? 0) > 0)).toBe(

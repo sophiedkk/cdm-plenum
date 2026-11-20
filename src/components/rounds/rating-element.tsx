@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// One element on the rating screen (DE3, DE7, DE8): a fieldset with the scale as a radio group,
-// "unable to rate" and an optional reason. A choice saves at once; a changed reason saves when
-// the field loses focus. In a later round the participant's own earlier rating, the group result
-// and the anonymous reasons sit next to it.
+// One element on the rating screen (DE3, DE7, DE8, DE15): a fieldset with the scale as a radio
+// group, "unable to rate" and an optional reason. A choice saves at once; a changed reason saves
+// when the field loses focus. In a later round one line above the scale shows the participant's
+// own earlier rating and the distribution per stakeholder group; the median, the band shares and
+// the anonymous reasons sit behind "details". No outcome label of the earlier round shows: it
+// can push ratings toward the group (ADR 0013).
 import { useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FieldDescription, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
@@ -15,8 +17,8 @@ import type { ConsensusRule } from "@/lib/consensus";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import type { MyElement, OwnRating } from "@/server/rounds/ratings";
 import { RATING_REASON_MAX } from "@/server/rounds/schemas";
-import { DistributionTable, ResultFigures } from "./element-result";
-import { OutcomeBadge } from "./round-badges";
+import { MiniDistribution, shownGroups } from "./distribution";
+import { DistributionTable, GroupResultsTable, ResultFigures } from "./element-result";
 
 const UNABLE = "unable";
 
@@ -41,39 +43,67 @@ function PreviousRound({
   element,
 }: Readonly<{ element: MyElement & { previous: NonNullable<MyElement["previous"]> } }>) {
   const previous = element.previous;
+  const groups = shownGroups(previous.groups);
   return (
-    <div className="flex flex-col gap-3 rounded-md bg-muted/50 p-3 text-sm">
-      <p className="font-medium">{m.rounds_rate_previous_heading({ number: previous.number })}</p>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-        <dt className="text-muted-foreground">{m.rounds_rate_previous_own()}</dt>
-        <dd>{ownText(previous.own)}</dd>
-        <dt className="text-muted-foreground">{m.rounds_rate_previous_outcome()}</dt>
-        <dd>
-          <OutcomeBadge outcome={previous.result.outcome} />
-        </dd>
-      </dl>
-      <ResultFigures result={previous.result} />
-      <DistributionTable
-        result={previous.result}
-        caption={m.rounds_rate_previous_distribution({
-          number: previous.number,
-          name: element.name,
-        })}
-      />
-      <div>
-        <p className="font-medium">{m.rounds_rate_previous_reasons()}</p>
-        {previous.reasons.length === 0 ? (
-          <p className="text-muted-foreground">{m.rounds_rate_previous_no_reasons()}</p>
-        ) : (
-          <ul className="mt-1 flex list-disc flex-col gap-1 pl-5">
-            {previous.reasons.map((reason, index) => (
-              // Reasons carry no id; the same text can occur twice.
-              // biome-ignore lint/suspicious/noArrayIndexKey: the list never reorders
-              <li key={index}>{reason}</li>
-            ))}
-          </ul>
-        )}
+    <div className="flex flex-col gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <p className="font-medium">
+          {m.rounds_rate_previous_own_value({
+            number: previous.number,
+            value: ownText(previous.own),
+          })}
+        </p>
+        <ul
+          aria-label={m.rounds_rate_previous_distribution({
+            number: previous.number,
+            name: element.name,
+          })}
+          className="flex flex-wrap items-center gap-x-5 gap-y-2"
+        >
+          <li className="flex items-center gap-2">
+            <span className="text-muted-foreground">{m.rounds_rate_previous_everyone()}</span>
+            <MiniDistribution result={previous.result} />
+          </li>
+          {groups.map((group) => (
+            <li key={group.groupId} className="flex items-center gap-2">
+              <span className="text-muted-foreground">{group.groupName}</span>
+              <MiniDistribution result={group.result} />
+            </li>
+          ))}
+        </ul>
       </div>
+      <details>
+        <summary className="cursor-pointer font-medium">
+          {m.rounds_rate_previous_details({ count: previous.reasons.length })}
+        </summary>
+        <div className="mt-3 flex flex-col gap-4">
+          <div className="grid gap-6 md:grid-cols-2">
+            <ResultFigures result={previous.result} />
+            <DistributionTable
+              result={previous.result}
+              caption={m.rounds_rate_previous_table({
+                number: previous.number,
+                name: element.name,
+              })}
+            />
+          </div>
+          <GroupResultsTable name={element.name} groups={previous.groups} showOutcome={false} />
+          <div>
+            <p className="font-medium">{m.rounds_rate_previous_reasons()}</p>
+            {previous.reasons.length === 0 ? (
+              <p className="text-muted-foreground">{m.rounds_rate_previous_no_reasons()}</p>
+            ) : (
+              <ul className="mt-1 flex list-disc flex-col gap-1 pl-5">
+                {previous.reasons.map((reason, index) => (
+                  // Reasons carry no id; the same text can occur twice.
+                  // biome-ignore lint/suspicious/noArrayIndexKey: the list never reorders
+                  <li key={index}>{reason}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </details>
     </div>
   );
 }
@@ -144,19 +174,17 @@ export function RatingElement({
             : state.error;
 
   return (
-    <FieldSet className="rounded-lg border p-4" aria-describedby={`${base}-about`}>
-      <FieldLegend className="text-lg font-semibold">{element.name}</FieldLegend>
-      <div id={`${base}-about`} className="flex flex-col gap-1 text-sm">
-        {element.description && <p>{element.description}</p>}
-        <p className="text-muted-foreground">
-          {dataType === null
-            ? m.rounds_rate_data_type_none()
-            : m.rounds_rate_data_type({ type: dataType })}
-        </p>
-      </div>
+    <FieldSet className="gap-3 rounded-lg border p-4" aria-describedby={`${base}-about`}>
+      <FieldLegend className="mb-0 text-base font-semibold">{element.name}</FieldLegend>
+      <p id={`${base}-about`} className="text-sm text-muted-foreground">
+        {element.description && <span className="text-foreground">{element.description} </span>}
+        {dataType === null
+          ? m.rounds_rate_data_type_none()
+          : m.rounds_rate_data_type({ type: dataType })}
+      </p>
       {element.previous && <PreviousRound element={{ ...element, previous: element.previous }} />}
       <div className="flex flex-col gap-2">
-        <p id={`${base}-scale`} className="text-sm font-medium">
+        <p id={`${base}-scale`} className="sr-only">
           {m.rounds_rate_scale_label({ min: rule.scaleMin, max: rule.scaleMax })}
         </p>
         <RadioGroup
@@ -187,21 +215,14 @@ export function RatingElement({
             </FieldLabel>
           </div>
         </RadioGroup>
-        <FieldDescription>
-          {m.rounds_rate_bands({
-            bottomFrom: rule.scaleMin,
-            bottomTo: rule.bottomBandMax,
-            topFrom: rule.topBandMin,
-            topTo: rule.scaleMax,
-          })}
-        </FieldDescription>
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1.5">
         <FieldLabel htmlFor={`${base}-reason`}>{m.rounds_rate_reason_label()}</FieldLabel>
         <Textarea
           id={`${base}-reason`}
           value={reason}
-          rows={2}
+          rows={1}
+          className="min-h-9"
           maxLength={RATING_REASON_MAX}
           disabled={!editable}
           aria-describedby={`${base}-reason-help`}

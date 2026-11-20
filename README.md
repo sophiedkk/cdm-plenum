@@ -5,7 +5,8 @@
 
 cdm-plenum guides a group of clinicians, information modellers and
 terminologists from the scope of a clinical concept to an agreed list of data
-elements, before anyone authors an openEHR archetype. The group collects
+elements: a common data model of the concept, before anyone writes it down
+in a standard such as an openEHR archetype or a FHIR profile. The group collects
 candidate elements on a shared board, checks them against existing archetypes
 in the openEHR Clinical Knowledge Manager (CKM), and rates them in e-Delphi
 rounds against a consensus rule fixed in advance. The agreed list goes to the

@@ -6,15 +6,24 @@ import { Kysely, PostgresDialect } from "kysely";
 import { NO_MIGRATIONS } from "kysely/migration";
 import pg from "pg";
 import { afterEach, describe, expect, it } from "vitest";
+import { ELEMENT_PROMPTS } from "@/lib/brainstorm";
 import { DATA_TYPES } from "@/lib/data-types";
 import { CHANGE_CLASSES } from "@/lib/panel";
 import { createAuth } from "../auth.ts";
+import { ELEMENT_SOURCE_KINDS } from "../elements/queries.ts";
 import { parseEnv } from "../env.ts";
-import { PANEL_MINIMUM_REASON_MAX as ROUNDS_REASON_MAX } from "../rounds/schemas.ts";
+import {
+  PROPOSAL_DESCRIPTION_MAX,
+  PROPOSAL_NAME_MAX,
+  PROPOSAL_RULE_MAX,
+  PANEL_MINIMUM_REASON_MAX as ROUNDS_REASON_MAX,
+} from "../rounds/schemas.ts";
 import { createMigrator } from "./index.ts";
 import { DATA_TYPE_KEYS } from "./migrations/0002_projects.ts";
 import { CHANGE_CLASS_KEYS } from "./migrations/0004_panel.ts";
 import { PANEL_MINIMUM_REASON_MAX } from "./migrations/0006_group_names_and_raters.ts";
+import { ELEMENT_PROMPT_KEYS } from "./migrations/0007_private_brainstorm.ts";
+import * as proposals from "./migrations/0008_round_proposals.ts";
 import { migrations } from "./migrations/index.ts";
 import { baseTestDatabaseUrl, createTestDb } from "./test-db.ts";
 import { createRunDatabase, dropRunDatabase } from "./test-run-database.ts";
@@ -69,11 +78,25 @@ describe("migrations", () => {
     expect([...DATA_TYPE_KEYS]).toEqual(DATA_TYPES.map((type) => type.key));
   });
 
+  it("allow exactly the brainstorm questions of src/lib/brainstorm.ts", () => {
+    expect([...ELEMENT_PROMPT_KEYS]).toEqual([...ELEMENT_PROMPTS]);
+  });
+
   it("allow exactly the change classes of src/lib/panel.ts", () => {
     expect([...CHANGE_CLASS_KEYS]).toEqual([...CHANGE_CLASSES]);
   });
 
   it("allow the DE13 reason length the round validator takes", () => {
     expect(PANEL_MINIMUM_REASON_MAX).toBe(ROUNDS_REASON_MAX);
+  });
+
+  it("allow the DE16 proposal lengths the round validators take", () => {
+    expect(proposals.PROPOSAL_RULE_MAX).toBe(PROPOSAL_RULE_MAX);
+    expect(proposals.PROPOSAL_NAME_MAX).toBe(PROPOSAL_NAME_MAX);
+    expect(proposals.PROPOSAL_DESCRIPTION_MAX).toBe(PROPOSAL_DESCRIPTION_MAX);
+  });
+
+  it("allow exactly the element source kinds the board knows", () => {
+    expect([...proposals.ELEMENT_SOURCE_KIND_KEYS]).toEqual([...ELEMENT_SOURCE_KINDS]);
   });
 });

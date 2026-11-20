@@ -46,8 +46,8 @@ earlier phases stay readable.
 | Phase | What happens | Requirements | Method and source |
 |---|---|---|---|
 | Scope | The facilitator writes the scope statement; participants comment; optionally the group consents to it. | SC1 to SC3 | Consent decision making, Sociocracy 3.0 |
-| Discover | Participants add candidate elements anonymously; the facilitator imports CSV files and CKM archetypes, links elements to CKM, merges duplicates. | EL1 to EL8 | Brainwriting (Diehl and Stroebe 1987, <https://doi.org/10.1037/0022-3514.53.3.497>); card sorting |
-| Decide | One or more e-Delphi rounds rate the elements on a fixed scale against a fixed rule; results per stakeholder group feed the next round. | DE1 to DE10 | e-Delphi; consensus definition from the COMET Handbook (<https://doi.org/10.1186/s13063-017-1978-4>) |
+| Discover | Participants and the facilitator collect sources; participants add candidate elements privately, guided by four questions, until the facilitator reveals the board; then they mark support and duplicates. Volunteers may sort the elements; the facilitator imports CSV files and CKM archetypes, links elements to CKM, merges duplicates and groups the list ([ADR 0012](adr/0012-discover-phase-sources-private-brainstorm-sort.md)). | EL1 to EL19 | Nominal group technique (Delbecq and Van de Ven 1971, <https://doi.org/10.1177/002188637100700404>); productivity loss in groups (Diehl and Stroebe 1987, <https://doi.org/10.1037/0022-3514.53.3.497>); long list from sources (COMET Handbook); open card sort (Reese et al. 2018, <https://doi.org/10.1093/jamia/ocy045>) |
+| Decide | One or more e-Delphi rounds rate the elements on a fixed scale against a fixed rule; results per stakeholder group feed the next round. | DE1 to DE16 | e-Delphi; consensus definition from the COMET Handbook (<https://doi.org/10.1186/s13063-017-1978-4>) |
 | Hand-off | Exports for the modellers and for the study report. | EX1 to EX5 | ACCORD reporting guideline (<https://doi.org/10.1371/journal.pmed.1004326>) |
 
 The first version (the Must rows) covers scope, the board with CSV import and
@@ -144,13 +144,14 @@ access goes through Kysely ([ADR 0002](adr/0002-stack-follows-edulims.md)).
 | Scope statement | `scope_statement`, `scope_source`, `scope_comment` | one statement per project; SC3 objections later |
 | Candidate element | `element` | name, description, data type (a key from the data type list, or none), cardinality as `min_occurs` and `max_occurs` (null for many), `merged_into` for merged duplicates, `author_member_id` (never sent to participants) |
 | Proposed value | `element_value` | ordered values of a coded, ordinal or scale element: text and optional number (EL9) |
-| Element source | `element_source` | kind (`brainstorm`, `csv`, `ckm`), label (the participant's optional note, the file name or the archetype ID); every element has at least one |
+| Element source | `element_source` | kind (`brainstorm`, `csv`, `ckm`, `delphi`), label (the participant's optional note, the file name, the archetype ID or the number of the round a proposal came from); every element has at least one |
 | CKM link | `element_ckm_link` | archetype ID, CKM `cid`, revision at linking time, at-code, element name as CKM showed it |
 | Comment | `element_comment` | author hidden as for elements (EL6) |
-| Round | `round` | number, scale minimum and maximum, the rule's percentages and score bands, opens and closes at, `facilitator_sees_raters`; when it opens: `panel_*` and `minimum_*` per expert type and `below_minimum_reason` (DE12), held by one CHECK: a draft has no snapshot, an open round all of it, a reason exactly when below the minimum |
+| Round | `round` | number, scale minimum and maximum, the rule's percentages and score bands, opens and closes at, `facilitator_sees_raters`, `proposal_rule` (round 1 only, DE16); when it opens: `panel_*` and `minimum_*` per expert type and `below_minimum_reason` (DE12), held by one CHECK: a draft has no snapshot, an open round all of it, a reason exactly when below the minimum |
 | Elements in a round | `round_element` | which elements are rated; the outcome is written when the round closes |
 | Rating pseudonym | `rating_code` | one random code per participant per project ([ADR 0005](adr/0005-rating-pseudonyms-and-anonymity.md)) |
 | Rating | `rating` | round, element, rating code, score or "unable to rate", optional reason, and `team_id`: the rater's stakeholder group when the rating was saved, so group results never read the code-to-member table (ADR 0005) |
+| Proposal | `round_proposal` | a missing element proposed in round 1 (DE16): name, description, the proposer's rating code as on a rating (ADR 0005), and the board element made from it |
 | Activity log | `activity_log` | time, actor, action, target id; never a score, an element text or a name (Q-PRIV-2) |
 
 The database holds the rules it can check itself, so no code path can skip
@@ -158,10 +159,12 @@ them (`src/server/db/migrations/0002_projects.ts`):
 
 - `CHECK` constraints on the data type key, the cardinality, the phase, the
   outcome and the round's scale and percentages.
-- A trigger refuses a change to a round's rule, closing date, rater setting or
-  panel snapshot once the round is open (DE2, DE12).
+- A trigger refuses a change to a round's rule, closing date, rater setting,
+  proposal rule or panel snapshot once the round is open (DE2, DE12, DE16).
 - A trigger accepts a rating only while its round is open, with a score inside
   the round's scale and a rating code of the round's project (DE3).
+- A trigger accepts a proposal only in round 1 while it is open, with a rating
+  code of the round's project (DE16).
 - Rating codes are random version 4 UUIDs; other ids are `uuidv7()`.
 
 ### Element data types
