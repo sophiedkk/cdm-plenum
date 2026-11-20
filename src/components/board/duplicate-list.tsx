@@ -30,7 +30,7 @@ export function DuplicateList({
   const [expanded, setExpanded] = useState(false);
   if (pairs.length === 0) return null;
   return (
-    <section aria-label={m.board_duplicates_title({ count: pairs.length })} className="mb-3">
+    <section aria-label={m.board_duplicates_title({ count: pairs.length })} className="mb-1">
       <Button
         type="button"
         variant="ghost"
