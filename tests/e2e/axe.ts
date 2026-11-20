@@ -21,3 +21,18 @@ export async function expectAxeClean(page: Page): Promise<void> {
   }));
   expect(summary, `axe violations on ${page.url()}`).toEqual([]);
 }
+
+/**
+ * Waits until every toast has finished its entry animation, then runs `expectAxeClean`: Sonner
+ * fades toasts in, and axe would otherwise measure the contrast of a half-faded toast.
+ */
+export async function expectAxeCleanAfterToasts(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page
+        .locator("[data-sonner-toast]")
+        .evaluateAll((toasts) => toasts.every((toast) => getComputedStyle(toast).opacity === "1")),
+    )
+    .toBe(true);
+  await expectAxeClean(page);
+}

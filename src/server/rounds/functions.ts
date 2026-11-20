@@ -8,6 +8,13 @@ import { getDb } from "../db/index.ts";
 import { requireSession } from "../middleware.ts";
 import { projectInput } from "../projects/schemas.ts";
 import {
+  addProposal,
+  addProposalToBoard,
+  deleteProposal,
+  myProposals,
+  roundProposals,
+} from "./proposals.ts";
+import {
   closeRound,
   createRound,
   getRound,
@@ -21,10 +28,12 @@ import {
 import { clearRating, myRatings, ratingsByParticipant, saveRating } from "./ratings.ts";
 import { responseRate, roundResults } from "./results.ts";
 import {
+  addProposalInput,
   changeClassInput,
   createRoundInput,
   openRoundInput,
   panelMinimumsInput,
+  proposalInput,
   ratingInput,
   roundInput,
   saveRatingInput,
@@ -107,3 +116,28 @@ export const ratingsByParticipantFn = createServerFn({ method: "GET" })
   .middleware([requireSession])
   .validator(roundInput)
   .handler(({ data, context }) => ratingsByParticipant(getDb(), context.userId, data));
+
+export const addProposalFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(addProposalInput)
+  .handler(({ data, context }) => addProposal(getDb(), context.userId, data));
+
+export const deleteProposalFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(proposalInput)
+  .handler(({ data, context }) => deleteProposal(getDb(), context.userId, data));
+
+export const myProposalsFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(roundInput)
+  .handler(({ data, context }) => myProposals(getDb(), context.userId, data));
+
+export const roundProposalsFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(roundInput)
+  .handler(({ data, context }) => roundProposals(getDb(), context.userId, data));
+
+export const addProposalToBoardFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(proposalInput)
+  .handler(({ data, context }) => addProposalToBoard(getDb(), context.userId, data));

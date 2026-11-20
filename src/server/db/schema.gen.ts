@@ -177,6 +177,7 @@ export interface Round {
   panel_clinical: number | null;
   panel_terminology: number | null;
   project_id: string;
+  proposal_rule: string | null;
   scale_max: Generated<number>;
   scale_min: Generated<number>;
   top_band_min: Generated<number>;
@@ -185,6 +186,16 @@ export interface Round {
 export interface RoundElement {
   element_id: string;
   outcome: string | null;
+  round_id: string;
+}
+
+export interface RoundProposal {
+  created_at: Generated<Timestamp>;
+  description: Generated<string>;
+  element_id: string | null;
+  id: Generated<string>;
+  name: string;
+  rating_code_id: string;
   round_id: string;
 }
 
@@ -281,6 +292,7 @@ export interface DB {
   rating_code: RatingCode;
   round: Round;
   round_element: RoundElement;
+  round_proposal: RoundProposal;
   scope_comment: ScopeComment;
   scope_source: ScopeSource;
   scope_statement: ScopeStatement;

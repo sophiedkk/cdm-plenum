@@ -7,6 +7,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { z } from "zod";
 import { projectTitle } from "@/components/projects/project-title";
+import { ProposeSection } from "@/components/rounds/proposals";
 import { RatingElement } from "@/components/rounds/rating-element";
 import { valueOrNotFound } from "@/components/rounds/result-value";
 import { LocalDateTime, RoundStatusBadge } from "@/components/rounds/round-badges";
@@ -16,14 +17,25 @@ import { m } from "@/i18n/messages";
 import { dataTypeByKey } from "@/lib/data-types";
 import { mayRate } from "@/lib/project-roles";
 import { projectQueryOptions } from "@/server/projects/query-options";
-import { clearRatingFn, saveRatingFn } from "@/server/rounds/functions";
-import { myRatingsQueryOptions, roundBoardQueryOptions } from "@/server/rounds/query-options";
+import {
+  addProposalFn,
+  clearRatingFn,
+  deleteProposalFn,
+  saveRatingFn,
+} from "@/server/rounds/functions";
+import {
+  myProposalsQueryOptions,
+  myRatingsQueryOptions,
+  roundBoardQueryOptions,
+  roundKeys,
+} from "@/server/rounds/query-options";
 import type { MyRatings, OwnRating } from "@/server/rounds/ratings";
 
 /**
  * The rating screen of an open round (DE3, DE4, DE7, DE8), for participants and for a
  * facilitator who joined a stakeholder group (DE14). A facilitator without a group sees the
- * elements read-only and where to join one.
+ * elements read-only and where to join one. Round 1 ends with the open question for missing
+ * elements (DE16).
  */
 export const Route = createFileRoute("/_authed/projects/$projectId/rounds/$roundId/rate")({
   loader: async ({ context, params }) => {
@@ -33,7 +45,11 @@ export const Route = createFileRoute("/_authed/projects/$projectId/rounds/$round
       queryClient.ensureQueryData(myRatingsQueryOptions(params.projectId, params.roundId)),
       queryClient.ensureQueryData(roundBoardQueryOptions(params.projectId)),
     ]);
-    return { number: valueOrNotFound(mine).round.number };
+    const { number } = valueOrNotFound(mine).round;
+    if (number === 1) {
+      await queryClient.ensureQueryData(myProposalsQueryOptions(params.projectId, params.roundId));
+    }
+    return { number };
   },
   head: ({ match, loaderData }) => ({
     meta: [
@@ -90,6 +106,7 @@ function RatePage() {
             {m.rounds_closes_at_short()} <LocalDateTime iso={round.closesAt} />
           </span>
         </p>
+        <p className="font-medium">{m.rounds_rate_question()}</p>
         <p className="text-sm text-muted-foreground">
           {m.rounds_rate_intro()}{" "}
           {m.rounds_rate_bands({
@@ -174,6 +191,7 @@ function RatePage() {
           );
         })}
       </div>
+      {round.number === 1 && <Proposals editable={editable} rule={round.proposalRule} />}
       <p className="text-sm text-muted-foreground">
         {m.rounds_rate_autosave()}{" "}
         <Link
@@ -185,5 +203,36 @@ function RatePage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+/** The rater's own proposals for missing elements and the form for a new one (DE16). */
+function Proposals({ editable, rule }: Readonly<{ editable: boolean; rule: string | null }>) {
+  const { projectId, roundId } = Route.useParams();
+  const { data } = useSuspenseQuery(myProposalsQueryOptions(projectId, roundId));
+  const proposals = valueOrNotFound(data);
+  const addProposal = useServerFn(addProposalFn);
+  const deleteProposal = useServerFn(deleteProposalFn);
+  const queryClient = useQueryClient();
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: roundKeys.myProposals(projectId, roundId) });
+  return (
+    <ProposeSection
+      rule={rule}
+      proposals={proposals}
+      editable={editable}
+      add={async (name, description) => {
+        const result = await addProposal({ data: { projectId, roundId, name, description } });
+        if (!result.ok) return result;
+        await refresh();
+        return { ok: true };
+      }}
+      remove={async (proposalId) => {
+        const result = await deleteProposal({ data: { projectId, roundId, proposalId } });
+        if (!result.ok) return result;
+        await refresh();
+        return { ok: true };
+      }}
+    />
   );
 }

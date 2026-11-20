@@ -52,6 +52,12 @@ Option 2.
 Author columns on elements and comments follow the same pattern: they are
 selected only in facilitator queries.
 
+A proposal for a missing element in round 1 (DE16) carries the rating code,
+as a rating does. The proposer sees their own proposals through the own-code
+lookup. The facilitator's list of proposals has no proposer; "ratings by
+participant" reads ratings and proposals as one union, so it stays one query
+and runs only when `facilitator_sees_raters` is true.
+
 ### Consequences
 
 - Good: the default path through the code cannot leak who rated what.

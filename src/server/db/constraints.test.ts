@@ -398,3 +398,148 @@ describe("rating_code", () => {
     expect(rows[0]?.version).toBe(4);
   });
 });
+
+describe("round proposals (DE16)", () => {
+  async function secondRound(projectId: string, opened = true) {
+    const row = await db
+      .insertInto("round")
+      .values({
+        project_id: projectId,
+        number: 2,
+        closes_at: new Date(Date.now() + 86_400_000),
+        ...(opened ? { opened_at: new Date(), ...FULL_PANEL } : {}),
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    return row.id;
+  }
+
+  it("lets the facilitator change the proposal rule before round 1 opens", async () => {
+    const r = await round(await project(), false);
+    await db
+      .updateTable("round")
+      .set({ proposal_rule: "Proposed by at least three participants" })
+      .where("id", "=", r)
+      .execute();
+  });
+
+  it("refuses a change to the proposal rule once the round is open (DE2)", async () => {
+    const r = await round(await project(), false);
+    await db
+      .updateTable("round")
+      .set({ proposal_rule: "Proposed by at least two participants" })
+      .where("id", "=", r)
+      .execute();
+    await db
+      .updateTable("round")
+      .set({ opened_at: new Date(), ...FULL_PANEL })
+      .where("id", "=", r)
+      .execute();
+    for (const proposal_rule of ["Proposed by one participant", null]) {
+      await expectRefused(
+        (trx) => trx.updateTable("round").set({ proposal_rule }).where("id", "=", r).execute(),
+        /round_rule_locked/,
+      );
+    }
+  });
+
+  it("refuses a proposal rule on a later round, a blank one and one that is too long", async () => {
+    const p = await project();
+    const r2 = await secondRound(p, false);
+    const r1 = await round(p, false);
+    await expectRefused(
+      (trx) =>
+        trx
+          .updateTable("round")
+          .set({ proposal_rule: "Proposed by at least two participants" })
+          .where("id", "=", r2)
+          .execute(),
+      /round_proposal_rule_check/,
+    );
+    for (const proposal_rule of ["  ", "x".repeat(501)]) {
+      await expectRefused(
+        (trx) => trx.updateTable("round").set({ proposal_rule }).where("id", "=", r1).execute(),
+        /round_proposal_rule_check/,
+      );
+    }
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("round")
+          .values({
+            project_id: p,
+            number: 3,
+            closes_at: new Date(Date.now() + 86_400_000),
+            proposal_rule: "Proposed by at least two participants",
+          })
+          .execute(),
+      /round_proposal_rule_check/,
+    );
+  });
+
+  it("takes a proposal in an open round 1 only, from a code of the round's project", async () => {
+    const p = await project();
+    const code = await member(p, "a");
+    const first = await round(p, false);
+    const later = await secondRound(p);
+    const values = (round_id: string, rating_code_id = code) => ({
+      round_id,
+      rating_code_id,
+      name: "Body position",
+    });
+    await expectRefused(
+      (trx) => trx.insertInto("round_proposal").values(values(first)).execute(),
+      /proposal_round_not_open/,
+    );
+    await expectRefused(
+      (trx) => trx.insertInto("round_proposal").values(values(later)).execute(),
+      /proposal_not_first_round/,
+    );
+    await db
+      .updateTable("round")
+      .set({ opened_at: new Date(), ...FULL_PANEL })
+      .where("id", "=", first)
+      .execute();
+    await db.insertInto("round_proposal").values(values(first)).execute();
+    const foreignCode = await member(await project("org-2"), "b");
+    await expectRefused(
+      (trx) => trx.insertInto("round_proposal").values(values(first, foreignCode)).execute(),
+      /proposal_code_wrong_project/,
+    );
+    await db.updateTable("round").set({ closed_at: new Date() }).where("id", "=", first).execute();
+    await expectRefused(
+      (trx) => trx.insertInto("round_proposal").values(values(first)).execute(),
+      /proposal_round_not_open/,
+    );
+  });
+
+  it("refuses a blank proposal name", async () => {
+    const p = await project();
+    const code = await member(p, "a");
+    const r = await round(p, true);
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("round_proposal")
+          .values({ round_id: r, rating_code_id: code, name: " " })
+          .execute(),
+      /round_proposal_name_check/,
+    );
+  });
+
+  it("allows a delphi source on an element and no unknown kind", async () => {
+    const e = await element(await project());
+    await db
+      .insertInto("element_source")
+      .values({ element_id: e, kind: "delphi", label: "1" })
+      .execute();
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("element_source")
+          .values({ element_id: e, kind: "survey", label: "1" })
+          .execute(),
+      /element_source_kind_check/,
+    );
+  });
+});

@@ -29,6 +29,17 @@ the project uses [Semantic Versioning](https://semver.org/).
 - After the reveal, the Brainstorm tab lists up to 5 elements with a similar
   name while you type, each with a link to the element on the board, so you
   can comment there instead of adding a duplicate.
+- Round 1 ends with an open question: "Is an element missing? Propose it".
+  You give a name and a one-line description, can propose several elements
+  and delete your own until the round closes. Other participants never see
+  your proposals. The facilitator sees them on the round page, with your
+  name only when the round lets the facilitator see who rated what.
+- When setting up round 1, the facilitator writes the rule for adding
+  proposed elements, prefilled with "Proposed by at least two
+  participants". Participants see the rule on the rating screen, and it
+  cannot change once the round is open.
+- On the round page the facilitator adds a proposal to the board with "Add
+  to the board". The new element shows the source "Round 1 proposal".
 
 ### Changed
 
@@ -40,6 +51,14 @@ the project uses [Semantic Versioning](https://semver.org/).
   comments and the facilitator's actions (Edit, Edit values, Link to CKM).
 - "Merge duplicates" and "Import CSV" moved into the "More actions" menu
   next to "Search CKM" on the element board.
+- The rating question now asks whether an element belongs in the data
+  model, for any use case in scope: the model holds every element that one of
+  those use cases needs, whichever standard implements it later. The scale
+  reads 1 to 3 "does not belong in the model", 4 to 6 "unsure" and 7 to 9
+  "belongs in the model". The scale and the consensus rule stay the same.
+- The outcomes of a round read "In the model", "Not in the model" and "No
+  consensus". An element that is not in the model stays on the board and in
+  the elements CSV.
 - The results of a round show one row per element: the outcome, the median,
   a small chart of the scores and the number of answers. "Details" opens
   every score, the share in each band and the result per stakeholder group.
