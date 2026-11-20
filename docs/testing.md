@@ -145,29 +145,33 @@ scripts/dev/compose.sh exec dev pnpm db:seed-demo --facilitator you@example.test
 Sign in at <http://localhost:3000/sign-in> and open the link from Mailpit at
 <http://localhost:8025>. Then work through these steps:
 
-1. **Scope, as facilitator:** open "Body temperature (demo)". The overview
-   shows the phase; the scope page shows the concept, use cases and three
-   comments. Move the project on to discover from the overview.
-2. **Discover:** open "Heart rate (demo)". Five participants have
-   brainstormed privately; the board shows their nine elements to you, with
-   "Heart rate" twice. Sign in as `nurse.c@example.test` in a private window:
-   the Brainstorm tab is empty for them and shows none of the others'
-   elements. Add one under each question, then reveal the board as
+1. **Scope, as facilitator:** open "Body temperature (demo)". It opens on
+   the Overview, with the checklist for the scope phase; the Scope tab shows
+   the concept, use cases and three comments. Move the project on to
+   discover with "Go on to Discover" at the end of the checklist.
+2. **Discover:** open "Heart rate (demo)". Five of eight participants have
+   brainstormed privately; the Overview counts them and offers "Send a
+   reminder", and the Elements tab shows you their nine elements, with
+   "Heart rate" twice. Sign in as `nurse.c@example.test` in a private
+   window: the project home asks them to add their elements and shows none
+   of the others'. Add one under each question, then reveal the board as
    facilitator and merge the duplicate.
-3. **Decide:** open "Blood pressure (demo)". On the board, look up a CKM
-   archetype (this calls the live CKM). Round 1 is closed: 5 elements in the
-   model, 1 not in the model and 2 without consensus. Round 2 is open.
-4. Open the members page. Eight participants sit in five stakeholder groups:
+3. **Decide:** open "Blood pressure (demo)". On the Elements tab, look up a
+   CKM archetype (this calls the live CKM). Round 1 is closed: 5 elements in
+   the model, 1 not in the model and 2 without consensus. Round 2 is open.
+4. Open the People tab. Eight participants sit in five stakeholder groups:
    Nursing, Primary care, General medicine, Terminology and Architecture.
    Invite a new address and open the invitation from Mailpit in a private
    window.
 5. **Hand-off:** open "Respiratory rate (demo)". Two rounds are closed;
    round 2 settled one of the two elements without consensus. Export the
-   elements as CSV and as a mind map.
+   elements as CSV and as a mind map from the Overview.
 6. **As participant,** sign in as `nurse.a@example.test` in a private window.
-   Each project's overview shows your task; rate the elements in round 2 of
-   Blood pressure. You should see no other participant's ratings, and no
-   names unless the facilitator turns that setting on.
+   The project list shows what waits per project. Open Blood pressure: its
+   home shows "Your turn: rate round 2" and what is decided so far. Rate the
+   two elements. You should see no other participant's ratings, and no
+   names unless the facilitator turns that setting on. "About this project"
+   at the bottom shows the groups and "Leave project".
 7. Switch the language to Dutch and repeat a few steps.
 
 To start over, drop the development database and run the commands again:
