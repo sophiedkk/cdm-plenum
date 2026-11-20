@@ -229,7 +229,8 @@ describe("overviewFacts (PR4)", () => {
       elements: 2,
       privateBrainstorm: false,
       duplicates: 1,
-      ckmLinked: 0,
+      importedModels: 0,
+      listedFromModels: 0,
       mailConfigured: true,
     });
     expect(personLeaks(facts, p)).toEqual([]);

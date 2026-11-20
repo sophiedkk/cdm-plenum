@@ -42,3 +42,13 @@ export type OtherSourceInput = z.infer<typeof otherSourceInput>;
 
 export const sourceModelInput = z.object({ projectId: idSchema, sourceModelId });
 export type SourceModelInput = z.infer<typeof sourceModelInput>;
+
+/** The most rows "Put on the list" takes at once; a model has a few hundred elements at most. */
+export const PUT_ON_LIST_MAX = 1000;
+
+/** The rows of the coverage table to put on the list, each by its first source element (EL20). */
+export const putOnListInput = z.object({
+  projectId: idSchema,
+  rowIds: z.array(sourceModelId).min(1).max(PUT_ON_LIST_MAX),
+});
+export type PutOnListInput = z.infer<typeof putOnListInput>;

@@ -19,6 +19,7 @@ export const PROJECT_STEPS = [
   "export",
   "members",
   "settings",
+  "models",
 ] as const;
 export type ProjectStep = (typeof PROJECT_STEPS)[number];
 
@@ -29,7 +30,8 @@ export type ProjectStep = (typeof PROJECT_STEPS)[number];
 export type StepAccess = "hidden" | "read" | "comment" | "add" | "rate";
 
 // NOTE: PR9, owner decision 2026-11-20. The board in discover takes comments; adding elements
-// there follows the brainstorm's `add`, so both forms open and close together.
+// there follows the brainstorm's `add`, so both forms open and close together. Existing models
+// (EL12, ADR 0020) are the facilitator's page; a participant suggests a model from the board.
 export const PARTICIPANT_ACCESS = {
   scope: {
     scope: "comment",
@@ -39,6 +41,7 @@ export const PARTICIPANT_ACCESS = {
     export: "hidden",
     members: "read",
     settings: "hidden",
+    models: "hidden",
   },
   discover: {
     scope: "read",
@@ -48,6 +51,7 @@ export const PARTICIPANT_ACCESS = {
     export: "hidden",
     members: "read",
     settings: "hidden",
+    models: "hidden",
   },
   decide: {
     scope: "read",
@@ -57,6 +61,7 @@ export const PARTICIPANT_ACCESS = {
     export: "hidden",
     members: "read",
     settings: "hidden",
+    models: "hidden",
   },
   handoff: {
     scope: "read",
@@ -66,6 +71,7 @@ export const PARTICIPANT_ACCESS = {
     export: "hidden",
     members: "read",
     settings: "hidden",
+    models: "hidden",
   },
 } as const satisfies Record<ProjectPhase, Record<ProjectStep, StepAccess>>;
 

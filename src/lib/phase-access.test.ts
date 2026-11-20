@@ -29,12 +29,12 @@ describe("the phase table (PR9)", () => {
       phase,
       PROJECT_STEPS.map((step) => participantAccess(phase, step)),
     ]);
-    // Steps in order: scope, brainstorm, board, rounds, export, members, settings.
+    // Steps in order: scope, brainstorm, board, rounds, export, members, settings, models.
     expect(table).toEqual([
-      ["scope", ["comment", "hidden", "hidden", "hidden", "hidden", "read", "hidden"]],
-      ["discover", ["read", "add", "comment", "hidden", "hidden", "read", "hidden"]],
-      ["decide", ["read", "hidden", "read", "rate", "hidden", "read", "hidden"]],
-      ["handoff", ["read", "hidden", "read", "read", "hidden", "read", "hidden"]],
+      ["scope", ["comment", "hidden", "hidden", "hidden", "hidden", "read", "hidden", "hidden"]],
+      ["discover", ["read", "add", "comment", "hidden", "hidden", "read", "hidden", "hidden"]],
+      ["decide", ["read", "hidden", "read", "rate", "hidden", "read", "hidden", "hidden"]],
+      ["handoff", ["read", "hidden", "read", "read", "hidden", "read", "hidden", "hidden"]],
     ]);
   });
 
@@ -50,6 +50,12 @@ describe("the phase table (PR9)", () => {
     for (const phase of PROJECT_PHASES) {
       expect(stepVisible("participant", phase, "export")).toBe(false);
       expect(stepVisible("participant", phase, "settings")).toBe(false);
+    }
+  });
+
+  it("keeps the existing models page from a participant in every phase (EL12)", () => {
+    for (const phase of PROJECT_PHASES) {
+      expect(stepVisible("participant", phase, "models")).toBe(false);
     }
   });
 

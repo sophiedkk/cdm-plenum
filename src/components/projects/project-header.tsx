@@ -63,6 +63,7 @@ type TabKey = (typeof TABS)[number]["key"];
 /** The pages that sit under a tab without a tab of their own. */
 const UNDER = [
   { to: "/projects/$projectId/export", tab: "overview" },
+  { to: "/projects/$projectId/models", tab: "overview" },
   { to: "/projects/$projectId/brainstorm", tab: "elements" },
   { to: "/projects/$projectId/board/import", tab: "elements" },
 ] as const satisfies readonly { to: string; tab: TabKey }[];

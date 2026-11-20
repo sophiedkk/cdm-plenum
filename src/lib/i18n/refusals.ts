@@ -106,6 +106,7 @@ export const REFUSAL_MESSAGE_KEYS = {
   source_not_suggested: "common_refusal_source_not_suggested",
   source_no_elements: "common_refusal_source_no_elements",
   source_after_discover: "common_refusal_source_after_discover",
+  source_row_not_found: "common_refusal_source_row_not_found",
   account_not_found: "common_refusal_account_not_found",
   own_account: "common_refusal_own_account",
   unauthenticated: "common_refusal_unauthenticated",

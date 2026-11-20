@@ -26,7 +26,8 @@ function facts(changes: Partial<OverviewFacts> = {}): OverviewFacts {
     privateBrainstorm: true,
     boardRevealed: true,
     duplicates: 0,
-    ckmLinked: 2,
+    importedModels: 2,
+    listedFromModels: 14,
     round: null,
     undecided: 0,
     lastClosedRound: { id: "round-1", number: 1 },
@@ -83,20 +84,33 @@ describe("checklist (PR4)", () => {
     });
   });
 
-  it("asks for the reveal only when the brainstorm starts private (EL13)", () => {
-    const keys = (changes: Partial<OverviewFacts>) =>
-      checklist("discover", facts(changes)).map((item) => item.key);
-    expect(keys({})).toEqual(["contributions", "reveal", "duplicates", "compare"]);
-    expect(keys({ privateBrainstorm: false })).toEqual(["contributions", "duplicates", "compare"]);
-    expect(
-      checklist("discover", facts({ boardRevealed: false })).find((item) => item.key === "reveal"),
-    ).toEqual({ key: "reveal", done: false });
+  it("lists discover in the parts of ADR 0020", () => {
+    expect(checklist("discover", facts()).map((item) => item.key)).toEqual([
+      "models",
+      "contributions",
+      "cleanup",
+    ]);
   });
 
-  it("marks duplicates and the comparison done by their counts", () => {
-    const items = checklist("discover", facts({ duplicates: 2, ckmLinked: 0 }));
-    expect(items).toContainEqual({ key: "duplicates", done: false, count: 2 });
-    expect(items).toContainEqual({ key: "compare", done: false, linked: 0 });
+  it("asks for the reveal only when the brainstorm starts private (EL13)", () => {
+    const cleanup = (changes: Partial<OverviewFacts>) =>
+      checklist("discover", facts(changes)).find((item) => item.key === "cleanup");
+    expect(cleanup({ boardRevealed: false })).toEqual({
+      key: "cleanup",
+      done: false,
+      revealed: false,
+      duplicates: 0,
+    });
+    expect(cleanup({ privateBrainstorm: false, boardRevealed: false })).toMatchObject({
+      done: true,
+      revealed: null,
+    });
+  });
+
+  it("marks the models and the duplicates done by their counts", () => {
+    const items = checklist("discover", facts({ duplicates: 2, importedModels: 0 }));
+    expect(items).toContainEqual({ key: "models", done: false, models: 0, elements: 14 });
+    expect(items).toContainEqual({ key: "cleanup", done: false, revealed: true, duplicates: 2 });
   });
 
   it("follows the round and the undecided elements in the decide phase", () => {
@@ -146,7 +160,7 @@ describe("waitingFor (PR8)", () => {
 
   it("counts the facilitator's open items before the next phase, or says they are ready", () => {
     const facilitator = overview({ role: "facilitator", phase: "discover" });
-    expect(waitingFor(facilitator, facts({ boardRevealed: false, duplicates: 1 }))).toEqual({
+    expect(waitingFor(facilitator, facts({ boardRevealed: false, importedModels: 0 }))).toEqual({
       kind: "checklist",
       open: 2,
       next: "decide",

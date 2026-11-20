@@ -82,8 +82,10 @@ export interface OverviewFacts {
   boardRevealed: boolean;
   /** Pairs of elements members marked as the same (EL16). */
   duplicates: number;
-  /** Elements linked to an archetype in openEHR CKM (EX2). */
-  ckmLinked: number;
+  /** Existing models with elements on the list (EL12, ADR 0020). */
+  importedModels: number;
+  /** Elements on the list that came from existing models, merged ones left out (EL7). */
+  listedFromModels: number;
   round: ChecklistRound | null;
   /** Elements without a decision: no consensus in their newest closed round, or not rated. */
   undecided: number;
@@ -107,9 +109,14 @@ export type ChecklistItem =
       participants: number;
       remind: boolean;
     }
-  | { key: "reveal"; done: boolean }
-  | { key: "duplicates"; done: boolean; count: number }
-  | { key: "compare"; done: boolean; linked: number }
+  | { key: "models"; done: boolean; models: number; elements: number }
+  | {
+      key: "cleanup";
+      done: boolean;
+      /** Whether the board is revealed; null when the brainstorm was never private (EL13). */
+      revealed: boolean | null;
+      duplicates: number;
+    }
   | { key: "round"; done: false; round: ChecklistRound | null; closed: ClosedRound | null }
   | { key: "undecided"; done: boolean; count: number };
 
@@ -123,8 +130,18 @@ export function checklist(phase: ProjectPhase, facts: OverviewFacts): ChecklistI
         { key: "scope_comments", done: null, count: facts.scopeComments },
       ];
     case "discover": {
+      // NOTE: ADR 0020. Discover in parts: existing models, what is missing, reveal and clean
+      // up; each item opens the page where it is done.
       const everyone = facts.participants > 0 && facts.contributors >= facts.participants;
-      const items: ChecklistItem[] = [
+      // A board shared from the start needs no reveal (EL13).
+      const revealed = facts.privateBrainstorm ? facts.boardRevealed : null;
+      return [
+        {
+          key: "models",
+          done: facts.importedModels > 0,
+          models: facts.importedModels,
+          elements: facts.listedFromModels,
+        },
         {
           key: "contributions",
           done: everyone,
@@ -132,14 +149,13 @@ export function checklist(phase: ProjectPhase, facts: OverviewFacts): ChecklistI
           participants: facts.participants,
           remind: !everyone && facts.participants > 0 && facts.mailConfigured,
         },
+        {
+          key: "cleanup",
+          done: revealed !== false && facts.duplicates === 0,
+          revealed,
+          duplicates: facts.duplicates,
+        },
       ];
-      // A board shared from the start needs no reveal (EL13).
-      if (facts.privateBrainstorm) items.push({ key: "reveal", done: facts.boardRevealed });
-      items.push(
-        { key: "duplicates", done: facts.duplicates === 0, count: facts.duplicates },
-        { key: "compare", done: facts.ckmLinked > 0, linked: facts.ckmLinked },
-      );
-      return items;
     }
     case "decide": {
       const items: ChecklistItem[] = [];

@@ -9,7 +9,21 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Existing models: the facilitator adds openEHR archetypes from CKM, FHIR
+  profiles from a package, and other sources such as a form, then compares
+  them in one table with a column per model. Check the elements you want and
+  choose "Put on the list"; each becomes one element linked to every model
+  that has it. Participants' suggested sources wait on the same page to be
+  accepted or dismissed. The Overview's first discover item opens the page.
+
 ### Changed
+
+- The facilitator's discover checklist follows the parts of the phase:
+  start from existing models, add what is missing, then reveal and clean up.
+  The item that linked to the CKM search is gone; the existing models page
+  replaces it.
 
 - Every page, from the projects list to each page of a project and the
   administration, uses one column of the same width with the same left edge.

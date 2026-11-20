@@ -210,10 +210,18 @@ async function factsOf(
       .where("element.project_id", "=", project.id)
       .executeTakeFirst(),
   );
-  const ckmLinked = await count(
+  const importedModels = await count(
     db
-      .selectFrom("element_ckm_link")
-      .innerJoin("element", "element.id", "element_ckm_link.element_id")
+      .selectFrom("source_model")
+      .select((eb) => eb.fn.countAll<string>().as("count"))
+      .where("project_id", "=", project.id)
+      .where("status", "=", "imported")
+      .executeTakeFirst(),
+  );
+  const listedFromModels = await count(
+    db
+      .selectFrom("element_source_link")
+      .innerJoin("element", "element.id", "element_source_link.element_id")
       .select((eb) => eb.fn.count<string>("element.id").distinct().as("count"))
       .where("element.project_id", "=", project.id)
       .where("element.merged_into", "is", null)
@@ -231,7 +239,8 @@ async function factsOf(
     privateBrainstorm: row.private_brainstorm,
     boardRevealed: row.board_revealed_at !== null,
     duplicates: marks.ok ? marks.value.duplicates.length : 0,
-    ckmLinked,
+    importedModels,
+    listedFromModels,
     round: await followedRound(db, project.id, deps.now),
     undecided: elements.filter(
       (element) => element.status === "no_consensus" || element.status === "not_rated",

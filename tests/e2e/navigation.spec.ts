@@ -20,6 +20,7 @@ import {
   BROWSER_LOCALE,
   expect,
   expectAxeClean,
+  expectAxeCleanAfterToasts,
   expectAxeCleanInBothThemes,
   expectHydrated,
   type Locale,
@@ -344,7 +345,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await reveal.click();
       await page.getByRole("button", { name: text.board_reveal_confirm }).click();
       await expect(page.getByText(text.board_revealed)).toBeVisible();
-      await expect(page.getByText(text.projects_check_revealed, { exact: true })).toBeVisible();
+      await expect(page.getByText(text.projects_check_duplicates_none)).toBeVisible();
       await expect(page.getByRole("button", { name: text.board_reveal })).toHaveCount(0);
 
       // On to decide, through the confirmation below the buttons.
@@ -359,7 +360,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         ),
       ).toBeFocused();
       expect(await goOn.boundingBox()).toEqual(before);
-      await expectAxeClean(page);
+      await expectAxeCleanAfterToasts(page);
       await page
         .getByRole("button", {
           name: fill(text.projects_phase_confirm, { phase: text.projects_phase_decide }),

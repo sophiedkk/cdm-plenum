@@ -17,6 +17,7 @@ import {
   importSourceModel,
   listSourceModels,
   listSourceModelsWithAuthors,
+  putOnList,
   sourceCoverage,
   suggestSource,
 } from "./queries.ts";
@@ -25,6 +26,7 @@ import {
   addFhirSourceInput,
   otherSourceInput,
   projectInput,
+  putOnListInput,
   sourceModelInput,
 } from "./schemas.ts";
 
@@ -77,3 +79,8 @@ export const importSourceModelFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(sourceModelInput)
   .handler(({ data, context }) => importSourceModel(getDb(), context.userId, data));
+
+export const putOnListFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(putOnListInput)
+  .handler(({ data, context }) => putOnList(getDb(), context.userId, data));

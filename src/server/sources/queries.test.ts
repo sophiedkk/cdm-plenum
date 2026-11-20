@@ -33,6 +33,7 @@ import {
   importSourceModel,
   listSourceModels,
   listSourceModelsWithAuthors,
+  putOnList,
   sourceCoverage,
   suggestSource,
 } from "./queries.ts";
@@ -801,5 +802,117 @@ describe("dataTypeForSource", () => {
     expect(dataTypeForSource("fhir", "dateTime | Period")).toBeNull();
     expect(dataTypeForSource("fhir", "BackboneElement")).toBeNull();
     expect(dataTypeForSource("ckm", null)).toBeNull();
+  });
+});
+
+describe("putOnList (EL7, EL20, ADR 0020)", () => {
+  async function table(projectId: string, userId: string) {
+    const coverage = await sourceCoverage(db, userId, { projectId });
+    if (!coverage.ok) throw new Error(coverage.error);
+    return coverage.value;
+  }
+
+  it("puts a chosen row on the list as one element linked to every model that has it", async () => {
+    const { projectId, facilitator } = await projectWithMembers(db, "discover");
+    const profile = await addProfile(projectId, facilitator);
+    const model = await addProfile(projectId, facilitator, MODEL);
+    const before = await table(projectId, facilitator);
+    const systolic = before.rows.find((row) => row.key === "http://loinc.org|8480-6");
+    if (!systolic) throw new Error("no systolic row");
+    expect(systolic.onList).toBe(false);
+
+    const listed = await putOnList(db, facilitator, { projectId, rowIds: [systolic.id] });
+    if (!listed.ok) throw new Error(listed.error);
+    expect(listed.value.createdElementIds).toHaveLength(1);
+    const elementId = listed.value.createdElementIds[0] ?? "";
+    const element = await db
+      .selectFrom("element")
+      .select(["name", "prompt"])
+      .where("id", "=", elementId)
+      .executeTakeFirstOrThrow();
+    // A FHIR element starts under what is recorded (EL18).
+    expect(element.prompt).toBe("recorded");
+    const links = await db
+      .selectFrom("element_source_link")
+      .select("source_element_id")
+      .where("element_id", "=", elementId)
+      .execute();
+    expect(links).toHaveLength(2);
+    const sources = await db
+      .selectFrom("element_source")
+      .select("kind")
+      .where("element_id", "=", elementId)
+      .execute();
+    expect(sources).toHaveLength(2);
+    const after = await table(projectId, facilitator);
+    expect(after.rows.find((row) => row.id === systolic.id)?.onList).toBe(true);
+    expect(after.models.map((m) => m.status)).toEqual(["imported", "imported"]);
+    expect(after.models.map((m) => m.id)).toEqual([profile, model]);
+
+    // A row already on the list is left as it is.
+    const again = await putOnList(db, facilitator, { projectId, rowIds: [systolic.id] });
+    expect(again).toEqual({ ok: true, value: { createdElementIds: [] } });
+  });
+
+  it("places an openEHR element by its part of the archetype (EL18)", async () => {
+    const { projectId, facilitator } = await projectWithMembers(db, "discover");
+    const added = await addCkmSource(db, ckm, facilitator, { projectId, cid: CID });
+    if (!added.ok) throw new Error(added.error);
+    const coverage = await table(projectId, facilitator);
+    const listed = await putOnList(db, facilitator, {
+      projectId,
+      rowIds: coverage.rows.map((row) => row.id),
+    });
+    if (!listed.ok) throw new Error(listed.error);
+    const prompts = await db
+      .selectFrom("element")
+      .select(["name", "prompt"])
+      .where("project_id", "=", projectId)
+      .execute();
+    const promptOf = new Map(prompts.map((row) => [row.name, row.prompt]));
+    expect(promptOf.get("Systolic")).toBe("recorded");
+    expect(promptOf.get("Position")).toBe("patient_state");
+    expect(promptOf.get("Cuff size")).toBe("method");
+    const ckmLinks = await db
+      .selectFrom("element_ckm_link")
+      .innerJoin("element", "element.id", "element_ckm_link.element_id")
+      .select("element_ckm_link.archetype_id")
+      .where("element.project_id", "=", projectId)
+      .execute();
+    expect(ckmLinks).toHaveLength(listed.value.createdElementIds.length);
+  });
+
+  it("refuses a row that is not in the table", async () => {
+    const { projectId, facilitator } = await projectWithMembers(db, "discover");
+    await addProfile(projectId, facilitator);
+    expect(
+      await putOnList(db, facilitator, {
+        projectId,
+        rowIds: ["0190a6b1-0000-7000-8000-000000000000"],
+      }),
+    ).toEqual({ ok: false, error: "source_row_not_found" });
+  });
+
+  it("refuses a participant, an outsider and the facilitator after discover", async () => {
+    const { projectId, facilitator, participant, outsider } = await projectWithMembers(
+      db,
+      "discover",
+    );
+    await addProfile(projectId, facilitator);
+    const rowIds = (await table(projectId, facilitator)).rows.map((row) => row.id);
+    expect(await putOnList(db, participant, { projectId, rowIds })).toEqual({
+      ok: false,
+      error: "forbidden",
+    });
+    expect(await putOnList(db, outsider, { projectId, rowIds })).toEqual({
+      ok: false,
+      error: "not_found",
+    });
+    await setPhase(db, projectId, "decide");
+    expect(await putOnList(db, facilitator, { projectId, rowIds })).toEqual({
+      ok: false,
+      error: "source_after_discover",
+    });
+    expect(await db.selectFrom("element").selectAll().execute()).toEqual([]);
   });
 });
