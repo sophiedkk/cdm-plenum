@@ -93,14 +93,17 @@ export function MergeForm({
   merge,
   onMerged,
   actions,
+  initial,
 }: Readonly<{
   candidates: readonly MergeCandidate[];
   merge: (intoId: string, fromIds: string[]) => Promise<MergeOutcome>;
   onMerged: (into: MergeCandidate) => Promise<void> | void;
   actions?: ReactNode;
+  /** The choice to start from, such as a pair of possible duplicates (EL16). */
+  initial?: { intoId: string; fromIds: string[] } | undefined;
 }>) {
   const form = useAppForm({
-    defaultValues: { intoId: "", fromIds: [] as string[] },
+    defaultValues: initial ?? { intoId: "", fromIds: [] as string[] },
     validationLogic: revalidateLogic(),
     validators: { onDynamic: mergeSchema() },
     onSubmit: async ({ value, formApi }) => {

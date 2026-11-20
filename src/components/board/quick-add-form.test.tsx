@@ -129,3 +129,58 @@ describe("QuickAddForm", () => {
     expect(screen.queryByRole("list", { name: "Similar elements" })).toBeNull();
   });
 });
+
+describe("QuickAddForm, same as a hint (EL16)", () => {
+  function renderWithMark(markSame: (element: HintElement) => Promise<Outcome<unknown>>) {
+    const submit = vi.fn(async () => ({ ok: true, value: null }) as const);
+    const onAdded = vi.fn();
+    const onMarkedSame = vi.fn();
+    render(
+      <QuickAddForm
+        question="What do you record or measure?"
+        hintSource={BOARD}
+        hintLink={(element) => <a href={`#${element.id}`}>{element.name}</a>}
+        submit={submit}
+        onAdded={onAdded}
+        markSame={markSame}
+        onMarkedSame={onMarkedSame}
+      />,
+    );
+    const form = screen.getByRole("form", { name: "What do you record or measure?" });
+    const name = within(form).getByLabelText("Element name") as HTMLInputElement;
+    fireEvent.change(name, { target: { value: "systolic" } });
+    return { submit, onAdded, onMarkedSame, form, name };
+  }
+
+  it("says what the action does and supports the hinted element instead of adding", async () => {
+    const markSame = vi.fn(async () => ({ ok: true, value: null }) as const);
+    const { submit, onAdded, onMarkedSame, name } = renderWithMark(markSame);
+    expect(screen.getByRole("status").textContent).toContain(
+      'Or choose "Same as this": you support that element, and what you typed is not added.',
+    );
+    const list = screen.getByRole("list", { name: "Similar elements" });
+    fireEvent.click(within(list).getByRole("button", { name: "Same as this: Systolic pressure" }));
+    await waitFor(() => expect(onMarkedSame).toHaveBeenCalledWith(BOARD[0]));
+    expect(markSame).toHaveBeenCalledWith(BOARD[0]);
+    expect(submit).not.toHaveBeenCalled();
+    expect(onAdded).not.toHaveBeenCalled();
+    expect(name.value).toBe("");
+  });
+
+  it("shows a refused mark at the top of the form and keeps the text", async () => {
+    const markSame = vi.fn(async () => ({ ok: false, error: "phase_closed" }) as const);
+    const { onMarkedSame, form, name } = renderWithMark(markSame);
+    fireEvent.click(screen.getByRole("button", { name: "Same as this: Systolic pressure" }));
+    expect(await within(form).findByRole("alert")).toBeTruthy();
+    expect(form.textContent).toContain("This step is closed in the current phase.");
+    expect(name.value).toBe("systolic");
+    expect(onMarkedSame).not.toHaveBeenCalled();
+  });
+
+  it("offers no action when marks are closed", () => {
+    const { name } = renderForm({ hintSource: BOARD });
+    fireEvent.change(name, { target: { value: "systolic" } });
+    expect(screen.queryByRole("button", { name: /Same as this/ })).toBeNull();
+    expect(screen.getByRole("status").textContent).toContain("instead of adding a duplicate");
+  });
+});
