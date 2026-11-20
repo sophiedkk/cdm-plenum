@@ -163,7 +163,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await rateNow.click();
       await expect(rater.getByText(text.rounds_rate_hidden_title)).toBeVisible();
       await axeClean(rater);
-      const systolic = rater.getByRole("group", { name: "Systolic pressure" });
+      // One element per card (DE18): the first card is Systolic pressure.
+      const systolic = rater.getByRole("region", { name: "Systolic pressure" });
       const lowest = systolic.getByRole("radio", {
         name: fill(text.rounds_rate_score_lowest, { score: 1 }),
       });
@@ -176,12 +177,17 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         await expect(systolic.getByRole("radio", { name: String(score) })).toBeChecked();
         await rater.keyboard.up("ArrowRight");
       }
-      await expect(systolic.getByRole("status")).toHaveText(text.rounds_rate_saved);
-      const cuff = rater.getByRole("group", { name: "Cuff size" });
+      await expect(systolic.getByRole("status").first()).toHaveText(text.rounds_rate_saved);
+      // "Next" moves to the next card and puts focus on its heading.
+      const next = rater.getByRole("link", { name: text.rounds_card_next });
+      await tabTo(rater, next, 30);
+      await rater.keyboard.press("Enter");
+      const cuff = rater.getByRole("region", { name: "Cuff size" });
+      await expect(cuff.getByRole("heading", { name: "Cuff size" })).toBeFocused();
       await cuff
         .getByRole("radio", { name: fill(text.rounds_rate_score_highest, { score: 9 }) })
         .click();
-      await expect(cuff.getByRole("status")).toHaveText(text.rounds_rate_saved);
+      await expect(cuff.getByRole("status").first()).toHaveText(text.rounds_rate_saved);
       await expect(
         rater.getByText(fill(text.rounds_rate_progress, { rated: 2, total: 2 })),
       ).toBeVisible();
@@ -190,14 +196,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       // The second participant cannot rate one element.
       const other = await pageFor(browser, locale, second);
       await other.goto(`${rounds}/${roundId}/rate`);
-      const otherSystolic = other.getByRole("group", { name: "Systolic pressure" });
+      const otherSystolic = other.getByRole("region", { name: "Systolic pressure" });
       const unable = otherSystolic.getByRole("radio", { name: text.rounds_rate_unable });
       await expectHydrated(unable);
       await unable.click();
-      await expect(otherSystolic.getByRole("status")).toHaveText(text.rounds_rate_saved);
-      const otherCuff = other.getByRole("group", { name: "Cuff size" });
+      await expect(otherSystolic.getByRole("status").first()).toHaveText(text.rounds_rate_saved);
+      await other.getByRole("link", { name: text.rounds_card_next }).click();
+      const otherCuff = other.getByRole("region", { name: "Cuff size" });
       await otherCuff.getByRole("radio", { name: "2" }).click();
-      await expect(otherCuff.getByRole("status")).toHaveText(text.rounds_rate_saved);
+      await expect(otherCuff.getByRole("status").first()).toHaveText(text.rounds_rate_saved);
 
       // The facilitator sees the response, then closes the round after its date.
       await page.reload();
@@ -283,13 +290,13 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expectHydrated(link);
       await link.click();
       await expect(page.getByText(text.rounds_rate_hidden_title)).toBeVisible();
-      const heartRate = page.getByRole("group", { name: "Heart rate" });
+      const heartRate = page.getByRole("region", { name: "Heart rate" });
       const highest = heartRate.getByRole("radio", {
         name: fill(text.rounds_rate_score_highest, { score: 9 }),
       });
       await expectHydrated(highest);
       await highest.click();
-      await expect(heartRate.getByRole("status")).toHaveText(text.rounds_rate_saved);
+      await expect(heartRate.getByRole("status").first()).toHaveText(text.rounds_rate_saved);
       await expect(
         page.getByText(fill(text.rounds_rate_progress, { rated: 1, total: 1 })),
       ).toBeVisible();
