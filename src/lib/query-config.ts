@@ -22,6 +22,11 @@ export const STALE_TIME = {
   admin: 0,
   /** Rounds, ratings and results: participants rate while the facilitator watches the response. */
   rounds: 10_000,
+  /**
+   * The project overview: always revalidated, since its counts change on the board and rating
+   * pages, whose mutations do not invalidate it.
+   */
+  overview: 0,
 } as const;
 
 /** The `staleTime` of a query that sets none. */

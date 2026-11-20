@@ -40,6 +40,15 @@ the project uses [Semantic Versioning](https://semver.org/).
   cannot change once the round is open.
 - On the round page the facilitator adds a proposal to the board with "Add
   to the board". The new element shows the source "Round 1 proposal".
+- A project now opens on an overview. It shows the four phases as steps,
+  with the current one marked "now". As a participant you see one task for
+  the current phase, such as "Rate round 2" with "12 of 40 rated" and the
+  closing date in your time zone, and one button that takes you there. When
+  there is nothing to do, the overview says so.
+- As a facilitator you move the project to the next or the previous phase
+  from the overview, after a confirmation. The overview also shows the
+  number of elements on the board, or how many raters completed the open
+  round.
 
 ### Changed
 
@@ -74,6 +83,8 @@ the project uses [Semantic Versioning](https://semver.org/).
   The full setup and the panel at opening are under "Setup of this round".
   The facilitator sees the response as one line, with the table per
   stakeholder group under a disclosure.
+- The demo project of `pnpm db:seed-demo` is now in the decide phase, since
+  its second round is open.
 
 ## [0.1.0] - 2026-11-19
 

@@ -5,7 +5,13 @@
 // factory, never the whole cache.
 import { queryOptions } from "@tanstack/react-query";
 import { STALE_TIME } from "@/lib/query-config";
-import { getProjectFn, listGroupMembersFn, listGroupsFn, listProjectsFn } from "./functions.ts";
+import {
+  getProjectFn,
+  listGroupMembersFn,
+  listGroupsFn,
+  listProjectsFn,
+  projectOverviewFn,
+} from "./functions.ts";
 
 export const projectKeys = {
   all: ["projects"] as const,
@@ -15,7 +21,17 @@ export const projectKeys = {
   groups: (projectId: string) => [...projectKeys.detail(projectId), "groups"] as const,
   groupCounts: (projectId: string) => [...projectKeys.groups(projectId), "counts"] as const,
   groupMembers: (projectId: string) => [...projectKeys.groups(projectId), "members"] as const,
+  overview: (projectId: string) => [...projectKeys.detail(projectId), "overview"] as const,
 };
+
+/** The phase, the user's own task counts and, for the facilitator, the status (PR4, PR8). */
+export function projectOverviewQueryOptions(projectId: string) {
+  return queryOptions({
+    queryKey: projectKeys.overview(projectId),
+    queryFn: () => projectOverviewFn({ data: { projectId } }),
+    staleTime: STALE_TIME.overview,
+  });
+}
 
 /** The stakeholder groups with the number of participants, for any member (PR6). */
 export function groupsQueryOptions(projectId: string) {

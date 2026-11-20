@@ -37,6 +37,9 @@ export const PROJECT_ACTION_ERRORS = [
   "rater_group_locked",
   "board_already_revealed",
   "merge_before_reveal",
+  "phase_changed",
+  "no_next_phase",
+  "no_previous_phase",
 ] as const;
 export type ProjectActionError = (typeof PROJECT_ACTION_ERRORS)[number];
 

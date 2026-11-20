@@ -132,6 +132,11 @@ page from these patterns; each has a real use and a test you can copy.
   shows its text; colour and icon only add to it (Q-ACC-2). Example:
   `PhaseBadge` and `RoleBadge` in `src/components/projects/project-badges.tsx`,
   with labels from `src/lib/i18n/labels.ts`.
+- **Project overview:** a project opens on `/projects/$projectId/`
+  (`src/components/projects/project-overview.tsx`), whose task and status
+  come from `src/lib/project-tasks.ts`. A new phase task goes there with a
+  test. The overview query is always revalidated (`STALE_TIME.overview`),
+  so a board or rating mutation need not invalidate it.
 - **Route states:** `src/components/shell/route-states.tsx` has
   `PageSkeleton` (the router's default pending state), `EmptyState`,
   `RouteErrorState` (the default error state, with a retry) and

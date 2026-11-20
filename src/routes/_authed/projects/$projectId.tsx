@@ -40,6 +40,7 @@ function ProjectLayout() {
   if (!data.ok) return <NotFoundState title={m.projects_not_found_title()} />;
   const project = data.value;
   const tabs = [
+    { to: "/projects/$projectId", label: m.projects_tab_overview() },
     { to: "/projects/$projectId/scope", label: m.projects_tab_scope() },
     // The brainstorm belongs before the Delphi; the page itself stays reachable in any phase.
     ...(BRAINSTORM_PHASES.includes(project.phase)
@@ -76,7 +77,13 @@ function ProjectLayout() {
         <ul className="flex flex-wrap">
           {tabs.map((tab) => (
             <li key={tab.to}>
-              <Link to={tab.to} params={{ projectId }} className={TAB_LINK}>
+              <Link
+                to={tab.to}
+                params={{ projectId }}
+                // The overview is the parent path of every tab, so only an exact match marks it.
+                activeOptions={{ exact: tab.to === "/projects/$projectId" }}
+                className={TAB_LINK}
+              >
                 {tab.label}
               </Link>
             </li>
