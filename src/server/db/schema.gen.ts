@@ -106,6 +106,12 @@ export interface ElementSource {
   label: string;
 }
 
+export interface ElementSourceLink {
+  created_at: Generated<Timestamp>;
+  element_id: string;
+  source_element_id: string;
+}
+
 export interface ElementSupport {
   created_at: Generated<Timestamp>;
   element_id: string;
@@ -260,6 +266,47 @@ export interface Session {
   userId: string;
 }
 
+export interface SourceElement {
+  at_code: string | null;
+  binding_strength: string | null;
+  binding_value_set: string | null;
+  code: string | null;
+  code_display: string | null;
+  code_system: string | null;
+  definition: Generated<string>;
+  id: Generated<string>;
+  max_occurs: number | null;
+  min_occurs: number | null;
+  name: string;
+  nl_cm_id: string | null;
+  path: string;
+  position: number;
+  source_model_id: string;
+  type: string | null;
+}
+
+export interface SourceModel {
+  added_by_member_id: string | null;
+  ckm_archetype_id: string | null;
+  ckm_cid: string | null;
+  ckm_revision: string | null;
+  created_at: Generated<Timestamp>;
+  fhir_canonical: string | null;
+  fhir_kind: string | null;
+  fhir_package: string | null;
+  fhir_type: string | null;
+  fhir_version: string | null;
+  id: Generated<string>;
+  imported_at: Timestamp | null;
+  kind: string;
+  link: string | null;
+  project_id: string;
+  status: string;
+  title: string;
+  zib_name: string | null;
+  zib_version: string | null;
+}
+
 export interface Team {
   createdAt: Timestamp;
   expert_type: string;
@@ -308,6 +355,7 @@ export interface DB {
   element_comment: ElementComment;
   element_same_as: ElementSameAs;
   element_source: ElementSource;
+  element_source_link: ElementSourceLink;
   element_support: ElementSupport;
   element_value: ElementValue;
   invitation: Invitation;
@@ -324,6 +372,8 @@ export interface DB {
   scope_source: ScopeSource;
   scope_statement: ScopeStatement;
   session: Session;
+  source_element: SourceElement;
+  source_model: SourceModel;
   team: Team;
   teamMember: TeamMember;
   user: User;

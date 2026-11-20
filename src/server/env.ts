@@ -19,10 +19,19 @@ export const envSchema = z
     MAIL_FROM: optional(z.email()),
     // The CKM REST API (ADR 0006); unset is the international CKM, set in src/server/ckm/.
     CKM_BASE_URL: optional(z.url({ protocol: /^https?$/ })),
+    // The FHIR package registry (ADR 0011); unset is the public registry, set in src/server/fhir/.
+    FHIR_REGISTRY_URL: optional(z.url({ protocol: /^https?$/ })),
   })
   .superRefine((env, ctx) => {
     if (env.CKM_BASE_URL !== undefined && /[?#]/.test(env.CKM_BASE_URL)) {
       ctx.addIssue({ code: "custom", path: ["CKM_BASE_URL"], message: "no query or fragment" });
+    }
+    if (env.FHIR_REGISTRY_URL !== undefined && /[?#]/.test(env.FHIR_REGISTRY_URL)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["FHIR_REGISTRY_URL"],
+        message: "no query or fragment",
+      });
     }
     if (env.SMTP_URL !== undefined && env.MAIL_FROM === undefined) {
       ctx.addIssue({ code: "custom", path: ["MAIL_FROM"], message: "required with SMTP_URL" });

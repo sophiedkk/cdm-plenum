@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: Sophie de Klerk
+# SPDX-License-Identifier: Apache-2.0
+
+# The FHIR contract test (ADR 0011): checks the FHIR package registry calls
+# cdm-plenum relies on against the live registry, on a schedule so a change in
+# the registry shows up without blocking pull requests.
+name: FHIR contract
+
+on:
+  schedule:
+    - cron: "47 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: fhir-contract
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Vitest's global setup creates a run database even for this test; same
+    # image and digest as ci.yml, change them together.
+    services:
+      postgres:
+        image: docker.io/library/postgres:18.7-trixie@sha256:e754b839f447639b7004895f4d8a4bfcb4e9dbe3a1bc035f27f646562a16fd61
+        env:
+          POSTGRES_USER: cdm_plenum
+          POSTGRES_PASSWORD: cdm_plenum
+          POSTGRES_DB: cdm_plenum
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U cdm_plenum -d cdm_plenum"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://cdm_plenum:cdm_plenum@localhost:5432/cdm_plenum
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:fhir

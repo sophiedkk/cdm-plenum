@@ -1,0 +1,8 @@
+{
+  "resourceType": "ValueSet",
+  "id": "example-cuff-size",
+  "url": "http://example.org/fhir/ValueSet/example-cuff-size",
+  "version": "1.0.0",
+  "name": "ExampleCuffSize",
+  "status": "draft"
+}

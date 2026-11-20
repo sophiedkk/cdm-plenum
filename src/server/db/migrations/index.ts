@@ -14,6 +14,7 @@ import * as m0007 from "./0007_private_brainstorm.ts";
 import * as m0008 from "./0008_round_proposals.ts";
 import * as m0009 from "./0009_detail_flags.ts";
 import * as m0011 from "./0011_element_marks.ts";
+import * as m0012 from "./0012_source_models.ts";
 
 export const migrations: Record<string, Migration> = {
   "0001_auth": m0001,
@@ -26,6 +27,7 @@ export const migrations: Record<string, Migration> = {
   "0008_round_proposals": m0008,
   "0009_detail_flags": m0009,
   "0011_element_marks": m0011,
+  "0012_source_models": m0012,
 };
 
 export const migrationProvider: MigrationProvider = {

@@ -18,10 +18,17 @@ ADR 0002); check it for a pattern before inventing one.
   complete a requirement; ask the owner.
 - `docs/architecture.md`: the design authority. An ADR overrides it.
 - `docs/adr/`: decision records in MADR format.
+- `docs/evaluations/`: dated design evaluations with their findings and sources;
+  the ADRs cite them. Kept as the record of why, not updated afterwards.
 - `src/routes/`: TanStack Router file routes; `src/routeTree.gen.ts` is
   generated.
 - `src/server/<area>/`: server-only code per area (`functions.ts`,
   `queries.ts`, `schemas.ts`), as planned in `docs/architecture.md`.
+- `src/server/ckm/` and `src/server/fhir/`: the only modules that call CKM
+  (ADR 0006) and the FHIR package registry (ADR 0011); a boundary test in each
+  fails when another module names their host. `src/server/fhir/fixtures/`
+  holds the synthetic test package. `src/server/sources/` keeps the source
+  models of a project (EL12) and their import and coverage table (EL7, EL20).
 - `src/lib/`: code both sides import, such as `data-types.ts` (ADR 0009) and
   `cardinality.ts`, with colocated `*.test.ts`.
 - `messages/`: the i18n catalogues; `project.inlang/` the Paraglide config.
@@ -79,7 +86,9 @@ with actionlint and zizmor (`uvx zizmor --persona=pedantic .github/`).
 Dependabot (`.github/dependabot.yml`) proposes weekly npm and action updates
 after a 7-day cooldown. `.github/workflows/ckm-contract.yml` runs
 `pnpm test:ckm` against the live CKM every Monday and by hand; run it
-locally with `scripts/dev/pnpm.sh test:ckm`.
+locally with `scripts/dev/pnpm.sh test:ckm`. `.github/workflows/fhir-contract.yml`
+runs `pnpm test:fhir` against the live FHIR package registry the same way;
+run it locally with `scripts/dev/pnpm.sh test:fhir`.
 
 ## UI
 
