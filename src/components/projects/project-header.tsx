@@ -2,15 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The header of every project page (PR4, PR11, ADR 0019): a back link, the project name and the
-// phases as steps. For a participant the steps that have something to show are links, and the
-// header is all the navigation there is; the facilitator's steps only show the status, and the
-// fixed tabs below them navigate.
+// phases as steps that show the status only. A participant goes on from the project home, the
+// facilitator from the fixed tabs below the header.
 import { Link, useMatchRoute } from "@tanstack/react-router";
 import { ChevronLeftIcon } from "lucide-react";
 import { m } from "@/i18n/messages";
-import { stepTarget } from "@/lib/project-home";
 import type { ProjectOverview } from "@/lib/project-tasks";
-import { PhaseSteps, type StepLink } from "./phase-steps";
+import { PhaseSteps } from "./phase-steps";
 
 /** The back link above the name: to the projects, or from a page of the project to its home. */
 function BackLink({ projectId, to }: Readonly<{ projectId: string; to: "projects" | "home" }>) {
@@ -40,26 +38,12 @@ export function ProjectHeader({
   overview: ProjectOverview;
   back: "projects" | "home";
 }>) {
-  const link: StepLink | undefined =
-    overview.role === "participant"
-      ? (phase, children, className) => {
-          const target = stepTarget(phase, overview);
-          if (target === null) return null;
-          const params =
-            "roundId" in target ? { projectId, roundId: target.roundId } : { projectId };
-          return (
-            <Link to={target.to} params={params} className={className}>
-              {children}
-            </Link>
-          );
-        }
-      : undefined;
   return (
     <div className="mb-6 flex flex-col gap-1">
       <BackLink projectId={projectId} to={back} />
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
         <h1 className="text-2xl font-semibold tracking-tight break-words">{name}</h1>
-        <PhaseSteps phase={overview.phase} link={link} />
+        <PhaseSteps phase={overview.phase} />
       </div>
     </div>
   );

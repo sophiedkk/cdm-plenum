@@ -139,12 +139,14 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(
         a.page.getByRole("heading", { level: 2, name: text.board_brainstorm_title }),
       ).toBeVisible();
-      // The scope stays one step away, from the phase steps.
+      // The steps show the phase only; the way on is back to the project home.
       await expect(
-        a.page
-          .getByRole("list", { name: text.projects_steps_label })
-          .getByRole("link", { name: new RegExp(`^${text.projects_phase_scope}`) }),
-      ).toHaveAttribute("href", `/projects/${project.projectId}/scope`);
+        a.page.getByRole("list", { name: text.projects_steps_label }).getByRole("link"),
+      ).toHaveCount(0);
+      await expect(a.page.getByRole("link", { name: text.projects_back_home })).toHaveAttribute(
+        "href",
+        `/projects/${project.projectId}`,
+      );
       await expect(a.page.getByText(text.board_brainstorm_private_note)).toBeVisible();
       await expect(
         a.page.getByRole("heading", { name: fill(text.board_brainstorm_yours, { count: 0 }) }),

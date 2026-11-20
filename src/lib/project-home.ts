@@ -6,6 +6,7 @@
 // per project. The server reads the facts; these functions only choose what to show, so the
 // choice is tested without a database.
 import type { Outcome } from "./consensus.ts";
+import { participantAccess } from "./phase-access.ts";
 import { adjacentPhase, type ProjectPhase } from "./project-phases.ts";
 import { type ParticipantTask, type ProjectOverview, participantTask } from "./project-tasks.ts";
 
@@ -199,36 +200,18 @@ export function waitingFor(overview: ProjectOverview, facts: OverviewFacts | nul
   return { kind: "nothing" };
 }
 
-/** Where a participant's phase step leads: a page of the project, by route. */
-export type StepTarget =
-  | { to: "/projects/$projectId/scope" | "/projects/$projectId/board" }
-  | {
-      to: "/projects/$projectId/rounds/$roundId/rate" | "/projects/$projectId/rounds/$roundId";
-      roundId: string;
-    };
+/** A page a participant reads from the home besides their task: the scope or the elements. */
+export type HomePage = "scope" | "board";
 
 /**
- * The page a participant's step opens, or null when the phase has nothing to show them yet:
- * Scope the scope, Discover the elements, Decide the round they rate or the newest results.
- * Hand-off has no page of its own; its results are Decide's. Every target is a step the phase
- * table shows a participant once the phase is done or current (PR9).
+ * The pages the participant's home links to besides the task (ADR 0019): the scope and the
+ * elements, each while the phase table shows it to a participant (PR9). The scope phase leaves
+ * the scope out, because "Your turn" leads there. The newest results are linked from "Decided so
+ * far", so they are not repeated here.
  */
-export function stepTarget(phase: ProjectPhase, overview: ProjectOverview): StepTarget | null {
-  switch (phase) {
-    case "scope":
-      return { to: "/projects/$projectId/scope" };
-    case "discover":
-      return { to: "/projects/$projectId/board" };
-    case "decide": {
-      const round = overview.round;
-      if (overview.phase === "decide" && round !== null && round.rated !== null) {
-        return { to: "/projects/$projectId/rounds/$roundId/rate", roundId: round.id };
-      }
-      return overview.lastClosedRoundId === null
-        ? null
-        : { to: "/projects/$projectId/rounds/$roundId", roundId: overview.lastClosedRoundId };
-    }
-    case "handoff":
-      return null;
-  }
+export function homePages(phase: ProjectPhase): HomePage[] {
+  return (["scope", "board"] as const).filter(
+    (page) =>
+      participantAccess(phase, page) !== "hidden" && !(page === "scope" && phase === "scope"),
+  );
 }

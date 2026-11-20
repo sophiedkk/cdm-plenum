@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Phase-bound access (PR9, PR10, PR11, ADR 0019): a participant reaches only the steps the
-// current phase opens, from the phase steps of the header, reads earlier steps without their
-// forms, and lands on the project home from a hidden step's URL; the facilitator sees the same
+// current phase opens, from the project home (the phase steps of the header link nowhere), reads
+// earlier steps without their forms, and lands on the project home from a hidden step's URL; the
+// facilitator sees the same
 // fixed tabs in every phase and gets a refusal when opening a round outside the decide phase.
 // The read-only scope is axe-clean in English and Dutch (Q-ACC-1, Q-I18N-1).
 import type { Page } from "@playwright/test";
@@ -39,15 +40,18 @@ async function tabNames(page: Page, locale: Locale): Promise<string[]> {
 }
 
 /**
- * The phase steps a participant can open, by their text; a participant has no tabs. The text of
- * a step ends in its state for a screen reader, such as ", done".
+ * The pages a participant's home links to besides the task, by their text. A participant has no
+ * tabs, and the phase steps show the status without a link (owner decision 2026-11-20).
  */
-async function stepLinks(page: Page, locale: Locale): Promise<string[]> {
+async function homeLinks(page: Page, locale: Locale): Promise<string[]> {
   const text = MESSAGES[locale];
   await expect(page.getByRole("navigation", { name: text.projects_tabs_label })).toHaveCount(0);
   const steps = page.getByRole("list", { name: text.projects_steps_label });
   await expect(steps).toBeVisible();
-  return (await steps.getByRole("link").allTextContents()).map((name) => name.split(",")[0] ?? "");
+  await expect(steps.getByRole("link")).toHaveCount(0);
+  const pages = page.getByRole("navigation", { name: text.projects_home_pages_title });
+  if ((await pages.count()) === 0) return [];
+  return pages.getByRole("link").allTextContents();
 }
 
 test("a participant in the scope phase reaches the scope only, and comments", async ({
@@ -57,8 +61,14 @@ test("a participant in the scope phase reaches the scope only, and comments", as
   const text = MESSAGES.en;
   const project = await seedProject(db, "scope");
   const participant = await seedParticipant(db, project);
-  await signInTo(page, participant, "en", `/projects/${project.projectId}/scope`);
-  expect(await stepLinks(page, "en")).toEqual([text.projects_phase_scope]);
+  await signInTo(page, participant, "en", `/projects/${project.projectId}`);
+  // The scope is the task: "Your turn" leads there, and the home links nothing else.
+  await expect(
+    page.getByRole("heading", { level: 2, name: text.projects_home_turn_scope }),
+  ).toBeVisible();
+  expect(await homeLinks(page, "en")).toEqual([]);
+  await page.getByRole("link", { name: text.projects_task_scope_action }).click();
+  await expect(page).toHaveURL((url) => url.pathname === `/projects/${project.projectId}/scope`);
   const field = page.getByLabel(text.common_comment_label);
   await expectHydrated(field);
   await field.fill("Do home readings count?");
@@ -86,12 +96,17 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         body: "Agreed in the scope phase.",
       });
       expect(comment.ok).toBe(true);
-      await signInTo(page, participant, locale, `/projects/${project.projectId}/scope`);
-      // Scope and Discover open; the brainstorm is the task on the home (PR8, PR11).
-      expect(await stepLinks(page, locale)).toEqual([
-        text.projects_phase_scope,
-        text.projects_phase_discover,
-      ]);
+      await signInTo(page, participant, locale, `/projects/${project.projectId}`);
+      // The scope and the elements open from the home; the brainstorm is the task (PR8, PR11).
+      expect(await homeLinks(page, locale)).toEqual([text.scope_title, text.board_title]);
+      await page
+        .getByRole("navigation", { name: text.projects_home_pages_title })
+        .getByRole("link", { name: text.scope_title })
+        .click();
+      await expect(page).toHaveURL(
+        (url) => url.pathname === `/projects/${project.projectId}/scope`,
+      );
+      await expect(page.getByRole("heading", { level: 2, name: text.scope_title })).toBeVisible();
       await expect(page.getByRole("link", { name: text.projects_back_home })).toHaveAttribute(
         "href",
         `/projects/${project.projectId}`,

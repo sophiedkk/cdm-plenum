@@ -15,6 +15,11 @@ the project uses [Semantic Versioning](https://semver.org/).
   administration, uses one column of the same width with the same left edge.
   The project name, the back link and the page title no longer move when you
   go from one page to the next.
+- The phases in the project header show where the project stands (done, now,
+  later) and are no longer links. A participant starts the current work from
+  the project home, which now also links to the scope and the element board
+  under "In this project"; the newest round results stay linked from
+  "Decided so far".
 
 ## [0.2.0] - 2026-11-20
 

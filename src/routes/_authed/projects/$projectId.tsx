@@ -14,8 +14,7 @@ import { idSchema } from "@/server/projects/schemas";
  * The project layout: loads the project and the user's role in it once (docs/architecture.md,
  * "Application structure"); a non-member gets the not-found page (Q-SEC-1). Children read the
  * project from the route context. The header's phase is read again on every navigation. A
- * participant navigates from the project home and its steps; the facilitator by fixed tabs
- * (ADR 0019).
+ * participant navigates from the project home; the facilitator by fixed tabs (ADR 0019).
  */
 export const Route = createFileRoute("/_authed/projects/$projectId")({
   beforeLoad: async ({ context, params }) => {

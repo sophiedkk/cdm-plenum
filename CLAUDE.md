@@ -121,13 +121,18 @@ page from these patterns; each has a real use and a test you can copy.
   as the `h1`, so a project page starts with `PageHeader level={2}`, at most
   one intro line, and sets its title with
   `projectTitle(match.context, m.<area>_title())`
-  (`src/components/projects/project-title.ts`).
+  (`src/components/projects/project-title.ts`). Every signed-in page sits
+  in the one column `PAGE_COLUMN` of the app shell, so the left edge never
+  moves; a page narrows only its reading text, on that same left edge,
+  and never centres itself.
 - **Project navigation (ADR 0019):** the header
   (`src/components/projects/project-header.tsx`) shows a back link, the
-  name and the phase steps. A participant has no tabs: the project index
-  route is their home (`TaskCard`, `DecidedSoFarSection`, `AboutProject`),
-  the steps link where `stepTarget` in `src/lib/project-home.ts` gives a
-  page, and every other page links back to the home. The facilitator gets
+  name and the phase steps, which show the status only and link nowhere
+  (owner decision 2026-11-20). A participant has no tabs: the project index
+  route is their home (`TaskCard`, `DecidedSoFarSection`, `ProjectPages`,
+  `AboutProject`); `homePages` in `src/lib/project-home.ts` decides which
+  earlier pages the home links, and every other page links back to the
+  home. The facilitator gets
   `ProjectTabs`, fixed as Overview, Scope, Elements, Rounds, People,
   Settings; a page without its own tab (export, brainstorm, import) marks
   the tab it belongs to in `UNDER`. Overview is the index route for the
