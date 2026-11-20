@@ -16,6 +16,7 @@ import {
   sendBrainstormReminder,
   setPrivateBrainstorm,
 } from "./brainstorm.ts";
+import { answerFirstLook, firstLook, firstLookSummary } from "./first-look.ts";
 import { importCsv, previewCsvImport } from "./import.ts";
 import { addSameAs, listOwnMarks, markSummary, removeSameAs, setSupport } from "./marks.ts";
 import {
@@ -35,6 +36,7 @@ import {
   addElementInput,
   csvImportInput,
   elementInput,
+  firstLookAnswerInput,
   mergeElementsInput,
   privateBrainstormInput,
   sameAsInput,
@@ -153,3 +155,18 @@ export const sendBrainstormReminderFn = createServerFn({ method: "POST" })
       baseUrl: getEnv().BETTER_AUTH_URL,
     }),
   );
+
+export const firstLookFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => firstLook(getDb(), context.userId, data.projectId));
+
+export const answerFirstLookFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(firstLookAnswerInput)
+  .handler(({ data, context }) => answerFirstLook(getDb(), context.userId, data));
+
+export const firstLookSummaryFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => firstLookSummary(getDb(), context.userId, data.projectId));

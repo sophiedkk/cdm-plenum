@@ -126,6 +126,13 @@ export interface ElementValue {
   value: Numeric | null;
 }
 
+export interface FirstLookAnswer {
+  answer: string;
+  answered_at: Generated<Timestamp>;
+  element_id: string;
+  member_id: string;
+}
+
 export interface Invitation {
   createdAt: Generated<Timestamp>;
   email: string;
@@ -358,6 +365,7 @@ export interface DB {
   element_source_link: ElementSourceLink;
   element_support: ElementSupport;
   element_value: ElementValue;
+  first_look_answer: FirstLookAnswer;
   invitation: Invitation;
   member: Member;
   organization: Organization;

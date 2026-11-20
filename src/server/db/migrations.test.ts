@@ -8,6 +8,7 @@ import pg from "pg";
 import { afterEach, describe, expect, it } from "vitest";
 import { ELEMENT_PROMPTS } from "@/lib/brainstorm";
 import { DATA_TYPES } from "@/lib/data-types";
+import { FIRST_LOOK_ANSWERS } from "@/lib/first-look";
 import { CHANGE_CLASSES } from "@/lib/panel";
 import { createAuth } from "../auth.ts";
 import { ELEMENT_SOURCE_KINDS } from "../elements/queries.ts";
@@ -30,6 +31,7 @@ import { ELEMENT_PROMPT_KEYS } from "./migrations/0007_private_brainstorm.ts";
 import * as proposals from "./migrations/0008_round_proposals.ts";
 import * as flags from "./migrations/0009_detail_flags.ts";
 import * as sources from "./migrations/0012_source_models.ts";
+import { FIRST_LOOK_ANSWER_KEYS } from "./migrations/0013_first_look.ts";
 import { migrations } from "./migrations/index.ts";
 import { baseTestDatabaseUrl, createTestDb } from "./test-db.ts";
 import { createRunDatabase, dropRunDatabase } from "./test-run-database.ts";
@@ -82,6 +84,10 @@ describe("migrations", () => {
 
   it("allow exactly the data type keys of src/lib/data-types.ts", () => {
     expect([...DATA_TYPE_KEYS]).toEqual(DATA_TYPES.map((type) => type.key));
+  });
+
+  it("allow exactly the first look answers of src/lib/first-look.ts", () => {
+    expect([...FIRST_LOOK_ANSWER_KEYS]).toEqual([...FIRST_LOOK_ANSWERS]);
   });
 
   it("allow exactly the brainstorm questions of src/lib/brainstorm.ts", () => {

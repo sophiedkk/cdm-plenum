@@ -19,6 +19,7 @@ import {
 import type { ProjectPhase } from "@/lib/project-phases";
 import { type ProjectRole, RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
+import { summaryOf } from "../elements/first-look.ts";
 import { markSummary } from "../elements/marks.ts";
 import { joinedPanel, projectPanel } from "../rounds/queries.ts";
 import { statusOf } from "../rounds/round.ts";
@@ -228,6 +229,7 @@ async function factsOf(
       .executeTakeFirst(),
   );
   const marks = await markSummary(db, userId, project.id);
+  const look = await summaryOf(db, project.id);
   const { elements, lastClosedRound } = await decided(db, project.id);
   return {
     scopeWritten: (scope?.concept ?? "").trim() !== "",
@@ -241,6 +243,8 @@ async function factsOf(
     duplicates: marks.ok ? marks.value.duplicates.length : 0,
     importedModels,
     listedFromModels,
+    firstLookTotal: look.total,
+    firstLookFinished: look.finished,
     round: await followedRound(db, project.id, deps.now),
     undecided: elements.filter(
       (element) => element.status === "no_consensus" || element.status === "not_rated",

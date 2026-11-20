@@ -28,6 +28,8 @@ function facts(changes: Partial<OverviewFacts> = {}): OverviewFacts {
     duplicates: 0,
     importedModels: 2,
     listedFromModels: 14,
+    firstLookTotal: 14,
+    firstLookFinished: 8,
     round: null,
     undecided: 0,
     lastClosedRound: { id: "round-1", number: 1 },
@@ -42,6 +44,7 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
     role: "participant",
     elements: 8,
     ownElements: 0,
+    firstLook: { total: 0, answered: 0 },
     round: null,
     lastClosedRoundId: null,
     ...changes,
@@ -72,21 +75,40 @@ describe("checklist (PR4)", () => {
     expect(openItems(items)).toBe(2);
   });
 
-  it("offers a reminder only while someone has not added and e-mail works", () => {
+  it("offers a reminder only while someone has not finished the first look and e-mail works", () => {
     const remind = (changes: Partial<OverviewFacts>) =>
-      checklist("discover", facts(changes)).find((item) => item.key === "contributions");
-    expect(remind({ contributors: 5 })).toMatchObject({ done: false, remind: true });
-    expect(remind({ contributors: 5, mailConfigured: false })).toMatchObject({ remind: false });
+      checklist("discover", facts(changes)).find((item) => item.key === "first_look");
+    expect(remind({ firstLookFinished: 5 })).toMatchObject({ done: false, remind: true });
+    expect(remind({ firstLookFinished: 5, mailConfigured: false })).toMatchObject({
+      remind: false,
+    });
     expect(remind({})).toMatchObject({ done: true, remind: false });
+    expect(remind({ firstLookTotal: 0, firstLookFinished: 0 })).toMatchObject({
+      done: false,
+      remind: false,
+    });
     expect(remind({ participants: 0, contributors: 0 })).toMatchObject({
       done: false,
       remind: false,
     });
   });
 
+  it("counts the participants who added elements, without a reminder", () => {
+    const item = (changes: Partial<OverviewFacts>) =>
+      checklist("discover", facts(changes)).find((entry) => entry.key === "contributions");
+    expect(item({ contributors: 5 })).toEqual({
+      key: "contributions",
+      done: false,
+      contributors: 5,
+      participants: 8,
+    });
+    expect(item({})).toMatchObject({ done: true });
+  });
+
   it("lists discover in the parts of ADR 0020", () => {
     expect(checklist("discover", facts()).map((item) => item.key)).toEqual([
       "models",
+      "first_look",
       "contributions",
       "cleanup",
     ]);

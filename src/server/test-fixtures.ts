@@ -93,3 +93,61 @@ export async function setPhase(
 ): Promise<void> {
   await db.updateTable("project").set({ phase }).where("id", "=", projectId).execute();
 }
+
+/**
+ * Inserts an element on the list from an existing model (EL7): a CKM source model of the
+ * project, created once, with one source element, linked to a new candidate element. Returns
+ * the element id.
+ */
+export async function insertImportedElement(
+  db: Kysely<DB>,
+  projectId: string,
+  name: string,
+): Promise<string> {
+  const existing = await db
+    .selectFrom("source_model")
+    .select("id")
+    .where("project_id", "=", projectId)
+    .where("kind", "=", "ckm")
+    .executeTakeFirst();
+  const modelId =
+    existing?.id ??
+    (
+      await db
+        .insertInto("source_model")
+        .values({
+          project_id: projectId,
+          kind: "ckm",
+          status: "imported",
+          title: "Test archetype",
+          ckm_archetype_id: "openEHR-EHR-OBSERVATION.test.v1",
+          ckm_cid: "1013.1.1",
+          ckm_revision: "1.0.0",
+          imported_at: new Date(),
+        })
+        .returning("id")
+        .executeTakeFirstOrThrow()
+    ).id;
+  const count = await db
+    .selectFrom("source_element")
+    .select((eb) => eb.fn.countAll<string>().as("count"))
+    .where("source_model_id", "=", modelId)
+    .executeTakeFirstOrThrow();
+  const position = Number(count.count);
+  const source = await db
+    .insertInto("source_element")
+    .values({
+      source_model_id: modelId,
+      position,
+      path: `/data[at0001]/items[at${1000 + position}]`,
+      name,
+    })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  const elementId = await insertElement(db, projectId, name);
+  await db
+    .insertInto("element_source_link")
+    .values({ element_id: elementId, source_element_id: source.id })
+    .execute();
+  return elementId;
+}

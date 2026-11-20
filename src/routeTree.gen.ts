@@ -23,6 +23,7 @@ import { Route as AuthedProjectsProjectIdIndexRouteImport } from './routes/_auth
 import { Route as AuthedProjectsProjectIdBoardRouteImport } from './routes/_authed/projects/$projectId/board'
 import { Route as AuthedProjectsProjectIdBrainstormRouteImport } from './routes/_authed/projects/$projectId/brainstorm'
 import { Route as AuthedProjectsProjectIdExportRouteImport } from './routes/_authed/projects/$projectId/export'
+import { Route as AuthedProjectsProjectIdFirstLookRouteImport } from './routes/_authed/projects/$projectId/first-look'
 import { Route as AuthedProjectsProjectIdMembersRouteImport } from './routes/_authed/projects/$projectId/members'
 import { Route as AuthedProjectsProjectIdModelsRouteImport } from './routes/_authed/projects/$projectId/models'
 import { Route as AuthedProjectsProjectIdRoundsRouteImport } from './routes/_authed/projects/$projectId/rounds'
@@ -107,6 +108,12 @@ const AuthedProjectsProjectIdExportRoute =
     path: '/export',
     getParentRoute: () => AuthedProjectsProjectIdRoute,
   } as any)
+const AuthedProjectsProjectIdFirstLookRoute =
+  AuthedProjectsProjectIdFirstLookRouteImport.update({
+    id: '/first-look',
+    path: '/first-look',
+    getParentRoute: () => AuthedProjectsProjectIdRoute,
+  } as any)
 const AuthedProjectsProjectIdMembersRoute =
   AuthedProjectsProjectIdMembersRouteImport.update({
     id: '/members',
@@ -181,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/board': typeof AuthedProjectsProjectIdBoardRoute
   '/projects/$projectId/brainstorm': typeof AuthedProjectsProjectIdBrainstormRoute
   '/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
+  '/projects/$projectId/first-look': typeof AuthedProjectsProjectIdFirstLookRoute
   '/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
   '/projects/$projectId/models': typeof AuthedProjectsProjectIdModelsRoute
   '/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsRouteWithChildren
@@ -205,6 +213,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/board': typeof AuthedProjectsProjectIdBoardRoute
   '/projects/$projectId/brainstorm': typeof AuthedProjectsProjectIdBrainstormRoute
   '/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
+  '/projects/$projectId/first-look': typeof AuthedProjectsProjectIdFirstLookRoute
   '/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
   '/projects/$projectId/models': typeof AuthedProjectsProjectIdModelsRoute
   '/projects/$projectId/scope': typeof AuthedProjectsProjectIdScopeRoute
@@ -231,6 +240,7 @@ export interface FileRoutesById {
   '/_authed/projects/$projectId/board': typeof AuthedProjectsProjectIdBoardRoute
   '/_authed/projects/$projectId/brainstorm': typeof AuthedProjectsProjectIdBrainstormRoute
   '/_authed/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
+  '/_authed/projects/$projectId/first-look': typeof AuthedProjectsProjectIdFirstLookRoute
   '/_authed/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
   '/_authed/projects/$projectId/models': typeof AuthedProjectsProjectIdModelsRoute
   '/_authed/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsRouteWithChildren
@@ -258,6 +268,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/board'
     | '/projects/$projectId/brainstorm'
     | '/projects/$projectId/export'
+    | '/projects/$projectId/first-look'
     | '/projects/$projectId/members'
     | '/projects/$projectId/models'
     | '/projects/$projectId/rounds'
@@ -282,6 +293,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/board'
     | '/projects/$projectId/brainstorm'
     | '/projects/$projectId/export'
+    | '/projects/$projectId/first-look'
     | '/projects/$projectId/members'
     | '/projects/$projectId/models'
     | '/projects/$projectId/scope'
@@ -307,6 +319,7 @@ export interface FileRouteTypes {
     | '/_authed/projects/$projectId/board'
     | '/_authed/projects/$projectId/brainstorm'
     | '/_authed/projects/$projectId/export'
+    | '/_authed/projects/$projectId/first-look'
     | '/_authed/projects/$projectId/members'
     | '/_authed/projects/$projectId/models'
     | '/_authed/projects/$projectId/rounds'
@@ -429,6 +442,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedProjectsProjectIdExportRouteImport
       parentRoute: typeof AuthedProjectsProjectIdRoute
     }
+    '/_authed/projects/$projectId/first-look': {
+      id: '/_authed/projects/$projectId/first-look'
+      path: '/first-look'
+      fullPath: '/projects/$projectId/first-look'
+      preLoaderRoute: typeof AuthedProjectsProjectIdFirstLookRouteImport
+      parentRoute: typeof AuthedProjectsProjectIdRoute
+    }
     '/_authed/projects/$projectId/members': {
       id: '/_authed/projects/$projectId/members'
       path: '/members'
@@ -530,6 +550,7 @@ interface AuthedProjectsProjectIdRouteChildren {
   AuthedProjectsProjectIdBoardRoute: typeof AuthedProjectsProjectIdBoardRoute
   AuthedProjectsProjectIdBrainstormRoute: typeof AuthedProjectsProjectIdBrainstormRoute
   AuthedProjectsProjectIdExportRoute: typeof AuthedProjectsProjectIdExportRoute
+  AuthedProjectsProjectIdFirstLookRoute: typeof AuthedProjectsProjectIdFirstLookRoute
   AuthedProjectsProjectIdMembersRoute: typeof AuthedProjectsProjectIdMembersRoute
   AuthedProjectsProjectIdModelsRoute: typeof AuthedProjectsProjectIdModelsRoute
   AuthedProjectsProjectIdRoundsRoute: typeof AuthedProjectsProjectIdRoundsRouteWithChildren
@@ -545,6 +566,8 @@ const AuthedProjectsProjectIdRouteChildren: AuthedProjectsProjectIdRouteChildren
     AuthedProjectsProjectIdBrainstormRoute:
       AuthedProjectsProjectIdBrainstormRoute,
     AuthedProjectsProjectIdExportRoute: AuthedProjectsProjectIdExportRoute,
+    AuthedProjectsProjectIdFirstLookRoute:
+      AuthedProjectsProjectIdFirstLookRoute,
     AuthedProjectsProjectIdMembersRoute: AuthedProjectsProjectIdMembersRoute,
     AuthedProjectsProjectIdModelsRoute: AuthedProjectsProjectIdModelsRoute,
     AuthedProjectsProjectIdRoundsRoute:

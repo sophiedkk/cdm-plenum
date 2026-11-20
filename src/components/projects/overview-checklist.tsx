@@ -168,12 +168,25 @@ function itemView(
           </ItemLink>
         ),
       };
-    case "contributions":
+    case "first_look":
       if (item.participants === 0)
         return {
-          text: part(m.projects_check_add_title(), m.projects_check_no_participants()),
+          text: part(m.projects_check_first_look_title(), m.projects_check_no_participants()),
           action: invite,
         };
+      return {
+        text: part(
+          m.projects_check_first_look_title(),
+          item.total === 0
+            ? m.projects_check_first_look_empty()
+            : m.projects_check_first_look({
+                finished: item.finished,
+                participants: item.participants,
+              }),
+        ),
+        action: item.remind && slots.remind ? <RemindButton remind={slots.remind} /> : undefined,
+      };
+    case "contributions":
       return {
         text: part(
           m.projects_check_add_title(),
@@ -182,7 +195,11 @@ function itemView(
             participants: item.participants,
           }),
         ),
-        action: item.remind && slots.remind ? <RemindButton remind={slots.remind} /> : undefined,
+        action: (
+          <ItemLink to="/projects/$projectId/brainstorm" projectId={projectId}>
+            {m.projects_check_add_action()}
+          </ItemLink>
+        ),
       };
     case "cleanup":
       if (item.revealed === false)

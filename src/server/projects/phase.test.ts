@@ -163,6 +163,7 @@ describe("projectOverview (PR8)", () => {
       role: "participant",
       elements: 3,
       ownElements: 2,
+      firstLook: { total: 0, answered: 0 },
       round: null,
       lastClosedRoundId: null,
     });

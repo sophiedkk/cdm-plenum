@@ -16,6 +16,7 @@ import {
   ELEMENT_VALUES_MAX,
   MERGE_SOURCES_MAX,
 } from "@/lib/elements";
+import { FIRST_LOOK_ANSWERS } from "@/lib/first-look";
 import { idSchema } from "../projects/schemas.ts";
 
 const DATA_TYPE_KEYS = DATA_TYPES.map((type) => type.key) as [DataTypeKey, ...DataTypeKey[]];
@@ -127,3 +128,11 @@ export const sameAsInput = z.object({
   sameAsId: idSchema,
 });
 export type SameAsInput = z.infer<typeof sameAsInput>;
+
+/** The member's answer to one element of the first look (EL22). */
+export const firstLookAnswerInput = z.object({
+  projectId: idSchema,
+  elementId: idSchema,
+  answer: z.enum(FIRST_LOOK_ANSWERS),
+});
+export type FirstLookAnswerInput = z.infer<typeof firstLookAnswerInput>;

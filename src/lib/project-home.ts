@@ -84,6 +84,10 @@ export interface OverviewFacts {
   duplicates: number;
   /** Existing models with elements on the list (EL12, ADR 0020). */
   importedModels: number;
+  /** Elements in the participants' first look (EL22). */
+  firstLookTotal: number;
+  /** Participants who answered every element of the first look. */
+  firstLookFinished: number;
   /** Elements on the list that came from existing models, merged ones left out (EL7). */
   listedFromModels: number;
   round: ChecklistRound | null;
@@ -103,12 +107,14 @@ export type ChecklistItem =
   | { key: "panel"; done: boolean; missing: number }
   | { key: "scope_comments"; done: null; count: number }
   | {
-      key: "contributions";
+      key: "first_look";
       done: boolean;
-      contributors: number;
+      finished: number;
       participants: number;
+      total: number;
       remind: boolean;
     }
+  | { key: "contributions"; done: boolean; contributors: number; participants: number }
   | { key: "models"; done: boolean; models: number; elements: number }
   | {
       key: "cleanup";
@@ -133,6 +139,10 @@ export function checklist(phase: ProjectPhase, facts: OverviewFacts): ChecklistI
       // NOTE: ADR 0020. Discover in parts: existing models, what is missing, reveal and clean
       // up; each item opens the page where it is done.
       const everyone = facts.participants > 0 && facts.contributors >= facts.participants;
+      const looked =
+        facts.firstLookTotal > 0 &&
+        facts.participants > 0 &&
+        facts.firstLookFinished >= facts.participants;
       // A board shared from the start needs no reveal (EL13).
       const revealed = facts.privateBrainstorm ? facts.boardRevealed : null;
       return [
@@ -143,11 +153,19 @@ export function checklist(phase: ProjectPhase, facts: OverviewFacts): ChecklistI
           elements: facts.listedFromModels,
         },
         {
+          key: "first_look",
+          done: looked,
+          finished: facts.firstLookFinished,
+          participants: facts.participants,
+          total: facts.firstLookTotal,
+          remind:
+            !looked && facts.firstLookTotal > 0 && facts.participants > 0 && facts.mailConfigured,
+        },
+        {
           key: "contributions",
           done: everyone,
           contributors: facts.contributors,
           participants: facts.participants,
-          remind: !everyone && facts.participants > 0 && facts.mailConfigured,
         },
         {
           key: "cleanup",

@@ -19,7 +19,10 @@ export function waitingText(waiting: Waiting, timeZone: string): string | null {
     case "task": {
       const { task } = waiting;
       if (task.kind === "scope") return m.projects_waiting_scope();
-      if (task.kind === "discover") return m.projects_waiting_discover();
+      if (task.kind === "discover")
+        return task.firstLook.answered < task.firstLook.total
+          ? m.projects_waiting_first_look()
+          : m.projects_waiting_discover();
       if (task.kind !== "rate") return null;
       const count = task.total - task.rated;
       const date = formatShortDate(task.closesAt, timeZone);

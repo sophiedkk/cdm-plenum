@@ -29,12 +29,14 @@ describe("the phase table (PR9)", () => {
       phase,
       PROJECT_STEPS.map((step) => participantAccess(phase, step)),
     ]);
-    // Steps in order: scope, brainstorm, board, rounds, export, members, settings, models.
+    // Steps in order: scope, brainstorm, board, rounds, export, members, settings, models,
+    // first_look.
+    const H = "hidden";
     expect(table).toEqual([
-      ["scope", ["comment", "hidden", "hidden", "hidden", "hidden", "read", "hidden", "hidden"]],
-      ["discover", ["read", "add", "comment", "hidden", "hidden", "read", "hidden", "hidden"]],
-      ["decide", ["read", "hidden", "read", "rate", "hidden", "read", "hidden", "hidden"]],
-      ["handoff", ["read", "hidden", "read", "read", "hidden", "read", "hidden", "hidden"]],
+      ["scope", ["comment", H, H, H, H, "read", H, H, H]],
+      ["discover", ["read", "add", "comment", H, H, "read", H, H, "answer"]],
+      ["decide", ["read", H, "read", "rate", H, "read", H, H, H]],
+      ["handoff", ["read", H, "read", "read", H, "read", H, H, H]],
     ]);
   });
 
@@ -114,6 +116,7 @@ describe("writeOpen", () => {
       ["element_mark", ["discover"]],
       ["rate", ["decide"]],
       ["source_suggest", ["discover"]],
+      ["first_look_answer", ["discover"]],
     ]);
   });
 

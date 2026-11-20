@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
 import { sendBrainstormReminder } from "../elements/brainstorm.ts";
+import { answerFirstLook } from "../elements/first-look.ts";
 import { setSupport } from "../elements/marks.ts";
 import { addElement } from "../elements/queries.ts";
 import { acceptInvitationsOnSignIn } from "../invitations/acceptance.ts";
@@ -16,7 +17,13 @@ import type { Mailer } from "../mail.ts";
 import { saveRating } from "../rounds/ratings.ts";
 import { closedNow, ok, openedRound, panelProject } from "../rounds/test-round.ts";
 import { addScopeComment, updateScope } from "../scope/queries.ts";
-import { facilitatorWithProject, groupId, insertElement, setPhase } from "../test-fixtures.ts";
+import {
+  facilitatorWithProject,
+  groupId,
+  insertElement,
+  insertImportedElement,
+  setPhase,
+} from "../test-fixtures.ts";
 import { personLeaks, projectWithMembers } from "../test-project-members.ts";
 import type { ProjectResult } from "./access.ts";
 import { decidedSoFar, listProjectRows, overviewFacts } from "./overview.ts";
@@ -265,7 +272,7 @@ describe("listProjectRows (PR2, PR8)", () => {
     const discovering = await listProjectRows(db, p.participant, DEPS);
     expect(discovering[0]?.waiting).toEqual({
       kind: "task",
-      task: { kind: "discover", added: 0 },
+      task: { kind: "discover", added: 0, firstLook: { total: 0, answered: 0 } },
     });
     const facilitator = await listProjectRows(db, p.facilitator, DEPS);
     expect(facilitator[0]).toMatchObject({ role: "facilitator", phase: "discover" });
@@ -348,6 +355,26 @@ describe("sendBrainstormReminder (EL13)", () => {
       .execute();
     expect(log).toHaveLength(1);
     expect(JSON.stringify(log)).not.toContain("@example.test");
+  });
+
+  it("mails the participants who have not finished the first look, with its link (EL22)", async () => {
+    const p = await projectWithMembers(db, "discover");
+    const systolic = await insertImportedElement(db, p.projectId, "Systolic");
+    const answered = await answerFirstLook(db, p.participant, {
+      projectId: p.projectId,
+      elementId: systolic,
+      answer: "belongs",
+    });
+    expect(answered.ok).toBe(true);
+    const mail = mailer();
+    const sent = await sendBrainstormReminder(db, p.facilitator, p.projectId, {
+      mailer: mail,
+      baseUrl: "http://localhost:3000",
+    });
+    expect(sent).toEqual({ ok: true, value: { sent: 1 } });
+    const [message] = mail.send.mock.calls[0] as unknown as [{ to: string; text: string }];
+    expect(message.to).toBe("par2@example.test");
+    expect(message.text).toContain(`http://localhost:3000/projects/${p.projectId}/first-look`);
   });
 
   it("refuses without a mailer, outside discover and for a participant", async () => {

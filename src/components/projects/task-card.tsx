@@ -47,6 +47,28 @@ export function TaskCard({
         </section>
       );
     case "discover":
+      // NOTE: ADR 0020. The first look at existing models comes before adding what is missing.
+      if (task.firstLook.answered < task.firstLook.total)
+        return (
+          <section aria-labelledby="task-heading" className={CARD}>
+            <h2 id="task-heading" className={HEADING}>
+              {m.projects_home_turn_first_look()}
+            </h2>
+            <Facts
+              facts={[
+                { term: m.projects_home_fact_to_look_at(), value: task.firstLook.total },
+                { term: m.projects_home_fact_looked_at(), value: task.firstLook.answered },
+              ]}
+            />
+            <Button asChild size="lg" className="mt-6">
+              <Link to="/projects/$projectId/first-look" params={{ projectId }}>
+                {task.firstLook.answered === 0
+                  ? m.projects_task_first_look_action()
+                  : m.projects_task_first_look_continue()}
+              </Link>
+            </Button>
+          </section>
+        );
       return (
         <section aria-labelledby="task-heading" className={CARD}>
           <h2 id="task-heading" className={HEADING}>

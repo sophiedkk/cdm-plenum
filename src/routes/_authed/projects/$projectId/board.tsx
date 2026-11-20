@@ -65,6 +65,7 @@ import {
   boardQueryOptions,
   brainstormStatusQueryOptions,
   elementKeys,
+  firstLookSummaryQueryOptions,
   markSummaryQueryOptions,
   ownMarksQueryOptions,
 } from "@/server/elements/query-options";
@@ -136,6 +137,11 @@ function Board() {
   const { data: status } = useQuery({
     ...brainstormStatusQueryOptions(projectId),
     enabled: isFacilitator && privateStep,
+  });
+  // NOTE: EL22. The facilitator sees the first look's counts per element during discover.
+  const { data: firstLook } = useQuery({
+    ...firstLookSummaryQueryOptions(projectId),
+    enabled: isFacilitator && project.phase === "discover",
   });
   const router = useRouter();
   const [dialog, setDialog] = useState<DialogState>(
@@ -303,6 +309,11 @@ function Board() {
             ckmColumn={ckmColumn}
             openElementId={openElementId}
             supportCounts={isFacilitator && summary?.ok ? summary.value.support : undefined}
+            firstLookCounts={
+              isFacilitator && firstLook?.ok && firstLook.value.total > 0
+                ? firstLook.value.counts
+                : undefined
+            }
             actions={{
               addComment: canComment
                 ? (element, body) =>

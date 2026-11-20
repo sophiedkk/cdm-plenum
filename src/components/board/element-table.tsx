@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { m } from "@/i18n/messages";
 import { formatCardinality } from "@/lib/cardinality";
+import type { FirstLookCounts } from "@/lib/first-look";
 import type { Outcome } from "@/lib/forms/outcome";
 import { promptLabel } from "@/lib/i18n/labels";
 import { cn } from "@/lib/utils";
@@ -104,6 +105,7 @@ function ElementRows({
   actions,
   targets,
   supportCount,
+  firstLook,
   columnCount,
 }: Readonly<{
   projectId: string;
@@ -115,6 +117,8 @@ function ElementRows({
   targets: readonly MarkTarget[];
   /** The number of supporters, in the facilitator's view only (EL16). */
   supportCount: number | undefined;
+  /** The first look's answers, in the facilitator's view during discover (EL22); null: none. */
+  firstLook: FirstLookCounts | null | undefined;
   columnCount: number;
   /** Open on arrival, from a link to this element (EL15). */
   opened: boolean;
@@ -181,6 +185,17 @@ function ElementRows({
         {supportCount !== undefined && (
           <TableCell className="text-right tabular-nums">{supportCount}</TableCell>
         )}
+        {firstLook !== undefined && (
+          <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
+            {firstLook === null
+              ? ""
+              : m.board_first_look_counts({
+                  belongs: firstLook.belongs,
+                  notSure: firstLook.not_sure,
+                  notBelongs: firstLook.not_belongs,
+                })}
+          </TableCell>
+        )}
       </TableRow>
       <TableRow id={detailsId} hidden={!expanded} className="hover:bg-transparent">
         <TableCell colSpan={columnCount} className="px-4 pt-2 pb-6 whitespace-normal">
@@ -219,6 +234,7 @@ export function ElementTable({
   openElementId,
   actions,
   supportCounts,
+  firstLookCounts,
 }: Readonly<{
   projectId: string;
   elements: readonly CardElement[];
@@ -232,10 +248,16 @@ export function ElementTable({
   actions: ElementActions;
   /** The supporters per element id; the facilitator's board shows them as a column (EL16). */
   supportCounts?: Readonly<Record<string, number>> | undefined;
+  /** The first look's answers per element id; the facilitator's board in discover (EL22). */
+  firstLookCounts?: Readonly<Record<string, FirstLookCounts>> | undefined;
 }>) {
   const targets = elements.map((element, index) => markTarget(element, index + 1));
   const columnCount =
-    6 + (detailFields ? 1 : 0) + (ckmColumn ? 1 : 0) + (supportCounts === undefined ? 0 : 1);
+    6 +
+    (detailFields ? 1 : 0) +
+    (ckmColumn ? 1 : 0) +
+    (supportCounts === undefined ? 0 : 1) +
+    (firstLookCounts === undefined ? 0 : 1);
   return (
     <Table aria-label={m.board_list_label()}>
       <TableHeader>
@@ -265,6 +287,9 @@ export function ElementTable({
               {m.board_column_support()}
             </TableHead>
           )}
+          {firstLookCounts !== undefined && (
+            <TableHead scope="col">{m.board_column_first_look()}</TableHead>
+          )}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -282,6 +307,9 @@ export function ElementTable({
             targets={targets}
             supportCount={
               supportCounts === undefined ? undefined : (supportCounts[element.id] ?? 0)
+            }
+            firstLook={
+              firstLookCounts === undefined ? undefined : (firstLookCounts[element.id] ?? null)
             }
             columnCount={columnCount}
           />

@@ -64,6 +64,8 @@ function facts(changes: Partial<OverviewFacts> = {}): OverviewFacts {
     duplicates: 2,
     importedModels: 0,
     listedFromModels: 0,
+    firstLookTotal: 14,
+    firstLookFinished: 6,
     round: null,
     undecided: 0,
     lastClosedRound: null,
@@ -161,8 +163,13 @@ describe("the checklist per phase", () => {
       ],
       [
         "To do",
-        "To doAdd what is missing. 5 of 8 participants added elementsSend a reminder",
+        "To doParticipants go through the list. 6 of 8 done.Send a reminder",
         ["Send a reminder"],
+      ],
+      [
+        "To do",
+        "To doAdd what is missing. 5 of 8 participants added elementsOpen the board",
+        ["Open the board"],
       ],
       [
         "To do",
@@ -173,11 +180,14 @@ describe("the checklist per phase", () => {
     expect(screen.getByRole("link", { name: "Add models" }).getAttribute("href")).toBe(
       "/projects/p1/models",
     );
+    expect(screen.getByRole("link", { name: "Open the board" }).getAttribute("href")).toBe(
+      "/projects/p1/brainstorm",
+    );
   });
 
   it("shows the imported models and, after the reveal, the duplicates to merge", () => {
     renderOverview("discover", { importedModels: 3, listedFromModels: 14, boardRevealed: true });
-    const [models, , cleanup] = items();
+    const [models, , , cleanup] = items();
     expect(models).toEqual({
       state: "Done",
       text: "DoneStart from existing models. 3 models imported: 14 elements on the list.Review",
