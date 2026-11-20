@@ -6,7 +6,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getLocale } from "@/i18n/runtime";
 import { getDb } from "../db/index.ts";
+import { getMailer } from "../mail.ts";
 import { requireSession } from "../middleware.ts";
+import { decidedSoFar, listProjectRows, overviewFacts } from "./overview.ts";
 import { movePhase, projectOverview } from "./phase.ts";
 import {
   createGroup,
@@ -15,7 +17,6 @@ import {
   leaveProject,
   listGroupMembers,
   listGroups,
-  listProjects,
   removeGroup,
   renameGroup,
   setGroupNamesVisible,
@@ -37,9 +38,29 @@ export const createProjectFn = createServerFn({ method: "POST" })
   .validator(createProjectInput)
   .handler(({ data, context }) => createProject(getDb(), context.userId, data, getLocale()));
 
-export const listProjectsFn = createServerFn({ method: "GET" })
+export const listProjectRowsFn = createServerFn({ method: "GET" })
   .middleware([requireSession])
-  .handler(({ context }) => listProjects(getDb(), context.userId));
+  .handler(({ context }) =>
+    listProjectRows(getDb(), context.userId, {
+      now: new Date(),
+      mailConfigured: getMailer() !== null,
+    }),
+  );
+
+export const decidedSoFarFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => decidedSoFar(getDb(), context.userId, data.projectId));
+
+export const overviewFactsFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) =>
+    overviewFacts(getDb(), context.userId, data.projectId, {
+      now: new Date(),
+      mailConfigured: getMailer() !== null,
+    }),
+  );
 
 export const getProjectFn = createServerFn({ method: "GET" })
   .middleware([requireSession])

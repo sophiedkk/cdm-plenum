@@ -13,6 +13,7 @@ const ACTION_LABELS: Record<(typeof ACTIVITY_ACTIONS)[number], () => string> = {
   app_role_granted: () => m.admin_action_app_role_granted(),
   app_role_revoked: () => m.admin_action_app_role_revoked(),
   board_revealed: () => m.admin_action_board_revealed(),
+  brainstorm_reminder_sent: () => m.admin_action_brainstorm_reminder_sent(),
   change_class_set: () => m.admin_action_change_class_set(),
   ckm_archetype_imported: () => m.admin_action_ckm_archetype_imported(),
   detail_flag_removed: () => m.admin_action_detail_flag_removed(),

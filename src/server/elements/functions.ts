@@ -6,9 +6,16 @@
 // refuse anyone but the facilitator (EL2, EL6, ADR 0005).
 import { createServerFn } from "@tanstack/react-start";
 import { getDb } from "../db/index.ts";
+import { getEnv } from "../env.ts";
+import { getMailer } from "../mail.ts";
 import { requireSession } from "../middleware.ts";
 import { projectInput } from "../projects/schemas.ts";
-import { brainstormStatus, revealBoard, setPrivateBrainstorm } from "./brainstorm.ts";
+import {
+  brainstormStatus,
+  revealBoard,
+  sendBrainstormReminder,
+  setPrivateBrainstorm,
+} from "./brainstorm.ts";
 import { importCsv, previewCsvImport } from "./import.ts";
 import { addSameAs, listOwnMarks, markSummary, removeSameAs, setSupport } from "./marks.ts";
 import {
@@ -136,3 +143,13 @@ export const markSummaryFn = createServerFn({ method: "GET" })
   .middleware([requireSession])
   .validator(projectInput)
   .handler(({ data, context }) => markSummary(getDb(), context.userId, data.projectId));
+
+export const sendBrainstormReminderFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) =>
+    sendBrainstormReminder(getDb(), context.userId, data.projectId, {
+      mailer: getMailer(),
+      baseUrl: getEnv().BETTER_AUTH_URL,
+    }),
+  );

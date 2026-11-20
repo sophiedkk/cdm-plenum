@@ -11,6 +11,7 @@ export const ACTIVITY_ACTIONS = [
   "app_role_granted",
   "app_role_revoked",
   "board_revealed",
+  "brainstorm_reminder_sent",
   "change_class_set",
   "ckm_archetype_imported",
   "detail_flag_removed",
