@@ -18,6 +18,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { m } from "@/i18n/messages";
 import { getLocale } from "@/i18n/runtime";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { sessionQueryOptions } from "@/server/session/query-options";
 import appCss from "@/styles/app.css?url";
 
@@ -48,8 +49,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang={getLocale()}>
+    // The theme script sets data-theme on <html> before React hydrates, so the server's markup
+    // differs from the browser's on that one attribute.
+    <html lang={getLocale()} suppressHydrationWarning>
       <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: a constant script, no user input */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
       <body>

@@ -11,6 +11,8 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A theme switch next to the language switch: Light, Dark or System. System
+  follows your device's setting, as before; the choice stays in your browser.
 - A new project starts with a private brainstorm: each participant sees only
   the elements they added, until the facilitator selects "Reveal the board"
   on the element board. Until then the board shows the facilitator how many
@@ -49,6 +51,13 @@ the project uses [Semantic Versioning](https://semver.org/).
   from the overview, after a confirmation. The overview also shows the
   number of elements on the board, or how many raters completed the open
   round.
+- While rating, you can flag the data type, the cardinality or the values of
+  an element as wrong. Open "Data type, cardinality and values (not rated)"
+  on the card, select "Flag as wrong" next to the detail and give a reason.
+  You can change or remove your flag until the round closes. Only the
+  facilitator sees flags: the round page lists, per element, how many
+  participants flagged each detail and their reasons, with names only when
+  the round lets the facilitator see who rated what.
 
 ### Changed
 
@@ -57,6 +66,19 @@ the project uses [Semantic Versioning](https://semver.org/).
   Blood pressure in decide and Respiratory rate in hand-off with two closed
   rounds. A database that already has the blood pressure demo gets the other
   three.
+- You now rate one element at a time. Each card shows the element's name and
+  description, your score and the scores of the previous round, the scale
+  and a reason field, and says where you are, such as "Element 3 of 8". Use
+  "Previous" and "Next" to move between cards; after the last card an
+  overview lists every element with your rating or "Not rated yet", and you
+  select an element to go back to its card. A reload or the browser's back
+  button keeps you on the same card. In round 1 the question "Is an element
+  missing? Propose it" is on the overview.
+- A rating now answers one question: does the element, by its name and
+  description, belong in the data model. The data type, cardinality and
+  values are folded away on the card and marked "not rated"; they are
+  settled in a later step.
+
 - The element board shows each element as one row of a table, with its
   number, name, description, data type, cardinality, number of sources, CKM
   link and number of comments. At 1280 by 800 pixels you see at least 10

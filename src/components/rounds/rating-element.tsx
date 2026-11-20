@@ -1,22 +1,25 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// One element on the rating screen (DE3, DE7, DE8, DE15): a fieldset with the scale as a radio
-// group, "unable to rate" and an optional reason. A choice saves at once; a changed reason saves
-// when the field loses focus. In a later round one line above the scale shows the participant's
-// own earlier rating and the distribution per stakeholder group; the median, the band shares and
+// One card of the rating screen (DE3, DE7, DE8, DE15, DE18): the element's name and description,
+// the scale as a radio group with "unable to rate", an optional reason and the folded details.
+// The rating covers inclusion only (DE1), so data type, cardinality and values are marked "not
+// rated" and can be flagged (DE17). A choice saves at once; a changed reason saves when the
+// field loses focus. In a later round one line above the scale shows the participant's own
+// earlier rating and the distribution per stakeholder group; the median, the band shares and
 // the anonymous reasons sit behind "details". No outcome label of the earlier round shows: it
 // can push ratings toward the group (ADR 0013).
-import { useId, useRef, useState } from "react";
+import { type Ref, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FieldDescription, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
+import { FieldDescription, FieldLabel } from "@/components/ui/field";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { m } from "@/i18n/messages";
 import type { ConsensusRule } from "@/lib/consensus";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import type { MyElement, OwnRating } from "@/server/rounds/ratings";
-import { RATING_REASON_MAX } from "@/server/rounds/schemas";
+import { type DetailFlagKind, RATING_REASON_MAX } from "@/server/rounds/schemas";
+import { type ElementDetails, ElementDetailsDisclosure, type FlagOutcome } from "./detail-flags";
 import { MiniDistribution, shownGroups } from "./distribution";
 import { DistributionTable, GroupResultsTable, ResultFigures } from "./element-result";
 
@@ -108,22 +111,32 @@ function PreviousRound({
   );
 }
 
-/** One element of the round as a fieldset whose legend is the element name. */
+/** One element of the round as a card: a region named by the element's heading. */
 export function RatingElement({
   element,
-  dataType,
+  details,
+  position,
+  headingRef,
   rule,
   editable,
   save,
   clear,
+  saveFlag,
+  removeFlag,
 }: Readonly<{
   element: MyElement;
-  /** The openEHR type of the element, or null when the board has none yet. */
-  dataType: string | null;
+  /** The element's data type, cardinality and values, shown folded and not rated. */
+  details: ElementDetails;
+  /** The card's place among the round's elements, from 1. */
+  position: { index: number; total: number };
+  /** The heading, which takes focus when the participant moves to this card. */
+  headingRef?: Ref<HTMLHeadingElement>;
   rule: ConsensusRule;
   editable: boolean;
   save: (score: number | null, reason: string) => Promise<RatingOutcome>;
   clear: () => Promise<RatingOutcome>;
+  saveFlag: (kind: DetailFlagKind, reason: string) => Promise<FlagOutcome>;
+  removeFlag: (kind: DetailFlagKind) => Promise<FlagOutcome>;
 }>) {
   const base = useId();
   const initial = element.own.rated
@@ -174,18 +187,30 @@ export function RatingElement({
             : state.error;
 
   return (
-    <FieldSet className="gap-3 rounded-lg border p-4" aria-describedby={`${base}-about`}>
-      <FieldLegend className="mb-0 text-base font-semibold">{element.name}</FieldLegend>
-      <p id={`${base}-about`} className="text-sm text-muted-foreground">
-        {element.description && <span className="text-foreground">{element.description} </span>}
-        {dataType === null
-          ? m.rounds_rate_data_type_none()
-          : m.rounds_rate_data_type({ type: dataType })}
-      </p>
+    <section
+      aria-labelledby={`${base}-heading`}
+      className="flex flex-col gap-3 rounded-lg border p-4"
+    >
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+          <h3
+            id={`${base}-heading`}
+            ref={headingRef}
+            tabIndex={-1}
+            className="min-w-0 text-lg font-semibold break-words outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {element.name}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {m.rounds_card_position({ index: position.index, total: position.total })}
+          </p>
+        </div>
+        {element.description && <p className="break-words">{element.description}</p>}
+      </div>
       {element.previous && <PreviousRound element={{ ...element, previous: element.previous }} />}
       <div className="flex flex-col gap-2">
-        <p id={`${base}-scale`} className="sr-only">
-          {m.rounds_rate_scale_label({ min: rule.scaleMin, max: rule.scaleMax })}
+        <p id={`${base}-scale`} className="font-medium">
+          {m.rounds_rate_question()}
         </p>
         <RadioGroup
           aria-labelledby={`${base}-scale`}
@@ -222,7 +247,7 @@ export function RatingElement({
           id={`${base}-reason`}
           value={reason}
           rows={1}
-          className="min-h-9"
+          className="min-h-9 py-1.5"
           maxLength={RATING_REASON_MAX}
           disabled={!editable}
           aria-describedby={`${base}-reason-help`}
@@ -231,38 +256,49 @@ export function RatingElement({
             if (choice !== "" && reason !== savedReason.current) void saveChoice(choice, reason);
           }}
         />
-        <FieldDescription id={`${base}-reason-help`}>
-          {choice === ""
-            ? m.rounds_rate_reason_help_unrated()
-            : m.rounds_rate_reason_help({ max: RATING_REASON_MAX })}
-        </FieldDescription>
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        {editable && choice !== "" && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              if (await run(clear, "cleared")) {
-                setChoice("");
-                savedReason.current = "";
-                setReason("");
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <FieldDescription id={`${base}-reason-help`} className="min-w-60 flex-1">
+            {choice === ""
+              ? m.rounds_rate_reason_help_unrated()
+              : m.rounds_rate_reason_help({ max: RATING_REASON_MAX })}
+          </FieldDescription>
+          <div className="flex flex-wrap items-center gap-3">
+            {editable && choice !== "" && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (await run(clear, "cleared")) {
+                    setChoice("");
+                    savedReason.current = "";
+                    setReason("");
+                  }
+                }}
+              >
+                {m.rounds_rate_clear()}
+              </Button>
+            )}
+            <p
+              role="status"
+              className={
+                typeof state === "object"
+                  ? "text-sm text-destructive"
+                  : "text-sm text-muted-foreground"
               }
-            }}
-          >
-            {m.rounds_rate_clear()}
-          </Button>
-        )}
-        <p
-          role="status"
-          className={
-            typeof state === "object" ? "text-sm text-destructive" : "text-sm text-muted-foreground"
-          }
-        >
-          {statusText}
-        </p>
+            >
+              {statusText}
+            </p>
+          </div>
+        </div>
       </div>
-    </FieldSet>
+      <ElementDetailsDisclosure
+        details={details}
+        flags={element.flags}
+        editable={editable}
+        saveFlag={saveFlag}
+        removeFlag={removeFlag}
+      />
+    </section>
   );
 }

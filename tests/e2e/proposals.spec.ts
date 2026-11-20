@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Round 1 asks whether each element belongs in the model and ends with the open question for
-// missing elements (DE1, DE16), in English and Dutch (Q-ACC-1, Q-I18N-1): a participant sees the
+// missing elements on the overview after the last card (DE1, DE16, DE18), in English and Dutch (Q-ACC-1, Q-I18N-1): a participant sees the
 // question and its anchors, proposes two elements and deletes one; the facilitator sees the
 // proposal without its proposer, adds it to the board, and the board shows it with its source.
 import { randomBytes } from "node:crypto";
@@ -74,7 +74,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
           { exact: false },
         ),
       ).toBeVisible();
-      const systolic = rater.getByRole("group", { name: "Systolic pressure" });
+      const systolic = rater.getByRole("region", { name: "Systolic pressure" });
       await expect(
         systolic.getByRole("radio", { name: fill(text.rounds_rate_score_lowest, { score: 1 }) }),
       ).toBeVisible();
@@ -82,7 +82,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         systolic.getByRole("radio", { name: fill(text.rounds_rate_score_highest, { score: 9 }) }),
       ).toBeVisible();
 
-      // The open question ends the screen, with the rule set before the round opened (DE16).
+      // The open question follows the overview after the last card, with the rule set before
+      // the round opened (DE16).
+      await expect(rater.getByRole("region", { name: text.rounds_propose_heading })).toHaveCount(0);
+      const next = rater.getByRole("link", { name: text.rounds_card_next });
+      await expectHydrated(next);
+      await next.click();
+      await expect(
+        rater.getByRole("heading", { name: text.rounds_overview_heading }),
+      ).toBeFocused();
       const propose = rater.getByRole("region", { name: text.rounds_propose_heading });
       await expect(propose).toContainText(
         fill(text.rounds_propose_rule, { rule: text.rounds_proposal_rule_default }),

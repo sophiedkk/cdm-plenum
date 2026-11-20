@@ -23,6 +23,7 @@ Each significant architecture or technology decision is recorded here in the
 | [0012](0012-discover-phase-sources-private-brainstorm-sort.md) | The discover phase: sources, a private-first brainstorm, an optional sort | Proposed |
 | [0013](0013-participant-task-home-and-compact-views.md) | A task home for participants, compact views and lean Delphi feedback | Proposed |
 | [0014](0014-rate-inclusion-detail-later.md) | The Delphi rates inclusion; the details are settled in a step of their own | Proposed |
+| [0015](0015-phase-bound-access.md) | What a participant sees and does follows the phase | Proposed |
 
 ## Adding a record
 

@@ -36,12 +36,15 @@ export interface ParticipantRatings {
   ratings: { elementId: string; score: number | null; reason: string | null }[];
   /** The ids of the elements the participant proposed in this round (DE16). */
   proposalIds: string[];
+  /** The ids of the detail flags the participant set in this round (DE17). */
+  flagIds: string[];
 }
 
 /**
- * Query 2 of 2: who gave which rating and who proposed which element in a round (DE4, DE16).
- * The caller runs it only for the facilitator of a round whose `facilitator_sees_raters` is
- * true. Ratings and proposals are one union, so the code-to-member table is read once.
+ * Query 2 of 2: who gave which rating, proposed which element and set which detail flag in a
+ * round (DE4, DE16, DE17). The caller runs it only for the facilitator of a round whose
+ * `facilitator_sees_raters` is true. The three are one union, so the code-to-member table is
+ * read once.
  */
 export async function ratingsByParticipantQuery(
   db: Kysely<DB>,
@@ -57,6 +60,7 @@ export async function ratingsByParticipantQuery(
       "rating.score",
       "rating.reason",
       sql<string | null>`null::uuid`.as("proposalId"),
+      sql<string | null>`null::uuid`.as("flagId"),
     ])
     .where("rating.round_id", "=", roundId)
     .unionAll((eb) =>
@@ -69,8 +73,23 @@ export async function ratingsByParticipantQuery(
           sql<number | null>`null::smallint`.as("score"),
           sql<string | null>`null::text`.as("reason"),
           eb.ref("round_proposal.id").$castTo<string | null>().as("proposalId"),
+          sql<string | null>`null::uuid`.as("flagId"),
         ])
         .where("round_proposal.round_id", "=", roundId),
+    )
+    .unionAll((eb) =>
+      eb
+        .selectFrom("detail_flag")
+        .select((eb) => [
+          "detail_flag.rating_code_id as codeId",
+          sql<string | null>`null::text`.as("teamId"),
+          sql<string | null>`null::uuid`.as("elementId"),
+          sql<number | null>`null::smallint`.as("score"),
+          sql<string | null>`null::text`.as("reason"),
+          sql<string | null>`null::uuid`.as("proposalId"),
+          eb.ref("detail_flag.id").$castTo<string | null>().as("flagId"),
+        ])
+        .where("detail_flag.round_id", "=", roundId),
     );
   const rows = await db
     .selectFrom(entries.as("entry"))
@@ -87,12 +106,14 @@ export async function ratingsByParticipantQuery(
       "entry.score",
       "entry.reason",
       "entry.proposalId",
+      "entry.flagId",
     ])
     .where("rating_code.project_id", "=", projectId)
     .orderBy("user.email")
     .orderBy("member.id")
     .orderBy("entry.elementId")
     .orderBy("entry.proposalId")
+    .orderBy("entry.flagId")
     .execute();
   const byMember = new Map<string, ParticipantRatings>();
   for (const row of rows) {
@@ -105,10 +126,13 @@ export async function ratingsByParticipantQuery(
         groupName: null,
         ratings: [],
         proposalIds: [],
+        flagIds: [],
       };
       byMember.set(row.memberId, participant);
     }
-    if (row.proposalId !== null) {
+    if (row.flagId !== null) {
+      participant.flagIds.push(row.flagId);
+    } else if (row.proposalId !== null) {
       participant.proposalIds.push(row.proposalId);
     } else if (row.elementId !== null) {
       if (participant.ratings.length === 0) participant.groupName = row.groupName;

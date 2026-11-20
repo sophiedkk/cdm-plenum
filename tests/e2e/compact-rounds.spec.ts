@@ -3,8 +3,8 @@
 
 // The compact round views at 1280 by 800 pixels, in English and Dutch (Q-USE-1, DE15, ADR 0013):
 // the results of a closed round show 8 elements on the first screen, the round page of an open
-// round starts with the call to rate, and the rating screen shows the first rating control on
-// the first screen, with the own earlier score and the distribution but no outcome label.
+// round starts with the call to rate, and the rating screen shows the whole first card on the
+// first screen (DE18), with the own earlier score and the distribution but no outcome label.
 import type { Locator, Page } from "@playwright/test";
 import { type Kysely, sql } from "kysely";
 import type { DB } from "../../src/server/db/schema.gen.ts";
@@ -199,12 +199,16 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expectHydrated(rateNow);
       await rateNow.click();
       await expect(page.getByText(text.rounds_rate_hidden_title)).toBeVisible();
-      const first = page.getByRole("group").first();
-      const firstRadio = first.getByRole("radio").first();
+      // The first card, Position, fits the first screen whole, with the way to the next card.
+      const position = page.getByRole("region", { name: "Position" });
+      const firstRadio = position.getByRole("radio").first();
       await expectHydrated(firstRadio);
       expect(await bottomOf(page, firstRadio)).toBeLessThanOrEqual(SCREEN.height);
+      expect(await bottomOf(page, position)).toBeLessThanOrEqual(SCREEN.height);
+      expect(
+        await bottomOf(page, page.getByRole("link", { name: text.rounds_card_next })),
+      ).toBeLessThanOrEqual(SCREEN.height);
       // The own earlier score and the distribution, without an outcome label of round 1.
-      const position = page.getByRole("group", { name: "Position" });
       await expect(position).toContainText(
         fill(text.rounds_rate_previous_own_value, { number: 1, value: 7 }),
       );
