@@ -42,6 +42,8 @@ export function CoverageTable({
   onListed: () => Promise<void> | void;
 }>) {
   const open = coverage.rows.filter((row) => !row.onList);
+  // With one model nothing is matched, so the column would say "only one model" on every row.
+  const showBasis = coverage.models.length > 1;
   // NOTE: ADR 0020 prototype: every row starts checked; the facilitator unchecks what is out.
   const [unchecked, setUnchecked] = useState<ReadonlySet<string>>(new Set());
   const [pending, setPending] = useState(false);
@@ -100,9 +102,11 @@ export function CoverageTable({
                   {model.title}
                 </th>
               ))}
-              <th scope="col" className="px-3 py-2.5 text-left font-semibold whitespace-nowrap">
-                {m.board_models_column_basis()}
-              </th>
+              {showBasis && (
+                <th scope="col" className="px-3 py-2.5 text-left font-semibold whitespace-nowrap">
+                  {m.board_models_column_basis()}
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -155,9 +159,11 @@ export function CoverageTable({
                       </td>
                     );
                   })}
-                  <td className="px-3 py-2.5 text-xs whitespace-nowrap text-muted-foreground">
-                    {models > 1 ? BASIS_LABELS[row.basis]() : BASIS_LABELS.none()}
-                  </td>
+                  {showBasis && (
+                    <td className="px-3 py-2.5 text-xs whitespace-nowrap text-muted-foreground">
+                      {models > 1 ? BASIS_LABELS[row.basis]() : BASIS_LABELS.none()}
+                    </td>
+                  )}
                 </tr>
               );
             })}
