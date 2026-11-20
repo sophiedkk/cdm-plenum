@@ -93,7 +93,7 @@ describe("ParticipantTaskCard", () => {
     render(<ParticipantTaskCard projectId="p1" overview={overview({ phase: "discover" })} />);
     expect(screen.getByText("You added 3 elements.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Add elements" }).getAttribute("href")).toBe(
-      "/projects/p1/board",
+      "/projects/p1/brainstorm",
     );
   });
 

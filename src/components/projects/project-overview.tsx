@@ -75,7 +75,12 @@ export function PhaseSteps({ phase }: Readonly<{ phase: ProjectPhase }>) {
 }
 
 type TaskLink =
-  | { to: "/projects/$projectId/scope" | "/projects/$projectId/board" }
+  | {
+      to:
+        | "/projects/$projectId/scope"
+        | "/projects/$projectId/board"
+        | "/projects/$projectId/brainstorm";
+    }
   | { to: "/projects/$projectId/rounds" }
   | { to: "/projects/$projectId/export" }
   | {
@@ -136,7 +141,7 @@ function taskView(task: ParticipantTask): TaskView {
         done: addedCount(task.added),
         action: {
           label: m.projects_task_discover_action(),
-          link: { to: "/projects/$projectId/board" },
+          link: { to: "/projects/$projectId/brainstorm" },
         },
       };
     case "rate":

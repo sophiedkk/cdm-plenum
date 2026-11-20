@@ -157,7 +157,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
   });
 }
 
-test("a participant in the discover phase sees only their own count and goes to the board", async ({
+test("a participant in the discover phase sees only their own count and goes to the brainstorm", async ({
   page,
   db,
 }) => {
@@ -182,6 +182,8 @@ test("a participant in the discover phase sees only their own count and goes to 
   const add = card.getByRole("link", { name: text.projects_task_discover_action });
   await expectHydrated(add);
   await add.click();
-  await expect(page).toHaveURL((url) => url.pathname === `/projects/${project.projectId}/board`);
+  await expect(page).toHaveURL(
+    (url) => url.pathname === `/projects/${project.projectId}/brainstorm`,
+  );
   await expectAxeClean(page);
 });
