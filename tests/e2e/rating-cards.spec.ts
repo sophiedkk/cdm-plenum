@@ -112,7 +112,10 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
       // The participant flags the data type with a reason (DE17).
       await first.getByText(text.rounds_card_details_summary).click();
-      await expect(first.getByText("DV_TEXT")).toBeVisible();
+      // The data type reads as on the board: its name first, the standards' types after it.
+      await expect(
+        first.getByText(`${text.board_type_text_name} (DV_TEXT / string)`),
+      ).toBeVisible();
       await first
         .getByRole("button", {
           name: fill(text.rounds_flag_open_named, { detail: text.rounds_flag_detail_data_type }),
@@ -177,7 +180,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await next.click();
       await expect(heading(text.rounds_overview_heading)).toBeFocused();
       const overview = rater.getByRole("region", { name: text.rounds_overview_heading });
-      await expect(overview).toContainText(fill(text.rounds_rate_progress, { rated: 3, total: 3 }));
+      await expect(
+        rater.getByText(fill(text.rounds_rate_progress, { rated: 3, total: 3 })),
+      ).toHaveCount(1);
       const rows = overview.getByRole("row");
       await expect(rows.filter({ hasText: "Systolic pressure" })).toContainText("7");
       await expect(rows.filter({ hasText: "Systolic pressure" })).toContainText(

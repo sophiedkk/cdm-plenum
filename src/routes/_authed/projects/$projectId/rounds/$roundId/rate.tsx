@@ -6,6 +6,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { z } from "zod";
+import { dataTypeText } from "@/components/board/element-details";
 import { projectTitle } from "@/components/projects/project-title";
 import type { ElementDetails } from "@/components/rounds/detail-flags";
 import { ProposeSection } from "@/components/rounds/proposals";
@@ -17,7 +18,6 @@ import { NotFoundState } from "@/components/shell/route-states";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { m } from "@/i18n/messages";
 import { formatCardinality } from "@/lib/cardinality";
-import { dataTypeByKey } from "@/lib/data-types";
 import { mayRate } from "@/lib/project-roles";
 import type { BoardElement } from "@/server/elements/queries";
 import { projectQueryOptions } from "@/server/projects/query-options";
@@ -86,10 +86,7 @@ export const Route = createFileRoute("/_authed/projects/$projectId/rounds/$round
 function detailsOf(element: BoardElement | undefined): ElementDetails {
   if (!element) return { dataType: null, cardinality: null, values: [] };
   return {
-    dataType:
-      element.dataType !== null
-        ? dataTypeByKey(element.dataType).rmType
-        : (element.ckmLink?.rmType ?? null),
+    dataType: element.dataType === null && element.ckmLink === null ? null : dataTypeText(element),
     cardinality: element.cardinality === null ? null : formatCardinality(element.cardinality),
     values: element.values.map((value) =>
       value.value === null ? value.text : `${value.value}: ${value.text}`,
