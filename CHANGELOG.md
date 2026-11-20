@@ -26,6 +26,9 @@ the project uses [Semantic Versioning](https://semver.org/).
   rating card. Participants can no longer flag those details while rating,
   and a round's page no longer lists flagged details. Values you entered
   before are kept and come back with the detail phase.
+- The element board shows each element's CKM link from the discover phase
+  on, when the group links elements to existing models, instead of from
+  decide.
 
 ## [0.2.0] - 2026-11-20
 

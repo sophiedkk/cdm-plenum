@@ -126,8 +126,11 @@ export function detailFieldsShown(phase: ProjectPhase): boolean {
   return from !== null && PROJECT_PHASES.indexOf(phase) >= PROJECT_PHASES.indexOf(from);
 }
 
-/** The phase from which the board shows each element's CKM link in a column of its own (EX2). */
-export const CKM_COLUMN_PHASE: ProjectPhase = "decide";
+/**
+ * The phase from which the board shows each element's CKM link in a column of its own (EX2).
+ * NOTE: owner decision 2026-11-20: from discover, the phase in which elements are linked to source models.
+ */
+export const CKM_COLUMN_PHASE: ProjectPhase = "discover";
 
 /** Whether the board shows the CKM column during `phase`. */
 export function ckmColumnShown(phase: ProjectPhase): boolean {

@@ -83,10 +83,10 @@ describe("detailFieldsShown (EL21)", () => {
 });
 
 describe("ckmColumnShown (EX2)", () => {
-  it("shows the board's CKM column from the decide phase on", () => {
+  it("shows the board's CKM column from the discover phase on", () => {
     expect(PROJECT_PHASES.map((phase) => [phase, ckmColumnShown(phase)])).toEqual([
       ["scope", false],
-      ["discover", false],
+      ["discover", true],
       ["decide", true],
       ["handoff", true],
     ]);
