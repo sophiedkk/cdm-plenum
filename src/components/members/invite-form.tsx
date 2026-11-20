@@ -5,6 +5,7 @@
 // the address shows at the address, a missing group at the group, anything else at the top.
 import { revalidateLogic } from "@tanstack/react-form";
 import { SendIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
 import { m } from "@/i18n/messages";
@@ -44,10 +45,13 @@ export function InviteForm({
   groups,
   invite,
   onInvited,
+  actions,
 }: Readonly<{
   groups: readonly { id: string; name: string; expertType: ExpertType }[];
   invite: (input: { email: string; groupId: string }) => Promise<Outcome<InvitedOutcome>>;
   onInvited: (email: string, invited: InvitedOutcome) => Promise<void> | void;
+  /** Buttons next to the submit button, such as Cancel in a dialog. */
+  actions?: ReactNode;
 }>) {
   const form = useAppForm({
     defaultValues: { email: "", groupId: "" },
@@ -81,29 +85,23 @@ export function InviteForm({
   return (
     <form
       noValidate
-      aria-labelledby="invite-title"
       className="flex flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();
       }}
     >
-      <h3 id="invite-title" className="text-lg font-semibold">
-        {m.members_invite_title()}
-      </h3>
       <form.AppForm>
         <form.FormErrors />
       </form.AppForm>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+      <div className="flex flex-col gap-4">
         <form.AppField name="email">
           {(field) => (
             <field.TextField
               type="email"
               label={m.members_invite_email_label()}
-              description={m.members_invite_email_description()}
               autoComplete="off"
               spellCheck={false}
-              className="sm:max-w-xs"
             />
           )}
         </form.AppField>
@@ -119,12 +117,12 @@ export function InviteForm({
                   expertType: expertTypeLabel(group.expertType),
                 }),
               }))}
-              className="sm:max-w-xs"
             />
           )}
         </form.AppField>
       </div>
-      <div>
+      <div className="flex flex-wrap justify-end gap-2">
+        {actions}
         <form.AppForm>
           <form.SubmitButton icon={<SendIcon aria-hidden="true" data-icon="inline-start" />}>
             {m.members_invite_submit()}

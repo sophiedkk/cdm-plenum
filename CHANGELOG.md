@@ -11,6 +11,14 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A Settings page for the facilitator, the last tab of a project. It holds
+  the change class and the minimum panel (moved from Rounds), the private
+  brainstorm and whether participants see group names (moved from Members),
+  and joining a stakeholder group to rate. Rounds still shows the panel when
+  you set up and open a round.
+- A menu under your name in the top bar holds the language, the theme and
+  Sign out.
+
 - After the reveal, in the discover phase, you can mark an element on the
   board with "I support this", or say it is the same as another element with
   "Same as…". Other participants never see your marks. The facilitator sees
@@ -69,6 +77,29 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Every project page shows a header with the project name, one line of the
+  scope, the phases as steps with the current one marked, and your task with
+  one button. As a facilitator you see the status of the phase there and
+  move the project to the next or the previous phase. The header replaces
+  the Overview tab and the Phase and Role badges.
+- Opening a project takes you to the page of the current step: as a
+  participant the page of your task, as a facilitator the main page of the
+  phase. The tabs start with the work of the current phase; Members and
+  Settings sit at the far end.
+- The Members page shows one table of people per stakeholder group. You
+  invite a participant and add a group in a dialog. Only open invitations
+  are listed; accepted, expired and revoked ones are under "Earlier
+  invitations".
+- In the discover phase the element board shows the brainstorm question
+  instead of data type, cardinality and CKM; these show from the decide
+  phase on. Adding an element asks for a name and a description only. As a
+  participant you add elements on the Brainstorm tab only.
+- The Brainstorm tab has one form: choose the question, type a name and
+  press Enter. Your elements show below it, grouped by question.
+- A participant who opens the export page lands on the page of the current
+  step, no longer on Scope.
+- Shorter texts on the project pages; the CSV help on the export page is
+  folded.
 - The rating card shows the scale as large buttons, grouped in the round's
   three bands with a label under each: does not belong in the model, unsure,
   belongs in the model. "Unable to rate" stands apart. A chosen button is

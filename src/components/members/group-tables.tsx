@@ -78,8 +78,11 @@ export function GroupCountTable({ groups }: Readonly<{ groups: readonly VisibleG
   );
 }
 
-/** The groups with their participants by name, and an actions cell per group. */
-export function GroupMemberTable({
+/**
+ * One table of people for the facilitator (ADR 0018): a row group per stakeholder group, headed
+ * by the group's name, expert type and actions, then one row per person in it.
+ */
+export function GroupPeopleTable({
   groups,
   actions,
 }: Readonly<{
@@ -90,51 +93,49 @@ export function GroupMemberTable({
     <Table>
       <TableCaption className="sr-only">{m.members_groups_caption()}</TableCaption>
       <TableHeader>
-        <TableRow>
-          <TableHead scope="col">{m.members_column_group()}</TableHead>
-          <TableHead scope="col">{m.members_column_expert_type()}</TableHead>
-          <TableHead scope="col">{m.members_column_participants()}</TableHead>
-          <TableHead scope="col">{m.members_column_actions()}</TableHead>
+        <TableRow className="hover:bg-transparent">
+          <TableHead scope="col">{m.members_column_name()}</TableHead>
+          <TableHead scope="col">{m.members_column_email()}</TableHead>
+          <TableHead scope="col">
+            <span className="sr-only">{m.members_column_actions()}</span>
+          </TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>
-        {groups.map((group) => (
-          <TableRow key={group.id} className="align-top">
-            <TableHead scope="row" className="font-medium">
-              {group.name}
+      {groups.map((group) => (
+        <TableBody key={group.id} className="border-b last:border-b-0">
+          <TableRow className="bg-muted/50 hover:bg-muted/50">
+            <TableHead scope="rowgroup" colSpan={2} className="py-1.5">
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold">{group.name}</span>
+                <ExpertTypeBadge expertType={group.expertType} />
+              </span>
             </TableHead>
-            <TableCell>
-              <ExpertTypeBadge expertType={group.expertType} />
-            </TableCell>
-            <TableCell className="whitespace-normal">
-              {group.members.length === 0 ? (
-                <span className="text-muted-foreground">{m.members_no_participants()}</span>
-              ) : (
-                <ul className="flex flex-col gap-1">
-                  {group.members.map((member) => (
-                    <li key={member.memberId} className="flex flex-wrap items-center gap-2">
-                      <span>
-                        {member.name === "" ? (
-                          member.email
-                        ) : (
-                          <>
-                            {member.name}{" "}
-                            <span className="text-muted-foreground">({member.email})</span>
-                          </>
-                        )}
-                      </span>
-                      {member.role === "facilitator" && <RoleBadge projectRole="facilitator" />}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </TableCell>
-            <TableCell>
-              <div className="flex flex-wrap gap-2">{actions(group)}</div>
+            <TableCell className="py-1.5">
+              <div className="flex flex-wrap justify-end gap-2">{actions(group)}</div>
             </TableCell>
           </TableRow>
-        ))}
-      </TableBody>
+          {group.members.length === 0 ? (
+            <TableRow className="hover:bg-transparent">
+              <TableCell colSpan={3} className="text-muted-foreground">
+                {m.members_no_participants()}
+              </TableCell>
+            </TableRow>
+          ) : (
+            group.members.map((member) => (
+              <TableRow key={member.memberId}>
+                <TableHead scope="row" className="font-normal">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <PersonName name={member.name} />
+                    {member.role === "facilitator" && <RoleBadge projectRole="facilitator" />}
+                  </span>
+                </TableHead>
+                <TableCell>{member.email}</TableCell>
+                <TableCell />
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      ))}
     </Table>
   );
 }

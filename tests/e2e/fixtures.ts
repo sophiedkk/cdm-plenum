@@ -21,7 +21,7 @@ import {
 import { linkIn, takeMessage } from "./mailpit.ts";
 import { appUrl, runDatabaseUrl } from "./run-env.ts";
 
-export { expectAxeClean } from "./axe.ts";
+export { expectAxeClean, expectAxeCleanInBothThemes } from "./axe.ts";
 export { expect };
 
 export type Locale = "en" | "nl";

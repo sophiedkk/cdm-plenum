@@ -321,8 +321,8 @@ function MinimumReason({ status }: Readonly<{ status: PanelStatus }>) {
 }
 
 /**
- * The panel section of the rounds page for the facilitator: the table, and while no round has
- * opened the change class and the minimum per expert type.
+ * The panel section of the Settings page (PR12): the table, whose status column names any
+ * shortfall, and while no round has opened the change class and the minimum per expert type.
  */
 export function PanelSetup({
   status,
@@ -348,11 +348,6 @@ export function PanelSetup({
         minimum={status.minimum}
         caption={m.rounds_panel_caption()}
       />
-      <ul className="flex flex-col gap-1 text-sm">
-        {shortfallText(status.shortfall).map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
       <MinimumReason status={status} />
       {status.locked ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">

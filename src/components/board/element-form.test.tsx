@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The element form (EL1, EL5): the data type picker with both type names and its help text, the
-// two-part cardinality, the client checks and the server refusals.
+// The element form (EL1, EL5, EL21): adding asks for a name and a description only; editing has
+// the data type picker with both type names and its help text, the two-part cardinality, the
+// client checks and the server refusals.
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { baseLocale, overwriteGetLocale } from "@/i18n/runtime";
@@ -15,17 +16,21 @@ afterEach(() => {
   overwriteGetLocale(() => baseLocale);
 });
 
+const EMPTY: ElementFields = { name: "", description: "", dataType: null, cardinality: null };
+
+/** The facilitator's edit form, which holds every field (EL5). */
 function renderForm(
   submit: (fields: ElementFields) => Promise<ElementOutcome> = vi.fn(
     async () => ({ ok: true }) as const,
   ),
-  initial?: Omit<ElementFields, "source">,
+  initial: ElementFields = EMPTY,
+  mode: "add" | "edit" = "edit",
 ) {
   const onDone = vi.fn();
   render(
     <ElementForm
-      withSource={initial === undefined}
-      {...(initial ? { initial } : {})}
+      mode={mode}
+      initial={initial}
       submitLabel="Add element"
       submit={submit}
       onDone={onDone}
@@ -35,6 +40,20 @@ function renderForm(
 }
 
 describe("ElementForm", () => {
+  it("asks only for a name and a description when adding (EL1)", async () => {
+    const { submit, onDone, button } = renderForm(undefined, EMPTY, "add");
+    expect(screen.queryByRole("group", { name: "Data type" })).toBeNull();
+    expect(screen.queryByLabelText("Minimum")).toBeNull();
+    expect(screen.queryByLabelText("Maximum")).toBeNull();
+    expect(screen.getAllByRole("textbox")).toHaveLength(2);
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: " Systolic " } });
+    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Peak" } });
+    fireEvent.click(button);
+    const sent = { name: "Systolic", description: "Peak", dataType: null, cardinality: null };
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith(sent));
+    expect(submit).toHaveBeenCalledWith(sent);
+  });
+
   it("lists not decided and the 17 data types with both type names and when to use each", () => {
     renderForm();
     const group = screen.getByRole("group", { name: "Data type" });
@@ -83,22 +102,18 @@ describe("ElementForm", () => {
     fireEvent.click(screen.getByRole("radio", { name: /Quantity/ }));
     fireEvent.change(screen.getByLabelText("Minimum"), { target: { value: "1" } });
     fireEvent.change(screen.getByLabelText("Maximum"), { target: { value: "many" } });
-    fireEvent.change(screen.getByLabelText(/Where the idea comes from/), {
-      target: { value: "Ward form" },
-    });
     fireEvent.click(button);
     const sent = {
       name: "Systolic",
       description: "Peak",
       dataType: "quantity",
       cardinality: { min: 1, max: null },
-      source: "Ward form",
     };
     await waitFor(() => expect(onDone).toHaveBeenCalledWith(sent));
     expect(submit).toHaveBeenCalledWith(sent);
   });
 
-  it("starts from the element when editing and sends no source", async () => {
+  it("starts from the element when editing", async () => {
     const submit = vi.fn(async () => ({ ok: true }) as const);
     renderForm(submit, {
       name: "Count",
@@ -106,7 +121,6 @@ describe("ElementForm", () => {
       dataType: "count",
       cardinality: { min: 0, max: 3 },
     });
-    expect(screen.queryByLabelText(/Where the idea comes from/)).toBeNull();
     expect(screen.getByRole("radio", { name: /^Count/ })).toHaveProperty("checked", true);
     expect(screen.getByLabelText("Maximum number")).toHaveProperty("value", "3");
     fireEvent.click(screen.getByRole("button", { name: "Add element" }));

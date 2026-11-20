@@ -42,7 +42,7 @@ import { m } from "@/i18n/messages";
 import { isPrivateStep } from "@/lib/brainstorm";
 import { dataTypeByKey } from "@/lib/data-types";
 import { requireStep } from "@/lib/guards";
-import { MARK_PHASE, REVEAL_PHASE, writeOpen } from "@/lib/phase-access";
+import { detailFieldsShown, MARK_PHASE, REVEAL_PHASE, writeOpen } from "@/lib/phase-access";
 import { importArchetypeFn, linkElementFn, searchCkmFn } from "@/server/ckm/functions";
 import {
   addElementCommentFn,
@@ -67,6 +67,8 @@ import { projectKeys, projectQueryOptions } from "@/server/projects/query-option
 /**
  * The element board of the project (EL1 to EL7, EL9). In the private step of the brainstorm the
  * facilitator follows it and reveals the board here (EL13). `element` opens that element's row.
+ * Participants add elements on the brainstorm only (ADR 0018); the server still takes an
+ * element from the board while the phase table opens adding (PR9).
  */
 export const Route = createFileRoute("/_authed/projects/$projectId/board")({
   validateSearch: z.object({ element: z.string().max(64).optional() }),
@@ -102,6 +104,7 @@ function Board() {
   // The phase opens or closes the participant's forms; the server checks it again (PR9).
   const canAdd = writeOpen(project.role, project.phase, "element_add");
   const canComment = writeOpen(project.role, project.phase, "element_comment");
+  const detailFields = detailFieldsShown(project.phase);
   const queryClient = useQueryClient();
   const { element: openElementId } = Route.useSearch();
   const { data: board } = useSuspenseQuery(boardQueryOptions(projectId, isFacilitator));
@@ -191,7 +194,7 @@ function Board() {
         description={m.board_purpose()}
         actions={
           <>
-            {canAdd && addButton}
+            {isFacilitator && addButton}
             {isFacilitator && (
               <>
                 <Button
@@ -280,6 +283,7 @@ function Board() {
             projectId={projectId}
             elements={elements}
             isFacilitator={isFacilitator}
+            detailFields={detailFields}
             openElementId={openElementId}
             supportCounts={isFacilitator && summary?.ok ? summary.value.support : undefined}
             actions={{
@@ -312,7 +316,7 @@ function Board() {
         description={m.board_add_description()}
       >
         <ElementForm
-          withSource
+          mode="add"
           submitLabel={m.board_add()}
           submit={(fields) => addElement({ data: { projectId, ...fields } })}
           onDone={async (fields) => {
@@ -332,7 +336,7 @@ function Board() {
       >
         {dialog?.kind === "edit" && (
           <ElementForm
-            withSource={false}
+            mode="edit"
             initial={dialog.element}
             submitLabel={m.board_save()}
             submit={(fields) =>
