@@ -94,8 +94,6 @@ export const REFUSAL_MESSAGE_KEYS = {
   ckm_unusable: "common_refusal_ckm_unusable",
   ckm_revision_changed: "common_refusal_ckm_revision_changed",
   ckm_element_not_found: "common_refusal_ckm_element_not_found",
-  ckm_no_elements: "common_refusal_ckm_no_elements",
-  ckm_already_imported: "common_refusal_ckm_already_imported",
   fhir_unreachable: "common_refusal_fhir_unreachable",
   fhir_timeout: "common_refusal_fhir_timeout",
   fhir_refused: "common_refusal_fhir_refused",

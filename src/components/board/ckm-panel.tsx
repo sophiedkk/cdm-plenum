@@ -6,7 +6,7 @@
 // translated message inside the dialog; the board itself never waits on CKM (R-06).
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeftIcon, CircleAlertIcon, DownloadIcon, LinkIcon, Loader2Icon } from "lucide-react";
+import { ArrowLeftIcon, CircleAlertIcon, LinkIcon, Loader2Icon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
@@ -36,7 +36,6 @@ type ErrorCode = RefusalCode | "unexpected";
 export interface CkmActions {
   search: (text: string) => Promise<Outcome<CkmArchetype[]>>;
   link: (archetype: CkmArchetypeView, element: CkmElementView) => Promise<Outcome<unknown>>;
-  importAll: (archetype: CkmArchetypeView) => Promise<Outcome<{ elementIds: string[] }>>;
 }
 
 const SEARCH_TEXT_MAX = 200;
@@ -74,8 +73,8 @@ function CkmError({ error }: Readonly<{ error: ErrorCode }>) {
 }
 
 /**
- * The panel inside the CKM dialog. With `linkTarget` it links that element (EL4); without it,
- * the facilitator imports a whole archetype (EL7). Both are offered when a target is set.
+ * The panel inside the CKM dialog: it links `linkTarget` to an archetype element (EL4). Whole
+ * models are imported on Existing models (EL7, ADR 0020).
  */
 export function CkmPanel({
   projectId,
@@ -84,7 +83,7 @@ export function CkmPanel({
   onDone,
 }: Readonly<{
   projectId: string;
-  linkTarget: { id: string; name: string } | null;
+  linkTarget: { id: string; name: string };
   actions: CkmActions;
   onDone: (message: string) => Promise<void> | void;
 }>) {
@@ -188,22 +187,6 @@ export function CkmPanel({
             <p className="text-sm text-muted-foreground">
               {m.board_ckm_revision({ revision: view.revision, status: view.status })}
             </p>
-            <div>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={busy}
-                onClick={() =>
-                  run(
-                    () => actions.importAll(view),
-                    () => m.board_ckm_imported({ archetypeId: view.archetypeId }),
-                  )
-                }
-              >
-                <DownloadIcon aria-hidden="true" data-icon="inline-start" />
-                {m.board_ckm_import()}
-              </Button>
-            </div>
             <Table>
               <TableCaption className="sr-only">
                 {m.board_ckm_elements_heading({ name: open.name })}
@@ -214,7 +197,7 @@ export function CkmPanel({
                   <TableHead scope="col">{m.board_ckm_column_at_code()}</TableHead>
                   <TableHead scope="col">{m.board_ckm_column_type()}</TableHead>
                   <TableHead scope="col">{m.board_ckm_column_occurrences()}</TableHead>
-                  {linkTarget && <TableHead scope="col">{m.board_ckm_column_action()}</TableHead>}
+                  <TableHead scope="col">{m.board_ckm_column_action()}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -235,30 +218,28 @@ export function CkmPanel({
                       {rmTypes(element)}
                     </TableCell>
                     <TableCell>{occurrences(element)}</TableCell>
-                    {linkTarget && (
-                      <TableCell>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={busy}
-                          aria-describedby={`ckm-path-${index}`}
-                          onClick={() =>
-                            run(
-                              () => actions.link(view, element),
-                              () =>
-                                m.board_ckm_linked({
-                                  name: linkTarget.name,
-                                  archetypeId: view.archetypeId,
-                                }),
-                            )
-                          }
-                        >
-                          <LinkIcon aria-hidden="true" data-icon="inline-start" />
-                          {m.board_ckm_link_to({ name: element.name })}
-                        </Button>
-                      </TableCell>
-                    )}
+                    <TableCell>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        aria-describedby={`ckm-path-${index}`}
+                        onClick={() =>
+                          run(
+                            () => actions.link(view, element),
+                            () =>
+                              m.board_ckm_linked({
+                                name: linkTarget.name,
+                                archetypeId: view.archetypeId,
+                              }),
+                          )
+                        }
+                      >
+                        <LinkIcon aria-hidden="true" data-icon="inline-start" />
+                        {m.board_ckm_link_to({ name: element.name })}
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

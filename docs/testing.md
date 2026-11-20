@@ -164,8 +164,8 @@ Sign in at <http://localhost:3000/sign-in> and open the link from Mailpit at
    (with the mouse or a finger) or click it and choose "Move here", rename a
    group and "Ask the group to check". As `gp.a@example.test`, "Your turn"
    now asks to check the groups.
-3. **Decide:** open "Blood pressure (demo)". On the Elements tab, look up a
-   CKM archetype (this calls the live CKM). Round 1 is closed: 5 elements in
+3. **Decide:** open "Blood pressure (demo)". On the Elements tab, link an
+   element to a CKM archetype element (this calls the live CKM). Round 1 is closed: 5 elements in
    the model, 1 not in the model and 2 without consensus. Round 2 is open;
    its rating card names each element's group and the overview lists the
    ratings under group headings. "Scope" and "Discover" in the header are

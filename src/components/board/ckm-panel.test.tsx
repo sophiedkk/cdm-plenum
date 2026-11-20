@@ -56,7 +56,6 @@ function renderPanel(actions: Partial<CkmActions>, linkTarget = { id: "el-1", na
   const all: CkmActions = {
     search: vi.fn(async () => ({ ok: true as const, value: [ROW] })),
     link: vi.fn(async () => ({ ok: true, value: null }) as const),
-    importAll: vi.fn(async () => ({ ok: true as const, value: { elementIds: ["a"] } })),
     ...actions,
   };
   render(
@@ -118,11 +117,10 @@ describe("CkmPanel", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("CKM took too long");
   });
 
-  it("shows ckm_revision_changed and ckm_already_imported as messages", async () => {
+  it("shows ckm_revision_changed as a message and offers no import of a whole archetype", async () => {
     archetypeAnswer.mockResolvedValue({ ok: true, value: VIEW });
     const { onDone } = renderPanel({
       link: vi.fn(async () => ({ ok: false, error: "ckm_revision_changed" }) as const),
-      importAll: vi.fn(async () => ({ ok: false, error: "ckm_already_imported" }) as const),
     });
     await search();
     fireEvent.click(await screen.findByRole("button", { name: "Show elements of Blood pressure" }));
@@ -130,12 +128,10 @@ describe("CkmPanel", () => {
     expect((await screen.findByRole("alert")).textContent).toContain(
       "The archetype has a new revision in CKM.",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Import all elements of this archetype" }));
-    await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain(
-        "This archetype is already imported into the project.",
-      ),
-    );
+    // NOTE: ADR 0020. Whole archetypes are imported on Existing models only.
+    expect(
+      screen.queryByRole("button", { name: "Import all elements of this archetype" }),
+    ).toBeNull();
     expect(onDone).not.toHaveBeenCalled();
   });
 });

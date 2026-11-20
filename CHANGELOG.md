@@ -45,6 +45,13 @@ the project uses [Semantic Versioning](https://semver.org/).
   duplicates and the groups; Decide shows the rounds and their outcomes. The
   current phase and later phases stay plain steps.
 
+### Removed
+
+- The element board's own "Search openEHR CKM" import of a whole archetype.
+  Its button now opens Existing models, where an imported archetype's
+  elements get a first look and a group. Linking one element to a CKM
+  archetype element stays on the board.
+
 ### Changed
 
 - The brainstorm is a board with one column per question. Elements from

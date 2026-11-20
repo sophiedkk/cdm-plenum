@@ -20,13 +20,12 @@ import type {
 import { parseArchetypeXml } from "./parse.ts";
 import {
   dataTypeForRmTypes,
-  importArchetype,
   linkElement,
   linkRmType,
   listArchetypeElements,
   searchCkm,
 } from "./queries.ts";
-import { importArchetypeInput, linkElementInput, searchCkmInput } from "./schemas.ts";
+import { linkElementInput, searchCkmInput } from "./schemas.ts";
 import { ckmFixture } from "./test-fixtures.ts";
 
 const CID = "1013.1.3574";
@@ -113,15 +112,6 @@ async function insertElement(projectId: string, name: string, dataType: string |
 
 async function links() {
   return db.selectFrom("element_ckm_link").selectAll().execute();
-}
-
-async function elementCount(projectId: string) {
-  const row = await db
-    .selectFrom("element")
-    .select((eb) => eb.fn.countAll<string>().as("n"))
-    .where("project_id", "=", projectId)
-    .executeTakeFirstOrThrow();
-  return Number(row.n);
 }
 
 const FAILURES: [CkmFailure, { error: string; status?: number }][] = [
@@ -354,165 +344,6 @@ describe("linkElement (EL4)", () => {
   });
 });
 
-describe("importArchetype (EL7)", () => {
-  it("adds one linked candidate per archetype element with a ckm source", async () => {
-    const { facilitator, projectId } = await setup();
-    const result = await importArchetype(db, ckm, facilitator, {
-      projectId,
-      cid: CID,
-      revision: REVISION,
-    });
-    if (!result.ok) throw new Error(result.error);
-    expect(result.value.archetypeId).toBe(ARCHETYPE_ID);
-    expect(result.value.elementIds).toHaveLength(17);
-    const rows = await db
-      .selectFrom("element")
-      .innerJoin("element_source", "element_source.element_id", "element.id")
-      .innerJoin("element_ckm_link", "element_ckm_link.element_id", "element.id")
-      .innerJoin("member", "member.id", "element.author_member_id")
-      .select([
-        "element.id",
-        "element.name",
-        "element.description",
-        "element.data_type",
-        "element.min_occurs",
-        "element.max_occurs",
-        "element_source.kind",
-        "element_source.label",
-        "element_ckm_link.at_code",
-        "element_ckm_link.revision",
-        "element_ckm_link.rm_type",
-        "member.userId",
-      ])
-      .where("element.id", "in", result.value.elementIds)
-      .execute();
-    expect(rows).toHaveLength(17);
-    const systolic = rows.find((row) => row.at_code === "at0004");
-    expect(systolic).toMatchObject({
-      name: "Systolic",
-      description:
-        "Peak systemic arterial blood pressure  - measured in systolic or contraction phase of the heart cycle.",
-      data_type: "quantity",
-      min_occurs: 0,
-      max_occurs: 1,
-      kind: "ckm",
-      label: ARCHETYPE_ID,
-      revision: REVISION,
-      rm_type: "DV_QUANTITY",
-      userId: facilitator,
-    });
-    expect(rows.find((row) => row.at_code === "at0014")).toMatchObject({
-      data_type: null,
-      rm_type: "DV_CODED_TEXT | DV_TEXT",
-    });
-    const logged = await db
-      .selectFrom("activity_log")
-      .select(["target_type", "target_id"])
-      .where("action", "=", "ckm_archetype_imported")
-      .execute();
-    expect(logged).toEqual([{ target_type: "ckm_archetype", target_id: CID }]);
-  });
-
-  it("leaves the cardinality open when the occurrences do not fit one", async () => {
-    const { facilitator, projectId } = await setup();
-    const [first] = ckm.archetype.elements;
-    if (!first) throw new Error("fixture has no elements");
-    ckm.archetype = {
-      ...ckm.archetype,
-      elements: [
-        { ...first, occurrences: { min: 2, max: 5 } },
-        { ...first, path: "/items[at0005]", atCode: "at0005", occurrences: null },
-        { ...first, path: "/items[at0006]", atCode: "at0006", occurrences: { min: 1, max: null } },
-      ],
-    };
-    const result = await importArchetype(db, ckm, facilitator, {
-      projectId,
-      cid: CID,
-      revision: REVISION,
-    });
-    if (!result.ok) throw new Error(result.error);
-    const rows = await db
-      .selectFrom("element")
-      .innerJoin("element_ckm_link", "element_ckm_link.element_id", "element.id")
-      .select(["element_ckm_link.at_code", "element.min_occurs", "element.max_occurs"])
-      .where("element.id", "in", result.value.elementIds)
-      .orderBy("element_ckm_link.at_code")
-      .execute();
-    expect(rows).toEqual([
-      { at_code: "at0004", min_occurs: null, max_occurs: null },
-      { at_code: "at0005", min_occurs: null, max_occurs: null },
-      { at_code: "at0006", min_occurs: 1, max_occurs: null },
-    ]);
-  });
-
-  it("refuses a second import of the same archetype", async () => {
-    const { facilitator, projectId } = await setup();
-    const input = { projectId, cid: CID, revision: REVISION };
-    expect((await importArchetype(db, ckm, facilitator, input)).ok).toBe(true);
-    const before = await elementCount(projectId);
-    expect(await importArchetype(db, ckm, facilitator, input)).toEqual({
-      ok: false,
-      error: "ckm_already_imported",
-    });
-    expect(await elementCount(projectId)).toBe(before);
-  });
-
-  it("refuses an archetype without elements and a changed revision", async () => {
-    const { facilitator, projectId } = await setup();
-    const input = { projectId, cid: CID, revision: REVISION };
-    ckm.archetype = { ...ckm.archetype, revision: "2.0.18" };
-    expect(await importArchetype(db, ckm, facilitator, input)).toEqual({
-      ok: false,
-      error: "ckm_revision_changed",
-    });
-    ckm.archetype = { ...ckm.archetype, revision: REVISION, elements: [] };
-    expect(await importArchetype(db, ckm, facilitator, input)).toEqual({
-      ok: false,
-      error: "ckm_no_elements",
-    });
-    expect(await elementCount(projectId)).toBe(1);
-  });
-
-  it("writes nothing when one element fails, since the import is one transaction", async () => {
-    const { facilitator, projectId } = await setup();
-    const [first, second] = ckm.archetype.elements;
-    if (!first || !second) throw new Error("fixture has too few elements");
-    ckm.archetype = { ...ckm.archetype, elements: [first, { ...second, name: "  " }] };
-    await expect(
-      importArchetype(db, ckm, facilitator, { projectId, cid: CID, revision: REVISION }),
-    ).rejects.toThrow(/element_name_check/);
-    expect(await elementCount(projectId)).toBe(1);
-    expect(await links()).toEqual([]);
-  });
-
-  it("refuses a participant and an outsider before calling CKM", async () => {
-    const { participant, outsider, projectId } = await setup();
-    const input = { projectId, cid: CID, revision: REVISION };
-    expect(await importArchetype(db, ckm, participant, input)).toEqual({
-      ok: false,
-      error: "forbidden",
-    });
-    expect(await importArchetype(db, ckm, outsider, input)).toEqual({
-      ok: false,
-      error: "not_found",
-    });
-    expect(ckm.calls).toBe(0);
-    expect(await elementCount(projectId)).toBe(1);
-  });
-
-  it.each(FAILURES)("writes nothing on the CKM failure %o", async (failure, expected) => {
-    const { facilitator, projectId } = await setup();
-    ckm.failure = failure;
-    const result = await importArchetype(db, ckm, facilitator, {
-      projectId,
-      cid: CID,
-      revision: REVISION,
-    });
-    expect(result).toEqual({ ok: false, ...expected });
-    expect(await elementCount(projectId)).toBe(1);
-  });
-});
-
 describe("CKM input schemas", () => {
   const ids = { projectId: "11111111-1111-4111-8111-111111111111" };
 
@@ -545,8 +376,5 @@ describe("CKM input schemas", () => {
     ]) {
       expect(linkElementInput.safeParse({ ...valid, ...change }).success).toBe(false);
     }
-    expect(importArchetypeInput.safeParse({ ...ids, cid: "x", revision: REVISION }).success).toBe(
-      false,
-    );
   });
 });
