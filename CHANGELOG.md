@@ -26,6 +26,16 @@ the project uses [Semantic Versioning](https://semver.org/).
   reminder e-mail now pointing to the first look.
 - Participants can suggest an existing model, with a title and a link, from
   the brainstorm board.
+- Grouping: every element starts in a group. One you added starts under its
+  brainstorm question; one from an openEHR archetype by its place in the
+  archetype (data, state, protocol); one from a FHIR profile under the
+  measurement; others, such as CSV rows, start in "Not grouped yet". The
+  facilitator moves elements by dragging them, with a mouse or a finger, or
+  by clicking one and choosing "Move here", and can rename and add groups.
+- Check the groups: once the facilitator asks, each participant marks an
+  element "Same as…" or "Belongs elsewhere" and says per group what is
+  missing. The facilitator sees the remarks per element and group, without
+  names; other participants do not see them.
 
 ### Changed
 

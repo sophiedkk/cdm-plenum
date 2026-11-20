@@ -34,6 +34,8 @@ export interface ProjectOverview {
   ownElements: number;
   /** The first look (EL22): elements from existing models, and how many the member answered. */
   firstLook: { total: number; answered: number };
+  /** The check of the groups (EL24): whether the facilitator asked, and the member is done. */
+  groupCheck: { asked: boolean; done: boolean };
   round: OverviewRound | null;
   /** The newest closed round, whose results every member may read (DE5). */
   lastClosedRoundId: string | null;
@@ -42,7 +44,12 @@ export interface ProjectOverview {
 /** The participant's task for the current phase (PR8). */
 export type ParticipantTask =
   | { kind: "scope" }
-  | { kind: "discover"; added: number; firstLook: { total: number; answered: number } }
+  | {
+      kind: "discover";
+      added: number;
+      firstLook: { total: number; answered: number };
+      groupCheck: { asked: boolean; done: boolean };
+    }
   | {
       kind: "rate";
       roundId: string;
@@ -62,7 +69,12 @@ export function participantTask(overview: ProjectOverview): ParticipantTask {
     case "scope":
       return { kind: "scope" };
     case "discover":
-      return { kind: "discover", added: overview.ownElements, firstLook: overview.firstLook };
+      return {
+        kind: "discover",
+        added: overview.ownElements,
+        firstLook: overview.firstLook,
+        groupCheck: overview.groupCheck,
+      };
     case "decide": {
       const round = overview.round;
       if (round === null || round.rated === null) return { kind: "wait" };

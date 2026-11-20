@@ -21,6 +21,8 @@ export const PROJECT_STEPS = [
   "settings",
   "models",
   "first_look",
+  "grouping",
+  "group_check",
 ] as const;
 export type ProjectStep = (typeof PROJECT_STEPS)[number];
 
@@ -45,6 +47,8 @@ export const PARTICIPANT_ACCESS = {
     settings: "hidden",
     models: "hidden",
     first_look: "hidden",
+    grouping: "hidden",
+    group_check: "hidden",
   },
   discover: {
     scope: "read",
@@ -56,6 +60,8 @@ export const PARTICIPANT_ACCESS = {
     settings: "hidden",
     models: "hidden",
     first_look: "answer",
+    grouping: "hidden",
+    group_check: "answer",
   },
   decide: {
     scope: "read",
@@ -67,6 +73,8 @@ export const PARTICIPANT_ACCESS = {
     settings: "hidden",
     models: "hidden",
     first_look: "hidden",
+    grouping: "hidden",
+    group_check: "hidden",
   },
   handoff: {
     scope: "read",
@@ -78,6 +86,8 @@ export const PARTICIPANT_ACCESS = {
     settings: "hidden",
     models: "hidden",
     first_look: "hidden",
+    grouping: "hidden",
+    group_check: "hidden",
   },
 } as const satisfies Record<ProjectPhase, Record<ProjectStep, StepAccess>>;
 
@@ -94,6 +104,8 @@ export const PARTICIPANT_WRITES = {
   source_suggest: { step: "brainstorm", access: "add" },
   // NOTE: EL22, ADR 0020. The first look takes answers in discover only.
   first_look_answer: { step: "first_look", access: "answer" },
+  // NOTE: EL24, ADR 0020. The check of the groups takes remarks in discover only.
+  group_remark: { step: "group_check", access: "answer" },
 } as const satisfies Record<string, { step: ProjectStep; access: StepAccess }>;
 export type ParticipantWrite = keyof typeof PARTICIPANT_WRITES;
 

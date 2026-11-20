@@ -71,6 +71,7 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
     elements: 8,
     ownElements: 3,
     firstLook: { total: 0, answered: 0 },
+    groupCheck: { asked: false, done: false },
     round: ROUND,
     lastClosedRoundId: "round-1",
     ...changes,
@@ -381,12 +382,40 @@ describe("ProjectRow (PR2, PR8)", () => {
   it.each<[Waiting, string | null]>([
     [{ kind: "task", task: { kind: "scope" } }, "Read the scope and comment"],
     [
-      { kind: "task", task: { kind: "discover", added: 2, firstLook: { total: 0, answered: 0 } } },
+      {
+        kind: "task",
+        task: {
+          kind: "discover",
+          added: 2,
+          firstLook: { total: 0, answered: 0 },
+          groupCheck: { asked: false, done: false },
+        },
+      },
       "Add your elements",
     ],
     [
-      { kind: "task", task: { kind: "discover", added: 0, firstLook: { total: 4, answered: 1 } } },
+      {
+        kind: "task",
+        task: {
+          kind: "discover",
+          added: 0,
+          firstLook: { total: 4, answered: 1 },
+          groupCheck: { asked: false, done: false },
+        },
+      },
       "Look at what already exists",
+    ],
+    [
+      {
+        kind: "task",
+        task: {
+          kind: "discover",
+          added: 0,
+          firstLook: { total: 4, answered: 1 },
+          groupCheck: { asked: true, done: false },
+        },
+      },
+      "Check the groups",
     ],
     [{ kind: "checklist", open: 1, next: "decide", round: null }, "1 step before Decide"],
     [{ kind: "checklist", open: 3, next: "decide", round: null }, "3 steps before Decide"],

@@ -20,6 +20,7 @@ import type { ProjectPhase } from "@/lib/project-phases";
 import { type ProjectRole, RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
 import { summaryOf } from "../elements/first-look.ts";
+import { checkProgress } from "../elements/groups.ts";
 import { markSummary } from "../elements/marks.ts";
 import { joinedPanel, projectPanel } from "../rounds/queries.ts";
 import { statusOf } from "../rounds/round.ts";
@@ -230,6 +231,7 @@ async function factsOf(
   );
   const marks = await markSummary(db, userId, project.id);
   const look = await summaryOf(db, project.id);
+  const check = await checkProgress(db, project.id);
   const { elements, lastClosedRound } = await decided(db, project.id);
   return {
     scopeWritten: (scope?.concept ?? "").trim() !== "",
@@ -245,6 +247,8 @@ async function factsOf(
     listedFromModels,
     firstLookTotal: look.total,
     firstLookFinished: look.finished,
+    groupCheckAsked: check.asked,
+    groupChecked: check.checked,
     round: await followedRound(db, project.id, deps.now),
     undecided: elements.filter(
       (element) => element.status === "no_consensus" || element.status === "not_rated",

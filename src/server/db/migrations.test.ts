@@ -8,6 +8,7 @@ import pg from "pg";
 import { afterEach, describe, expect, it } from "vitest";
 import { ELEMENT_PROMPTS } from "@/lib/brainstorm";
 import { DATA_TYPES } from "@/lib/data-types";
+import { ELEMENT_GROUP_NAME_MAX, GROUP_MISSING_MAX } from "@/lib/element-groups";
 import { FIRST_LOOK_ANSWERS } from "@/lib/first-look";
 import { CHANGE_CLASSES } from "@/lib/panel";
 import { createAuth } from "../auth.ts";
@@ -32,6 +33,7 @@ import * as proposals from "./migrations/0008_round_proposals.ts";
 import * as flags from "./migrations/0009_detail_flags.ts";
 import * as sources from "./migrations/0012_source_models.ts";
 import { FIRST_LOOK_ANSWER_KEYS } from "./migrations/0013_first_look.ts";
+import * as groups from "./migrations/0014_element_groups.ts";
 import { migrations } from "./migrations/index.ts";
 import { baseTestDatabaseUrl, createTestDb } from "./test-db.ts";
 import { createRunDatabase, dropRunDatabase } from "./test-run-database.ts";
@@ -88,6 +90,11 @@ describe("migrations", () => {
 
   it("allow exactly the first look answers of src/lib/first-look.ts", () => {
     expect([...FIRST_LOOK_ANSWER_KEYS]).toEqual([...FIRST_LOOK_ANSWERS]);
+  });
+
+  it("allow the group name and remark lengths the group validators take", () => {
+    expect(groups.ELEMENT_GROUP_NAME_MAX).toBe(ELEMENT_GROUP_NAME_MAX);
+    expect(groups.GROUP_MISSING_MAX).toBe(GROUP_MISSING_MAX);
   });
 
   it("allow exactly the brainstorm questions of src/lib/brainstorm.ts", () => {

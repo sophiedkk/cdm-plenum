@@ -49,6 +49,10 @@ export const PROJECT_ACTION_ERRORS = [
   "same_as_itself",
   "mail_not_configured",
   "reminder_outside_discover",
+  "element_group_not_found",
+  "groups_after_discover",
+  "group_check_before_reveal",
+  "group_check_not_asked",
 ] as const;
 export type ProjectActionError = (typeof PROJECT_ACTION_ERRORS)[number];
 

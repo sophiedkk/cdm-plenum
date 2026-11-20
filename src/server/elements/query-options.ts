@@ -11,6 +11,8 @@ import {
   brainstormStatusFn,
   firstLookFn,
   firstLookSummaryFn,
+  groupCheckFn,
+  groupingBoardFn,
   listElementCommentsFn,
   listElementCommentsWithAuthorsFn,
   listElementsFn,
@@ -27,6 +29,8 @@ export const elementKeys = {
   brainstorm: (projectId: string) => [...elementKeys.all(projectId), "brainstorm"] as const,
   /** The brainstorm board with its columns and counts (EL23). */
   questionBoard: (projectId: string) => [...elementKeys.all(projectId), "question-board"] as const,
+  /** The grouping, the facilitator's board and the participant's check of it (EL18, EL24). */
+  groups: (projectId: string) => [...elementKeys.all(projectId), "groups"] as const,
   /** The member's first look and, for the facilitator, its counts (EL22). */
   firstLook: (projectId: string) => [...elementKeys.all(projectId), "first-look"] as const,
   /** The member's own marks and, for the facilitator, the counts (EL16). */
@@ -148,6 +152,24 @@ export function brainstormBoardQueryOptions(projectId: string) {
   return queryOptions({
     queryKey: elementKeys.questionBoard(projectId),
     queryFn: () => brainstormBoardFn({ data: { projectId } }),
+    staleTime: STALE_TIME.board,
+  });
+}
+
+/** The grouping with the participants' remarks, for the facilitator (EL18, EL24). */
+export function groupingBoardQueryOptions(projectId: string) {
+  return queryOptions({
+    queryKey: [...elementKeys.groups(projectId), "board"] as const,
+    queryFn: () => groupingBoardFn({ data: { projectId } }),
+    staleTime: STALE_TIME.board,
+  });
+}
+
+/** The grouping as a participant checks it, with their own remarks (EL24). */
+export function groupCheckQueryOptions(projectId: string) {
+  return queryOptions({
+    queryKey: [...elementKeys.groups(projectId), "check"] as const,
+    queryFn: () => groupCheckFn({ data: { projectId } }),
     staleTime: STALE_TIME.board,
   });
 }

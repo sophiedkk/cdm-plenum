@@ -19,6 +19,8 @@ export function waitingText(waiting: Waiting, timeZone: string): string | null {
     case "task": {
       const { task } = waiting;
       if (task.kind === "scope") return m.projects_waiting_scope();
+      if (task.kind === "discover" && task.groupCheck.asked && !task.groupCheck.done)
+        return m.projects_waiting_check();
       if (task.kind === "discover")
         return task.firstLook.answered < task.firstLook.total
           ? m.projects_waiting_first_look()

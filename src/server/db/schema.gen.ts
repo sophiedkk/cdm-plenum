@@ -61,6 +61,7 @@ export interface Element {
   created_at: Generated<Timestamp>;
   data_type: string | null;
   description: Generated<string>;
+  group_id: string | null;
   id: Generated<string>;
   max_occurs: number | null;
   merged_into: string | null;
@@ -88,6 +89,21 @@ export interface ElementComment {
   created_at: Generated<Timestamp>;
   element_id: string;
   id: Generated<string>;
+}
+
+export interface ElementElsewhere {
+  created_at: Generated<Timestamp>;
+  element_id: string;
+  member_id: string;
+}
+
+export interface ElementGroup {
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  name: string | null;
+  position: number;
+  project_id: string;
+  prompt: string | null;
 }
 
 export interface ElementSameAs {
@@ -133,6 +149,19 @@ export interface FirstLookAnswer {
   member_id: string;
 }
 
+export interface GroupCheckDone {
+  done_at: Generated<Timestamp>;
+  member_id: string;
+}
+
+export interface GroupMissing {
+  body: string;
+  created_at: Generated<Timestamp>;
+  group_id: string;
+  id: Generated<string>;
+  member_id: string;
+}
+
 export interface Invitation {
   createdAt: Generated<Timestamp>;
   email: string;
@@ -166,6 +195,7 @@ export interface Project {
   board_revealed_at: Timestamp | null;
   change_class: Generated<string>;
   created_at: Generated<Timestamp>;
+  group_check_at: Timestamp | null;
   group_names_visible: Generated<boolean>;
   id: string;
   panel_minimum_reason: string | null;
@@ -360,12 +390,16 @@ export interface DB {
   element: Element;
   element_ckm_link: ElementCkmLink;
   element_comment: ElementComment;
+  element_elsewhere: ElementElsewhere;
+  element_group: ElementGroup;
   element_same_as: ElementSameAs;
   element_source: ElementSource;
   element_source_link: ElementSourceLink;
   element_support: ElementSupport;
   element_value: ElementValue;
   first_look_answer: FirstLookAnswer;
+  group_check_done: GroupCheckDone;
+  group_missing: GroupMissing;
   invitation: Invitation;
   member: Member;
   organization: Organization;

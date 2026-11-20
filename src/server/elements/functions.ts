@@ -18,6 +18,17 @@ import {
 } from "./brainstorm.ts";
 import { brainstormBoard } from "./brainstorm-board.ts";
 import { answerFirstLook, firstLook, firstLookSummary } from "./first-look.ts";
+import {
+  addElementGroup,
+  addGroupMissing,
+  askGroupCheck,
+  finishGroupCheck,
+  groupCheck,
+  groupingBoard,
+  moveElement,
+  renameElementGroup,
+  setElsewhere,
+} from "./groups.ts";
 import { importCsv, previewCsvImport } from "./import.ts";
 import { addSameAs, listOwnMarks, markSummary, removeSameAs, setSupport } from "./marks.ts";
 import {
@@ -34,12 +45,17 @@ import {
 } from "./queries.ts";
 import {
   addElementCommentInput,
+  addElementGroupInput,
   addElementInput,
+  addGroupMissingInput,
   csvImportInput,
   elementInput,
+  elsewhereInput,
   firstLookAnswerInput,
   mergeElementsInput,
+  moveElementInput,
   privateBrainstormInput,
+  renameElementGroupInput,
   sameAsInput,
   setElementValuesInput,
   setSupportInput,
@@ -176,3 +192,48 @@ export const brainstormBoardFn = createServerFn({ method: "GET" })
   .middleware([requireSession])
   .validator(projectInput)
   .handler(({ data, context }) => brainstormBoard(getDb(), context.userId, data.projectId));
+
+export const groupingBoardFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => groupingBoard(getDb(), context.userId, data.projectId));
+
+export const moveElementFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(moveElementInput)
+  .handler(({ data, context }) => moveElement(getDb(), context.userId, data));
+
+export const renameElementGroupFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(renameElementGroupInput)
+  .handler(({ data, context }) => renameElementGroup(getDb(), context.userId, data));
+
+export const addElementGroupFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(addElementGroupInput)
+  .handler(({ data, context }) => addElementGroup(getDb(), context.userId, data));
+
+export const askGroupCheckFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => askGroupCheck(getDb(), context.userId, data.projectId));
+
+export const groupCheckFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => groupCheck(getDb(), context.userId, data.projectId));
+
+export const setElsewhereFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(elsewhereInput)
+  .handler(({ data, context }) => setElsewhere(getDb(), context.userId, data));
+
+export const addGroupMissingFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(addGroupMissingInput)
+  .handler(({ data, context }) => addGroupMissing(getDb(), context.userId, data));
+
+export const finishGroupCheckFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => finishGroupCheck(getDb(), context.userId, data.projectId));

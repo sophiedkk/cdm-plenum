@@ -7,6 +7,7 @@ import { ELEMENT_PROMPTS } from "@/lib/brainstorm";
 import { cardinalityError } from "@/lib/cardinality";
 import { DATA_TYPES, type DataTypeKey } from "@/lib/data-types";
 import { CSV_MAX_BYTES } from "@/lib/element-csv";
+import { ELEMENT_GROUP_NAME_MAX, GROUP_MISSING_MAX } from "@/lib/element-groups";
 import {
   ELEMENT_COMMENT_MAX,
   ELEMENT_DESCRIPTION_MAX,
@@ -136,3 +137,39 @@ export const firstLookAnswerInput = z.object({
   answer: z.enum(FIRST_LOOK_ANSWERS),
 });
 export type FirstLookAnswerInput = z.infer<typeof firstLookAnswerInput>;
+
+const elementGroupName = z.string().trim().min(1).max(ELEMENT_GROUP_NAME_MAX);
+
+/** Moves an element to a group, or with a null group to "Not grouped yet" (EL18). */
+export const moveElementInput = z.object({
+  projectId: idSchema,
+  elementId: idSchema,
+  groupId: idSchema.nullable(),
+});
+export type MoveElementInput = z.infer<typeof moveElementInput>;
+
+export const renameElementGroupInput = z.object({
+  projectId: idSchema,
+  groupId: idSchema,
+  name: elementGroupName,
+});
+export type RenameElementGroupInput = z.infer<typeof renameElementGroupInput>;
+
+export const addElementGroupInput = z.object({ projectId: idSchema, name: elementGroupName });
+export type AddElementGroupInput = z.infer<typeof addElementGroupInput>;
+
+/** "Belongs elsewhere" on or off for the member's own mark (EL24). */
+export const elsewhereInput = z.object({
+  projectId: idSchema,
+  elementId: idSchema,
+  elsewhere: z.boolean(),
+});
+export type ElsewhereInput = z.infer<typeof elsewhereInput>;
+
+/** What a group misses, in the member's words (EL24). */
+export const addGroupMissingInput = z.object({
+  projectId: idSchema,
+  groupId: idSchema,
+  body: z.string().trim().min(1).max(GROUP_MISSING_MAX),
+});
+export type AddGroupMissingInput = z.infer<typeof addGroupMissingInput>;

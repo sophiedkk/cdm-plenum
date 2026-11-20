@@ -5,6 +5,7 @@
 // brainstorm questions. A table per value set, so a new value is a type error until it has a label.
 import { m } from "@/i18n/messages";
 import type { ElementPrompt } from "@/lib/brainstorm";
+import type { GroupLabel } from "@/lib/element-groups";
 import type { ProjectPhase } from "@/lib/project-phases";
 import type { ExpertType, ProjectRole } from "@/lib/project-roles";
 
@@ -59,6 +60,22 @@ const PROMPT_LABELS: Record<ElementPrompt, () => string> = {
   method: () => m.board_prompt_short_method(),
   context: () => m.board_prompt_short_context(),
 };
+
+const GROUP_NAMES: Record<ElementPrompt, () => string> = {
+  recorded: () => m.board_group_recorded(),
+  patient_state: () => m.board_group_patient_state(),
+  method: () => m.board_group_method(),
+  context: () => m.board_group_context(),
+};
+
+/**
+ * The name of a group of elements (EL18): the facilitator's own, or the name of the question the
+ * group started from, in the active locale.
+ */
+export function groupName(group: GroupLabel): string {
+  if (group.name !== null) return group.name;
+  return group.prompt === null ? "" : GROUP_NAMES[group.prompt]();
+}
 
 /** The brainstorm question in a word or two, for a table column; null for another source. */
 export function promptLabel(prompt: ElementPrompt | null): string {

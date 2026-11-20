@@ -13,6 +13,7 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
     elements: 8,
     ownElements: 3,
     firstLook: { total: 0, answered: 0 },
+    groupCheck: { asked: false, done: false },
     round: null,
     lastClosedRoundId: null,
     ...changes,
@@ -43,6 +44,7 @@ describe("participantTask (PR8)", () => {
       kind: "discover",
       added: 3,
       firstLook: { total: 0, answered: 0 },
+      groupCheck: { asked: false, done: false },
     });
   });
 

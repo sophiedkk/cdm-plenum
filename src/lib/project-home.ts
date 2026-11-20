@@ -88,6 +88,10 @@ export interface OverviewFacts {
   firstLookTotal: number;
   /** Participants who answered every element of the first look. */
   firstLookFinished: number;
+  /** Whether the facilitator asked the participants to check the groups (EL24). */
+  groupCheckAsked: boolean;
+  /** Participants who said they are done checking. */
+  groupChecked: number;
   /** Elements on the list that came from existing models, merged ones left out (EL7). */
   listedFromModels: number;
   round: ChecklistRound | null;
@@ -115,6 +119,7 @@ export type ChecklistItem =
       remind: boolean;
     }
   | { key: "contributions"; done: boolean; contributors: number; participants: number }
+  | { key: "grouping"; done: boolean; asked: boolean; checked: number; participants: number }
   | { key: "models"; done: boolean; models: number; elements: number }
   | {
       key: "cleanup";
@@ -172,6 +177,13 @@ export function checklist(phase: ProjectPhase, facts: OverviewFacts): ChecklistI
           done: revealed !== false && facts.duplicates === 0,
           revealed,
           duplicates: facts.duplicates,
+        },
+        {
+          key: "grouping",
+          done: facts.groupCheckAsked,
+          asked: facts.groupCheckAsked,
+          checked: facts.groupChecked,
+          participants: facts.participants,
         },
       ];
     }

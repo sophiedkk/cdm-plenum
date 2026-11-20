@@ -30,6 +30,8 @@ function facts(changes: Partial<OverviewFacts> = {}): OverviewFacts {
     listedFromModels: 14,
     firstLookTotal: 14,
     firstLookFinished: 8,
+    groupCheckAsked: true,
+    groupChecked: 6,
     round: null,
     undecided: 0,
     lastClosedRound: { id: "round-1", number: 1 },
@@ -45,6 +47,7 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
     elements: 8,
     ownElements: 0,
     firstLook: { total: 0, answered: 0 },
+    groupCheck: { asked: false, done: false },
     round: null,
     lastClosedRoundId: null,
     ...changes,
@@ -111,6 +114,7 @@ describe("checklist (PR4)", () => {
       "first_look",
       "contributions",
       "cleanup",
+      "grouping",
     ]);
   });
 

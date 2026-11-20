@@ -66,6 +66,8 @@ function facts(changes: Partial<OverviewFacts> = {}): OverviewFacts {
     listedFromModels: 0,
     firstLookTotal: 14,
     firstLookFinished: 6,
+    groupCheckAsked: false,
+    groupChecked: 0,
     round: null,
     undecided: 0,
     lastClosedRound: null,
@@ -175,6 +177,11 @@ describe("the checklist per phase", () => {
         "To do",
         "To doReveal and clean up. Reveal the board, then merge the duplicates people marked.Reveal the board",
         ["Reveal the board"],
+      ],
+      [
+        "To do",
+        "To doGroup the elements. You or a modeller put each element in a group; participants check it.Group",
+        ["Group"],
       ],
     ]);
     expect(screen.getByRole("link", { name: "Add models" }).getAttribute("href")).toBe(

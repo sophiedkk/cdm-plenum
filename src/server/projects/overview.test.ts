@@ -238,6 +238,10 @@ describe("overviewFacts (PR4)", () => {
       duplicates: 1,
       importedModels: 0,
       listedFromModels: 0,
+      firstLookTotal: 0,
+      firstLookFinished: 0,
+      groupCheckAsked: false,
+      groupChecked: 0,
       mailConfigured: true,
     });
     expect(personLeaks(facts, p)).toEqual([]);
@@ -272,7 +276,12 @@ describe("listProjectRows (PR2, PR8)", () => {
     const discovering = await listProjectRows(db, p.participant, DEPS);
     expect(discovering[0]?.waiting).toEqual({
       kind: "task",
-      task: { kind: "discover", added: 0, firstLook: { total: 0, answered: 0 } },
+      task: {
+        kind: "discover",
+        added: 0,
+        firstLook: { total: 0, answered: 0 },
+        groupCheck: { asked: false, done: false },
+      },
     });
     const facilitator = await listProjectRows(db, p.facilitator, DEPS);
     expect(facilitator[0]).toMatchObject({ role: "facilitator", phase: "discover" });

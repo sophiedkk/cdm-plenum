@@ -32,6 +32,7 @@ function ItemLink({
     | "/projects/$projectId/board"
     | "/projects/$projectId/brainstorm"
     | "/projects/$projectId/models"
+    | "/projects/$projectId/grouping"
     | "/projects/$projectId/rounds/new"
     | "/projects/$projectId/rounds/$roundId";
   projectId: string;
@@ -228,6 +229,23 @@ function itemView(
               </ItemLink>
             ),
           };
+    case "grouping":
+      return {
+        text: part(
+          m.projects_check_group_title(),
+          item.asked
+            ? m.projects_check_group_asked({
+                checked: item.checked,
+                participants: item.participants,
+              })
+            : m.projects_check_group_todo(),
+        ),
+        action: (
+          <ItemLink to="/projects/$projectId/grouping" projectId={projectId}>
+            {m.projects_check_group_action()}
+          </ItemLink>
+        ),
+      };
     case "round":
       return roundView(item, projectId);
     case "undecided":
