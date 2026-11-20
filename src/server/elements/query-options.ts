@@ -7,6 +7,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { STALE_TIME } from "@/lib/query-config";
 import { listArchetypeElementsFn } from "../ckm/functions.ts";
 import {
+  brainstormBoardFn,
   brainstormStatusFn,
   firstLookFn,
   firstLookSummaryFn,
@@ -24,6 +25,8 @@ export const elementKeys = {
   board: (projectId: string) => [...elementKeys.all(projectId), "board"] as const,
   own: (projectId: string) => [...elementKeys.all(projectId), "own"] as const,
   brainstorm: (projectId: string) => [...elementKeys.all(projectId), "brainstorm"] as const,
+  /** The brainstorm board with its columns and counts (EL23). */
+  questionBoard: (projectId: string) => [...elementKeys.all(projectId), "question-board"] as const,
   /** The member's first look and, for the facilitator, its counts (EL22). */
   firstLook: (projectId: string) => [...elementKeys.all(projectId), "first-look"] as const,
   /** The member's own marks and, for the facilitator, the counts (EL16). */
@@ -136,6 +139,15 @@ export function firstLookSummaryQueryOptions(projectId: string) {
   return queryOptions({
     queryKey: [...elementKeys.firstLook(projectId), "summary"] as const,
     queryFn: () => firstLookSummaryFn({ data: { projectId } }),
+    staleTime: STALE_TIME.board,
+  });
+}
+
+/** The brainstorm board: one column per question, others' elements as counts before the reveal. */
+export function brainstormBoardQueryOptions(projectId: string) {
+  return queryOptions({
+    queryKey: elementKeys.questionBoard(projectId),
+    queryFn: () => brainstormBoardFn({ data: { projectId } }),
     staleTime: STALE_TIME.board,
   });
 }

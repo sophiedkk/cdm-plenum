@@ -170,8 +170,10 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
       // A hint's "Same as this" supports Rhythm and adds nothing.
       await b.page.goto(brainstorm);
-      const form = b.page.getByRole("form", { name: text.board_brainstorm_add_title });
-      const name = form.getByLabel(text.board_quick_name_label, { exact: true });
+      const form = b.page.getByRole("form", {
+        name: fill(text.board_column_add_label, { question: text.board_prompt_recorded }),
+      });
+      const name = form.getByRole("textbox");
       await expectHydrated(name);
       await name.fill("rhythm");
       const hints = form.getByRole("list", { name: text.board_hints_list_label });
@@ -187,10 +189,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         b.page.getByText(fill(text.board_hints_marked_same, { name: "Rhythm" }), { exact: true }),
       ).toBeVisible();
       await expect(name).toHaveValue("");
-      // Nothing was added: the own list stays empty.
-      await expect(
-        b.page.getByRole("heading", { name: fill(text.board_brainstorm_yours, { count: 0 }) }),
-      ).toBeVisible();
+      // Nothing was added: the own count stays at zero.
+      await expect(b.page.getByText(fill(text.board_strip_own, { count: 0 }))).toBeVisible();
       await axeBothThemes(b.page);
       await b.page.goto(board);
       await expect(

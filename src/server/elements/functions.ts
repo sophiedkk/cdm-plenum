@@ -16,6 +16,7 @@ import {
   sendBrainstormReminder,
   setPrivateBrainstorm,
 } from "./brainstorm.ts";
+import { brainstormBoard } from "./brainstorm-board.ts";
 import { answerFirstLook, firstLook, firstLookSummary } from "./first-look.ts";
 import { importCsv, previewCsvImport } from "./import.ts";
 import { addSameAs, listOwnMarks, markSummary, removeSameAs, setSupport } from "./marks.ts";
@@ -170,3 +171,8 @@ export const firstLookSummaryFn = createServerFn({ method: "GET" })
   .middleware([requireSession])
   .validator(projectInput)
   .handler(({ data, context }) => firstLookSummary(getDb(), context.userId, data.projectId));
+
+export const brainstormBoardFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => brainstormBoard(getDb(), context.userId, data.projectId));

@@ -24,14 +24,22 @@ the project uses [Semantic Versioning](https://semver.org/).
   look" column on the element board. "Your turn" on the project home starts
   here, and the Overview shows how many participants are done, with the
   reminder e-mail now pointing to the first look.
+- Participants can suggest an existing model, with a title and a link, from
+  the brainstorm board.
 
 ### Changed
 
+- The brainstorm is a board with one column per question. Elements from
+  existing models show dashed in their column, your own elements are
+  marked, and before the reveal other people's elements show only as a
+  count per column. Type in a column and press Enter to add an element
+  under that question. A strip above the board shows how many people have
+  added elements. Elements from existing models are visible to everyone
+  from the start, also on the element board.
 - The facilitator's discover checklist follows the parts of the phase:
-  start from existing models, add what is missing, then reveal and clean up.
-  The item that linked to the CKM search is gone; the existing models page
-  replaces it.
-
+  start from existing models, let participants take a first look, add what
+  is missing, then reveal and clean up. The item that linked to the CKM
+  search is gone; the existing models page replaces it.
 - Every page, from the projects list to each page of a project and the
   administration, uses one column of the same width with the same left edge.
   The project name, the back link and the page title no longer move when you
