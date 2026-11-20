@@ -95,7 +95,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
   });
 }
 
-test("a participant has no Settings tab and the URL sends them to their current step", async ({
+test("a participant has no Settings tab and the URL sends them to the project home", async ({
   page,
   db,
 }) => {
@@ -103,6 +103,6 @@ test("a participant has no Settings tab and the URL sends them to their current 
   const project = await seedProject(db, "scope");
   const participant = await seedParticipant(db, project);
   await signInTo(page, participant, "en", `/projects/${project.projectId}/settings`);
-  await expect(page).toHaveURL((url) => url.pathname === `/projects/${project.projectId}/scope`);
+  await expect(page).toHaveURL((url) => url.pathname === `/projects/${project.projectId}`);
   await expect(page.getByRole("link", { name: text.projects_tab_settings })).toHaveCount(0);
 });

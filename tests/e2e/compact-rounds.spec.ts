@@ -186,20 +186,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const seeded = await seedTwoRounds(db);
       await signInAs(page, seeded.nurse, locale);
       await page.goto(`/projects/${seeded.projectId}/rounds/${seeded.round2}`);
-      // The header's task line carries the call to rate and the count, once on the page.
-      const task = page.getByRole("region", { name: text.projects_task_heading });
-      const rateNow = task.getByRole("link", {
-        name: fill(text.projects_task_rate_action, { number: 2 }),
-      });
-      await expect(task).toContainText(
-        fill(text.projects_task_rated_count, { rated: 0, total: 4 }),
-      );
-      await expect(
-        page.getByRole("link", { name: fill(text.rounds_rate_now, { number: 2 }) }),
-      ).toHaveCount(0);
+      // The call to rate carries the button and the count, once on the page (ADR 0019).
+      const rateNow = page.getByRole("link", { name: fill(text.rounds_rate_now, { number: 2 }) });
+      await expect(rateNow).toHaveCount(1);
       await expect(
         page.getByText(fill(text.rounds_rate_progress, { rated: 0, total: 4 })),
-      ).toHaveCount(0);
+      ).toHaveCount(1);
       expect(await bottomOf(page, rateNow)).toBeLessThanOrEqual(SCREEN.height);
       // The panel table of the opening is behind the setup disclosure.
       await expect(page.getByRole("heading", { name: text.rounds_snapshot_heading })).toBeHidden();
@@ -210,14 +202,11 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await rateNow.click();
       await expect(page.getByText(text.rounds_rate_hidden_title)).toBeVisible();
       // The closing date, the count and the anonymity note each show once (the short label).
-      await expect(page.getByRole("region", { name: text.projects_task_heading })).toContainText(
-        text.projects_task_closes,
-      );
       await expect(page.locator("time")).toHaveCount(1);
-      await expect(page.getByText(text.rounds_closes_at_short)).toHaveCount(0);
+      await expect(page.getByText(text.rounds_closes_at_short)).toHaveCount(1);
       await expect(page.getByText(text.rounds_raters_hidden)).toHaveCount(0);
       await expect(
-        page.getByText(fill(text.projects_task_rated_count, { rated: 0, total: 4 })),
+        page.getByText(fill(text.rounds_rate_progress, { rated: 0, total: 4 })),
       ).toHaveCount(1);
       // The first card, Position, fits the first screen whole, with the way to the next card.
       const position = page.getByRole("region", { name: "Position" });
@@ -232,6 +221,10 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(position).toContainText(
         fill(text.rounds_rate_previous_own_value, { number: 1, value: 7 }),
       );
+      // How the group scored opens below the own score.
+      await position
+        .getByRole("button", { name: fill(text.rounds_rate_group_scores, { number: 1 }) })
+        .click();
       const distribution = position.getByRole("list", {
         name: fill(text.rounds_rate_previous_distribution, { number: 1, name: "Position" }),
       });

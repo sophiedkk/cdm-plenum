@@ -255,13 +255,10 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await next.click();
       await expect(heading(text.rounds_overview_heading)).toBeFocused();
       const overview = rater.getByRole("region", { name: text.rounds_overview_heading });
-      // The header's task line holds the count; the rating screen does not repeat it.
-      await expect(
-        rater.getByText(fill(text.projects_task_rated_count, { rated: 3, total: 3 })),
-      ).toHaveCount(1);
+      // The rating screen holds the count once; the overview does not repeat it.
       await expect(
         rater.getByText(fill(text.rounds_rate_progress, { rated: 3, total: 3 })),
-      ).toHaveCount(0);
+      ).toHaveCount(1);
       const rows = overview.getByRole("row");
       await expect(rows.filter({ hasText: "Systolic pressure" })).toContainText("7");
       await expect(rows.filter({ hasText: "Systolic pressure" })).toContainText(
@@ -307,18 +304,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const card = (name: string) => rater.getByRole("region", { name });
       const heading = (name: string) => rater.getByRole("heading", { level: 3, name });
       const next = rater.getByRole("link", { name: text.rounds_card_next });
-      const dot = (index: number, name: string, answer: string, score?: number) =>
-        rater.getByRole("link", {
-          name: fill(
-            answer === "rated"
-              ? text.rounds_card_dot_rated
-              : answer === "unable"
-                ? text.rounds_card_dot_unable
-                : text.rounds_card_dot_not_rated,
-            { index, name, score: score ?? "" },
-          ),
-          exact: true,
-        });
+      const previous = rater.getByRole("link", { name: text.rounds_card_previous });
 
       // The whole card fits the first screen, with the way to the next card.
       const first = card("Systolic pressure");
@@ -328,7 +314,11 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       expect(await bottomOf(rater, first)).toBeLessThanOrEqual(SCREEN.height);
       expect(await bottomOf(rater, next)).toBeLessThanOrEqual(SCREEN.height);
 
-      // The own score of round 1 is marked on the distribution and above its button (DE15).
+      // The own score of round 1 is marked on the distribution and above its button (DE15). The
+      // distribution opens below the own score (ADR 0019).
+      await first
+        .getByRole("button", { name: fill(text.rounds_rate_group_scores, { number: 1 }) })
+        .click();
       const counts = [
         { score: 5, count: 1 },
         { score: 6, count: 1 },
@@ -387,7 +377,6 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(first.getByRole("status").first()).toHaveText(
         fill(text.rounds_rate_saved_score, { score: 7 }),
       );
-      await expect(dot(1, "Systolic pressure", "rated", 7)).toBeVisible();
 
       // While the reason has focus the keys type; they do not choose or move.
       const reason = first.getByLabel(text.rounds_rate_reason_label);
@@ -408,13 +397,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(card("Cuff size").getByRole("status").first()).toHaveText(
         text.rounds_rate_saved_unable,
       );
-      await expect(dot(2, "Cuff size", "unable")).toHaveAttribute("aria-current", "page");
+      await expect(card("Cuff size")).toContainText(
+        fill(text.rounds_card_position, { index: 2, total: 2 }),
+      );
 
-      // A dot jumps back to its card; the reason saved when the field lost focus.
-      await dot(1, "Systolic pressure", "rated", 7).click();
+      // Previous goes back to card 1; the reason saved when the field lost focus.
+      await previous.click();
       await expect(heading("Systolic pressure")).toBeFocused();
       await expect(first.getByLabel(text.rounds_rate_reason_label)).toHaveValue("N 8");
-      await expect(dot(1, "Systolic pressure", "rated", 7)).toHaveAttribute("aria-current", "page");
+      await expect(rater).toHaveURL((url) => url.searchParams.get("card") === "1");
 
       // The first card has no previous one, so P keeps it.
       await rater.keyboard.press("p");
