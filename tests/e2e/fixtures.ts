@@ -10,9 +10,14 @@ import { Kysely, PostgresDialect } from "kysely";
 import pg from "pg";
 import en from "../../messages/en.json" with { type: "json" };
 import nl from "../../messages/nl.json" with { type: "json" };
+import type { ProjectPhase } from "../../src/lib/project-phases.ts";
 import type { DB } from "../../src/server/db/schema.gen.ts";
 import { invite } from "../../src/server/invitations/queries.ts";
-import { facilitatorWithProject, joinedParticipant } from "../../src/server/test-fixtures.ts";
+import {
+  facilitatorWithProject,
+  joinedParticipant,
+  setPhase,
+} from "../../src/server/test-fixtures.ts";
 import { linkIn, takeMessage } from "./mailpit.ts";
 import { appUrl, runDatabaseUrl } from "./run-env.ts";
 
@@ -44,10 +49,17 @@ export interface SeededProject {
   facilitator: { userId: string; email: string };
 }
 
-/** A facilitator, granted through the grant command's function, with one new project. */
-export async function seedProject(db: Kysely<DB>): Promise<SeededProject> {
+/**
+ * A facilitator, granted through the grant command's function, with one new project in `phase`.
+ * The phase decides which steps a participant sees and writes in (PR9).
+ */
+export async function seedProject(
+  db: Kysely<DB>,
+  phase: ProjectPhase = "scope",
+): Promise<SeededProject> {
   const name = uniqueName("facilitator");
   const { userId, projectId } = await facilitatorWithProject(db, name);
+  await setPhase(db, projectId, phase);
   return { projectId, facilitator: { userId, email: addressOf(name) } };
 }
 

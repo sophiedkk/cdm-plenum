@@ -95,7 +95,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
     test("a round from setup to results", async ({ page, db, browser }) => {
       test.setTimeout(120_000);
-      const project = await seedProject(db);
+      const project = await seedProject(db, "decide");
       await insertElement(db, project.projectId, "Systolic pressure");
       await insertElement(db, project.projectId, "Cuff size");
       const first = await seedParticipant(db, project);
@@ -248,7 +248,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
     });
 
     test("the facilitator joins a stakeholder group and rates (DE14)", async ({ page, db }) => {
-      const project = await seedProject(db);
+      const project = await seedProject(db, "decide");
       await insertElement(db, project.projectId, "Heart rate");
       await seedParticipant(db, project);
       await openedRound(db, project.facilitator.userId, project.projectId, {}, "A small panel");

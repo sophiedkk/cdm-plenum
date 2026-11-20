@@ -65,7 +65,7 @@ async function passClosingDate(db: Kysely<DB>, roundId: string): Promise<void> {
 
 /** A project with round 1 rated by six raters and closed, and round 2 open on the rest. */
 async function seedTwoRounds(db: Kysely<DB>): Promise<Seeded> {
-  const project = await seedProject(db);
+  const project = await seedProject(db, "decide");
   const { projectId } = project;
   const facilitator = project.facilitator.userId;
   const names = RATERS.map(() => uniqueName("participant"));
