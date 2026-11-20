@@ -50,19 +50,23 @@ function Overview() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div>
       <PageHeader level={2} title={m.projects_overview_title()} />
-      <PhaseSteps phase={overview.phase} />
-      {overview.role === "facilitator" ? (
-        <FacilitatorPhasePanel
-          projectId={projectId}
-          overview={overview}
-          move={(direction) => movePhase({ data: { projectId, from: overview.phase, direction } })}
-          onMoved={refresh}
-        />
-      ) : (
-        <ParticipantTaskCard projectId={projectId} overview={overview} />
-      )}
+      <div className="flex flex-col gap-4">
+        <PhaseSteps phase={overview.phase} />
+        {overview.role === "facilitator" ? (
+          <FacilitatorPhasePanel
+            projectId={projectId}
+            overview={overview}
+            move={(direction) =>
+              movePhase({ data: { projectId, from: overview.phase, direction } })
+            }
+            onMoved={refresh}
+          />
+        ) : (
+          <ParticipantTaskCard projectId={projectId} overview={overview} />
+        )}
+      </div>
     </div>
   );
 }
