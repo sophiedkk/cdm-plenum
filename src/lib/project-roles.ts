@@ -32,6 +32,7 @@ export const PROJECT_STATEMENTS = {
   scope: ["update", "read_authors"],
   element: ["update", "merge", "import", "set_values", "read_authors"],
   ckm: ["search", "link", "import"],
+  source: ["add", "import", "review", "read_authors"],
   export: ["download"],
 } as const;
 
@@ -41,8 +42,9 @@ export const projectAccessControl = createAccessControl(PROJECT_STATEMENTS);
 /**
  * The facilitator changes the project settings (PR7), invites, manages stakeholder groups and
  * joins one to rate (DE14), edits the scope and the board, sees who wrote what (EL2, ADR 0005),
- * uses CKM (EL4, EL7) and downloads the exports. A participant manages nothing: reading the
- * scope, adding elements and commenting need only a membership.
+ * uses CKM (EL4, EL7), adds and imports source models and reviews suggestions (EL12, EL20) and
+ * downloads the exports. A participant manages nothing: reading the scope, adding elements,
+ * suggesting a source model and commenting need only a membership.
  */
 export const projectRoles = {
   facilitator: projectAccessControl.newRole({
@@ -53,6 +55,7 @@ export const projectRoles = {
     scope: ["update", "read_authors"],
     element: ["update", "merge", "import", "set_values", "read_authors"],
     ckm: ["search", "link", "import"],
+    source: ["add", "import", "review", "read_authors"],
     export: ["download"],
   }),
   participant: projectAccessControl.newRole({}),

@@ -20,6 +20,8 @@ import {
   PROPOSAL_RULE_MAX,
   PANEL_MINIMUM_REASON_MAX as ROUNDS_REASON_MAX,
 } from "../rounds/schemas.ts";
+import { SOURCE_MODEL_KINDS, SOURCE_MODEL_STATUSES } from "../sources/queries.ts";
+import { SOURCE_LINK_MAX, SOURCE_TITLE_MAX } from "../sources/schemas.ts";
 import { createMigrator } from "./index.ts";
 import { DATA_TYPE_KEYS } from "./migrations/0002_projects.ts";
 import { CHANGE_CLASS_KEYS } from "./migrations/0004_panel.ts";
@@ -27,6 +29,7 @@ import { PANEL_MINIMUM_REASON_MAX } from "./migrations/0006_group_names_and_rate
 import { ELEMENT_PROMPT_KEYS } from "./migrations/0007_private_brainstorm.ts";
 import * as proposals from "./migrations/0008_round_proposals.ts";
 import * as flags from "./migrations/0009_detail_flags.ts";
+import * as sources from "./migrations/0012_source_models.ts";
 import { migrations } from "./migrations/index.ts";
 import { baseTestDatabaseUrl, createTestDb } from "./test-db.ts";
 import { createRunDatabase, dropRunDatabase } from "./test-run-database.ts";
@@ -104,7 +107,17 @@ describe("migrations", () => {
     expect(flags.DETAIL_FLAG_REASON_MAX).toBe(DETAIL_FLAG_REASON_MAX);
   });
 
+  it("allow the source model title and link lengths the source validators take", () => {
+    expect(sources.SOURCE_TITLE_MAX).toBe(SOURCE_TITLE_MAX);
+    expect(sources.SOURCE_LINK_MAX).toBe(SOURCE_LINK_MAX);
+    expect([...sources.SOURCE_MODEL_KINDS]).toEqual([...SOURCE_MODEL_KINDS]);
+    expect([...sources.SOURCE_MODEL_STATUSES]).toEqual([...SOURCE_MODEL_STATUSES]);
+  });
+
   it("allow exactly the element source kinds the board knows", () => {
-    expect([...proposals.ELEMENT_SOURCE_KIND_KEYS]).toEqual([...ELEMENT_SOURCE_KINDS]);
+    expect([...sources.ELEMENT_SOURCE_KIND_KEYS]).toEqual([...ELEMENT_SOURCE_KINDS]);
+    expect(sources.ELEMENT_SOURCE_KIND_KEYS.slice(0, 4)).toEqual([
+      ...proposals.ELEMENT_SOURCE_KIND_KEYS,
+    ]);
   });
 });

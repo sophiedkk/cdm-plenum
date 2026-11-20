@@ -78,4 +78,18 @@ describe("parseEnv", () => {
       );
     }
   });
+
+  it("leaves FHIR_REGISTRY_URL unset when it is empty, and accepts an http or https URL", () => {
+    expect(parseEnv({ ...VALID, FHIR_REGISTRY_URL: "" }).FHIR_REGISTRY_URL).toBeUndefined();
+    const url = "http://localhost:8081/";
+    expect(parseEnv({ ...VALID, FHIR_REGISTRY_URL: url }).FHIR_REGISTRY_URL).toBe(url);
+  });
+
+  it("refuses a FHIR_REGISTRY_URL that is not http or https, or has a query or fragment", () => {
+    for (const value of ["ftp://registry.example.test/", "https://registry.example.test/#a"]) {
+      expect(() => parseEnv({ ...VALID, FHIR_REGISTRY_URL: value })).toThrow(
+        "Invalid environment configuration: FHIR_REGISTRY_URL",
+      );
+    }
+  });
 });

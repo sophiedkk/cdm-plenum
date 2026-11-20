@@ -1,0 +1,85 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "BloodPressureModel",
+  "url": "http://example.org/fhir/StructureDefinition/BloodPressureModel",
+  "version": "1.0.0",
+  "name": "BloodPressureModel",
+  "title": "Blood pressure model",
+  "status": "draft",
+  "fhirVersion": "4.0.1",
+  "kind": "logical",
+  "abstract": false,
+  "type": "http://example.org/fhir/StructureDefinition/BloodPressureModel",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Element",
+  "derivation": "specialization",
+  "snapshot": {
+    "element": [
+      {
+        "id": "BloodPressureModel",
+        "path": "BloodPressureModel",
+        "short": "Blood pressure",
+        "definition": "A logical model of a blood pressure measurement.",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "BloodPressureModel.extension",
+        "path": "BloodPressureModel.extension",
+        "min": 0,
+        "max": "*",
+        "type": [{ "code": "Extension" }]
+      },
+      {
+        "id": "BloodPressureModel.systolic",
+        "path": "BloodPressureModel.systolic",
+        "short": "Systolic",
+        "definition": "Peak systemic arterial blood pressure.",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "Quantity" }],
+        "code": [{ "system": "http://loinc.org", "code": "8480-6" }]
+      },
+      {
+        "id": "BloodPressureModel.diastolic",
+        "path": "BloodPressureModel.diastolic",
+        "short": "Diastolic",
+        "definition": "Minimum systemic arterial blood pressure.",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "Quantity" }],
+        "mapping": [{ "identity": "zib", "map": "NL-CM:12.4.3" }]
+      },
+      {
+        "id": "BloodPressureModel.cuffSize",
+        "path": "BloodPressureModel.cuffSize",
+        "short": "Cuff size",
+        "definition": "The size of the cuff used for the measurement.",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "CodeableConcept" }],
+        "binding": {
+          "strength": "preferred",
+          "valueSet": "http://example.org/fhir/ValueSet/example-cuff-size"
+        }
+      },
+      {
+        "id": "BloodPressureModel.measuringLocation",
+        "path": "BloodPressureModel.measuringLocation",
+        "short": "Measuring location",
+        "definition": "Where on the body the pressure was measured.",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "CodeableConcept" }]
+      },
+      {
+        "id": "BloodPressureModel.text",
+        "path": "BloodPressureModel.text",
+        "short": "Comment",
+        "definition": "A free text comment; a logical model may name an element text.",
+        "min": 0,
+        "max": "*",
+        "type": [{ "code": "string" }]
+      }
+    ]
+  }
+}

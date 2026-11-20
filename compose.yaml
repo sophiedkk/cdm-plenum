@@ -29,6 +29,7 @@ services:
       SMTP_URL: ${SMTP_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}
       CKM_BASE_URL: ${CKM_BASE_URL:-}
+      FHIR_REGISTRY_URL: ${FHIR_REGISTRY_URL:-}
     ports:
       # The loopback only: the reverse proxy is the one way in.
       - "127.0.0.1:${CDM_PLENUM_PORT:-3000}:3000"

@@ -1,0 +1,30 @@
+{
+  "index-version": 1,
+  "files": [
+    {
+      "filename": "StructureDefinition-example-BloodPressure.json",
+      "resourceType": "StructureDefinition",
+      "id": "example-BloodPressure",
+      "url": "http://example.org/fhir/StructureDefinition/example-BloodPressure",
+      "version": "1.0.0",
+      "kind": "resource",
+      "type": "Observation"
+    },
+    {
+      "filename": "StructureDefinition-BloodPressureModel.json",
+      "resourceType": "StructureDefinition",
+      "id": "BloodPressureModel",
+      "url": "http://example.org/fhir/StructureDefinition/BloodPressureModel",
+      "version": "1.0.0",
+      "kind": "logical",
+      "type": "http://example.org/fhir/StructureDefinition/BloodPressureModel"
+    },
+    {
+      "filename": "ValueSet-example-cuff-size.json",
+      "resourceType": "ValueSet",
+      "id": "example-cuff-size",
+      "url": "http://example.org/fhir/ValueSet/example-cuff-size",
+      "version": "1.0.0"
+    }
+  ]
+}

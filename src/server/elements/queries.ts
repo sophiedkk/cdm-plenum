@@ -34,12 +34,15 @@ import type {
   UpdateElementInput,
 } from "./schemas.ts";
 
-export const ELEMENT_SOURCE_KINDS = ["brainstorm", "csv", "ckm", "delphi"] as const;
+export const ELEMENT_SOURCE_KINDS = ["brainstorm", "csv", "ckm", "delphi", "fhir", "zib"] as const;
 export type ElementSourceKind = (typeof ELEMENT_SOURCE_KINDS)[number];
 
 export interface ElementSource {
   kind: ElementSourceKind;
-  /** The participant's note, the CSV file name, the archetype id or the round number. */
+  /**
+   * The participant's note, the CSV file name, the archetype id, the round number or the title
+   * of a FHIR or zib source model.
+   */
   label: string;
 }
 

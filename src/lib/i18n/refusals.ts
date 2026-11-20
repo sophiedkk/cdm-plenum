@@ -10,6 +10,7 @@ import type { AdminActionError } from "@/server/admin/queries";
 import type { CkmActionError } from "@/server/ckm/queries";
 import type { ProjectActionError } from "@/server/projects/access";
 import type { RoundActionError } from "@/server/rounds/access";
+import type { SourceActionError } from "@/server/sources/queries";
 
 /** A refused session (`AuthError` of src/server/middleware.ts) and the sign-in link errors. */
 export const AUTH_REFUSALS = [
@@ -24,6 +25,7 @@ export type RefusalCode =
   | ProjectActionError
   | RoundActionError
   | CkmActionError
+  | SourceActionError
   | AdminActionError
   | AuthRefusal;
 
@@ -86,6 +88,22 @@ export const REFUSAL_MESSAGE_KEYS = {
   ckm_element_not_found: "common_refusal_ckm_element_not_found",
   ckm_no_elements: "common_refusal_ckm_no_elements",
   ckm_already_imported: "common_refusal_ckm_already_imported",
+  fhir_unreachable: "common_refusal_fhir_unreachable",
+  fhir_timeout: "common_refusal_fhir_timeout",
+  fhir_refused: "common_refusal_fhir_refused",
+  fhir_unusable: "common_refusal_fhir_unusable",
+  fhir_too_large: "common_refusal_fhir_too_large",
+  fhir_not_r4: "common_refusal_fhir_not_r4",
+  fhir_package_not_found: "common_refusal_fhir_package_not_found",
+  fhir_structure_not_found: "common_refusal_fhir_structure_not_found",
+  fhir_no_snapshot: "common_refusal_fhir_no_snapshot",
+  source_not_found: "common_refusal_source_not_found",
+  source_already_added: "common_refusal_source_already_added",
+  source_already_imported: "common_refusal_source_already_imported",
+  source_not_added: "common_refusal_source_not_added",
+  source_not_suggested: "common_refusal_source_not_suggested",
+  source_no_elements: "common_refusal_source_no_elements",
+  source_after_discover: "common_refusal_source_after_discover",
   account_not_found: "common_refusal_account_not_found",
   own_account: "common_refusal_own_account",
   unauthenticated: "common_refusal_unauthenticated",
