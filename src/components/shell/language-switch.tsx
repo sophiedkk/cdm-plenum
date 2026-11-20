@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -21,9 +22,32 @@ const LANGUAGE_NAMES: Record<Locale, () => string> = {
 };
 
 /**
- * The language switch (Q-I18N-1). Paraglide stores the choice in its locale cookie and reloads
- * the page, so the server renders the next page in that language.
+ * The languages as a labelled radio group, for a menu (Q-I18N-1). Paraglide stores the choice in
+ * its locale cookie and reloads the page, so the server renders the next page in that language.
  */
+export function LanguageMenuGroup() {
+  const current = getLocale();
+  return (
+    <DropdownMenuGroup>
+      <DropdownMenuLabel>{m.shell_language_label()}</DropdownMenuLabel>
+      <DropdownMenuRadioGroup
+        value={current}
+        onValueChange={(value) => {
+          const locale = toLocale(value);
+          if (locale && locale !== current) void setLocale(locale);
+        }}
+      >
+        {(Object.keys(LANGUAGE_NAMES) as Locale[]).map((locale) => (
+          <DropdownMenuRadioItem key={locale} value={locale} lang={locale}>
+            {LANGUAGE_NAMES[locale]()}
+          </DropdownMenuRadioItem>
+        ))}
+      </DropdownMenuRadioGroup>
+    </DropdownMenuGroup>
+  );
+}
+
+/** The language switch of the pages without a session. */
 export function LanguageSwitch() {
   const current = getLocale();
   return (
@@ -37,20 +61,7 @@ export function LanguageSwitch() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>{m.shell_language_label()}</DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          value={current}
-          onValueChange={(value) => {
-            const locale = toLocale(value);
-            if (locale && locale !== current) void setLocale(locale);
-          }}
-        >
-          {(Object.keys(LANGUAGE_NAMES) as Locale[]).map((locale) => (
-            <DropdownMenuRadioItem key={locale} value={locale} lang={locale}>
-              {LANGUAGE_NAMES[locale]()}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
+        <LanguageMenuGroup />
       </DropdownMenuContent>
     </DropdownMenu>
   );

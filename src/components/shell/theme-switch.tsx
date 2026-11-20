@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -33,7 +34,33 @@ export function useThemeChoice(): ThemeChoice {
   return useSyncExternalStore(subscribeThemeChoice, readThemeChoice, () => "system");
 }
 
-/** The colour theme switch next to the language switch: light, dark or the system setting. */
+/** The theme choices as a labelled radio group, for a menu: the switch or the person menu. */
+export function ThemeMenuGroup() {
+  const current = useThemeChoice();
+  return (
+    <DropdownMenuGroup>
+      <DropdownMenuLabel>{m.shell_theme_label()}</DropdownMenuLabel>
+      <DropdownMenuRadioGroup
+        value={current}
+        onValueChange={(value) => {
+          if (isThemeChoice(value) && value !== current) setThemeChoice(value);
+        }}
+      >
+        {THEME_CHOICES.map((choice) => {
+          const ChoiceIcon = THEME_TEXT[choice].icon;
+          return (
+            <DropdownMenuRadioItem key={choice} value={choice}>
+              <ChoiceIcon aria-hidden="true" />
+              {THEME_TEXT[choice].label()}
+            </DropdownMenuRadioItem>
+          );
+        })}
+      </DropdownMenuRadioGroup>
+    </DropdownMenuGroup>
+  );
+}
+
+/** The colour theme switch of the pages without a session: light, dark or the system setting. */
 export function ThemeSwitch() {
   const current = useThemeChoice();
   const { label, icon: Icon } = THEME_TEXT[current];
@@ -48,23 +75,7 @@ export function ThemeSwitch() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>{m.shell_theme_label()}</DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          value={current}
-          onValueChange={(value) => {
-            if (isThemeChoice(value) && value !== current) setThemeChoice(value);
-          }}
-        >
-          {THEME_CHOICES.map((choice) => {
-            const ChoiceIcon = THEME_TEXT[choice].icon;
-            return (
-              <DropdownMenuRadioItem key={choice} value={choice}>
-                <ChoiceIcon aria-hidden="true" />
-                {THEME_TEXT[choice].label()}
-              </DropdownMenuRadioItem>
-            );
-          })}
-        </DropdownMenuRadioGroup>
+        <ThemeMenuGroup />
       </DropdownMenuContent>
     </DropdownMenu>
   );
