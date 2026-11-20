@@ -11,6 +11,8 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A theme switch next to the language switch: Light, Dark or System. System
+  follows your device's setting, as before; the choice stays in your browser.
 - A new project starts with a private brainstorm: each participant sees only
   the elements they added, until the facilitator selects "Reveal the board"
   on the element board. Until then the board shows the facilitator how many

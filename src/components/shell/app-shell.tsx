@@ -10,6 +10,7 @@ import { hasAppRole } from "@/lib/guards";
 import type { SessionUser } from "@/server/session/queries";
 import { LanguageSwitch } from "./language-switch";
 import { MAIN_CONTENT_ID, SkipLink } from "./skip-link";
+import { ThemeSwitch } from "./theme-switch";
 import { useSignOut } from "./use-sign-out";
 
 const NAV_LINK =
@@ -50,6 +51,7 @@ export function AppShell({ user, children }: Readonly<{ user: SessionUser; child
               <span className="sr-only">{m.shell_signed_in_as()} </span>
               {user.name || user.email}
             </p>
+            <ThemeSwitch />
             <LanguageSwitch />
             <Button
               type="button"
@@ -86,6 +88,7 @@ export function PublicLayout({ children }: Readonly<{ children: ReactNode }>) {
             {m.app_name()}
           </Link>
           <div className="ml-auto">
+            <ThemeSwitch />
             <LanguageSwitch />
           </div>
         </div>

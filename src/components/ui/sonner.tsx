@@ -12,14 +12,15 @@ import {
 } from "lucide-react";
 import type * as React from "react";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
+import { useThemeChoice } from "@/components/shell/theme-switch";
 import { m } from "@/i18n/messages";
 
-// Adapted from the shadcn/ui registry: the theme follows prefers-color-scheme (no next-themes),
+// Adapted from the shadcn/ui registry: the theme follows the app's theme choice (no next-themes),
 // and the toast region has a translated name.
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
-      theme="system"
+      theme={useThemeChoice()}
       className="toaster group"
       containerAriaLabel={m.common_notifications()}
       icons={{

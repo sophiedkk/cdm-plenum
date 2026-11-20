@@ -94,7 +94,8 @@ page from these patterns; each has a real use and a test you can copy.
   `src/components/<area>/`. Style with the theme tokens in
   `src/styles/app.css` (`text-muted-foreground`, `text-destructive`,
   `text-success`, `text-warning`), never with a fixed colour, so dark mode
-  (`prefers-color-scheme`) keeps AA contrast. Icons from `lucide-react` carry
+  (`<html data-theme>`, set by the theme switch in `src/lib/theme.ts`) keeps AA
+  contrast. Icons from `lucide-react` carry
   `aria-hidden="true"`.
 - **Routes:** pages that need a session live under `src/routes/_authed/`,
   whose layout redirects to `/sign-in` and renders the app shell
