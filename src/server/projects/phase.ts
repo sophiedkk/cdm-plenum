@@ -102,11 +102,6 @@ export async function projectOverview(
         .where("member.userId", "=", userId)
         .executeTakeFirst(),
     );
-    const scope = await reader
-      .selectFrom("scope_statement")
-      .select("concept")
-      .where("project_id", "=", project.id)
-      .executeTakeFirst();
     const lastClosed = await reader
       .selectFrom("round")
       .select("id")
@@ -117,7 +112,6 @@ export async function projectOverview(
     return done({
       phase,
       role: project.role,
-      concept: scope?.concept ?? "",
       elements,
       ownElements,
       round: await runningRound(reader, project.id, project.role, userId, deps.now),

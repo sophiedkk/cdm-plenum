@@ -68,10 +68,16 @@ import { projectKeys, projectQueryOptions } from "@/server/projects/query-option
  * The element board of the project (EL1 to EL7, EL9). In the private step of the brainstorm the
  * facilitator follows it and reveals the board here (EL13). `element` opens that element's row.
  * Participants add elements on the brainstorm only (ADR 0018); the server still takes an
- * element from the board while the phase table opens adding (PR9).
+ * element from the board while the phase table opens adding (PR9). For the facilitator this is
+ * the Elements tab; adding an element here replaces their brainstorm (ADR 0019).
  */
 export const Route = createFileRoute("/_authed/projects/$projectId/board")({
-  validateSearch: z.object({ element: z.string().max(64).optional() }),
+  validateSearch: z.object({
+    element: z.string().max(64).optional(),
+    // The Overview's checklist opens the duplicates or the CKM search from here (ADR 0019).
+    duplicates: z.boolean().optional().catch(undefined),
+    ckm: z.boolean().optional().catch(undefined),
+  }),
   beforeLoad: requireStep("board"),
   loader: async ({ context, params }) => {
     const isFacilitator = context.project.role === "facilitator";
@@ -106,7 +112,7 @@ function Board() {
   const canComment = writeOpen(project.role, project.phase, "element_comment");
   const detailFields = detailFieldsShown(project.phase);
   const queryClient = useQueryClient();
-  const { element: openElementId } = Route.useSearch();
+  const { element: openElementId, duplicates: showDuplicates, ckm } = Route.useSearch();
   const { data: board } = useSuspenseQuery(boardQueryOptions(projectId, isFacilitator));
   const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
   const privateStep = detail.ok && isPrivateStep(detail.value);
@@ -125,7 +131,9 @@ function Board() {
     enabled: isFacilitator && privateStep,
   });
   const router = useRouter();
-  const [dialog, setDialog] = useState<DialogState>(null);
+  const [dialog, setDialog] = useState<DialogState>(
+    ckm && isFacilitator ? { kind: "ckm", target: null } : null,
+  );
 
   const addElement = useServerFn(addElementFn);
   const updateElement = useServerFn(updateElementFn);
@@ -271,6 +279,7 @@ function Board() {
           {isFacilitator && (
             <DuplicateList
               pairs={duplicates}
+              defaultExpanded={showDuplicates === true}
               onMerge={(pair) =>
                 setDialog({
                   kind: "merge",

@@ -16,7 +16,6 @@ import {
   type PanelProject,
   panelProject,
 } from "../rounds/test-round.ts";
-import { updateScope } from "../scope/queries.ts";
 import { groupId } from "../test-fixtures.ts";
 import { personLeaks, projectWithMembers } from "../test-project-members.ts";
 import type { ProjectResult } from "./access.ts";
@@ -162,28 +161,12 @@ describe("projectOverview (PR8)", () => {
     expect(result).toEqual({
       phase: "discover",
       role: "participant",
-      concept: "",
       elements: 3,
       ownElements: 2,
       round: null,
       lastClosedRoundId: null,
     });
     expect(personLeaks(result, p)).toEqual([]);
-  });
-
-  it("carries the concept of the scope for the project header (PR11)", async () => {
-    const p = await projectWithMembers(db);
-    const saved = await updateScope(db, p.facilitator, {
-      projectId: p.projectId,
-      concept: "The pressure of the blood in the arteries",
-      useCases: "",
-      outOfScope: "",
-    });
-    expect(saved.ok).toBe(true);
-    const result = value(
-      await projectOverview(db, p.participant, p.projectId, { now: new Date() }),
-    );
-    expect(result.concept).toBe("The pressure of the blood in the arteries");
   });
 
   it("refuses an outsider with not_found", async () => {

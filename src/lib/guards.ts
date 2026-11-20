@@ -31,7 +31,7 @@ export function requireAppRole(role: AppRole) {
 }
 
 /**
- * Sends a member to the project, which opens on their current step, when the phase hides `step`
+ * Sends a member to the project home (ADR 0019) when the phase hides `step`
  * from them (PR9, PR11). The facilitator sees every step (PR10). The server checks again.
  */
 export function requireStep(step: ProjectStep) {

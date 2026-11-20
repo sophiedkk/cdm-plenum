@@ -1,0 +1,290 @@
+// @vitest-environment jsdom
+// SPDX-FileCopyrightText: Sophie de Klerk
+// SPDX-License-Identifier: Apache-2.0
+
+// The facilitator's Overview (PR4, PR10, ADR 0019): the checklist per phase with a check and its
+// state in words per item, at most one outline action each, one main button on to the next
+// phase and a quiet link back, each confirmed in the page below the buttons.
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { baseLocale, overwriteGetLocale } from "@/i18n/runtime";
+import type { OverviewFacts } from "@/lib/project-home";
+import type { ProjectPhase } from "@/lib/project-phases";
+import { OverviewChecklist } from "./overview-checklist";
+
+const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+vi.mock("sonner", () => ({ toast }));
+
+function resolve(to: string, params: Record<string, string>): string {
+  return Object.entries(params).reduce((path, [key, value]) => path.replace(`$${key}`, value), to);
+}
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    to,
+    params = {},
+    search,
+    hash,
+    children,
+    className,
+  }: {
+    to: string;
+    params?: Record<string, string>;
+    search?: Record<string, unknown>;
+    hash?: string;
+    children: ReactNode;
+    className?: string;
+  }) => {
+    const query = search ? `?${new URLSearchParams(search as Record<string, string>)}` : "";
+    return (
+      <a href={`${resolve(to, params)}${query}${hash ? `#${hash}` : ""}`} className={className}>
+        {children}
+      </a>
+    );
+  },
+}));
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+  overwriteGetLocale(() => baseLocale);
+});
+
+function facts(changes: Partial<OverviewFacts> = {}): OverviewFacts {
+  return {
+    scopeWritten: true,
+    scopeComments: 0,
+    panelMissing: 0,
+    participants: 8,
+    contributors: 5,
+    elements: 11,
+    privateBrainstorm: true,
+    boardRevealed: false,
+    duplicates: 2,
+    ckmLinked: 0,
+    round: null,
+    undecided: 0,
+    lastClosedRound: null,
+    mailConfigured: true,
+    ...changes,
+  };
+}
+
+function renderOverview(
+  phase: ProjectPhase,
+  changes: Partial<OverviewFacts> = {},
+  props: {
+    move?: ReturnType<typeof vi.fn>;
+    remind?: ReturnType<typeof vi.fn>;
+    reveal?: ReactNode;
+  } = {},
+) {
+  const move = props.move ?? vi.fn(async () => ({ ok: true, value: { phase: "decide" } }));
+  const onMoved = vi.fn();
+  render(
+    <OverviewChecklist
+      projectId="p1"
+      phase={phase}
+      facts={facts(changes)}
+      reveal={props.reveal}
+      remind={props.remind as never}
+      move={move as never}
+      onMoved={onMoved}
+    />,
+  );
+  return { move, onMoved };
+}
+
+/** Each item's state in words, its text and its actions. */
+function items() {
+  return within(screen.getByRole("list"))
+    .getAllByRole("listitem")
+    .map((item) => {
+      const state = item.querySelector(".sr-only")?.textContent ?? "";
+      const actions = within(item)
+        .queryAllByRole("link")
+        .concat(within(item).queryAllByRole("button"))
+        .map((action) => action.textContent);
+      return { state, text: item.textContent, actions };
+    });
+}
+
+describe("the checklist per phase", () => {
+  it("lists the scope phase: scope written, panel invited, comments to read", () => {
+    renderOverview("scope", { scopeWritten: false, panelMissing: 2, scopeComments: 3 });
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(
+      "Before you go on to Discover",
+    );
+    expect(items()).toEqual([
+      {
+        state: "To do",
+        text: "To doWrite the scope statementGo to the scope",
+        actions: ["Go to the scope"],
+      },
+      {
+        state: "To do",
+        text: "To doInvite 2 more people for the minimum panelInvite people",
+        actions: ["Invite people"],
+      },
+      {
+        state: "",
+        text: "3 comments on the scopeRead the comments",
+        actions: ["Read the comments"],
+      },
+    ]);
+    expect(screen.getByRole("link", { name: "Read the comments" }).getAttribute("href")).toBe(
+      "/projects/p1/scope#scope-comments",
+    );
+  });
+
+  it("marks done items with a check and its state in words, without an action", () => {
+    renderOverview("scope");
+    const [scope, panel] = items();
+    expect(scope).toEqual({
+      state: "Done",
+      text: "DoneThe scope statement is written",
+      actions: [],
+    });
+    expect(panel?.state).toBe("Done");
+  });
+
+  it("lists the discover phase with the reveal, duplicates and the comparison", () => {
+    const reveal = <button type="button">Reveal the board</button>;
+    renderOverview("discover", {}, { reveal, remind: vi.fn() });
+    expect(items().map((item) => [item.state, item.actions])).toEqual([
+      ["To do", ["Send a reminder"]],
+      ["To do", ["Reveal the board"]],
+      ["To do", ["Review"]],
+      ["To do", ["Search openEHR CKM"]],
+    ]);
+    expect(screen.getByText("5 of 8 participants added elements")).toBeTruthy();
+    expect(screen.getByText("2 likely duplicate pairs to review")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Review" }).getAttribute("href")).toBe(
+      "/projects/p1/board?duplicates=true",
+    );
+    expect(screen.getByText("Compare with openEHR CKM. FHIR and zib follow.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Search openEHR CKM" }).getAttribute("href")).toBe(
+      "/projects/p1/board?ckm=true",
+    );
+  });
+
+  it("offers no reminder without e-mail", () => {
+    renderOverview("discover", { mailConfigured: false }, { remind: vi.fn() });
+    expect(screen.queryByRole("button", { name: "Send a reminder" })).toBeNull();
+  });
+
+  it("sends the reminder and says to how many", async () => {
+    const remind = vi.fn(async () => ({ ok: true, value: { sent: 3 } }));
+    renderOverview("discover", {}, { remind });
+    fireEvent.click(screen.getByRole("button", { name: "Send a reminder" }));
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Reminder sent to 3 participants."),
+    );
+  });
+
+  it("shows a refused reminder as a translated message", async () => {
+    const remind = vi.fn(async () => ({ ok: false, error: "mail_not_configured" }));
+    renderOverview("discover", {}, { remind });
+    fireEvent.click(screen.getByRole("button", { name: "Send a reminder" }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "This server cannot send e-mail, so no reminder went out.",
+      ),
+    );
+  });
+
+  it("follows the open round with its response and closing date in the decide phase", () => {
+    renderOverview("decide", {
+      round: {
+        id: "round-2",
+        number: 2,
+        status: "open",
+        closesAt: "2026-11-26T22:05:00.000Z",
+        completed: 3,
+        raters: 8,
+      },
+      undecided: 2,
+    });
+    const [round, undecided] = items();
+    expect(round?.text).toContain("Round 2: 3 of 8 completed.");
+    expect(round?.actions).toEqual(["Go to round 2"]);
+    expect(undecided?.text).toContain("2 elements still without consensus");
+  });
+
+  it("asks to set up the next round while elements wait for a decision", () => {
+    renderOverview("decide", { undecided: 4, lastClosedRound: { id: "round-1", number: 1 } });
+    expect(screen.getByText("Set up round 2")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "New round" }).getAttribute("href")).toBe(
+      "/projects/p1/rounds/new",
+    );
+  });
+
+  it("shows the export in hand-off as its one main button", () => {
+    renderOverview("handoff");
+    expect(screen.queryByRole("list")).toBeNull();
+    expect(screen.getByRole("link", { name: "Go to the export" }).getAttribute("href")).toBe(
+      "/projects/p1/export",
+    );
+    expect(screen.queryByRole("button", { name: /Go on to/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Move back to Decide" })).toBeTruthy();
+  });
+});
+
+describe("the phase move (PR4)", () => {
+  it("has one filled button, on to the next phase; every other action is outline or text", () => {
+    renderOverview("discover", {}, { remind: vi.fn() });
+    const filled = [...document.querySelectorAll("a, button")].filter((node) =>
+      node.className.includes("bg-primary"),
+    );
+    expect(filled.map((node) => node.textContent)).toEqual(["Go on to Decide"]);
+  });
+
+  it("asks before moving on, below the buttons, and moves after the confirmation", async () => {
+    const { move, onMoved } = renderOverview("discover");
+    const goOn = screen.getByRole("button", { name: "Go on to Decide" });
+    const back = screen.getByRole("button", { name: "Move back to Scope" });
+    fireEvent.click(goOn);
+    expect(goOn.getAttribute("aria-expanded")).toBe("true");
+    const question = screen.getByText(/Move the project on to Decide\?/);
+    await waitFor(() => expect(document.activeElement).toBe(question));
+    // The confirmation follows the row of buttons, which stays as it was.
+    const row = goOn.parentElement as HTMLElement;
+    expect(row.contains(back)).toBe(true);
+    const group = screen.getByRole("group");
+    expect(row.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(move).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Yes, move to Decide" }));
+    await waitFor(() => expect(move).toHaveBeenCalledWith("next"));
+    await waitFor(() => expect(onMoved).toHaveBeenCalled());
+    expect(toast.success).toHaveBeenCalledWith("The project is now in the phase Decide.");
+  });
+
+  it("asks before moving back with its own confirmation, and cancels without moving", async () => {
+    const { move } = renderOverview("discover");
+    const back = screen.getByRole("button", { name: "Move back to Scope" });
+    fireEvent.click(back);
+    expect(screen.getByText(/Move the project back to Scope\?/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("group")).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(back));
+    expect(move).not.toHaveBeenCalled();
+  });
+
+  it("shows a refusal, such as a round still open (PR10), and stays", async () => {
+    const move = vi.fn(async () => ({ ok: false, error: "round_still_open" }));
+    const { onMoved } = renderOverview("decide", {}, { move });
+    fireEvent.click(screen.getByRole("button", { name: "Go on to Hand-off" }));
+    fireEvent.click(screen.getByRole("button", { name: "Yes, move to Hand-off" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(onMoved).not.toHaveBeenCalled();
+    expect(screen.getByRole("group")).toBeTruthy();
+  });
+
+  it("speaks Dutch when the locale is Dutch", () => {
+    overwriteGetLocale(() => "nl");
+    renderOverview("discover");
+    expect(screen.getByRole("button", { name: "Door naar Besluiten" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Terugzetten naar Scope" })).toBeTruthy();
+  });
+});

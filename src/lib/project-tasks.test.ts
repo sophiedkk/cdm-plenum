@@ -2,13 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, expect, it } from "vitest";
-import {
-  facilitatorStatus,
-  headerCovers,
-  type OverviewRound,
-  type ProjectOverview,
-  participantTask,
-} from "./project-tasks.ts";
+import { type OverviewRound, type ProjectOverview, participantTask } from "./project-tasks.ts";
 
 const CLOSES = "2026-12-01T16:00:00.000Z";
 
@@ -16,7 +10,6 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
   return {
     phase: "scope",
     role: "participant",
-    concept: "",
     elements: 8,
     ownElements: 3,
     round: null,
@@ -88,68 +81,5 @@ describe("participantTask (PR8)", () => {
       kind: "handoff",
       resultsRoundId: "round-1",
     });
-  });
-});
-
-describe("facilitatorStatus", () => {
-  it("counts the board outside the decide phase", () => {
-    expect(facilitatorStatus(overview({ phase: "discover", role: "facilitator" }))).toEqual({
-      kind: "elements",
-      count: 8,
-    });
-  });
-
-  it("shows the open round's response while deciding", () => {
-    const status = facilitatorStatus(
-      overview({
-        phase: "decide",
-        role: "facilitator",
-        round: round({ rated: null, completed: 5, raters: 8 }),
-      }),
-    );
-    expect(status).toEqual({
-      kind: "round",
-      roundId: "round-2",
-      number: 2,
-      status: "open",
-      completed: 5,
-      raters: 8,
-      closesAt: CLOSES,
-    });
-  });
-
-  it("says no round is open while deciding without one", () => {
-    expect(facilitatorStatus(overview({ phase: "decide", role: "facilitator" }))).toEqual({
-      kind: "no_round",
-    });
-  });
-});
-
-describe("headerCovers", () => {
-  const deciding = (changes: Partial<ProjectOverview> = {}) =>
-    overview({ phase: "decide", round: round(), ...changes });
-
-  it("covers the round a participant is asked to rate, rated in full or not", () => {
-    expect(headerCovers(deciding(), "round-2")).toEqual({ rate: true, closesAt: true });
-    expect(headerCovers(deciding({ round: round({ rated: 40 }) }), "round-2")).toEqual({
-      rate: true,
-      closesAt: true,
-    });
-  });
-
-  it("covers no other round, and none once the round waits to be closed", () => {
-    expect(headerCovers(deciding(), "round-1")).toEqual({ rate: false, closesAt: false });
-    expect(
-      headerCovers(deciding({ round: round({ status: "awaiting_close" }) }), "round-2"),
-    ).toEqual({ rate: false, closesAt: false });
-  });
-
-  it("covers only the closing date of the facilitator's open round", () => {
-    const facilitator = deciding({
-      role: "facilitator",
-      round: round({ rated: 3, completed: 1, raters: 2 }),
-    });
-    expect(headerCovers(facilitator, "round-2")).toEqual({ rate: false, closesAt: true });
-    expect(headerCovers(facilitator, "round-1")).toEqual({ rate: false, closesAt: false });
   });
 });
