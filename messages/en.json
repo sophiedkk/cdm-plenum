@@ -585,6 +585,7 @@
   "common_refusal_phase_changed": "The phase changed in the meantime. Reload the page to see the current phase.",
   "common_refusal_phase_closed": "This step is closed in the current phase. You can still read it.",
   "common_refusal_previous_round_not_closed": "Close the previous round before you start a new one.",
+  "common_refusal_private_after_group_check": "The participants were asked to check the groups and have seen every element, so the brainstorm cannot be private again.",
   "common_refusal_proposal_already_on_board": "This proposal is already on the board.",
   "common_refusal_proposal_not_found": "This proposal no longer exists.",
   "common_refusal_proposals_first_round_only": "Only round 1 takes proposals for missing elements.",

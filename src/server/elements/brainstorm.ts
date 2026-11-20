@@ -102,6 +102,8 @@ export async function revealBoard(
 /**
  * Turns the private step on or off (facilitator only, EL13). Refused after the reveal
  * (`board_already_revealed`): participants have seen the board, so hiding it again means nothing.
+ * Turning it on is refused once the group was asked to check the groups
+ * (`private_after_group_check`): the check has shown every element to every participant (EL24).
  */
 export async function setPrivateBrainstorm(
   db: Kysely<DB>,
@@ -111,10 +113,11 @@ export async function setPrivateBrainstorm(
   return withProject(db, userId, input.projectId, { project: ["update"] }, async (trx, project) => {
     const row = await trx
       .selectFrom("project")
-      .select("board_revealed_at")
+      .select(["board_revealed_at", "group_check_at"])
       .where("id", "=", project.id)
       .executeTakeFirstOrThrow();
     if (row.board_revealed_at !== null) return refused("board_already_revealed");
+    if (input.enabled && row.group_check_at !== null) return refused("private_after_group_check");
     await trx
       .updateTable("project")
       .set({ private_brainstorm: input.enabled })

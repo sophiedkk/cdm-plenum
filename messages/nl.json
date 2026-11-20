@@ -585,6 +585,7 @@
   "common_refusal_phase_changed": "De fase is intussen veranderd. Laad de pagina opnieuw om de huidige fase te zien.",
   "common_refusal_phase_closed": "Deze stap is gesloten in de huidige fase. Je kunt hem nog wel lezen.",
   "common_refusal_previous_round_not_closed": "Sluit eerst de vorige ronde voordat je een nieuwe begint.",
+  "common_refusal_private_after_group_check": "De deelnemers is gevraagd de groepen te controleren en ze hebben elk element gezien, dus de brainstorm kan niet meer privé worden.",
   "common_refusal_proposal_already_on_board": "Dit voorstel staat al op het bord.",
   "common_refusal_proposal_not_found": "Dit voorstel bestaat niet meer.",
   "common_refusal_proposals_first_round_only": "Alleen ronde 1 neemt voorstellen voor ontbrekende elementen aan.",

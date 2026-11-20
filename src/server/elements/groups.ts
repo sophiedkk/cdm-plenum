@@ -317,6 +317,10 @@ export async function groupCheck(
   return readProject(db, userId, projectId, null, async (reader, project) => {
     if (!stepVisible(project.role, project.phase, "group_check")) return refused("phase_closed");
     if ((await checkAskedAt(reader, project.id)) === null) return refused("group_check_not_asked");
+    // NOTE: EL13. A second guard: the check shows every element, so never in the private step.
+    if (project.role !== "facilitator" && (await inPrivateStep(reader, project.id))) {
+      return refused("group_check_before_reveal");
+    }
     const me = await actorMemberId(reader, project.id, userId);
     const grouping = await groupingOf(reader, project.id);
     const elsewhere = await reader
@@ -364,6 +368,9 @@ async function inCheck<T>(
     if (!project) return refused<T>("not_found");
     if (!(await phaseOpenFor(trx, project, "group_remark"))) return refused<T>("phase_closed");
     if ((await checkAskedAt(trx, project.id)) === null) return refused<T>("group_check_not_asked");
+    if (project.role !== "facilitator" && (await inPrivateStep(trx, project.id))) {
+      return refused<T>("group_check_before_reveal");
+    }
     return action(trx, project, await actorMemberId(trx, project.id, userId));
   });
 }

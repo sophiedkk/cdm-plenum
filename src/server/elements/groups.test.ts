@@ -10,7 +10,7 @@ import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
 import { insertElement, setPhase } from "../test-fixtures.ts";
 import { type ProjectMembers, personLeaks, projectWithMembers } from "../test-project-members.ts";
-import { revealBoard } from "./brainstorm.ts";
+import { revealBoard, setPrivateBrainstorm } from "./brainstorm.ts";
 import {
   addElementGroup,
   addGroupMissing,
@@ -196,6 +196,32 @@ describe("asking for the check (EL24)", () => {
     expect(await askGroupCheck(db, m.facilitator, m.projectId)).toEqual({
       ok: false,
       error: "phase_closed",
+    });
+  });
+
+  it("keeps the brainstorm from turning private again once asked (EL13, EL24)", async () => {
+    const off = await setPrivateBrainstorm(db, m.facilitator, {
+      projectId: m.projectId,
+      enabled: false,
+    });
+    expect(off.ok).toBe(true);
+    expect(await askGroupCheck(db, m.facilitator, m.projectId)).toEqual({ ok: true, value: null });
+    expect(
+      await setPrivateBrainstorm(db, m.facilitator, { projectId: m.projectId, enabled: true }),
+    ).toEqual({ ok: false, error: "private_after_group_check" });
+    // A second guard: should the step turn private anyway, the check refuses.
+    await db
+      .updateTable("project")
+      .set({ private_brainstorm: true })
+      .where("id", "=", m.projectId)
+      .execute();
+    expect(await groupCheck(db, m.participant, m.projectId)).toEqual({
+      ok: false,
+      error: "group_check_before_reveal",
+    });
+    expect(await finishGroupCheck(db, m.participant, m.projectId)).toEqual({
+      ok: false,
+      error: "group_check_before_reveal",
     });
   });
 

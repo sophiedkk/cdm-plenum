@@ -82,6 +82,7 @@ export const REFUSAL_MESSAGE_KEYS = {
   group_check_before_reveal: "common_refusal_group_check_before_reveal",
   group_check_not_asked: "common_refusal_group_check_not_asked",
   recap_not_ready: "common_refusal_recap_not_ready",
+  private_after_group_check: "common_refusal_private_after_group_check",
   round_outside_decide: "common_refusal_round_outside_decide",
   minimum_reason_required: "common_refusal_minimum_reason_required",
   proposals_first_round_only: "common_refusal_proposals_first_round_only",
