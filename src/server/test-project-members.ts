@@ -4,10 +4,11 @@
 // A project with one account per role, for the role tests of Q-SEC-1 and Q-ANON-1. All data is
 // invented; addresses use the reserved `.test` domain.
 import type { Kysely } from "kysely";
+import type { ProjectPhase } from "@/lib/project-phases";
 import type { DB } from "./db/schema.gen.ts";
 import { acceptInvitationsOnSignIn } from "./invitations/acceptance.ts";
 import { invite } from "./invitations/queries.ts";
-import { facilitatorWithProject, groupId, insertUser } from "./test-fixtures.ts";
+import { facilitatorWithProject, groupId, insertUser, setPhase } from "./test-fixtures.ts";
 
 export interface ProjectMembers {
   projectId: string;
@@ -38,9 +39,13 @@ async function addParticipant(
   return userId;
 }
 
-/** A facilitator, two participants in "Nursing" and an outsider. */
-export async function projectWithMembers(db: Kysely<DB>): Promise<ProjectMembers> {
+/** A facilitator, two participants in "Nursing" and an outsider, in the given phase. */
+export async function projectWithMembers(
+  db: Kysely<DB>,
+  phase: ProjectPhase = "scope",
+): Promise<ProjectMembers> {
   const { userId: facilitator, projectId } = await facilitatorWithProject(db);
+  await setPhase(db, projectId, phase);
   const participant = await addParticipant(db, facilitator, projectId, "par");
   const otherParticipant = await addParticipant(db, facilitator, projectId, "par2");
   const outsider = await insertUser(db, "out");

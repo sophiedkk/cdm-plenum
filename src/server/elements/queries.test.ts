@@ -38,7 +38,8 @@ let m: ProjectMembers;
 
 beforeEach(async () => {
   db = await createTestDb();
-  m = await projectWithMembers(db);
+  // Participants add and comment in the discover phase (PR9).
+  m = await projectWithMembers(db, "discover");
   // These tests cover the shared board after the reveal; brainstorm.test.ts covers the private
   // step before it (EL13).
   const revealed = await revealBoard(db, m.facilitator, m.projectId);

@@ -5,7 +5,14 @@
 // statement and comments on it; only the facilitator edits it and sees who wrote a comment.
 import { type Kysely, sql, type Transaction } from "kysely";
 import type { DB } from "../db/schema.gen.ts";
-import { done, type ProjectResult, readProject, refused, withProject } from "../projects/access.ts";
+import {
+  done,
+  type ProjectResult,
+  phaseOpenFor,
+  readProject,
+  refused,
+  withProject,
+} from "../projects/access.ts";
 import { type Author, actorMemberId } from "../projects/member.ts";
 import { log } from "../projects/queries.ts";
 import type {
@@ -195,7 +202,10 @@ export async function removeScopeSource(
   });
 }
 
-/** Adds a comment on the scope statement (any member, SC2). */
+/**
+ * Adds a comment on the scope statement (any member, SC2). A participant comments in the scope
+ * phase only (`phase_closed`, PR9).
+ */
 export async function addScopeComment(
   db: Kysely<DB>,
   userId: string,
@@ -203,6 +213,7 @@ export async function addScopeComment(
 ): Promise<ProjectResult<{ commentId: string }>> {
   return db.transaction().execute((trx) =>
     readProject(trx, userId, input.projectId, null, async (trx, project) => {
+      if (!(await phaseOpenFor(trx, project, "scope_comment"))) return refused("phase_closed");
       const authorMemberId = await actorMemberId(trx, project.id, userId);
       const row = await trx
         .insertInto("scope_comment")

@@ -28,7 +28,8 @@ let m: ProjectMembers;
 
 beforeEach(async () => {
   db = await createTestDb();
-  m = await projectWithMembers(db);
+  // The brainstorm and the reveal belong to the discover phase (PR9, PR10).
+  m = await projectWithMembers(db, "discover");
 });
 
 afterEach(async () => {

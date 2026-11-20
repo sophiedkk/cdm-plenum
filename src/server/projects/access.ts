@@ -6,6 +6,8 @@
 // row locked. A user without a role in the project gets `not_found`, never a hint that the
 // project exists (docs/architecture.md, "Roles and access").
 import type { Kysely, Transaction } from "kysely";
+import { type ParticipantWrite, writeOpen } from "@/lib/phase-access";
+import { isProjectPhase, type ProjectPhase } from "@/lib/project-phases";
 import {
   isProjectRole,
   type ProjectPermission,
@@ -40,6 +42,9 @@ export const PROJECT_ACTION_ERRORS = [
   "phase_changed",
   "no_next_phase",
   "no_previous_phase",
+  "phase_closed",
+  "reveal_outside_discover",
+  "round_still_open",
 ] as const;
 export type ProjectActionError = (typeof PROJECT_ACTION_ERRORS)[number];
 
@@ -59,6 +64,8 @@ export interface LockedProject {
   id: string;
   name: string;
   role: ProjectRole;
+  /** The phase when the row was read; under `lockProject` it cannot change before the commit. */
+  phase: ProjectPhase;
 }
 
 /**
@@ -74,13 +81,13 @@ export async function lockProject(
     .selectFrom("project")
     .innerJoin("organization", "organization.id", "project.id")
     .innerJoin("member", "member.organizationId", "project.id")
-    .select(["project.id", "organization.name", "member.role"])
+    .select(["project.id", "organization.name", "member.role", "project.phase"])
     .where("project.id", "=", projectId)
     .where("member.userId", "=", userId)
     .forUpdate("project")
     .executeTakeFirst();
-  if (!row || !isProjectRole(row.role)) return null;
-  return { id: row.id, name: row.name, role: row.role };
+  if (!row || !isProjectRole(row.role) || !isProjectPhase(row.phase)) return null;
+  return { id: row.id, name: row.name, role: row.role, phase: row.phase };
 }
 
 /**
@@ -118,11 +125,32 @@ export async function readProject<T>(
     .selectFrom("project")
     .innerJoin("organization", "organization.id", "project.id")
     .innerJoin("member", "member.organizationId", "project.id")
-    .select(["project.id", "organization.name", "member.role"])
+    .select(["project.id", "organization.name", "member.role", "project.phase"])
     .where("project.id", "=", projectId)
     .where("member.userId", "=", userId)
     .executeTakeFirst();
-  if (!row || !isProjectRole(row.role)) return refused<T>("not_found");
+  if (!row || !isProjectRole(row.role) || !isProjectPhase(row.phase)) {
+    return refused<T>("not_found");
+  }
   if (permission !== null && !projectCan(row.role, permission)) return refused<T>("forbidden");
-  return action(db, { id: row.id, name: row.name, role: row.role });
+  return action(db, { id: row.id, name: row.name, role: row.role, phase: row.phase });
+}
+
+/**
+ * Whether the current phase lets the member make `write` (PR9). The phase is read again under a
+ * share lock, so a phase move waits until this write commits and never slips in between.
+ */
+export async function phaseOpenFor(
+  trx: Kysely<DB>,
+  project: LockedProject,
+  write: ParticipantWrite,
+): Promise<boolean> {
+  if (project.role === "facilitator") return true;
+  const row = await trx
+    .selectFrom("project")
+    .select("phase")
+    .where("id", "=", project.id)
+    .forShare()
+    .executeTakeFirstOrThrow();
+  return isProjectPhase(row.phase) && writeOpen(project.role, row.phase, write);
 }

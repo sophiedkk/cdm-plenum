@@ -3,12 +3,14 @@
 
 // Invented projects with a panel and elements for the round tests.
 import type { Kysely } from "kysely";
+import type { ProjectPhase } from "@/lib/project-phases";
 import type { DB } from "../db/schema.gen.ts";
 import {
   facilitatorWithProject,
   insertElement,
   insertUser,
   joinedParticipant,
+  setPhase,
 } from "../test-fixtures.ts";
 import type { RoundResult } from "./access.ts";
 import { closeRound, createRound, openRound } from "./queries.ts";
@@ -36,9 +38,16 @@ export interface PanelProject {
   elements: [string, string, string];
 }
 
-/** A class D project whose panel meets the minimum, with three elements on the board. */
-export async function panelProject(db: Kysely<DB>): Promise<PanelProject> {
+/**
+ * A class D project whose panel meets the minimum, with three elements on the board. It is in
+ * the decide phase unless `phase` says otherwise, as a round opens there only (PR10).
+ */
+export async function panelProject(
+  db: Kysely<DB>,
+  phase: ProjectPhase = "decide",
+): Promise<PanelProject> {
   const { userId: facilitator, projectId } = await facilitatorWithProject(db);
+  await setPhase(db, projectId, phase);
   const join = (group: string, name: string) =>
     joinedParticipant(db, facilitator, projectId, group, name);
   const raters = {

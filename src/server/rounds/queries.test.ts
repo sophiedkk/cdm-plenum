@@ -10,7 +10,12 @@ import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
 import { listElements } from "../elements/queries.ts";
 import { exportElementsCsv } from "../exports/queries.ts";
-import { facilitatorWithProject, insertElement, joinedParticipant } from "../test-fixtures.ts";
+import {
+  facilitatorWithProject,
+  insertElement,
+  joinedParticipant,
+  setPhase,
+} from "../test-fixtures.ts";
 import {
   closeRound,
   createRound,
@@ -504,6 +509,8 @@ describe("openRound (DE11, DE12)", () => {
 
   it("opens with an expert type missing entirely, given a reason", async () => {
     const { userId: facilitator, projectId } = await facilitatorWithProject(db, "small");
+    // A round opens in the decide phase only (PR10).
+    await setPhase(db, projectId, "decide");
     await joinedParticipant(db, facilitator, projectId, "Nursing", "s1");
     await insertElement(db, projectId, "Heart rate");
     const { roundId } = ok(
