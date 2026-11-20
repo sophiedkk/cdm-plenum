@@ -692,6 +692,7 @@
   "rounds_open_confirm": "Ronde openen",
   "rounds_open_fixed": "Na het openen kun je de elementen, de regel, de sluitingsdatum en de instelling voor wie wat beoordeelde niet meer wijzigen.",
   "rounds_open_heading": "Ronde openen",
+  "rounds_open_in_decide": "Je opent de ronde zodra het project in de fase Besluiten is. Zet het project door vanaf het overzicht.",
   "rounds_open_intro": "Als je de ronde opent, kunnen deelnemers beoordelen tot de sluitingsdatum.",
   "rounds_open_reason_help": "De reden wordt bij de ronde bewaard en komt in het besluitverslag. Hoogstens {max} tekens.",
   "rounds_open_reason_label": "Reden om onder het minimum te openen",

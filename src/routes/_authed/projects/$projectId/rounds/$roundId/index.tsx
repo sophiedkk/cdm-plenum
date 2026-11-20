@@ -35,6 +35,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import { refusalMessage } from "@/lib/i18n/refusals";
+import { ROUND_PHASE } from "@/lib/phase-access";
 import { mayRate } from "@/lib/project-roles";
 import { elementKeys } from "@/server/elements/query-options";
 import { projectQueryOptions } from "@/server/projects/query-options";
@@ -286,6 +287,8 @@ function DraftSetup({ round }: Readonly<{ round: RoundDetail }>) {
   const { projectId } = Route.useParams();
   const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
   const revealsBoard = detail.ok && detail.value.privateBrainstorm && !detail.value.boardRevealed;
+  // NOTE: PR10. The facilitator prepares a round ahead, but opens it in the decide phase only.
+  const mayOpen = detail.ok && detail.value.phase === ROUND_PHASE;
   const { data: boardResult } = useSuspenseQuery(roundBoardQueryOptions(projectId));
   const { data: panelResult } = useSuspenseQuery(panelStatusQueryOptions(projectId));
   const board = valueOrNotFound(boardResult);
@@ -340,29 +343,33 @@ function DraftSetup({ round }: Readonly<{ round: RoundDetail }>) {
             <AlertDescription>{m.rounds_open_shortfall_hint()}</AlertDescription>
           </Alert>
         )}
-        <div>
-          <OpenRoundDialog
-            number={round.number}
-            revealsBoard={revealsBoard}
-            open={(reason) =>
-              openRound({
-                data: {
-                  projectId,
-                  roundId: round.id,
-                  ...(reason === undefined ? {} : { belowMinimumReason: reason }),
-                },
-              })
-            }
-            onOpened={async (status) => {
-              await refreshProject();
-              toast.success(
-                status === "below_minimum"
-                  ? m.rounds_opened_below_minimum({ number: round.number })
-                  : m.rounds_opened({ number: round.number }),
-              );
-            }}
-          />
-        </div>
+        {!mayOpen ? (
+          <p className="text-sm text-muted-foreground">{m.rounds_open_in_decide()}</p>
+        ) : (
+          <div>
+            <OpenRoundDialog
+              number={round.number}
+              revealsBoard={revealsBoard}
+              open={(reason) =>
+                openRound({
+                  data: {
+                    projectId,
+                    roundId: round.id,
+                    ...(reason === undefined ? {} : { belowMinimumReason: reason }),
+                  },
+                })
+              }
+              onOpened={async (status) => {
+                await refreshProject();
+                toast.success(
+                  status === "below_minimum"
+                    ? m.rounds_opened_below_minimum({ number: round.number })
+                    : m.rounds_opened({ number: round.number }),
+                );
+              }}
+            />
+          </div>
+        )}
       </section>
     </>
   );

@@ -174,15 +174,10 @@ test("the facilitator sets up a round in the discover phase but cannot open it",
     "en",
     `/projects/${project.projectId}/rounds/${created.value.roundId}`,
   );
-  const openButton = page.getByRole("button", { name: text.rounds_open_button });
-  await expectHydrated(openButton);
-  await openButton.click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByRole("button", { name: text.rounds_open_confirm }).click();
-  // The dialog also shows that opening reveals the board, so pick the refusal by its text.
-  await expect(
-    dialog.getByRole("alert").filter({ hasText: text.common_refusal_round_outside_decide }),
-  ).toBeVisible();
+  // The facilitator prepared the round, but outside decide the page offers no button to open it;
+  // the server refuses it too (round_outside_decide, phase-access.test.ts).
+  await expect(page.getByText(text.rounds_open_in_decide)).toBeVisible();
+  await expect(page.getByRole("button", { name: text.rounds_open_button })).toHaveCount(0);
   await expectAxeClean(page);
   const round = await db
     .selectFrom("round")

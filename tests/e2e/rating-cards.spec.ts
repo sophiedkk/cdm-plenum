@@ -66,7 +66,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       browser,
     }) => {
       test.setTimeout(120_000);
-      const project = await seedProject(db);
+      const project = await seedProject(db, "decide");
       const { projectId } = project;
       const participant = await seedParticipant(db, project);
       const ids: string[] = [];

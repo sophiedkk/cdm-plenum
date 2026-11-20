@@ -692,6 +692,7 @@
   "rounds_open_confirm": "Open round",
   "rounds_open_fixed": "After opening, the elements, the rule, the closing date and the setting for who rated what can no longer change.",
   "rounds_open_heading": "Open the round",
+  "rounds_open_in_decide": "You open the round once the project is in the decide phase. Move it on from the project's overview.",
   "rounds_open_intro": "When you open the round, participants can rate until the closing date.",
   "rounds_open_reason_help": "The reason is stored with the round and shown in the decision report. At most {max} characters.",
   "rounds_open_reason_label": "Reason for opening below the minimum",
