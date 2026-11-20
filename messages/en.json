@@ -322,6 +322,7 @@
   "common_refusal_group_not_empty": "You can only remove a group without members and without open invitations.",
   "common_refusal_group_not_found": "This stakeholder group no longer exists.",
   "common_refusal_invitation_not_found": "This invitation no longer exists.",
+  "common_refusal_merge_before_reveal": "These elements were added by different people. Merge them after you reveal the board, so no participant sees the words of another before then.",
   "common_refusal_merge_values_conflict": "The proposed values do not fit the data type of the element that stays.",
   "common_refusal_minimum_reason_required": "Give a reason for the project's own minimum.",
   "common_refusal_not_found": "This does not exist, or you have no access to it.",

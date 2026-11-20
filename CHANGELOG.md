@@ -17,7 +17,8 @@ the project uses [Semantic Versioning](https://semver.org/).
   participants added elements, and the confirmation lists the count per
   participant. After the reveal everyone sees every element, still without
   the name of who added it. The facilitator can switch the private step off
-  on the members page, before the reveal only. Existing projects keep their
+  on the members page, before the reveal only. Elements added by different
+  people can be merged only after the reveal. Existing projects keep their
   shared board.
 - The Brainstorm tab asks four questions: what you record or measure, what
   about the patient you need to know to interpret it, how it was measured,

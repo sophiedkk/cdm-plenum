@@ -556,7 +556,8 @@ function mergedDescription(descriptions: string[]): string {
  * keeps every description, source, comment and proposed value of the duplicates; each duplicate
  * gets `merged_into` and leaves the board. Refused when an element was put in a round
  * (`element_in_round`), so a rating history never moves, or when the moved values do not fit the
- * result's data type (`merge_values_conflict`).
+ * result's data type (`merge_values_conflict`). In the private step a merge of elements by
+ * different authors is refused (`merge_before_reveal`, EL13).
  */
 export async function mergeElements(
   db: Kysely<DB>,
@@ -567,7 +568,7 @@ export async function mergeElements(
     const ids = [input.intoId, ...input.fromIds];
     const rows = await trx
       .selectFrom("element")
-      .select(["id", "data_type", "description"])
+      .select(["id", "data_type", "description", "author_member_id"])
       .where("project_id", "=", project.id)
       .where("merged_into", "is", null)
       .where("id", "in", ids)
@@ -575,6 +576,12 @@ export async function mergeElements(
       .forUpdate()
       .execute();
     if (rows.length !== ids.length) return refused("element_not_found");
+    // NOTE: EL13. The result keeps every description, source and comment, so before the reveal
+    // a merge across authors would show one participant's words to another.
+    const authors = new Set(rows.map((row) => row.author_member_id));
+    if (authors.size > 1 && (await inPrivateStep(trx, project.id))) {
+      return refused("merge_before_reveal");
+    }
     const byId = new Map(rows.map((row) => [row.id, row]));
     const inRound = await trx
       .selectFrom("round_element")

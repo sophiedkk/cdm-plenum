@@ -64,6 +64,7 @@ export const REFUSAL_MESSAGE_KEYS = {
   rater_group_required: "common_refusal_rater_group_required",
   rater_group_locked: "common_refusal_rater_group_locked",
   board_already_revealed: "common_refusal_board_already_revealed",
+  merge_before_reveal: "common_refusal_merge_before_reveal",
   minimum_reason_required: "common_refusal_minimum_reason_required",
   ckm_unreachable: "common_refusal_ckm_unreachable",
   ckm_timeout: "common_refusal_ckm_timeout",

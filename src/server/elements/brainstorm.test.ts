@@ -222,6 +222,41 @@ describe("brainstormStatus (EL13)", () => {
   });
 });
 
+describe("merging in the private step (EL13, EL5)", () => {
+  const merge = (intoId: string, fromIds: string[]) =>
+    mergeElements(db, m.facilitator, { projectId: m.projectId, intoId, fromIds });
+
+  it("refuses a merge across authors with merge_before_reveal and changes nothing", async () => {
+    const theirs = await elementOfA();
+    const mine = await add(m.otherParticipant, "Systolic of B");
+    expect(await merge(mine, [theirs])).toEqual({ ok: false, error: "merge_before_reveal" });
+    expect(await names(m.otherParticipant)).toEqual(["Systolic of B"]);
+    const comments = await listElementComments(db, m.otherParticipant, {
+      projectId: m.projectId,
+      elementId: mine,
+    });
+    expect(comments).toEqual({ ok: true, value: [] });
+  });
+
+  it("refuses a merge of a participant's element with the facilitator's", async () => {
+    const theirs = await elementOfA();
+    const facilitators = await add(m.facilitator, "Imported systolic");
+    expect(await merge(theirs, [facilitators])).toEqual({
+      ok: false,
+      error: "merge_before_reveal",
+    });
+  });
+
+  it("merges the duplicates of one participant, and any after the reveal", async () => {
+    const first = await elementOfA();
+    const second = await add(m.participant, "Systolic again");
+    expect(await merge(first, [second])).toEqual({ ok: true, value: null });
+    const mine = await add(m.otherParticipant, "Systolic of B");
+    await reveal();
+    expect(await merge(first, [mine])).toEqual({ ok: true, value: null });
+  });
+});
+
 describe("revealBoard (EL13)", () => {
   it("reveals once and logs it with ids only", async () => {
     await reveal();

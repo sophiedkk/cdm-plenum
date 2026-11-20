@@ -322,6 +322,7 @@
   "common_refusal_group_not_empty": "Je kunt alleen een groep zonder leden en zonder openstaande uitnodigingen verwijderen.",
   "common_refusal_group_not_found": "Deze stakeholdergroep bestaat niet meer.",
   "common_refusal_invitation_not_found": "Deze uitnodiging bestaat niet meer.",
+  "common_refusal_merge_before_reveal": "Deze elementen zijn door verschillende mensen toegevoegd. Voeg ze samen nadat je het bord hebt vrijgegeven, zodat geen deelnemer eerder de woorden van een ander ziet.",
   "common_refusal_merge_values_conflict": "De voorgestelde waarden passen niet bij het datatype van het element dat blijft.",
   "common_refusal_minimum_reason_required": "Geef een reden voor het eigen minimum van het project.",
   "common_refusal_not_found": "Dit bestaat niet, of je hebt er geen toegang toe.",
