@@ -12,7 +12,8 @@ export const adminKeys = {
   appRoles: () => [...adminKeys.all, "app-roles"] as const,
   accounts: () => [...adminKeys.all, "accounts"] as const,
   activityAll: () => [...adminKeys.all, "activity"] as const,
-  activity: (action: string | undefined) => [...adminKeys.activityAll(), action ?? ""] as const,
+  activity: (action: string | undefined, page: number) =>
+    [...adminKeys.activityAll(), action ?? "", page] as const,
 };
 
 /** The addresses with an application right. */
@@ -33,11 +34,11 @@ export function accountsQueryOptions() {
   });
 }
 
-/** The newest activity log entries, of one action when `action` is set. */
-export function activityQueryOptions(action: string | undefined) {
+/** One page of the activity log, of one action when `action` is set. */
+export function activityQueryOptions(action: string | undefined, page = 1) {
   return queryOptions({
-    queryKey: adminKeys.activity(action),
-    queryFn: () => listActivityFn({ data: action === undefined ? {} : { action } }),
+    queryKey: adminKeys.activity(action, page),
+    queryFn: () => listActivityFn({ data: action === undefined ? { page } : { action, page } }),
     staleTime: STALE_TIME.admin,
   });
 }

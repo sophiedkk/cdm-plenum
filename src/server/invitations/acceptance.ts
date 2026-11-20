@@ -5,6 +5,7 @@
 // ADR 0004). better-auth calls both from its database hooks (src/server/auth.ts).
 import { randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
+import type { ActivityAction } from "@/lib/activity-actions";
 import { LEFT_ROLE } from "@/lib/project-roles";
 import { hasAnyAppRole, normalizeEmail } from "../admin/app-roles.ts";
 import type { DB } from "../db/schema.gen.ts";
@@ -117,7 +118,7 @@ export async function acceptInvitationsOnSignIn(
         .values({
           actor_user_id: userId,
           project_id: projectId,
-          action: "invitation_accepted",
+          action: "invitation_accepted" satisfies ActivityAction,
           target_type: "invitation",
           target_id: invitation.id,
         })

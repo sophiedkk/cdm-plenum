@@ -21,7 +21,7 @@ import {
   reactivateAccount,
   revokeRole,
 } from "./queries.ts";
-import { APP_ROLE_INPUTS } from "./schemas.ts";
+import { ACTIVITY_PAGE_SIZE, APP_ROLE_INPUTS, activityInput } from "./schemas.ts";
 
 let db: Kysely<DB>;
 
@@ -224,10 +224,60 @@ describe("listActivity (AD2)", () => {
         actorUserId: facilitator,
         actorName: "",
         projectId,
+        projectName: "Blood pressure",
         targetType: "project",
         targetId: projectId,
       }),
     ]);
+  });
+
+  it("shows the log a page at a time, newest first, and the last page for one past it", async () => {
+    const admin = await administrator();
+    await db
+      .insertInto("activity_log")
+      .values(
+        Array.from({ length: ACTIVITY_PAGE_SIZE * 2 + 3 }, (_, index) => ({
+          action: "signed_in",
+          actor_user_id: admin,
+          occurred_at: new Date(NOW.getTime() + index * 1000),
+        })),
+      )
+      .execute();
+    const pageOf = async (page?: number) => {
+      // The administrator right is logged too; the filter keeps to the inserted entries.
+      const action = "signed_in";
+      const result = await listActivity(
+        db,
+        admin,
+        page === undefined ? { action } : { action, page },
+      );
+      if (!result.ok) throw new Error(result.error);
+      return result.value;
+    };
+    const first = await pageOf();
+    expect([first.page, first.pages, first.entries.length]).toEqual([1, 3, ACTIVITY_PAGE_SIZE]);
+    const third = await pageOf(3);
+    expect([third.page, third.entries.length]).toEqual([3, 3]);
+    const seen = [first, await pageOf(2), third].flatMap((log) => log.entries.map((e) => e.id));
+    expect(new Set(seen).size).toBe(ACTIVITY_PAGE_SIZE * 2 + 3);
+    expect(first.entries[0]?.occurredAt).toBe(new Date(NOW.getTime() + 52_000).toISOString());
+    expect(await pageOf(9)).toMatchObject({ page: 3, pages: 3 });
+  });
+
+  it("counts the pages of the filtered action only", async () => {
+    const admin = await administrator();
+    await facilitatorWithProject(db);
+    const created = await listActivity(db, admin, { action: "project_created" });
+    expect(created.ok && [created.value.page, created.value.pages]).toEqual([1, 1]);
+    const none = await listActivity(db, admin, { action: "round_opened" });
+    expect(none.ok && [none.value.entries, none.value.pages]).toEqual([[], 1]);
+  });
+
+  it("refuses a page below 1 or a fraction before the handler runs", () => {
+    for (const page of [0, -1, 1.5]) {
+      expect(activityInput.safeParse({ page }).success).toBe(false);
+    }
+    expect(activityInput.safeParse({ page: 2 }).success).toBe(true);
   });
 });
 

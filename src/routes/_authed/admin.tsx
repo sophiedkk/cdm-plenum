@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { z } from "zod";
 import { AccountsTable } from "@/components/admin/accounts-table";
-import { ActivityFilter, ActivityTable } from "@/components/admin/activity-log";
+import { ActivityFilter, ActivityPager, ActivityTable } from "@/components/admin/activity-log";
 import { AppRightsTable, GrantRightForm, rightLabel } from "@/components/admin/app-rights";
 import { NotFoundState, PageHeader } from "@/components/shell/route-states";
 import { Separator } from "@/components/ui/separator";
@@ -25,21 +25,24 @@ import {
   adminKeys,
   appRolesQueryOptions,
 } from "@/server/admin/query-options";
-import { ACTIVITY_LIMIT, activityInput } from "@/server/admin/schemas";
+import { ACTIVITY_PAGE_SIZE, activityInput } from "@/server/admin/schemas";
 import { sessionKeys } from "@/server/session/query-options";
 
-const searchSchema = z.object({ action: activityInput.shape.action.catch(undefined) });
+const searchSchema = z.object({
+  action: activityInput.shape.action.catch(undefined),
+  page: activityInput.shape.page.catch(undefined),
+});
 
 /** Administration (AD1, AD2), for administrators only; the server functions check again. */
 export const Route = createFileRoute("/_authed/admin")({
   beforeLoad: requireAppRole("administrator"),
   validateSearch: searchSchema,
-  loaderDeps: ({ search }) => ({ action: search.action }),
+  loaderDeps: ({ search }) => ({ action: search.action, page: search.page ?? 1 }),
   loader: ({ context, deps }) =>
     Promise.all([
       context.queryClient.ensureQueryData(appRolesQueryOptions()),
       context.queryClient.ensureQueryData(accountsQueryOptions()),
-      context.queryClient.ensureQueryData(activityQueryOptions(deps.action)),
+      context.queryClient.ensureQueryData(activityQueryOptions(deps.action, deps.page)),
     ]),
   head: () => ({ meta: [{ title: `${m.admin_title()} | ${m.app_name()}` }] }),
   component: Admin,
@@ -47,12 +50,12 @@ export const Route = createFileRoute("/_authed/admin")({
 
 function Admin() {
   const { user } = Route.useRouteContext();
-  const { action } = Route.useSearch();
+  const { action, page = 1 } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const queryClient = useQueryClient();
   const { data: rights } = useSuspenseQuery(appRolesQueryOptions());
   const { data: accounts } = useSuspenseQuery(accountsQueryOptions());
-  const { data: activity } = useSuspenseQuery(activityQueryOptions(action));
+  const { data: activity } = useSuspenseQuery(activityQueryOptions(action, page));
   const grant = useServerFn(grantRoleFn);
   const revoke = useServerFn(revokeRoleFn);
   const deactivate = useServerFn(deactivateAccountFn);
@@ -114,15 +117,29 @@ function Admin() {
               {m.admin_activity_title()}
             </h2>
             <p className="text-muted-foreground">
-              {m.admin_activity_description({ limit: ACTIVITY_LIMIT })}
+              {m.admin_activity_description({ size: ACTIVITY_PAGE_SIZE })}
             </p>
           </div>
           <ActivityFilter
             actions={activity.value.actions}
             value={action}
+            // A new filter starts on its first page.
             onChange={(next) => void navigate({ search: { action: next }, replace: true })}
           />
           <ActivityTable entries={activity.value.entries} />
+          <ActivityPager
+            page={activity.value.page}
+            pages={activity.value.pages}
+            pageLink={(target, children) => (
+              <Link
+                to="/admin"
+                search={{ action, page: target === 1 ? undefined : target }}
+                className="inline-flex items-center gap-1 font-medium underline underline-offset-4"
+              >
+                {children}
+              </Link>
+            )}
+          />
         </section>
       </div>
     </>

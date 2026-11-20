@@ -4,6 +4,7 @@
 // The administration page (AD1, AD2): accessible in both languages and with the keyboard only
 // (Q-ACC-1, Q-I18N-1); an administrator grants the facilitator right and deactivates an
 // account; a user without the right never sees the page (Q-SEC-1).
+import { randomBytes } from "node:crypto";
 import type { Kysely } from "kysely";
 import { grantAppRole, userHasAppRole } from "../../src/server/admin/app-roles.ts";
 import type { DB } from "../../src/server/db/schema.gen.ts";
@@ -23,6 +24,7 @@ import {
 } from "./fixtures.ts";
 import { tabTo } from "./keyboard.ts";
 import { countMessages } from "./mailpit.ts";
+import { appUrl } from "./run-env.ts";
 
 /** An address with the administrator right; the account appears at its first sign-in. */
 async function seedAdministrator(db: Kysely<DB>): Promise<string> {
@@ -131,11 +133,13 @@ test("an administrator deactivates an account, which then cannot sign in", async
   await expect(dialog).toBeHidden();
   await expect(row.getByText(text.admin_status_deactivated)).toBeVisible();
 
-  // The activity log names the action, filtered by it.
+  // The activity log names the action in words, filtered by it.
   await page.goto("/admin?action=account_deactivated");
+  const log = page.getByRole("table", { name: text.admin_activity_caption });
   await expect(
-    page.getByRole("row").filter({ hasText: "account_deactivated" }).first(),
+    log.getByRole("row").filter({ hasText: text.admin_action_account_deactivated }).first(),
   ).toBeVisible();
+  await expect(log).not.toContainText("account_deactivated");
   await expectAxeClean(page);
 
   await context.clearCookies();
@@ -156,4 +160,64 @@ test("a user without the administrator right is sent to their projects", async (
   await signIn(page, project.facilitator.email);
   await page.goto("/admin");
   await expect(page).toHaveURL((url) => url.pathname === "/projects");
+});
+
+test("the activity log names actions and projects, a page at a time, in English and Dutch", async ({
+  browser,
+  db,
+}) => {
+  const admin = await seedAdministrator(db);
+  const project = await seedProject(db);
+  const projectName = uniqueName("Project");
+  await db
+    .updateTable("organization")
+    .set({ name: projectName })
+    .where("id", "=", project.projectId)
+    .execute();
+  // Dated far ahead, so these 30 entries are the newest whatever other specs log meanwhile.
+  await db
+    .insertInto("activity_log")
+    .values(
+      Array.from({ length: 30 }, (_, second) => ({
+        action: "export_mind_map",
+        project_id: project.projectId,
+        occurred_at: new Date(Date.UTC(2100, 0, 1, 0, 0, second)),
+      })),
+    )
+    .execute();
+  for (const locale of ["en", "nl"] as const satisfies Locale[]) {
+    const text = MESSAGES[locale];
+    const [a, b, c] = randomBytes(3);
+    // axe needs a page of its own context.
+    const context = await browser.newContext({
+      baseURL: appUrl(),
+      locale: BROWSER_LOCALE[locale],
+      extraHTTPHeaders: { "X-Forwarded-For": `10.${a}.${b}.${c}` },
+    });
+    const page = await context.newPage();
+    await signIn(page, admin, locale);
+    await page.goto("/admin");
+    const log = page.getByRole("table", { name: text.admin_activity_caption });
+    const rows = log.locator("tbody > tr");
+    await expect(rows).toHaveCount(25);
+    await expect(rows.first()).toContainText(text.admin_action_export_mind_map);
+    await expect(rows.first()).toContainText(projectName);
+    await expect(log).not.toContainText("export_mind_map");
+    await expect(log).not.toContainText(project.projectId);
+    const pages = page.getByRole("navigation", { name: text.admin_activity_pages_label });
+    const pageWord = (n: number) =>
+      text.admin_activity_page.split("{pages}")[0]?.replace("{page}", String(n)) ?? "";
+    await expect(pages).toContainText(pageWord(1));
+    await expectAxeClean(page);
+
+    const next = pages.getByRole("link", { name: text.admin_activity_next });
+    await expectHydrated(next);
+    await next.click();
+    await expect(page).toHaveURL((url) => url.searchParams.get("page") === "2");
+    await expect(pages).toContainText(pageWord(2));
+    await expect(rows.first()).toContainText(projectName);
+    await expect(pages.getByRole("link", { name: text.admin_activity_previous })).toBeVisible();
+    await expectAxeClean(page);
+    await context.close();
+  }
 });

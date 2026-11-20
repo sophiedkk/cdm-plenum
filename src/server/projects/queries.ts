@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import { type Kysely, sql, type Transaction } from "kysely";
 import { m } from "@/i18n/messages";
 import type { Locale } from "@/i18n/runtime";
+import type { ActivityAction } from "@/lib/activity-actions";
 import { isProjectPhase, type ProjectPhase } from "@/lib/project-phases";
 import {
   DEFAULT_GROUPS,
@@ -578,7 +579,7 @@ export async function log(
   trx: Kysely<DB> | Transaction<DB>,
   actorUserId: string,
   projectId: string,
-  action: string,
+  action: ActivityAction,
   targetType: string,
   targetId: string,
 ): Promise<void> {
