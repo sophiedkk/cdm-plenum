@@ -95,10 +95,13 @@ function DiscoverView({ projectId, recap }: Readonly<{ projectId: string; recap:
       <Heading title={m.projects_recap_discover_title()} closedAt={recap.closedAt} />
       <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Num value={recap.elements} label={m.projects_recap_into_round()} />
-        <Num
-          value={recap.fromModels}
-          label={m.projects_recap_from_models({ models: recap.models.length })}
-        />
+        {/* Without models the side section says so once; no "0 from 0" card here. */}
+        {recap.models.length > 0 && (
+          <Num
+            value={recap.fromModels}
+            label={m.projects_recap_from_models({ models: recap.models.length })}
+          />
+        )}
         <Num
           value={recap.added + recap.fromFiles}
           label={
