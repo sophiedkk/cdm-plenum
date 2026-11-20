@@ -3,20 +3,22 @@
 
 // Rating card by card at 1280 by 800 pixels, in English and Dutch (DE1, DE17, DE18, Q-ACC-1,
 // Q-USE-1): a participant rates three elements one card at a time, goes back a card and changes
-// a score, keeps the card through a reload and the back button, flags a data type with a reason,
-// and checks every rating on the overview. The facilitator sees the flag count and the reason on
-// the round page, without the participant's name. In round 2 the card shows the own score of
-// round 1 on the distribution and above the scale, and the reasons of round 1 (DE8, DE15); the
-// participant rates with the keys and jumps to a card by its dot, in light and dark.
+// a score, keeps the card through a reload and the back button, and checks every rating on the
+// overview. No screen shows a data type or a detail flag before the detail phase (EL21), not even
+// a stored flag. In round 2 the card shows the own score of round 1 on the distribution and above
+// the scale, and the reasons of round 1 (DE8, DE15); the participant rates with the keys and
+// jumps to a card by its dot, in light and dark.
 import { randomBytes } from "node:crypto";
 import type { Browser, BrowserContextOptions, Locator, Page } from "@playwright/test";
 import { type Kysely, sql } from "kysely";
 import type { DB } from "../../src/server/db/schema.gen.ts";
+import { saveDetailFlag } from "../../src/server/rounds/flags.ts";
 import { closeRound } from "../../src/server/rounds/queries.ts";
 import { saveRating } from "../../src/server/rounds/ratings.ts";
 import { openedRound } from "../../src/server/rounds/test-round.ts";
 import { insertElement, joinedParticipant } from "../../src/server/test-fixtures.ts";
 import { expectAxeCleanAfterToasts } from "./axe.ts";
+import { userIdOf } from "./board-seed.ts";
 import {
   addressOf,
   BROWSER_LOCALE,
@@ -134,7 +136,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
   test.describe(`rating cards in ${locale}`, () => {
     const text = MESSAGES[locale];
 
-    test("a participant rates card by card, changes a score and flags a data type", async ({
+    test("a participant rates card by card and changes a score, with no details or flags shown", async ({
       db,
       browser,
     }) => {
@@ -157,6 +159,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         "An invented test panel",
       );
       const ratePath = `/projects/${projectId}/rounds/${roundId}/rate`;
+      // A flag from before the switch: the screens must not show it either.
+      const flagged = await saveDetailFlag(db, await userIdOf(db, participant), {
+        projectId,
+        roundId,
+        elementId: ids[0] ?? "",
+        kind: "data_type",
+        reason: "A blood pressure is a quantity in mmHg",
+      });
+      expect(flagged.ok).toBe(true);
 
       const rater = await pageFor(browser, locale, participant);
       await rater.goto(ratePath);
@@ -169,15 +180,18 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
           fill(text.rounds_rate_saved_score, { score }),
         );
 
-      // Card 1 of 3 fits the first screen, with its details folded and marked not rated.
+      // Card 1 of 3 fits the first screen; data type, cardinality and values wait for their phase.
       const first = card("Systolic pressure");
       await expect(first).toContainText(fill(text.rounds_card_position, { index: 1, total: 3 }));
       const seven = first.getByRole("radio", { name: "7", exact: true });
       await expectHydrated(seven);
       expect(await bottomOf(rater, first)).toBeLessThanOrEqual(SCREEN.height);
       expect(await bottomOf(rater, next)).toBeLessThanOrEqual(SCREEN.height);
-      await expect(first.getByText(text.rounds_card_details_summary)).toBeVisible();
-      await expect(first.getByText("DV_TEXT")).toBeHidden();
+      await expect(first.getByText(text.rounds_card_details_summary)).toHaveCount(0);
+      await expect(first.getByText(/DV_TEXT/)).toHaveCount(0);
+      await expect(
+        first.getByRole("button", { name: new RegExp(text.rounds_flag_open) }),
+      ).toHaveCount(0);
       await seven.click();
       await saved("Systolic pressure", 7);
       // With "Remove my answer" shown after the choice, the card still fits.
@@ -185,36 +199,6 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expectAxeClean(rater);
       await rater.screenshot({ path: test.info().outputPath(`card-${locale}.png`) });
 
-      // The participant flags the data type with a reason (DE17).
-      await first.getByText(text.rounds_card_details_summary).click();
-      // The data type reads as on the board: its name first, the standards' types after it.
-      await expect(
-        first.getByText(`${text.board_type_text_name} (DV_TEXT / string)`),
-      ).toBeVisible();
-      await first
-        .getByRole("button", {
-          name: fill(text.rounds_flag_open_named, { detail: text.rounds_flag_detail_data_type }),
-        })
-        .click();
-      const reason = first.getByLabel(text.rounds_flag_reason_data_type);
-      await expect(reason).toBeFocused();
-      await expectAxeClean(rater);
-      await rater.screenshot({
-        path: test.info().outputPath(`card-flag-form-${locale}.png`),
-        fullPage: true,
-      });
-      await reason.fill("A blood pressure is a quantity in mmHg");
-      await first.getByRole("button", { name: text.rounds_flag_save }).click();
-      await expect(
-        first.getByText(
-          fill(text.rounds_flag_yours, { reason: "A blood pressure is a quantity in mmHg" }),
-        ),
-      ).toBeVisible();
-      await expect(
-        first.getByRole("button", {
-          name: fill(text.rounds_flag_change_named, { detail: text.rounds_flag_detail_data_type }),
-        }),
-      ).toBeFocused();
       await expectAxeCleanAfterToasts(rater);
 
       // Next moves to card 2, then card 3, focus on each heading.
@@ -261,7 +245,10 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       ).toHaveCount(1);
       const rows = overview.getByRole("row");
       await expect(rows.filter({ hasText: "Systolic pressure" })).toContainText("7");
-      await expect(rows.filter({ hasText: "Systolic pressure" })).toContainText(
+      await expect(
+        overview.getByRole("columnheader", { name: text.rounds_overview_flags }),
+      ).toHaveCount(0);
+      await expect(rows.filter({ hasText: "Systolic pressure" })).not.toContainText(
         text.rounds_card_data_type,
       );
       await expect(rows.filter({ hasText: "Cuff size" })).toContainText("5");
@@ -272,24 +259,20 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(heading("Cuff size")).toBeFocused();
       await rater.context().close();
 
-      // The facilitator sees the flag count and the reason, without the participant's name.
+      // The facilitator's round page shows the progress, and no flagged details.
       const facilitator = await pageFor(browser, locale, project.facilitator.email);
       await facilitator.goto(`/projects/${projectId}/rounds/${roundId}`);
-      const flags = facilitator.getByRole("region", {
-        name: fill(text.rounds_flags_heading, { count: 1 }),
-      });
-      await expect(flags).toContainText("Systolic pressure");
-      await expect(flags).toContainText(
-        fill(text.rounds_flags_count, { detail: text.rounds_card_data_type, count: 1 }),
-      );
-      await expect(flags).toContainText("A blood pressure is a quantity in mmHg");
-      await expect(flags).not.toContainText(participant);
+      await expect(
+        facilitator.getByRole("heading", {
+          level: 2,
+          name: fill(text.rounds_round_name, { number: 1 }),
+        }),
+      ).toBeVisible();
+      await expect(
+        facilitator.getByRole("region", { name: fill(text.rounds_flags_heading, { count: 1 }) }),
+      ).toHaveCount(0);
+      await expect(facilitator.getByText("A blood pressure is a quantity in mmHg")).toHaveCount(0);
       await expectAxeClean(facilitator);
-      await flags.scrollIntoViewIfNeeded();
-      await facilitator.screenshot({
-        path: test.info().outputPath(`facilitator-flags-${locale}.png`),
-        fullPage: true,
-      });
       await facilitator.context().close();
     });
 

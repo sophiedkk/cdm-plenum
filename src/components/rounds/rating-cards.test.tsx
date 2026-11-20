@@ -32,7 +32,10 @@ const ELEMENTS: MyElement[] = [
 
 const DONE = async () => ({ ok: true }) as const;
 
-function Harness({ start = 1 }: Readonly<{ start?: ShownCard }>) {
+function Harness({
+  start = 1,
+  detailFields = true,
+}: Readonly<{ start?: ShownCard; detailFields?: boolean }>) {
   const [shown, setShown] = useState<ShownCard>(start);
   return (
     <>
@@ -60,11 +63,12 @@ function Harness({ start = 1 }: Readonly<{ start?: ShownCard }>) {
           </a>
         )}
         go={setShown}
+        flags={detailFields}
         renderCard={(item, position, headingRef) => (
           <RatingElement
             key={item.id}
             element={item}
-            details={{ dataType: null, cardinality: null, values: [] }}
+            details={detailFields ? { dataType: null, cardinality: null, values: [] } : null}
             position={position}
             headingRef={headingRef}
             rule={DEFAULT_RULE}
@@ -148,6 +152,30 @@ describe("RatingCards (DE18)", () => {
       ).toBeTruthy();
       if (name !== "Position") fireEvent.click(link("Next"));
     }
+  });
+});
+
+describe("while the phase hides the details (EL21)", () => {
+  it("shows no details on a card", () => {
+    render(<Harness detailFields={false} />);
+    expect(screen.getByRole("region", { name: "Systolic pressure" })).toBeTruthy();
+    expect(screen.queryByText("Data type, cardinality and values (not rated)")).toBeNull();
+  });
+
+  it("shows no flags on the overview", () => {
+    render(<Harness start="overview" detailFields={false} />);
+    const overview = screen.getByRole("region", { name: "Overview of your ratings" });
+    expect(
+      within(overview)
+        .getAllByRole("columnheader")
+        .map((cell) => cell.textContent),
+    ).toEqual(["Element", "Your rating"]);
+    expect(
+      within(overview)
+        .getAllByRole("row")
+        .slice(1)
+        .map((row) => row.textContent),
+    ).toEqual(["Systolic pressure8", "Cuff sizeUnable to rate", "PositionNot rated yet"]);
   });
 });
 

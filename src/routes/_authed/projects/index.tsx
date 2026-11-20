@@ -37,7 +37,7 @@ function Projects() {
     );
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <>
       <PageHeader title={m.projects_title()} actions={projects.length > 0 && newProject(false)} />
       {projects.length === 0 ? (
         <EmptyState
@@ -67,6 +67,6 @@ function Projects() {
           ))}
         </ul>
       )}
-    </div>
+    </>
   );
 }

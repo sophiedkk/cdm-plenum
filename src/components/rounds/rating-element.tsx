@@ -4,8 +4,9 @@
 // One card of the rating screen (DE3, DE7, DE8, DE15, DE18, ADR 0019): the element's name and
 // description with the question right under them, the scale as a radio group of large buttons in
 // the round's three bands with "unable to rate" after them, the reason at full width and the
-// folded details. The rating covers inclusion only (DE1), so data type, cardinality and values
-// are marked "not rated" and can be flagged (DE17). A choice saves at once; a changed reason saves
+// folded details. The rating covers inclusion only (DE1), so data type, cardinality and values,
+// where the phase shows them (EL21), are marked "not rated" and can be flagged (DE17). A choice
+// saves at once; a changed reason saves
 // when the field loses focus. In a later round the card shows the own earlier score in a line and
 // above the scale; how the group scored, with the anonymous reasons, opens below that line. No
 // outcome label of the earlier round shows: it can push ratings toward the group (ADR 0013).
@@ -360,8 +361,11 @@ export function RatingElement({
   removeFlag,
 }: Readonly<{
   element: MyElement;
-  /** The element's data type, cardinality and values, shown folded and not rated. */
-  details: ElementDetails;
+  /**
+   * The element's data type, cardinality and values, shown folded and not rated; null while the
+   * phase hides them (EL21), which leaves out the flags as well.
+   */
+  details: ElementDetails | null;
   /** The card's place among the round's elements, from 1. */
   position: { index: number; total: number };
   /** The heading, which takes focus when the participant moves to this card. */
@@ -541,13 +545,15 @@ export function RatingElement({
           </FieldDescription>
         )}
       </div>
-      <ElementDetailsDisclosure
-        details={details}
-        flags={element.flags}
-        editable={editable}
-        saveFlag={saveFlag}
-        removeFlag={removeFlag}
-      />
+      {details && (
+        <ElementDetailsDisclosure
+          details={details}
+          flags={element.flags}
+          editable={editable}
+          saveFlag={saveFlag}
+          removeFlag={removeFlag}
+        />
+      )}
     </section>
   );
 }

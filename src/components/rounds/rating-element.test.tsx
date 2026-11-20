@@ -98,6 +98,25 @@ describe("RatingElement", () => {
     expect(rest.map((child) => child.textContent).join(" ")).not.toContain("DV_QUANTITY");
   });
 
+  it("leaves out the details and their flags while the phase hides them (EL21)", () => {
+    render(
+      <RatingElement
+        element={{ ...ELEMENT, flags: [{ kind: "values", reason: "No unit" }] }}
+        details={null}
+        position={{ index: 2, total: 5 }}
+        rule={DEFAULT_RULE}
+        editable
+        save={vi.fn(DONE)}
+        clear={vi.fn(DONE)}
+        saveFlag={vi.fn(DONE)}
+        removeFlag={vi.fn(DONE)}
+      />,
+    );
+    const group = screen.getByRole("region", { name: "Systolic pressure" });
+    expect(within(group).queryByText(/Data type, cardinality and values/)).toBeNull();
+    expect(within(group).queryByRole("button", { name: /Flag/ })).toBeNull();
+  });
+
   it("counts the participant's own flags in the summary of the details (DE17)", () => {
     renderElement({ ...ELEMENT, flags: [{ kind: "values", reason: "No unit" }] });
     expect(

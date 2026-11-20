@@ -99,6 +99,7 @@ function ElementRows({
   position,
   isFacilitator,
   detailFields,
+  ckmColumn,
   opened,
   actions,
   targets,
@@ -110,6 +111,7 @@ function ElementRows({
   position: number;
   isFacilitator: boolean;
   detailFields: boolean;
+  ckmColumn: boolean;
   targets: readonly MarkTarget[];
   /** The number of supporters, in the facilitator's view only (EL16). */
   supportCount: number | undefined;
@@ -170,7 +172,7 @@ function ElementRows({
           <TableCell>{promptLabel(element.prompt)}</TableCell>
         )}
         <TableCell className="text-right tabular-nums">{element.sources.length}</TableCell>
-        {detailFields && (
+        {ckmColumn && (
           <TableCell>
             <CkmStatus element={element} />
           </TableCell>
@@ -213,6 +215,7 @@ export function ElementTable({
   elements,
   isFacilitator,
   detailFields,
+  ckmColumn,
   openElementId,
   actions,
   supportCounts,
@@ -222,6 +225,8 @@ export function ElementTable({
   isFacilitator: boolean;
   /** Whether the phase shows data type, cardinality and values (EL21, `detailFieldsShown`). */
   detailFields: boolean;
+  /** Whether the phase shows the CKM column (EX2, `ckmColumnShown`). */
+  ckmColumn: boolean;
   /** The element whose details are open when the board loads. */
   openElementId?: string | undefined;
   actions: ElementActions;
@@ -229,7 +234,8 @@ export function ElementTable({
   supportCounts?: Readonly<Record<string, number>> | undefined;
 }>) {
   const targets = elements.map((element, index) => markTarget(element, index + 1));
-  const columnCount = (detailFields ? 8 : 6) + (supportCounts === undefined ? 0 : 1);
+  const columnCount =
+    6 + (detailFields ? 1 : 0) + (ckmColumn ? 1 : 0) + (supportCounts === undefined ? 0 : 1);
   return (
     <Table aria-label={m.board_list_label()}>
       <TableHeader>
@@ -250,7 +256,7 @@ export function ElementTable({
           <TableHead scope="col" className="text-right">
             {m.board_field_sources()}
           </TableHead>
-          {detailFields && <TableHead scope="col">{m.board_field_ckm()}</TableHead>}
+          {ckmColumn && <TableHead scope="col">{m.board_field_ckm()}</TableHead>}
           <TableHead scope="col" className="text-right">
             {m.board_column_comments()}
           </TableHead>
@@ -270,6 +276,7 @@ export function ElementTable({
             position={index + 1}
             isFacilitator={isFacilitator}
             detailFields={detailFields}
+            ckmColumn={ckmColumn}
             opened={element.id === openElementId}
             actions={actions}
             targets={targets}

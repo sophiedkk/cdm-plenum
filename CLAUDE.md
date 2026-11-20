@@ -121,13 +121,18 @@ page from these patterns; each has a real use and a test you can copy.
   as the `h1`, so a project page starts with `PageHeader level={2}`, at most
   one intro line, and sets its title with
   `projectTitle(match.context, m.<area>_title())`
-  (`src/components/projects/project-title.ts`).
+  (`src/components/projects/project-title.ts`). Every signed-in page sits
+  in the one column `PAGE_COLUMN` of the app shell, so the left edge never
+  moves; a page narrows only its reading text, on that same left edge,
+  and never centres itself.
 - **Project navigation (ADR 0019):** the header
   (`src/components/projects/project-header.tsx`) shows a back link, the
-  name and the phase steps. A participant has no tabs: the project index
-  route is their home (`TaskCard`, `DecidedSoFarSection`, `AboutProject`),
-  the steps link where `stepTarget` in `src/lib/project-home.ts` gives a
-  page, and every other page links back to the home. The facilitator gets
+  name and the phase steps, which show the status only and link nowhere
+  (owner decision 2026-11-20). A participant has no tabs: the project index
+  route is their home (`TaskCard`, `DecidedSoFarSection`, `ProjectPages`,
+  `AboutProject`); `homePages` in `src/lib/project-home.ts` decides which
+  earlier pages the home links, and every other page links back to the
+  home. The facilitator gets
   `ProjectTabs`, fixed as Overview, Scope, Elements, Rounds, People,
   Settings; a page without its own tab (export, brainstorm, import) marks
   the tab it belongs to in `UNDER`. Overview is the index route for the
@@ -143,9 +148,12 @@ page from these patterns; each has a real use and a test you can copy.
   sees and writes in per phase (PR9, PR10); a step page uses `requireStep`,
   `writeOpen` and `StepClosedNote`, its server function `phaseOpenFor`; a
   hidden step's URL sends a participant to the project home. The same file
-  holds the phase from which the board shows data type, cardinality and
-  values (`detailFieldsShown`, EL21). A new step is a new column in the
-  table.
+  holds the one switch for data type, cardinality and values in the UI
+  (`DETAIL_FIELDS_PHASE`, `detailFieldsShown`, EL21): off in every phase
+  until the detail phase exists (owner decision 2026-11-20). The board, the
+  element form, the rating card, its overview and the round page all read
+  it; the database, the server and the export keep the fields. A new step
+  is a new column in the table.
 - **Data:** each area keeps a key factory and query options in
   `src/server/<area>/query-options.ts` (example:
   `src/server/projects/query-options.ts`, staleness in

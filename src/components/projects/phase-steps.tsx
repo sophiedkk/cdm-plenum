@@ -3,9 +3,9 @@
 
 // The phases of a project as one row of steps (PR4, PR11): a check on a finished phase, the
 // current one marked, later ones dashed. The state is in the text for a screen reader; the
-// icon and the border only show it. A step can be a link where the caller gives one.
+// icon and the border only show it. NOTE: owner decision 2026-11-20. The steps show the status
+// only and link nowhere, for every role: the phase's work starts on the home or the Overview.
 import { CheckIcon } from "lucide-react";
-import type { ReactNode } from "react";
 import { m } from "@/i18n/messages";
 import { projectPhaseLabel } from "@/lib/i18n/labels";
 import { type PhaseStepState, type ProjectPhase, phaseSteps } from "@/lib/project-phases";
@@ -27,38 +27,21 @@ function stateText(state: PhaseStepState): string {
   return m.projects_step_later();
 }
 
-/**
- * A link around a step's content, or null when the step is no link. Only a done or the current
- * step is offered: a later phase has nothing to open yet.
- */
-export type StepLink = (phase: ProjectPhase, children: ReactNode, className: string) => ReactNode;
-
-export function PhaseSteps({
-  phase,
-  link,
-}: Readonly<{ phase: ProjectPhase; link?: StepLink | undefined }>) {
+export function PhaseSteps({ phase }: Readonly<{ phase: ProjectPhase }>) {
   return (
     <ol aria-label={m.projects_steps_label()} className="flex flex-wrap gap-1">
       {phaseSteps(phase).map((step) => {
-        const className = cn(STEP, STATE_CLASS[step.state]);
-        const content = (
-          <>
-            {step.state === "done" && <CheckIcon aria-hidden="true" className="size-4" />}
-            {projectPhaseLabel(step.phase)}
-            <span className="sr-only">, {stateText(step.state)}</span>
-          </>
-        );
-        const linked =
-          link && (step.state === "done" || step.state === "current")
-            ? link(step.phase, content, cn(className, "hover:bg-accent"))
-            : null;
         return (
           <li
             key={step.phase}
             aria-current={step.state === "current" ? "step" : undefined}
             className="flex"
           >
-            {linked ?? <span className={className}>{content}</span>}
+            <span className={cn(STEP, STATE_CLASS[step.state])}>
+              {step.state === "done" && <CheckIcon aria-hidden="true" className="size-4" />}
+              {projectPhaseLabel(step.phase)}
+              <span className="sr-only">, {stateText(step.state)}</span>
+            </span>
           </li>
         );
       })}

@@ -14,11 +14,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { m } from "@/i18n/messages";
 import { hasAppRole } from "@/lib/guards";
+import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/server/session/queries";
 import { LanguageMenuGroup, LanguageSwitch } from "./language-switch";
 import { MAIN_CONTENT_ID, SkipLink } from "./skip-link";
 import { ThemeMenuGroup, ThemeSwitch } from "./theme-switch";
 import { useSignOut } from "./use-sign-out";
+
+/**
+ * The one column every signed-in page and the top bar share, about 1024 px wide: the left edge
+ * and the title stay in place as you move between pages. A page may narrow its reading text
+ * inside it, aligned to the same left edge.
+ */
+export const PAGE_COLUMN = "mx-auto w-full max-w-5xl px-4";
 
 const NAV_LINK =
   "rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground aria-[current=page]:bg-accent aria-[current=page]:text-foreground";
@@ -64,7 +72,7 @@ export function AppShell({ user, children }: Readonly<{ user: SessionUser; child
     <div className="flex min-h-screen flex-col">
       <SkipLink />
       <header className="border-b">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+        <div className={cn(PAGE_COLUMN, "flex flex-wrap items-center gap-x-6 gap-y-2 py-3")}>
           <Link to="/projects" className="font-semibold tracking-tight">
             {m.app_name()}
           </Link>
@@ -92,7 +100,7 @@ export function AppShell({ user, children }: Readonly<{ user: SessionUser; child
       <main
         id={MAIN_CONTENT_ID}
         tabIndex={-1}
-        className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 outline-none"
+        className={cn(PAGE_COLUMN, "flex-1 py-6 outline-none")}
       >
         {children}
       </main>
@@ -106,7 +114,7 @@ export function PublicLayout({ children }: Readonly<{ children: ReactNode }>) {
     <div className="flex min-h-screen flex-col">
       <SkipLink />
       <header className="border-b">
-        <div className="mx-auto flex w-full max-w-6xl items-center gap-4 px-4 py-3">
+        <div className={cn(PAGE_COLUMN, "flex items-center gap-4 py-3")}>
           <Link to="/" className="font-semibold tracking-tight">
             {m.app_name()}
           </Link>

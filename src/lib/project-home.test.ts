@@ -7,12 +7,12 @@ import {
   type ChecklistRound,
   checklist,
   decidedGroups,
+  homePages,
   type OverviewFacts,
   openItems,
-  stepTarget,
   waitingFor,
 } from "./project-home.ts";
-import { PROJECT_PHASES, phaseSteps } from "./project-phases.ts";
+import { PROJECT_PHASES } from "./project-phases.ts";
 import type { ProjectOverview } from "./project-tasks.ts";
 
 function facts(changes: Partial<OverviewFacts> = {}): OverviewFacts {
@@ -183,52 +183,20 @@ describe("decidedGroups (PR8)", () => {
   });
 });
 
-describe("stepTarget (PR9, PR11)", () => {
-  const rating = overview({
-    lastClosedRoundId: "round-1",
-    round: {
-      id: "round-2",
-      number: 2,
-      status: "open",
-      closesAt: OPEN_ROUND.closesAt,
-      elements: 2,
-      rated: 1,
-      completed: null,
-      raters: null,
-    },
+describe("homePages (PR9, ADR 0019)", () => {
+  it("links the scope and the elements from discover on, and nothing extra in scope", () => {
+    expect(PROJECT_PHASES.map((phase) => [phase, homePages(phase)])).toEqual([
+      ["scope", []],
+      ["discover", ["scope", "board"]],
+      ["decide", ["scope", "board"]],
+      ["handoff", ["scope", "board"]],
+    ]);
   });
 
-  it("opens the scope, the elements and the round being rated", () => {
-    expect(stepTarget("scope", rating)).toEqual({ to: "/projects/$projectId/scope" });
-    expect(stepTarget("discover", rating)).toEqual({ to: "/projects/$projectId/board" });
-    expect(stepTarget("decide", rating)).toEqual({
-      to: "/projects/$projectId/rounds/$roundId/rate",
-      roundId: "round-2",
-    });
-  });
-
-  it("opens the newest results without a round to rate, and nothing without results", () => {
-    expect(stepTarget("decide", overview({ lastClosedRoundId: "round-1" }))).toEqual({
-      to: "/projects/$projectId/rounds/$roundId",
-      roundId: "round-1",
-    });
-    expect(stepTarget("decide", overview())).toBeNull();
-    expect(stepTarget("handoff", overview({ phase: "handoff" }))).toBeNull();
-  });
-
-  it("only leads to a page the phase table shows a participant once the step is reached", () => {
-    const page = {
-      scope: "scope",
-      discover: "board",
-      decide: "rounds",
-      handoff: "rounds",
-    } as const;
-    for (const current of PROJECT_PHASES) {
-      const view = { ...rating, phase: current };
-      for (const step of phaseSteps(current)) {
-        if (step.state !== "done" && step.state !== "current") continue;
-        if (stepTarget(step.phase, view) === null) continue;
-        expect(participantAccess(current, page[step.phase])).not.toBe("hidden");
+  it("only links a page the phase table shows a participant", () => {
+    for (const phase of PROJECT_PHASES) {
+      for (const page of homePages(phase)) {
+        expect(participantAccess(phase, page)).not.toBe("hidden");
       }
     }
   });

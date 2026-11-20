@@ -111,16 +111,30 @@ export function writeOpen(
   return participantAccess(phase, step) === access;
 }
 
-// NOTE: EL21, ADR 0018. Data type, cardinality and values belong to the detail phase; until
-// that phase exists they show from decide on. The detail phase changes only this constant.
-export const DETAIL_FIELDS_PHASE: ProjectPhase = "decide";
+// NOTE: EL21, owner decision 2026-11-20. Data type, cardinality and values show from the detail
+// phase on. That phase is not built, so no project is in it and nothing shows them; the detail
+// phase sets this constant to its own phase.
+export const DETAIL_FIELDS_PHASE: ProjectPhase | null = null;
 
 /**
- * Whether the board and an element's details show data type, cardinality and values during
- * `phase` (EL21). The facilitator keeps the edit actions for them in every phase.
+ * Whether the UI shows data type, cardinality and values during `phase` (EL21): the board, an
+ * element's details and edit form, the rating card's details and the detail flags of a round.
+ * The database, the server and the export keep them in every phase.
  */
 export function detailFieldsShown(phase: ProjectPhase): boolean {
-  return PROJECT_PHASES.indexOf(phase) >= PROJECT_PHASES.indexOf(DETAIL_FIELDS_PHASE);
+  const from: ProjectPhase | null = DETAIL_FIELDS_PHASE;
+  return from !== null && PROJECT_PHASES.indexOf(phase) >= PROJECT_PHASES.indexOf(from);
+}
+
+/**
+ * The phase from which the board shows each element's CKM link in a column of its own (EX2).
+ * NOTE: owner decision 2026-11-20: from discover, the phase in which elements are linked to source models.
+ */
+export const CKM_COLUMN_PHASE: ProjectPhase = "discover";
+
+/** Whether the board shows the CKM column during `phase`. */
+export function ckmColumnShown(phase: ProjectPhase): boolean {
+  return PROJECT_PHASES.indexOf(phase) >= PROJECT_PHASES.indexOf(CKM_COLUMN_PHASE);
 }
 
 /** The phase in which the facilitator opens a round and keeps it open (PR10). */

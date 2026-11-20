@@ -39,9 +39,12 @@ export function RatingCards({
   go,
   renderCard,
   afterOverview,
+  flags = false,
 }: Readonly<{
   number: number;
   elements: readonly MyElement[];
+  /** Whether the overview lists the flagged details (DE17), as the phase shows them (EL21). */
+  flags?: boolean;
   shown: ShownCard;
   cardLink: CardLink;
   /** Moves to card `index`, or to the overview, as following its link does. */
@@ -84,6 +87,7 @@ export function RatingCards({
         <RatingOverview
           number={number}
           elements={elements}
+          flags={flags}
           headingRef={headingRef}
           cardLink={(index, name) => cardLink(index, name, "underline underline-offset-4")}
         />
