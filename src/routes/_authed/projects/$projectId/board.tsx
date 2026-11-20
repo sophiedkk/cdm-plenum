@@ -4,18 +4,32 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CombineIcon, FileUpIcon, LayoutGridIcon, PlusIcon, SearchIcon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  CombineIcon,
+  FileUpIcon,
+  LayoutGridIcon,
+  PlusIcon,
+  SearchIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { BoardDialog } from "@/components/board/board-dialog";
 import { CkmPanel } from "@/components/board/ckm-panel";
-import { type CardElement, ElementCard } from "@/components/board/element-card";
+import type { CardElement } from "@/components/board/element-details";
 import { ElementForm } from "@/components/board/element-form";
+import { ElementTable } from "@/components/board/element-table";
 import { MergeForm } from "@/components/board/merge-form";
 import { ValuesForm } from "@/components/board/values-form";
 import { projectTitle } from "@/components/projects/project-title";
 import { EmptyState, PageHeader } from "@/components/shell/route-states";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { m } from "@/i18n/messages";
 import { dataTypeByKey } from "@/lib/data-types";
 import { importArchetypeFn, linkElementFn, searchCkmFn } from "@/server/ckm/functions";
@@ -98,26 +112,34 @@ function Board() {
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={elements.length < 2}
-                  onClick={() => setDialog({ kind: "merge" })}
-                >
-                  <CombineIcon aria-hidden="true" data-icon="inline-start" />
-                  {m.board_merge()}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
                   onClick={() => setDialog({ kind: "ckm", target: null })}
                 >
                   <SearchIcon aria-hidden="true" data-icon="inline-start" />
                   {m.board_ckm_search()}
                 </Button>
-                <Button asChild variant="outline">
-                  <Link to="/projects/$projectId/board/import" params={{ projectId }}>
-                    <FileUpIcon aria-hidden="true" data-icon="inline-start" />
-                    {m.board_import_link()}
-                  </Link>
-                </Button>
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="outline">
+                      {m.board_more_actions()}
+                      <ChevronDownIcon aria-hidden="true" data-icon="inline-end" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-auto">
+                    <DropdownMenuItem
+                      disabled={elements.length < 2}
+                      onSelect={() => setDialog({ kind: "merge" })}
+                    >
+                      <CombineIcon aria-hidden="true" />
+                      {m.board_merge()}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/projects/$projectId/board/import" params={{ projectId }}>
+                        <FileUpIcon aria-hidden="true" />
+                        {m.board_import_link()}
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )}
           </>
@@ -131,33 +153,27 @@ function Board() {
           description={m.board_empty_description()}
         />
       ) : (
-        <ol aria-label={m.board_list_label()} className="flex flex-col gap-4">
-          {elements.map((element, index) => (
-            <li key={element.id}>
-              <ElementCard
-                projectId={projectId}
-                element={element}
-                position={index + 1}
-                isFacilitator={isFacilitator}
-                addComment={(body) =>
-                  addComment({ data: { projectId, elementId: element.id, body } })
-                }
-                onCommentAdded={async () => {
-                  await Promise.all([
-                    queryClient.invalidateQueries({
-                      queryKey: elementKeys.comments(projectId, element.id),
-                    }),
-                    refreshBoard(),
-                  ]);
-                  toast.success(m.common_comment_added());
-                }}
-                onEdit={() => setDialog({ kind: "edit", element })}
-                onValues={() => setDialog({ kind: "values", element })}
-                onLink={() => setDialog({ kind: "ckm", target: element })}
-              />
-            </li>
-          ))}
-        </ol>
+        <ElementTable
+          projectId={projectId}
+          elements={elements}
+          isFacilitator={isFacilitator}
+          actions={{
+            addComment: (element, body) =>
+              addComment({ data: { projectId, elementId: element.id, body } }),
+            onCommentAdded: async (element) => {
+              await Promise.all([
+                queryClient.invalidateQueries({
+                  queryKey: elementKeys.comments(projectId, element.id),
+                }),
+                refreshBoard(),
+              ]);
+              toast.success(m.common_comment_added());
+            },
+            onEdit: (element) => setDialog({ kind: "edit", element }),
+            onValues: (element) => setDialog({ kind: "values", element }),
+            onLink: (element) => setDialog({ kind: "ckm", target: element }),
+          }}
+        />
       )}
 
       <BoardDialog
