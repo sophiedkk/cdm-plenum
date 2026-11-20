@@ -48,7 +48,7 @@ describe("ResultsTable", () => {
   it("shows one row per element with the outcome in words, median, distribution and answers", () => {
     render(<ResultsTable elements={[SYSTOLIC, CUFF]} />);
     const systolic = row("Systolic pressure");
-    expect(within(systolic).getByText("In the archetype")).toBeTruthy();
+    expect(within(systolic).getByText("In the model")).toBeTruthy();
     expect(within(systolic).getByRole("cell", { name: "8" })).toBeTruthy();
     expect(
       within(systolic).getByRole("img", {
@@ -78,7 +78,7 @@ describe("ResultsTable", () => {
     });
     expect(within(groups).getByRole("rowheader", { name: "Nursing" })).toBeTruthy();
     expect(within(groups).queryByText("Architecture")).toBeNull();
-    expect(within(groups).getByText("In the archetype")).toBeTruthy();
+    expect(within(groups).getByText("In the model")).toBeTruthy();
 
     fireEvent.click(toggle);
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
@@ -94,8 +94,8 @@ describe("ResultsTable", () => {
       result: elementResult([1, 2, 2, 3], DEFAULT_RULE),
     };
     const expected = {
-      en: ["In the archetype", "No consensus", "Not in this archetype"],
-      nl: ["In het archetype", "Geen consensus", "Niet in dit archetype"],
+      en: ["In the model", "No consensus", "Not in the model"],
+      nl: ["In het model", "Geen consensus", "Niet in het model"],
     } as const;
     for (const locale of ["en", "nl"] as const) {
       overwriteGetLocale(() => locale);

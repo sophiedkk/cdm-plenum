@@ -62,9 +62,9 @@ describe("RatingElement", () => {
     const { group } = renderElement();
     expect(within(group).getAllByRole("radio")).toHaveLength(10);
     expect(
-      within(group).getByRole("radio", { name: "1, does not belong in the archetype" }),
+      within(group).getByRole("radio", { name: "1, does not belong in the model" }),
     ).toBeTruthy();
-    expect(within(group).getByRole("radio", { name: "9, belongs in the archetype" })).toBeTruthy();
+    expect(within(group).getByRole("radio", { name: "9, belongs in the model" })).toBeTruthy();
     expect(within(group).getByRole("radio", { name: "Unable to rate" })).toBeTruthy();
     expect(group.textContent).toContain("Data type: DV_QUANTITY");
   });
@@ -137,7 +137,7 @@ describe("RatingElement", () => {
   it("shows no outcome label of the earlier round, overall or per group (DE15)", () => {
     renderElement(LATER);
     const text = screen.getByRole("group", { name: "Systolic pressure" }).textContent ?? "";
-    for (const label of ["In the archetype", "Not in this archetype", "No consensus", "Outcome"]) {
+    for (const label of ["In the model", "Not in the model", "No consensus", "Outcome"]) {
       expect(text).not.toContain(label);
     }
   });

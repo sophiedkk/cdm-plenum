@@ -25,14 +25,14 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- The rating question now asks whether an element belongs in the archetype,
-  for any use case in scope: the archetype holds every element that one of
-  those use cases needs. The scale reads 1 to 3 "does not belong in the
-  archetype", 4 to 6 "unsure" and 7 to 9 "belongs in the archetype". The
-  scale and the consensus rule stay the same.
-- The outcomes of a round read "In the archetype", "Not in this archetype"
-  and "No consensus". An element that is not in this archetype stays on the
-  board and in the elements CSV.
+- The rating question now asks whether an element belongs in the data
+  model, for any use case in scope: the model holds every element that one of
+  those use cases needs, whichever standard implements it later. The scale
+  reads 1 to 3 "does not belong in the model", 4 to 6 "unsure" and 7 to 9
+  "belongs in the model". The scale and the consensus rule stay the same.
+- The outcomes of a round read "In the model", "Not in the model" and "No
+  consensus". An element that is not in the model stays on the board and in
+  the elements CSV.
 
 - The results of a round show one row per element: the outcome, the median,
   a small chart of the scores and the number of answers. "Details" opens

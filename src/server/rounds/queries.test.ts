@@ -542,7 +542,7 @@ describe("closeRound (DE5)", () => {
     expect(await actions(draftId)).toEqual(["round_created", "round_opened", "round_closed"]);
   });
 
-  it("keeps an element that is not in this archetype on the board and in the export (DE1)", async () => {
+  it("keeps an element that is not in the model on the board and in the export (DE1)", async () => {
     const roundId = await openedRound(db, p.facilitator, p.projectId);
     const cuff = p.elements[2];
     for (const rater of Object.values(p.raters)) {

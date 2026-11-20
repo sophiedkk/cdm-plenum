@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// Round 1 asks whether each element belongs in the archetype and ends with the open question for
+// Round 1 asks whether each element belongs in the model and ends with the open question for
 // missing elements (DE1, DE16), in English and Dutch (Q-ACC-1, Q-I18N-1): a participant sees the
 // question and its anchors, proposes two elements and deletes one; the facilitator sees the
 // proposal without its proposer, adds it to the board, and the board shows it with its source.
@@ -9,6 +9,7 @@ import { randomBytes } from "node:crypto";
 import type { Browser, Page } from "@playwright/test";
 import { openedRound } from "../../src/server/rounds/test-round.ts";
 import { insertElement } from "../../src/server/test-fixtures.ts";
+import { expectAxeCleanAfterToasts } from "./axe.ts";
 import {
   BROWSER_LOCALE,
   expect,
@@ -63,7 +64,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         "An invented test panel",
       );
 
-      // The participant sees the archetype question and its anchors (DE1).
+      // The participant sees the data model question and its anchors (DE1).
       const rater = await pageFor(browser, locale, participant);
       await rater.goto(`/projects/${projectId}/rounds/${roundId}/rate`);
       await expect(rater.getByText(text.rounds_rate_question)).toBeVisible();
@@ -128,7 +129,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await add.click();
       await expect(list).toContainText(text.rounds_proposals_on_board);
       await expect(add).toHaveCount(0);
-      await expectAxeClean(facilitator);
+      await expectAxeCleanAfterToasts(facilitator);
 
       // The board shows the element with its source.
       await facilitator.goto(`/projects/${projectId}/board`);

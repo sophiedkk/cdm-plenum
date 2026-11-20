@@ -60,13 +60,11 @@ describe("RoundForm", () => {
   it("explains the default rule in plain words", () => {
     renderForm(vi.fn());
     expect(
-      screen.getByText(
-        "In the archetype when at least 70% score 7 to 9 and at most 15% score 1 to 3.",
-      ),
+      screen.getByText("In the model when at least 70% score 7 to 9 and at most 15% score 1 to 3."),
     ).toBeTruthy();
     expect(
       screen.getByText(
-        "Not in this archetype when at least 70% score 1 to 3 and at most 15% score 7 to 9.",
+        "Not in the model when at least 70% score 1 to 3 and at most 15% score 7 to 9.",
       ),
     ).toBeTruthy();
   });
@@ -175,7 +173,7 @@ describe("RoundForm", () => {
     expect(screen.queryByLabelText("Rule for adding proposed elements")).toBeNull();
     expect(
       screen.getByText(
-        'Participants answer for each element: "Does this element belong in the archetype, for any use case in scope?"',
+        'Participants answer for each element: "Does this element belong in the data model, for any use case in scope?"',
       ),
     ).toBeTruthy();
   });
@@ -185,7 +183,7 @@ describe("RoundForm", () => {
     renderForm(vi.fn());
     expect(
       screen.getByText(
-        "In het archetype als minstens 70% 7 tot en met 9 scoort en hoogstens 15% 1 tot en met 3.",
+        "In het model als minstens 70% 7 tot en met 9 scoort en hoogstens 15% 1 tot en met 3.",
       ),
     ).toBeTruthy();
   });
