@@ -5,7 +5,7 @@
 
 - Status: Proposed
 - Date: 2026-11-20
-- Deciders: owner (private first, maximal archetype, sorting step after validation), maintainer (design)
+- Deciders: owner (private first, a maximal common data model, standard-agnostic wording, sorting step after validation), maintainer (design)
 
 ## Context and problem statement
 
@@ -37,12 +37,17 @@ section 2.7). The NINDS common data element project collected the forms of
 existing studies first (Grinnon et al. 2012,
 <https://doi.org/10.1177/1740774512438980>).
 
-openEHR archetypes aim at a maximal data set: each archetype "is intentionally
-designed to be inclusive of all possible data elements that could be relevant
-for the topic and for all possible clinical use cases" (Leslie 2014,
+A common data model of a clinical concept aims at a maximal data set: every
+element that any use case of the concept needs. openEHR states the principle
+most clearly: each archetype "is intentionally designed to be inclusive of all
+possible data elements that could be relevant for the topic and for all
+possible clinical use cases" (Leslie 2014,
 <https://openehr.atlassian.net/wiki/download/attachments/2949213/2014+07+openEHR+approach.pdf>).
-The owner confirmed that cdm-plenum aims at that maximal archetype, not at a
-minimal core set.
+It holds for any implementation standard. A FHIR profile often leaves fields
+out because it is exchanged across a network, but the model it draws on should
+still hold every element. The owner confirmed that cdm-plenum aims at that
+maximal common data model, not at a minimal core set, and that its wording
+stays independent of any one standard (2026-11-20).
 
 ## Considered options
 
@@ -71,9 +76,12 @@ The steps, with their requirements:
 2. **Brainstorm, private first (EL13 to EL16).** By default each participant
    sees only their own elements until the facilitator reveals the board
    (owner decision 2026-11-20). The add screen asks four questions in
-   clinicians' words, taken from the parts of an openEHR OBSERVATION
-   (`data`, `state`, `protocol`, plus the context of use; openEHR EHR
-   Information Model, <https://specifications.openehr.org/releases/RM/latest/ehr.html>).
+   clinicians' words: what is recorded, what about the patient is needed to
+   interpret it, how it was measured, and in which context it is recorded.
+   Clinical information models separate these parts, for example `data`,
+   `state` and `protocol` in an openEHR OBSERVATION
+   (<https://specifications.openehr.org/releases/RM/latest/ehr.html>); the
+   questions themselves name no standard.
    No study tests these prompts for data elements; they are our own design,
    in line with the use of creativity triggers in requirements workshops
    (Maiden, Gizikis and Robertson 2004, <https://doi.org/10.1109/MS.2004.1331305>).
@@ -94,7 +102,7 @@ The steps, with their requirements:
    how often two elements share a group, suggested clusters and the group
    names, labelled as suggestions.
 4. **Group and clean up (EL18, EL19).** The facilitator groups the elements,
-   either by the openEHR structure or by groups of their own, and merges
+   either by the four questions of the brainstorm or by groups of their own, and merges
    duplicates with the wording kept. A saturation view shows whether the
    last sources still added elements. The result is the list for Delphi
    round 1, which can take proposals for missing elements (DE16).
