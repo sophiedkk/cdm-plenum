@@ -13,20 +13,14 @@ import { ProposeSection } from "@/components/rounds/proposals";
 import { RatingCards, shownCard } from "@/components/rounds/rating-cards";
 import { RatingElement } from "@/components/rounds/rating-element";
 import { valueOrNotFound } from "@/components/rounds/result-value";
-import { RoundStatusBadge } from "@/components/rounds/round-badges";
 import { NotFoundState } from "@/components/shell/route-states";
 import { DateTime } from "@/components/status/date-time";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { m } from "@/i18n/messages";
 import { formatCardinality } from "@/lib/cardinality";
 import { mayRate } from "@/lib/project-roles";
-import { headerCovers } from "@/lib/project-tasks";
 import type { BoardElement } from "@/server/elements/queries";
-import {
-  projectKeys,
-  projectOverviewQueryOptions,
-  projectQueryOptions,
-} from "@/server/projects/query-options";
+import { projectKeys, projectQueryOptions } from "@/server/projects/query-options";
 import type { OwnFlag } from "@/server/rounds/flags";
 import {
   addProposalFn,
@@ -112,12 +106,7 @@ function RatePage() {
   const { data } = useSuspenseQuery(myRatingsQueryOptions(projectId, roundId));
   const { data: boardResult } = useSuspenseQuery(roundBoardQueryOptions(projectId));
   const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
-  const { data: overview } = useSuspenseQuery(projectOverviewQueryOptions(projectId));
   const canRate = detail.ok && mayRate(detail.value.role, detail.value.ownGroupId);
-  // The header's task line may show the closing date and the count already; they show once.
-  const covered = overview.ok
-    ? headerCovers(overview.value, roundId)
-    : { rate: false, closesAt: false };
   const mine = valueOrNotFound(data);
   const board = valueOrNotFound(boardResult);
   const saveRating = useServerFn(saveRatingFn);
@@ -144,40 +133,32 @@ function RatePage() {
       };
       return { ...old, value };
     });
-    // The header counts the rated elements (PR11).
+    // The project home counts the rated elements (PR8).
     void queryClient.invalidateQueries({ queryKey: projectKeys.overview(projectId) });
   };
   const rememberOwn = (elementId: string, own: OwnRating) =>
     remember(elementId, (item) => ({ ...item, own }));
 
   return (
-    <div className="flex max-w-5xl flex-col gap-3">
-      <div className="flex flex-col gap-1.5">
-        <h2 className="text-xl font-semibold">{m.rounds_rate_title({ number: round.number })}</h2>
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-          <RoundStatusBadge status={round.status} />
-          {!covered.closesAt && (
-            <span>
-              {m.rounds_closes_at_short()} <DateTime value={round.closesAt} />
-            </span>
-          )}
-          {!covered.rate && (
-            <span className="font-medium">{m.rounds_rate_progress({ rated, total })}</span>
-          )}
+    <div className="flex max-w-5xl flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-lg font-semibold">{m.rounds_rate_title({ number: round.number })}</h2>
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <span>
+            {m.rounds_closes_at_short()} <DateTime value={round.closesAt} />
+          </span>
+          <span>{m.rounds_rate_progress({ rated, total })}</span>
           <span className="flex items-center gap-2">
             {round.facilitatorSeesRaters ? (
               <EyeIcon aria-hidden="true" className="size-4 shrink-0" />
             ) : (
               <EyeOffIcon aria-hidden="true" className="size-4 shrink-0" />
             )}
-            <strong className="font-medium">
-              {round.facilitatorSeesRaters
-                ? m.rounds_rate_visible_title()
-                : m.rounds_rate_hidden_title()}
-            </strong>
+            {round.facilitatorSeesRaters
+              ? m.rounds_rate_visible_title()
+              : m.rounds_rate_hidden_title()}
           </span>
         </p>
-        <p className="text-sm text-muted-foreground">{m.rounds_rate_intro()}</p>
       </div>
       {!canRate && (
         <Alert>
@@ -220,13 +201,12 @@ function RatePage() {
         go={(index) => {
           void navigate({ search: { card: index } });
         }}
-        renderCard={(element, position, headingRef, progress) => (
+        renderCard={(element, position, headingRef) => (
           <RatingElement
             key={element.id}
             element={element}
             details={detailsOf(boardElements.get(element.id))}
             position={position}
-            progress={progress}
             headingRef={headingRef}
             rule={round.rule}
             editable={editable}
@@ -279,16 +259,7 @@ function RatePage() {
           round.number === 1 && <Proposals editable={editable} rule={round.proposalRule} />
         }
       />
-      <p className="text-sm text-muted-foreground">
-        {m.rounds_rate_autosave()}{" "}
-        <Link
-          to="/projects/$projectId/rounds"
-          params={{ projectId }}
-          className="underline underline-offset-4"
-        >
-          {m.rounds_back_to_rounds()}
-        </Link>
-      </p>
+      <p className="text-sm text-muted-foreground">{m.rounds_rate_autosave()}</p>
     </div>
   );
 }

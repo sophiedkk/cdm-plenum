@@ -165,7 +165,8 @@ describe("RatingElement", () => {
   it("shows the own earlier rating and the distribution per group, with details and reasons", () => {
     renderElement(LATER);
     const group = screen.getByRole("region", { name: "Systolic pressure" });
-    expect(group.textContent).toContain("Your rating in round 1: 5");
+    expect(group.textContent).toContain("Your round 1 score: 5");
+    openGroupScores();
     const distributions = screen.getByRole("list", {
       name: "Scores for Systolic pressure in round 1, from everyone and per stakeholder group",
     });
@@ -186,6 +187,7 @@ describe("RatingElement", () => {
 
   it("puts the median and the band shares behind details", () => {
     renderElement(LATER);
+    openGroupScores();
     const summary = screen.getByText("Median, band shares and all scores");
     const details = summary.closest("details");
     expect(details?.open).toBe(false);
@@ -213,12 +215,13 @@ describe("RatingElement", () => {
       ...LATER,
       previous: { ...LATER.previous, own: { rated: false, score: null, reason: null } },
     } as MyElement);
-    expect(screen.getByText("Your rating in round 1: Not rated")).toBeTruthy();
+    expect(screen.getByText("Your round 1 score: Not rated")).toBeTruthy();
   });
 
   it("shows the reasons of round 1 on the card, the first three and then all (DE8)", () => {
     const reasons = ["A first", "B second", "C third", "D fourth", "E fifth"];
     renderElement({ ...LATER, previous: { ...LATER.previous, reasons } });
+    openGroupScores();
     const list = screen.getByRole("list", { name: "Reasons given, without names" });
     expect(
       within(list)
@@ -246,11 +249,13 @@ describe("RatingElement", () => {
 
   it("says so when nobody gave a reason", () => {
     renderElement({ ...LATER, previous: { ...LATER.previous, reasons: [] } });
+    openGroupScores();
     expect(screen.getByText("Nobody gave a reason.")).toBeTruthy();
   });
 
   it("marks the own earlier score on the distribution and above the scale (DE15)", () => {
     renderElement(LATER);
+    openGroupScores();
     const everyone = screen.getByRole("img", { name: /Your score: 5$/ });
     expect(everyone.querySelector("[data-own]")).toBeTruthy();
     expect(everyone.querySelector("[data-own-label]")?.getAttribute("data-own-label")).toBe("you");
@@ -271,8 +276,51 @@ describe("RatingElement", () => {
       ...LATER,
       previous: { ...LATER.previous, own: { rated: true, score: null, reason: null } },
     });
+    openGroupScores();
     expect(description(screen.getByRole("radio", { name: "Unable to rate" }))).toBe("Round 1");
     expect(screen.getByRole("img", { name: /score 9: 3$/ }).querySelector("[data-own]")).toBeNull();
+  });
+
+  it("folds how the group scored behind a button beside the own score (ADR 0019)", () => {
+    renderElement(LATER);
+    const toggle = screen.getByRole("button", { name: "How the group scored in round 1" });
+    const panel = document.getElementById(toggle.getAttribute("aria-controls") ?? "");
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(panel?.hidden).toBe(true);
+    // The button shares a row with the own score; the panel follows that row, so it opens below.
+    const row = toggle.parentElement;
+    expect(row?.textContent).toContain("Your round 1 score: 5");
+    expect(row?.nextElementSibling).toBe(panel);
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(panel?.hidden).toBe(false);
+    expect(row?.contains(toggle)).toBe(true);
+  });
+
+  it("puts the question right under the name and description, before the scale", () => {
+    renderElement(LATER);
+    const question = screen.getByText(
+      "Does this element belong in the data model, for any use case in scope?",
+    );
+    const toggle = screen.getByRole("button", { name: "How the group scored in round 1" });
+    const scale = screen.getByRole("radiogroup");
+    const follows = (a: Node, b: Node) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(follows(screen.getByText("The highest pressure in the cycle"), question)).toBe(true);
+    expect(follows(question, toggle)).toBe(true);
+    expect(follows(toggle, scale)).toBe(true);
+  });
+
+  it("shows the help under the reason only while the field has focus", () => {
+    renderElement();
+    const reason = screen.getByLabelText("Reason (optional)");
+    expect(screen.queryByText(/Choose a score or "unable to rate" first/)).toBeNull();
+    expect(reason.getAttribute("aria-describedby")).toBeNull();
+    fireEvent.focus(reason);
+    const help = screen.getByText(/Choose a score or "unable to rate" first/);
+    expect(reason.getAttribute("aria-describedby")).toBe(help.id);
+    fireEvent.blur(reason);
+    expect(screen.queryByText(/Choose a score or "unable to rate" first/)).toBeNull();
   });
 
   it("shows no marker in the first round", () => {
@@ -280,6 +328,11 @@ describe("RatingElement", () => {
     expect(document.querySelector("[data-previous-marker]")).toBeNull();
   });
 });
+
+/** Opens the panel with how the group scored in the previous round. */
+function openGroupScores(): void {
+  fireEvent.click(screen.getByRole("button", { name: /^How the group scored in round/ }));
+}
 
 /** The text of the elements that describe `element`, joined by a space. */
 function description(element: HTMLElement): string {
