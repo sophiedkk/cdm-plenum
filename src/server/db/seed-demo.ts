@@ -2,14 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // `pnpm db:seed-demo [--facilitator <email>]`: fills a development database with one demo project
-// so the whole flow can be tried in a minute. Every step goes through the app's own services, so
-// the data obeys the same rules as real use. Invented people and `example.test` addresses only.
-// Refuses to run with NODE_ENV=production.
+// per phase, so every step can be tried in a minute. Every step goes through the app's own
+// services, so the data obeys the same rules as real use. Invented people and `example.test`
+// addresses only. Refuses to run with NODE_ENV=production.
 import { randomUUID } from "node:crypto";
 import { parseArgs } from "node:util";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import pg from "pg";
 import type { ElementPrompt } from "@/lib/brainstorm";
+import type { ProjectPhase } from "@/lib/project-phases";
 import { grantAppRole, normalizeEmail } from "../admin/app-roles.ts";
 import { revealBoard } from "../elements/brainstorm.ts";
 import { addElement, addElementComment, setElementValues } from "../elements/queries.ts";
@@ -22,8 +23,16 @@ import { saveRating } from "../rounds/ratings.ts";
 import { addScopeComment, addScopeSource, updateScope } from "../scope/queries.ts";
 import type { DB } from "./schema.gen.ts";
 
-export const DEMO_PROJECT_NAME = "Blood pressure (demo)";
 const DEFAULT_FACILITATOR = "facilitator@example.test";
+const ONE_DAY = 24 * 60 * 60 * 1000;
+
+/** The demo projects, one per phase, in the order of the phases (PR4). */
+export const DEMO_PROJECTS = {
+  scope: "Body temperature (demo)",
+  discover: "Heart rate (demo)",
+  decide: "Blood pressure (demo)",
+  handoff: "Respiratory rate (demo)",
+} as const satisfies Record<ProjectPhase, string>;
 
 /** A refused service call stops the seed with the step and the refusal code. */
 function must<T>(step: string, result: { ok: true; value: T } | { ok: false; error: string }): T {
@@ -44,16 +53,19 @@ export const DEMO_PARTICIPANTS = [
 ] as const;
 
 type Cardinality = { min: 0 | 1; max: number | null };
+/** Scores per rater in the order of DEMO_PARTICIPANTS; null is "unable to rate". */
+type Scores = (number | null)[];
 interface DemoElement {
   name: string;
   /** The brainstorm question the element answers (EL14). */
   prompt: ElementPrompt;
   description: string;
-  dataType: "quantity" | "coded_text" | "text";
-  cardinality: Cardinality;
+  dataType: "quantity" | "coded_text" | "text" | null;
+  cardinality: Cardinality | null;
   values?: string[];
-  /** Scores in round 1 in the order of DEMO_PARTICIPANTS; null is "unable to rate". */
-  round1: (number | null)[];
+  round1?: Scores;
+  /** Only for an element without consensus in round 1. */
+  round2?: Scores;
 }
 
 // Scores chosen so round 1 under the default rule gives every outcome: included (at least 70%
@@ -128,6 +140,85 @@ export const DEMO_ELEMENTS: DemoElement[] = [
   },
 ];
 
+/**
+ * The private brainstorm of the discover demo: who added what (index into DEMO_PARTICIPANTS).
+ * Two participants add the same element and a third a near duplicate, so the reveal shows the
+ * facilitator something to merge. Three participants have added nothing yet.
+ */
+export const DEMO_BRAINSTORM: { by: number; element: DemoElement }[] = [
+  { by: 0, element: brainstormed("Heart rate", "recorded", "Beats per minute.") },
+  { by: 0, element: brainstormed("Regularity", "recorded", "Regular or irregular.") },
+  { by: 1, element: brainstormed("Pulse rate", "recorded", "Counted at the wrist.") },
+  { by: 1, element: brainstormed("Body position", "patient_state", "Lying, sitting or standing.") },
+  { by: 3, element: brainstormed("Heart rate", "recorded", "") },
+  { by: 3, element: brainstormed("Method", "method", "Palpation, auscultation or a device.") },
+  { by: 4, element: brainstormed("Location", "method", "Radial, carotid or apical.") },
+  { by: 5, element: brainstormed("Exertion", "patient_state", "At rest or after exercise.") },
+  { by: 5, element: brainstormed("Clinical setting", "context", "Ward, outpatient or home.") },
+];
+
+function brainstormed(name: string, prompt: ElementPrompt, description: string): DemoElement {
+  return { name, prompt, description, dataType: null, cardinality: null };
+}
+
+// Two rounds: round 1 gives every outcome, round 2 settles one of the two elements without
+// consensus and leaves the other open, as a real hand-off can.
+export const DEMO_HANDOFF_ELEMENTS: DemoElement[] = [
+  {
+    name: "Rate",
+    prompt: "recorded",
+    description: "The number of breaths per minute.",
+    dataType: "quantity",
+    cardinality: { min: 1, max: 1 },
+    round1: [9, 9, 8, 9, 9, 8, 9, 9],
+  },
+  {
+    name: "Regularity",
+    prompt: "recorded",
+    description: "Whether the breathing is regular or irregular.",
+    dataType: "coded_text",
+    cardinality: { min: 0, max: 1 },
+    values: ["Regular", "Irregular"],
+    round1: [7, 8, 5, 6, 7, 4, 8, 6],
+    round2: [8, 8, 7, 7, 7, 6, 8, 7],
+  },
+  {
+    name: "Depth",
+    prompt: "recorded",
+    description: "How deep the breaths are.",
+    dataType: "coded_text",
+    cardinality: { min: 0, max: 1 },
+    values: ["Shallow", "Normal", "Deep"],
+    round1: [5, 6, 4, 7, 3, 6, 5, 4],
+    round2: [5, 6, 5, 7, 4, 6, 5, 6],
+  },
+  {
+    name: "Body position",
+    prompt: "patient_state",
+    description: "The body position during the count.",
+    dataType: "coded_text",
+    cardinality: { min: 0, max: 1 },
+    values: ["Lying", "Sitting", "Standing"],
+    round1: [7, 8, 7, 7, 8, 6, 7, 8],
+  },
+  {
+    name: "Ventilator mode",
+    prompt: "context",
+    description: "The mode of a ventilator, for a person on mechanical ventilation.",
+    dataType: "text",
+    cardinality: { min: 0, max: 1 },
+    round1: [2, 1, 3, 2, 3, 4, 2, 1],
+  },
+  {
+    name: "Comment",
+    prompt: "context",
+    description: "Anything about the count not captured in the other elements.",
+    dataType: "text",
+    cardinality: { min: 0, max: 1 },
+    round1: [7, 7, 8, 6, 7, 8, 9, 7],
+  },
+];
+
 async function ensureUser(db: Kysely<DB>, email: string, name: string): Promise<string> {
   const address = normalizeEmail(email);
   const found = await db
@@ -152,71 +243,43 @@ async function groupIdByName(db: Kysely<DB>, projectId: string, name: string): P
   return row.id;
 }
 
-export interface SeedSummary {
-  status: "seeded" | "already_seeded";
+interface Seeded {
   projectId: string;
-  facilitator: string;
-  participants: string[];
+  /** The participants' user ids, in the order of DEMO_PARTICIPANTS. */
+  raterIds: string[];
 }
 
-/** Seeds the demo project once; a second run finds it and changes nothing. */
-export async function seedDemo(
+interface ScopeText {
+  concept: string;
+  useCases: string;
+  outOfScope: string;
+  sources: string[];
+}
+
+/** Creates a project with its scope and the whole demo panel invited and joined. */
+async function startProject(
   db: Kysely<DB>,
-  facilitatorEmail: string,
-  now: Date = new Date(),
-): Promise<SeedSummary> {
-  const participants = DEMO_PARTICIPANTS.map((person) => person.email);
-  const existing = await db
-    .selectFrom("organization")
-    .select("id")
-    .where("name", "=", DEMO_PROJECT_NAME)
-    .executeTakeFirst();
-  if (existing) {
-    return {
-      status: "already_seeded",
-      projectId: existing.id,
-      facilitator: facilitatorEmail,
-      participants,
-    };
-  }
-
-  const facilitatorId = await ensureUser(db, facilitatorEmail, "Demo facilitator");
-  await grantAppRole(db, facilitatorEmail, "facilitator");
-  await grantAppRole(db, facilitatorEmail, "administrator");
-
+  facilitatorId: string,
+  name: string,
+  scope: ScopeText,
+  now: Date,
+): Promise<Seeded> {
   const { projectId } = must(
     "create project",
-    await createProject(db, facilitatorId, { name: DEMO_PROJECT_NAME }, "en"),
+    await createProject(db, facilitatorId, { name }, "en"),
   );
-
   must(
     "scope",
     await updateScope(db, facilitatorId, {
       projectId,
-      concept:
-        "The local measurement of the systemic arterial blood pressure of an adult, as recorded at the outpatient clinic and at home.",
-      useCases:
-        "Outpatient visit; home measurement reported by the patient; follow-up of hypertension treatment.",
-      outOfScope: "Invasive (intra-arterial) pressure; 24-hour ambulatory monitoring summaries.",
+      concept: scope.concept,
+      useCases: scope.useCases,
+      outOfScope: scope.outOfScope,
     }),
   );
-  must(
-    "scope source",
-    await addScopeSource(db, facilitatorId, {
-      projectId,
-      label: "openEHR CKM archetype openEHR-EHR-OBSERVATION.blood_pressure.v2",
-      url: null,
-    }),
-  );
-  must(
-    "scope source",
-    await addScopeSource(db, facilitatorId, {
-      projectId,
-      label: "Outpatient blood pressure form of the demo clinic (invented)",
-      url: null,
-    }),
-  );
-
+  for (const label of scope.sources) {
+    must("scope source", await addScopeSource(db, facilitatorId, { projectId, label, url: null }));
+  }
   const raterIds: string[] = [];
   for (const person of DEMO_PARTICIPANTS) {
     const userId = await ensureUser(db, person.email, person.name);
@@ -236,31 +299,41 @@ export async function seedDemo(
     await acceptInvitationsOnSignIn(db, userId, now);
     raterIds.push(userId);
   }
+  return { projectId, raterIds };
+}
 
+async function nextPhase(
+  db: Kysely<DB>,
+  facilitatorId: string,
+  projectId: string,
+  from: ProjectPhase,
+): Promise<void> {
   must(
-    "scope comment",
-    await addScopeComment(db, raterIds[0] ?? facilitatorId, {
-      projectId,
-      body: "Should home measurements by the patient be in scope from the start?",
-    }),
+    `phase after ${from}`,
+    await movePhase(db, facilitatorId, { projectId, from, direction: "next" }),
   );
+}
 
-  must(
-    "phase discover",
-    await movePhase(db, facilitatorId, { projectId, from: "scope", direction: "next" }),
-  );
-  const elementIds: string[] = [];
-  for (const [index, element] of DEMO_ELEMENTS.entries()) {
-    const author = raterIds[index % raterIds.length] ?? facilitatorId;
+/** Adds the elements, the n-th by the n-th participant, with their proposed values. */
+async function addElements(
+  db: Kysely<DB>,
+  facilitatorId: string,
+  project: Seeded,
+  elements: DemoElement[],
+  source: (index: number) => string,
+): Promise<string[]> {
+  const ids: string[] = [];
+  for (const [index, element] of elements.entries()) {
+    const author = project.raterIds[index % project.raterIds.length] ?? facilitatorId;
     const { elementId } = must(
       `element ${element.name}`,
       await addElement(db, author, {
-        projectId,
+        projectId: project.projectId,
         name: element.name,
         description: element.description,
         dataType: element.dataType,
         cardinality: element.cardinality,
-        source: index < 4 ? "Outpatient form" : "",
+        source: source(index),
         prompt: element.prompt,
       }),
     );
@@ -268,65 +341,53 @@ export async function seedDemo(
       must(
         `values ${element.name}`,
         await setElementValues(db, facilitatorId, {
-          projectId,
+          projectId: project.projectId,
           elementId,
           values: element.values.map((text) => ({ text, value: null })),
         }),
       );
     }
-    elementIds.push(elementId);
+    ids.push(elementId);
   }
-  // The demo is past the brainstorm: the board is revealed, as a facilitator would (EL13).
-  must("reveal board", await revealBoard(db, facilitatorId, projectId));
+  return ids;
+}
 
-  const cuffSize = elementIds[5];
-  if (cuffSize) {
-    must(
-      "element comment",
-      await addElementComment(db, raterIds[3] ?? facilitatorId, {
-        projectId,
-        elementId: cuffSize,
-        body: "We rarely record the cuff size, but it explains odd readings.",
-      }),
-    );
-  }
-
-  must(
-    "phase decide",
-    await movePhase(db, facilitatorId, { projectId, from: "discover", direction: "next" }),
-  );
-  // Round 1: rated by everyone, then closed, so results exist.
-  const oneDay = 24 * 60 * 60 * 1000;
-  const round1 = must(
-    "create round 1",
+/**
+ * Opens a round on the facilitator's default element choice, rates it with the given scores per
+ * element id and closes it, so its results exist.
+ */
+async function runClosedRound(
+  db: Kysely<DB>,
+  facilitatorId: string,
+  project: Seeded,
+  scores: Map<string, Scores>,
+  reason: (elementId: string, score: number | null) => string | undefined,
+  now: Date,
+): Promise<string> {
+  const { projectId } = project;
+  const { roundId } = must(
+    "create round",
     await createRound(
       db,
       facilitatorId,
-      { projectId, closesAt: new Date(now.getTime() + oneDay) },
+      { projectId, closesAt: new Date(now.getTime() + ONE_DAY) },
       { now },
     ),
   );
-  must(
-    "open round 1",
-    await openRound(db, facilitatorId, { projectId, roundId: round1.roundId }, { now }),
-  );
-  for (const [e, element] of DEMO_ELEMENTS.entries()) {
-    const elementId = elementIds[e];
-    if (!elementId) continue;
-    for (const [r, score] of element.round1.entries()) {
-      const raterId = raterIds[r];
+  must("open round", await openRound(db, facilitatorId, { projectId, roundId }, { now }));
+  for (const [elementId, perRater] of scores) {
+    for (const [r, score] of perRater.entries()) {
+      const raterId = project.raterIds[r];
       if (!raterId) continue;
+      const why = reason(elementId, score);
       must(
-        `rating ${element.name}`,
+        "rating",
         await saveRating(db, raterId, {
           projectId,
-          roundId: round1.roundId,
+          roundId,
           elementId,
           score,
-          ...(score === null ? { reason: "Outside my practice." } : {}),
-          ...(element.name === "Cuff size" && score !== null && score <= 5
-            ? { reason: "Hardly ever recorded in our clinic." }
-            : {}),
+          ...(why === undefined ? {} : { reason: why }),
         }),
       );
     }
@@ -339,21 +400,150 @@ export async function seedDemo(
     await trx
       .updateTable("round")
       .set({ closes_at: new Date(now.getTime() - 60_000) })
-      .where("id", "=", round1.roundId)
+      .where("id", "=", roundId)
       .execute();
   });
-  must(
-    "close round 1",
-    await closeRound(db, facilitatorId, { projectId, roundId: round1.roundId }, { now }),
-  );
+  must("close round", await closeRound(db, facilitatorId, { projectId, roundId }, { now }));
+  return roundId;
+}
 
+function scoresOf(elementIds: string[], elements: DemoElement[], round: "round1" | "round2") {
+  const scores = new Map<string, Scores>();
+  for (const [index, element] of elements.entries()) {
+    const id = elementIds[index];
+    const perRater = element[round];
+    if (id && perRater) scores.set(id, perRater);
+  }
+  return scores;
+}
+
+/** Scope phase: a scope statement with comments from three participants. */
+async function seedScope(db: Kysely<DB>, facilitatorId: string, now: Date): Promise<string> {
+  const project = await startProject(
+    db,
+    facilitatorId,
+    DEMO_PROJECTS.scope,
+    {
+      concept:
+        "A measurement of the body temperature of a person, by any method and at any site of the body.",
+      useCases: "Ward rounds; fever follow-up at home; screening at the emergency department.",
+      outOfScope: "Continuous core temperature monitoring during surgery.",
+      sources: ["Nursing observation chart of the demo hospital (invented)"],
+    },
+    now,
+  );
+  const comments = [
+    "Do we include temperatures that the patient measures at home?",
+    "The site of measurement changes the normal range; it should be part of the concept.",
+    "Is a skin temperature from a screening camera the same concept?",
+  ];
+  for (const [index, body] of comments.entries()) {
+    const author = project.raterIds[index * 3] ?? facilitatorId;
+    must(
+      "scope comment",
+      await addScopeComment(db, author, { projectId: project.projectId, body }),
+    );
+  }
+  return project.projectId;
+}
+
+/** Discover phase, private step: five participants have brainstormed; the board is not revealed. */
+async function seedDiscover(db: Kysely<DB>, facilitatorId: string, now: Date): Promise<string> {
+  const project = await startProject(
+    db,
+    facilitatorId,
+    DEMO_PROJECTS.discover,
+    {
+      concept: "The rate and rhythm of the heart beat of a person, counted or measured.",
+      useCases: "Vital signs on the ward; triage; home monitoring.",
+      outOfScope: "ECG interpretation.",
+      sources: [],
+    },
+    now,
+  );
+  await nextPhase(db, facilitatorId, project.projectId, "scope");
+  for (const { by, element } of DEMO_BRAINSTORM) {
+    const author = project.raterIds[by] ?? facilitatorId;
+    must(
+      `brainstorm ${element.name}`,
+      await addElement(db, author, {
+        projectId: project.projectId,
+        name: element.name,
+        description: element.description,
+        dataType: null,
+        cardinality: null,
+        source: "",
+        prompt: element.prompt,
+      }),
+    );
+  }
+  return project.projectId;
+}
+
+/** Decide phase: the blood pressure board, a closed round 1 and an open round 2. */
+async function seedDecide(db: Kysely<DB>, facilitatorId: string, now: Date): Promise<string> {
+  const project = await startProject(
+    db,
+    facilitatorId,
+    DEMO_PROJECTS.decide,
+    {
+      concept:
+        "The local measurement of the systemic arterial blood pressure of an adult, as recorded at the outpatient clinic and at home.",
+      useCases:
+        "Outpatient visit; home measurement reported by the patient; follow-up of hypertension treatment.",
+      outOfScope: "Invasive (intra-arterial) pressure; 24-hour ambulatory monitoring summaries.",
+      sources: [
+        "openEHR CKM archetype openEHR-EHR-OBSERVATION.blood_pressure.v2",
+        "Outpatient blood pressure form of the demo clinic (invented)",
+      ],
+    },
+    now,
+  );
+  const { projectId, raterIds } = project;
+  must(
+    "scope comment",
+    await addScopeComment(db, raterIds[0] ?? facilitatorId, {
+      projectId,
+      body: "Should home measurements by the patient be in scope from the start?",
+    }),
+  );
+  await nextPhase(db, facilitatorId, projectId, "scope");
+  const elementIds = await addElements(db, facilitatorId, project, DEMO_ELEMENTS, (index) =>
+    index < 4 ? "Outpatient form" : "",
+  );
+  // The demo is past the brainstorm: the board is revealed, as a facilitator would (EL13).
+  must("reveal board", await revealBoard(db, facilitatorId, projectId));
+  const cuffSize = elementIds[5];
+  if (cuffSize) {
+    must(
+      "element comment",
+      await addElementComment(db, raterIds[3] ?? facilitatorId, {
+        projectId,
+        elementId: cuffSize,
+        body: "We rarely record the cuff size, but it explains odd readings.",
+      }),
+    );
+  }
+  await nextPhase(db, facilitatorId, projectId, "discover");
+  await runClosedRound(
+    db,
+    facilitatorId,
+    project,
+    scoresOf(elementIds, DEMO_ELEMENTS, "round1"),
+    (elementId, score) => {
+      if (score === null) return "Outside my practice.";
+      if (elementId === cuffSize && score <= 5) return "Hardly ever recorded in our clinic.";
+      return undefined;
+    },
+    now,
+  );
   // Round 2: the elements without consensus, open for a week, so participants can rate now.
   const round2 = must(
     "create round 2",
     await createRound(
       db,
       facilitatorId,
-      { projectId, closesAt: new Date(now.getTime() + 7 * oneDay) },
+      { projectId, closesAt: new Date(now.getTime() + 7 * ONE_DAY) },
       { now },
     ),
   );
@@ -361,12 +551,97 @@ export async function seedDemo(
     "open round 2",
     await openRound(db, facilitatorId, { projectId, roundId: round2.roundId }, { now }),
   );
+  return projectId;
+}
 
+/** Hand-off phase: two closed rounds, so the exports and results have content. */
+async function seedHandoff(db: Kysely<DB>, facilitatorId: string, now: Date): Promise<string> {
+  const project = await startProject(
+    db,
+    facilitatorId,
+    DEMO_PROJECTS.handoff,
+    {
+      concept: "The breathing of a person, counted over a period of time.",
+      useCases: "Vital signs on the ward; early warning scores; home monitoring.",
+      outOfScope: "Measurements by a ventilator.",
+      sources: ["Early warning score chart of the demo hospital (invented)"],
+    },
+    now,
+  );
+  const { projectId } = project;
+  await nextPhase(db, facilitatorId, projectId, "scope");
+  const elementIds = await addElements(db, facilitatorId, project, DEMO_HANDOFF_ELEMENTS, () => "");
+  must("reveal board", await revealBoard(db, facilitatorId, projectId));
+  await nextPhase(db, facilitatorId, projectId, "discover");
+  const noReason = () => undefined;
+  await runClosedRound(
+    db,
+    facilitatorId,
+    project,
+    scoresOf(elementIds, DEMO_HANDOFF_ELEMENTS, "round1"),
+    noReason,
+    now,
+  );
+  await runClosedRound(
+    db,
+    facilitatorId,
+    project,
+    scoresOf(elementIds, DEMO_HANDOFF_ELEMENTS, "round2"),
+    noReason,
+    now,
+  );
+  await nextPhase(db, facilitatorId, projectId, "decide");
+  return projectId;
+}
+
+const SEEDERS: Record<ProjectPhase, typeof seedScope> = {
+  scope: seedScope,
+  discover: seedDiscover,
+  decide: seedDecide,
+  handoff: seedHandoff,
+};
+
+export interface SeededProject {
+  phase: ProjectPhase;
+  name: string;
+  projectId: string;
+  status: "seeded" | "already_seeded";
+}
+
+export interface SeedSummary {
+  facilitator: string;
+  participants: string[];
+  projects: SeededProject[];
+}
+
+/** Seeds every demo project that does not exist yet; one that exists is left as it is. */
+export async function seedDemo(
+  db: Kysely<DB>,
+  facilitatorEmail: string,
+  now: Date = new Date(),
+): Promise<SeedSummary> {
+  const facilitatorId = await ensureUser(db, facilitatorEmail, "Demo facilitator");
+  await grantAppRole(db, facilitatorEmail, "facilitator");
+  await grantAppRole(db, facilitatorEmail, "administrator");
+
+  const projects: SeededProject[] = [];
+  for (const [phase, name] of Object.entries(DEMO_PROJECTS) as [ProjectPhase, string][]) {
+    const existing = await db
+      .selectFrom("organization")
+      .select("id")
+      .where("name", "=", name)
+      .executeTakeFirst();
+    if (existing) {
+      projects.push({ phase, name, projectId: existing.id, status: "already_seeded" });
+      continue;
+    }
+    const projectId = await SEEDERS[phase](db, facilitatorId, now);
+    projects.push({ phase, name, projectId, status: "seeded" });
+  }
   return {
-    status: "seeded",
-    projectId,
     facilitator: normalizeEmail(facilitatorEmail),
-    participants,
+    participants: DEMO_PARTICIPANTS.map((person) => person.email),
+    projects,
   };
 }
 
@@ -404,11 +679,13 @@ export async function seedDemoCommand(
   const db = connect(url);
   try {
     const summary = await seedDemo(db, facilitator);
-    out(
-      summary.status === "seeded"
-        ? `Seeded "${DEMO_PROJECT_NAME}".`
-        : `"${DEMO_PROJECT_NAME}" already exists; nothing changed.`,
-    );
+    for (const project of summary.projects) {
+      out(
+        project.status === "seeded"
+          ? `Seeded "${project.name}" (phase ${project.phase}).`
+          : `"${project.name}" already exists; nothing changed.`,
+      );
+    }
     out(`Facilitator and administrator: ${summary.facilitator}`);
     out(`Participants: ${summary.participants.join(", ")}`);
     out(

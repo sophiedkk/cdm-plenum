@@ -52,6 +52,11 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `pnpm db:seed-demo` loads one demo project per phase: Body temperature in
+  scope, Heart rate in discover with a private brainstorm not yet revealed,
+  Blood pressure in decide and Respiratory rate in hand-off with two closed
+  rounds. A database that already has the blood pressure demo gets the other
+  three.
 - The element board shows each element as one row of a table, with its
   number, name, description, data type, cardinality, number of sources, CKM
   link and number of comments. At 1280 by 800 pixels you see at least 10

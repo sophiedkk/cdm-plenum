@@ -51,7 +51,7 @@ scripts/dev/pnpm.sh check           # the local gate: typecheck, lint, test
 scripts/dev/e2e.sh                  # build, then Playwright with axe in the e2e container
 scripts/dev/pnpm.sh db:migrate      # migrate the dev database (db:migrate down reverts one)
 scripts/dev/pnpm.sh db:generate-types  # regenerate src/server/db/schema.gen.ts after a migration
-scripts/dev/pnpm.sh db:seed-demo --facilitator you@example.test  # the demo project, dev only
+scripts/dev/pnpm.sh db:seed-demo --facilitator you@example.test  # one demo project per phase, dev only
 ```
 
 Versions are pinned exactly in `package.json`; `pnpm-workspace.yaml` sets

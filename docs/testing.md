@@ -121,9 +121,9 @@ check to require.
 
 ## Try it by hand
 
-The demo project gives you a filled board and a finished first round in one
-command. Start the whole stack, migrate, and load it with your own address
-as facilitator:
+The demo projects give you one project in each phase in one command. Start
+the whole stack, migrate, and load them with your own address as
+facilitator:
 
 ```sh
 scripts/dev/compose.sh up -d
@@ -134,21 +134,29 @@ scripts/dev/compose.sh exec dev pnpm db:seed-demo --facilitator you@example.test
 Sign in at <http://localhost:3000/sign-in> and open the link from Mailpit at
 <http://localhost:8025>. Then work through these steps:
 
-1. **As facilitator,** open "Blood pressure (demo)". The scope page shows the
-   concept, use cases and sources, with comments.
-2. Open the board. It has eight elements, such as Systolic, Cuff size and
-   Comment. Add an element, merge two duplicates, and look up a CKM
-   archetype (this calls the live CKM).
-3. Open the rounds. Round 1 is closed: 5 elements in the model, 1 not in
-   the model and 2 without consensus. Round 2 is open.
+1. **Scope, as facilitator:** open "Body temperature (demo)". The overview
+   shows the phase; the scope page shows the concept, use cases and three
+   comments. Move the project on to discover from the overview.
+2. **Discover:** open "Heart rate (demo)". Five participants have
+   brainstormed privately; the board shows their nine elements to you, with
+   "Heart rate" twice. Sign in as `nurse.c@example.test` in a private window:
+   the Brainstorm tab is empty for them and shows none of the others'
+   elements. Add one under each question, then reveal the board as
+   facilitator and merge the duplicate.
+3. **Decide:** open "Blood pressure (demo)". On the board, look up a CKM
+   archetype (this calls the live CKM). Round 1 is closed: 5 elements in the
+   model, 1 not in the model and 2 without consensus. Round 2 is open.
 4. Open the members page. Eight participants sit in five stakeholder groups:
    Nursing, Primary care, General medicine, Terminology and Architecture.
    Invite a new address and open the invitation from Mailpit in a private
    window.
-5. Export the elements as CSV and as a mind map.
-6. **As participant,** sign in as `nurse.a@example.test` in a private window
-   and rate the elements in round 2. You should see no other participant's
-   ratings, and no names unless the facilitator turns that setting on.
+5. **Hand-off:** open "Respiratory rate (demo)". Two rounds are closed;
+   round 2 settled one of the two elements without consensus. Export the
+   elements as CSV and as a mind map.
+6. **As participant,** sign in as `nurse.a@example.test` in a private window.
+   Each project's overview shows your task; rate the elements in round 2 of
+   Blood pressure. You should see no other participant's ratings, and no
+   names unless the facilitator turns that setting on.
 7. Switch the language to Dutch and repeat a few steps.
 
 To start over, drop the development database and run the commands again:
