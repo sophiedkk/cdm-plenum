@@ -4,7 +4,7 @@
 
 // The compact board (Q-USE-1): one row per element, a disclosure button that opens the details,
 // the author and the actions for the facilitator only (EL2), and the comment refusals. Data type,
-// cardinality and values show from the phase that decides them (EL21).
+// cardinality and values show from the phase that decides them (EL21); the CKM column from decide.
 import { QueryClient, QueryClientProvider, queryOptions } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -89,6 +89,7 @@ function renderTable(
   elements = [SYSTOLIC, POSITION, UNDECIDED],
   openElementId?: string,
   detailFields = true,
+  ckmColumn = detailFields,
 ) {
   const actions: ElementActions = {
     addComment: vi.fn(async (): Promise<CommentOutcome> => ({ ok: true })),
@@ -105,6 +106,7 @@ function renderTable(
         elements={elements}
         isFacilitator={isFacilitator}
         detailFields={detailFields}
+        ckmColumn={ckmColumn}
         openElementId={openElementId}
         actions={actions}
       />
@@ -215,16 +217,27 @@ describe("ElementTable", () => {
     expect(within(region).getByText("Question")).toBeTruthy();
   });
 
-  it("keeps the facilitator's edit actions for those fields in discover (EL21)", () => {
+  it("keeps the facilitator's edit action but not the values while the phase hides them (EL21)", () => {
     commentsAnswer.mockResolvedValue({ ok: true, value: [] });
     const actions = renderTable(true, [POSITION], undefined, false);
     fireEvent.click(screen.getByRole("button", { name: "Position" }));
     const region = screen.getByRole("region", { name: "Details of Position" });
     expect(within(region).queryByText("Data type")).toBeNull();
     fireEvent.click(within(region).getByRole("button", { name: "Edit: Position" }));
-    fireEvent.click(within(region).getByRole("button", { name: "Edit values: Position" }));
     expect(actions.onEdit).toHaveBeenCalledWith(POSITION);
-    expect(actions.onValues).toHaveBeenCalledWith(POSITION);
+    expect(within(region).queryByRole("button", { name: "Edit values: Position" })).toBeNull();
+  });
+
+  it("shows the CKM column in decide while data type and cardinality stay hidden (EX2, EL21)", () => {
+    commentsAnswer.mockResolvedValue({ ok: true, value: [] });
+    renderTable(false, [SYSTOLIC], undefined, false, true);
+    const table = screen.getByRole("table", { name: "Elements on the board" });
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((cell) => cell.textContent),
+    ).toEqual(["No.", "Name", "Description", "Question", "Sources", "CKM", "Comments"]);
+    expect(within(summaryRow("Systolic")).getByText("Linked")).toBeTruthy();
   });
 
   it("shows the RM type of a CKM link outside the data type list", () => {
@@ -307,6 +320,7 @@ describe("ElementTable", () => {
           elements={[SYSTOLIC]}
           isFacilitator={false}
           detailFields
+          ckmColumn
           actions={{ onCommentAdded: vi.fn(), onEdit: vi.fn(), onValues: vi.fn(), onLink: vi.fn() }}
         />
       </QueryClientProvider>,
@@ -328,6 +342,7 @@ describe("ElementTable", () => {
           elements={[SYSTOLIC, POSITION]}
           isFacilitator
           detailFields
+          ckmColumn
           actions={{ onCommentAdded: vi.fn(), onEdit: vi.fn(), onValues: vi.fn(), onLink: vi.fn() }}
           supportCounts={{ [SYSTOLIC.id]: 2 }}
         />
@@ -356,6 +371,7 @@ describe("ElementTable", () => {
           elements={[SYSTOLIC, POSITION, UNDECIDED]}
           isFacilitator={false}
           detailFields
+          ckmColumn
           actions={{
             onCommentAdded: vi.fn(),
             onEdit: vi.fn(),

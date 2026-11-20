@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  ckmColumnShown,
   detailFieldsShown,
   PARTICIPANT_ACCESS,
   PARTICIPANT_WRITES,
@@ -71,10 +72,21 @@ describe("the phase table (PR9)", () => {
 });
 
 describe("detailFieldsShown (EL21)", () => {
-  it("hides data type, cardinality and values before the decide phase", () => {
+  it("hides data type, cardinality and values in every phase until the detail phase exists", () => {
     expect(PROJECT_PHASES.map((phase) => [phase, detailFieldsShown(phase)])).toEqual([
       ["scope", false],
       ["discover", false],
+      ["decide", false],
+      ["handoff", false],
+    ]);
+  });
+});
+
+describe("ckmColumnShown (EX2)", () => {
+  it("shows the board's CKM column from the discover phase on", () => {
+    expect(PROJECT_PHASES.map((phase) => [phase, ckmColumnShown(phase)])).toEqual([
+      ["scope", false],
+      ["discover", true],
       ["decide", true],
       ["handoff", true],
     ]);

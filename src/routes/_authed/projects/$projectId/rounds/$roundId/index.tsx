@@ -36,7 +36,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import { refusalMessage } from "@/lib/i18n/refusals";
-import { ROUND_PHASE } from "@/lib/phase-access";
+import { detailFieldsShown, ROUND_PHASE } from "@/lib/phase-access";
 import { mayRate } from "@/lib/project-roles";
 import { elementKeys } from "@/server/elements/query-options";
 import { projectQueryOptions } from "@/server/projects/query-options";
@@ -77,7 +77,9 @@ export const Route = createFileRoute("/_authed/projects/$projectId/rounds/$round
     }
     if (isFacilitator && round.status !== "draft") {
       loads.push(queryClient.ensureQueryData(responseRateQueryOptions(projectId, roundId)));
-      loads.push(queryClient.ensureQueryData(roundFlagsQueryOptions(projectId, roundId)));
+      if (detailFieldsShown(context.project.phase)) {
+        loads.push(queryClient.ensureQueryData(roundFlagsQueryOptions(projectId, roundId)));
+      }
       if (round.number === 1) {
         loads.push(queryClient.ensureQueryData(roundProposalsQueryOptions(projectId, roundId)));
       }
@@ -249,7 +251,9 @@ function RoundPage() {
       {closed && <Results projectId={projectId} roundId={roundId} />}
       {isFacilitator && round.status === "draft" && <DraftSetup round={round} />}
       {isFacilitator && round.status !== "draft" && <RoundProgress round={round} />}
-      {isFacilitator && round.status !== "draft" && <Flags round={round} />}
+      {isFacilitator && round.status !== "draft" && detailFieldsShown(project.phase) && (
+        <Flags round={round} />
+      )}
       {isFacilitator && round.status !== "draft" && round.number === 1 && (
         <Proposals round={round} />
       )}

@@ -27,9 +27,12 @@ clickable prototype of four screens.
   decide on (the outcome of each element's newest closed round; an element no
   closed round rated counts as "Not rated yet") and one "About this project"
   disclosure with the stakeholder groups (PR7) and "Leave project" (PR5).
-  There is no tab bar: the phase steps in the header are links where a done
-  or current phase has a page, and every other page has a link back to the
-  home.
+  There is no tab bar: the home links the earlier pages a participant reads
+  (the scope, the elements, the newest round results), and every other page
+  has a link back to the home. The phase steps in the header show the status
+  only (owner decision 2026-11-20, after testing 0.2.0: a step that linked to
+  a page left the page you were on unmarked, and the current step opened a
+  different page than the project did).
 - **Facilitator (U2, U4):** fixed tabs that never reorder: Overview, Scope,
   Elements, Rounds, People, Settings. The project opens on Overview, with a
   checklist per phase, one main "Go on to" button and a quiet "Move back to"

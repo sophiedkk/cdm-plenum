@@ -42,7 +42,13 @@ import { m } from "@/i18n/messages";
 import { isPrivateStep } from "@/lib/brainstorm";
 import { dataTypeByKey } from "@/lib/data-types";
 import { requireStep } from "@/lib/guards";
-import { detailFieldsShown, MARK_PHASE, REVEAL_PHASE, writeOpen } from "@/lib/phase-access";
+import {
+  ckmColumnShown,
+  detailFieldsShown,
+  MARK_PHASE,
+  REVEAL_PHASE,
+  writeOpen,
+} from "@/lib/phase-access";
 import { importArchetypeFn, linkElementFn, searchCkmFn } from "@/server/ckm/functions";
 import {
   addElementCommentFn,
@@ -111,6 +117,7 @@ function Board() {
   const canAdd = writeOpen(project.role, project.phase, "element_add");
   const canComment = writeOpen(project.role, project.phase, "element_comment");
   const detailFields = detailFieldsShown(project.phase);
+  const ckmColumn = ckmColumnShown(project.phase);
   const queryClient = useQueryClient();
   const { element: openElementId, duplicates: showDuplicates, ckm } = Route.useSearch();
   const { data: board } = useSuspenseQuery(boardQueryOptions(projectId, isFacilitator));
@@ -293,6 +300,7 @@ function Board() {
             elements={elements}
             isFacilitator={isFacilitator}
             detailFields={detailFields}
+            ckmColumn={ckmColumn}
             openElementId={openElementId}
             supportCounts={isFacilitator && summary?.ok ? summary.value.support : undefined}
             actions={{
@@ -346,6 +354,7 @@ function Board() {
         {dialog?.kind === "edit" && (
           <ElementForm
             mode="edit"
+            detailFields={detailFields}
             initial={dialog.element}
             submitLabel={m.board_save()}
             submit={(fields) =>

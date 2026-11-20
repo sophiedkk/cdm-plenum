@@ -3,7 +3,8 @@
 
 // The task-centred navigation in English and Dutch (PR2, PR4, PR8, PR11, ADR 0019): a participant
 // goes from Projects to the project home, starts rating from the "Your turn" card, opens the scope
-// from its phase step and opens "About this project"; the facilitator lands on the Overview,
+// from the home's links while the steps only show the phase, and opens "About this project"; every
+// project page keeps the same left edge; the facilitator lands on the Overview,
 // reveals the board from its checklist and moves to decide through the confirmation. Axe-clean in
 // the light and the dark theme; the home and the rating card fit a phone without sideways scroll.
 import type { Page } from "@playwright/test";
@@ -136,6 +137,17 @@ async function scrollsSideways(page: Page): Promise<boolean> {
   );
 }
 
+/**
+ * Where the project name and the back link start, in pixels from the left: the same on every
+ * page, so nothing jumps when you move between pages.
+ */
+async function leftEdges(page: Page): Promise<{ title: number; back: number }> {
+  const title = await page.getByRole("heading", { level: 1 }).boundingBox();
+  const back = await page.locator("main a").first().boundingBox();
+  if (title === null || back === null) throw new Error("no project header on the page");
+  return { title: title.x, back: back.x };
+}
+
 function steps(page: Page, text: Text) {
   return page.getByRole("list", { name: text.projects_steps_label });
 }
@@ -167,11 +179,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(page).toHaveURL((url) => url.pathname === `/projects/${seeded.projectId}`);
       await expect(page.getByRole("heading", { level: 1, name: "Blood pressure" })).toBeVisible();
       await expect(page).toHaveTitle(/^Blood pressure \|/);
-      // A participant has no tabs: the home and its steps are the navigation.
-      await expect(page.getByRole("navigation", { name: text.projects_tabs_label })).toHaveCount(0);
+      // A participant has no tabs: the home is the navigation, and the steps show the phase only.
+      await expect(
+        page.getByRole("navigation", { name: text.projects_tabs_label, exact: true }),
+      ).toHaveCount(0);
       await expect(steps(page, text).locator('[aria-current="step"]')).toContainText(
         text.projects_phase_decide,
       );
+      await expect(steps(page, text).getByRole("link")).toHaveCount(0);
+      const edge = await leftEdges(page);
 
       const card = page.getByRole("region", {
         name: fill(text.projects_home_turn_rate, { number: 2 }),
@@ -211,6 +227,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       // About this project opens below its button, with the groups and leaving.
       const about = page.getByRole("button", { name: text.projects_about_title });
       await expectHydrated(about);
+      // Below the fold the click scrolls first; the button must not move after that.
+      await about.scrollIntoViewIfNeeded();
       const before = await about.boundingBox();
       await about.click();
       await expect(about).toHaveAttribute("aria-expanded", "true");
@@ -223,12 +241,19 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(panel.getByRole("button", { name: text.members_leave })).toBeVisible();
       await expectAxeClean(page);
 
-      // The scope step opens the scope, with a way back to the home.
-      const scope = steps(page, text).getByRole("link", {
-        name: new RegExp(`^${text.projects_phase_scope}`),
-      });
-      await scope.click();
+      // The home links the scope; the scope page says where you are and leads back to the home.
+      const pages = page.getByRole("navigation", { name: text.projects_home_pages_title });
+      await expect(pages.getByRole("link")).toHaveText([text.scope_title, text.board_title]);
+      await pages.getByRole("link", { name: text.scope_title }).click();
       await expect(page).toHaveURL((url) => url.pathname === `/projects/${seeded.projectId}/scope`);
+      await expect(page.getByRole("heading", { level: 2, name: text.scope_title })).toBeVisible();
+      await expect(steps(page, text).locator('[aria-current="step"]')).toContainText(
+        text.projects_phase_decide,
+      );
+      await expect(steps(page, text).getByRole("link")).toHaveCount(0);
+      expect(await leftEdges(page)).toEqual(edge);
+      await expectAxeClean(page);
+      await snap(page, { path: test.info().outputPath(`scope-in-decide-${locale}.png`) });
       await page.getByRole("link", { name: text.projects_back_home }).click();
       await expect(page).toHaveURL((url) => url.pathname === `/projects/${seeded.projectId}`);
 
@@ -241,6 +266,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const rating = page.getByRole("region", { name: "Cuff size" });
       await expect(rating).toContainText(fill(text.rounds_card_position, { index: 1, total: 2 }));
       await expect(rating.getByText(text.rounds_rate_question)).toBeVisible();
+      expect(await leftEdges(page)).toEqual(edge);
       // How the group scored opens below its row; the button stays where it is.
       const groupScores = rating.getByRole("button", {
         name: fill(text.rounds_rate_group_scores, { number: 1 }),
@@ -280,6 +306,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       );
       // The facilitator's steps show the status only; the tabs navigate.
       await expect(steps(page, text).getByRole("link")).toHaveCount(0);
+      const edge = await leftEdges(page);
       await expect(
         page.getByRole("heading", {
           name: fill(text.projects_overview_before, { phase: text.projects_phase_decide }),
@@ -297,6 +324,19 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         path: test.info().outputPath(`overview-discover-dark-${locale}.png`),
       });
       await page.emulateMedia({ colorScheme: "light" });
+
+      // Elements keeps the header in place, with its tab marked.
+      await tabs.getByRole("link", { name: text.projects_tab_elements }).click();
+      await expect(page).toHaveURL((url) => url.pathname.endsWith("/board"));
+      await expect(tabs.getByRole("link", { name: text.projects_tab_elements })).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+      await expect(page.getByRole("heading", { level: 2, name: text.board_title })).toBeVisible();
+      expect(await leftEdges(page)).toEqual(edge);
+      await snap(page, { path: test.info().outputPath(`elements-discover-${locale}.png`) });
+      await tabs.getByRole("link", { name: text.projects_tab_overview }).click();
+      await expect(page).toHaveURL((url) => url.pathname === `/projects/${project.projectId}`);
 
       // The reveal from the checklist, after its confirmation.
       const reveal = page.getByRole("button", { name: text.board_reveal });

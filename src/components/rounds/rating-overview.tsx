@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The overview after the last rating card (DE18): every element with the participant's own
-// rating, or "not rated yet", and the details they flagged, each with a link back to its card.
+// rating, or "not rated yet", and the details they flagged while the phase shows details (EL21),
+// each with a link back to its card.
 import type { ReactNode, Ref } from "react";
 import { m } from "@/i18n/messages";
 import type { MyElement, OwnRating } from "@/server/rounds/ratings";
@@ -18,11 +19,14 @@ function ratingText(own: OwnRating): string {
 export function RatingOverview({
   number,
   elements,
+  flags,
   headingRef,
   cardLink,
 }: Readonly<{
   number: number;
   elements: readonly MyElement[];
+  /** Whether to list the flagged details (DE17). */
+  flags: boolean;
   /** The heading, which takes focus when the participant moves to the overview. */
   headingRef?: Ref<HTMLHeadingElement>;
   cardLink: (index: number, name: string) => ReactNode;
@@ -51,9 +55,11 @@ export function RatingOverview({
               <th scope="col" className="px-3 py-2 font-medium">
                 {m.rounds_overview_rating()}
               </th>
-              <th scope="col" className="px-3 py-2 font-medium">
-                {m.rounds_overview_flags()}
-              </th>
+              {flags && (
+                <th scope="col" className="px-3 py-2 font-medium">
+                  {m.rounds_overview_flags()}
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -69,15 +75,19 @@ export function RatingOverview({
                 >
                   {ratingText(element.own)}
                 </td>
-                <td
-                  className={
-                    element.flags.length === 0 ? "px-3 py-1.5 text-muted-foreground" : "px-3 py-1.5"
-                  }
-                >
-                  {element.flags.length === 0
-                    ? m.rounds_overview_no_flags()
-                    : element.flags.map((flag) => detailLabel(flag.kind)).join(", ")}
-                </td>
+                {flags && (
+                  <td
+                    className={
+                      element.flags.length === 0
+                        ? "px-3 py-1.5 text-muted-foreground"
+                        : "px-3 py-1.5"
+                    }
+                  >
+                    {element.flags.length === 0
+                      ? m.rounds_overview_no_flags()
+                      : element.flags.map((flag) => detailLabel(flag.kind)).join(", ")}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

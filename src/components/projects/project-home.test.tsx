@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The participant's project home and the projects list (PR2, PR5, PR7, PR8, PR11, ADR 0019):
-// the steps as links where a phase has something to show, the "Your turn" card or one line when
-// nothing waits, "Decided so far", "About this project", and a projects row.
+// the steps as status only, the "Your turn" card or one line when nothing waits, "Decided so
+// far", the links to the scope and the elements, "About this project", and a projects row.
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -16,6 +16,7 @@ import { AboutProject } from "./about-project";
 import { DecidedSoFarSection } from "./decided-so-far";
 import { PhaseSteps } from "./phase-steps";
 import { ProjectHeader } from "./project-header";
+import { ProjectPages } from "./project-pages";
 import { ProjectRow, waitingText } from "./project-row";
 import { TaskCard } from "./task-card";
 
@@ -87,38 +88,23 @@ describe("the phase steps", () => {
     expect(steps.querySelector('[aria-current="step"]')?.textContent).toBe("Decide, now");
   });
 
-  it("are links for a participant only where a done or current phase has a page", () => {
+  it("are no links for a participant: they show the status, the home leads on", () => {
     render(
       <ProjectHeader projectId="p1" name="Blood pressure" overview={overview()} back="projects" />,
     );
     const steps = screen.getByRole("list", { name: "Phases of the project" });
-    expect(
-      within(steps)
-        .getAllByRole("link")
-        .map((link) => [link.textContent, link.getAttribute("href")]),
-    ).toEqual([
-      ["Scope, done", "/projects/p1/scope"],
-      ["Discover, done", "/projects/p1/board"],
-      ["Decide, now", "/projects/p1/rounds/round-2/rate"],
-    ]);
-    // Hand-off lies ahead: no link.
-    expect(within(steps).getAllByRole("listitem")[3]?.querySelector("a")).toBeNull();
+    expect(within(steps).queryAllByRole("link")).toHaveLength(0);
+    expect(steps.querySelector('[aria-current="step"]')?.textContent).toBe("Decide, now");
   });
 
-  it("leave a phase without anything to show unlinked", () => {
+  it("sit below the way back to the project on a page of the project", () => {
     render(
-      <ProjectHeader
-        projectId="p1"
-        name="Blood pressure"
-        overview={overview({ round: null, lastClosedRoundId: null })}
-        back="home"
-      />,
+      <ProjectHeader projectId="p1" name="Blood pressure" overview={overview()} back="home" />,
     );
-    const steps = screen.getByRole("list", { name: "Phases of the project" });
-    expect(within(steps).getAllByRole("link")).toHaveLength(2);
     expect(screen.getByRole("link", { name: "Back to the project" }).getAttribute("href")).toBe(
       "/projects/p1",
     );
+    expect(screen.getAllByRole("link")).toHaveLength(1);
   });
 
   it("are no links for the facilitator, whose tabs navigate", () => {
@@ -133,6 +119,26 @@ describe("the phase steps", () => {
     const steps = screen.getByRole("list", { name: "Phases of the project" });
     expect(within(steps).queryAllByRole("link")).toHaveLength(0);
     expect(screen.getByRole("heading", { level: 1, name: "Blood pressure" })).toBeTruthy();
+  });
+});
+
+describe("ProjectPages (PR9, ADR 0019)", () => {
+  it("links the scope and the elements by the heading of the page they open", () => {
+    render(<ProjectPages projectId="p1" pages={["scope", "board"]} />);
+    const nav = screen.getByRole("navigation", { name: "In this project" });
+    expect(
+      within(nav)
+        .getAllByRole("link")
+        .map((link) => [link.textContent, link.getAttribute("href")]),
+    ).toEqual([
+      ["Scope", "/projects/p1/scope"],
+      ["Element board", "/projects/p1/board"],
+    ]);
+  });
+
+  it("shows nothing without a page to link", () => {
+    const { container } = render(<ProjectPages projectId="p1" pages={[]} />);
+    expect(container.textContent).toBe("");
   });
 });
 

@@ -383,7 +383,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
 test("the facilitator links an element to a CKM archetype element", async ({ page, db }) => {
   const text = MESSAGES.en;
-  // The data type the link sets shows from the decide phase on (EL21).
+  // The data type the link carries stays hidden until the detail phase (EL21).
   const project = await seedProject(db, "decide");
   await seedElement(db, project.facilitator.userId, project.projectId, { name: "Top pressure" });
   await signInTo(page, project.facilitator.email, "en", `/projects/${project.projectId}/board`);
@@ -410,5 +410,13 @@ test("the facilitator links an element to a CKM archetype element", async ({ pag
   await expect(card).toContainText(
     new RegExp(`${escapeRegExp(BP_ID)}, revision 2\\.0\\.17, element at0004`),
   );
-  await expect(card).toContainText("Quantity (DV_QUANTITY / Quantity)");
+  await expect(card).not.toContainText(text.board_field_data_type);
+  await expect(card).not.toContainText("DV_QUANTITY");
+  const stored = await db
+    .selectFrom("element_ckm_link")
+    .innerJoin("element", "element.id", "element_ckm_link.element_id")
+    .select("element_ckm_link.rm_type")
+    .where("element.project_id", "=", project.projectId)
+    .executeTakeFirstOrThrow();
+  expect(stored.rm_type).toBe("DV_QUANTITY");
 });

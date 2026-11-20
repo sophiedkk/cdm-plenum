@@ -8,11 +8,13 @@ import { RevealButton } from "@/components/board/brainstorm-panel";
 import { AboutProject } from "@/components/projects/about-project";
 import { DecidedSoFarSection } from "@/components/projects/decided-so-far";
 import { OverviewChecklist } from "@/components/projects/overview-checklist";
+import { ProjectPages } from "@/components/projects/project-pages";
 import { projectTitle } from "@/components/projects/project-title";
 import { TaskCard } from "@/components/projects/task-card";
 import { NotFoundState } from "@/components/shell/route-states";
 import { m } from "@/i18n/messages";
 import { ROUND_PHASE, stepVisible } from "@/lib/phase-access";
+import { homePages } from "@/lib/project-home";
 import { PROJECT_PHASES } from "@/lib/project-phases";
 import { revealBoardFn, sendBrainstormReminderFn } from "@/server/elements/functions";
 import { brainstormStatusQueryOptions, elementKeys } from "@/server/elements/query-options";
@@ -28,8 +30,8 @@ import { roundKeys } from "@/server/rounds/query-options";
 
 /**
  * The project's first page (PR8, PR11, ADR 0019): for a participant the home with "Your turn",
- * what is decided so far and "About this project"; for the facilitator the Overview with the
- * checklist of the phase and the phase move.
+ * what is decided so far, the links to the scope and the elements and "About this project"; for
+ * the facilitator the Overview with the checklist of the phase and the phase move.
  */
 export const Route = createFileRoute("/_authed/projects/$projectId/")({
   loader: async ({ context, params }) => {
@@ -85,10 +87,12 @@ function ParticipantHome() {
     PROJECT_PHASES.indexOf(phase) >= PROJECT_PHASES.indexOf(ROUND_PHASE) &&
     stepVisible("participant", phase, "rounds");
 
+  // The home reads as text: a narrower measure, on the column's left edge.
   return (
-    <>
+    <div className="max-w-3xl">
       <TaskCard projectId={projectId} overview={overview.value} />
       {showDecided && <DecidedSoFarSection projectId={projectId} decided={decided.value} />}
+      <ProjectPages projectId={projectId} pages={homePages(phase)} />
       <AboutProject
         projectName={project.name}
         groups={groups.value}
@@ -99,7 +103,7 @@ function ParticipantHome() {
           await queryClient.invalidateQueries({ queryKey: projectKeys.list() });
         }}
       />
-    </>
+    </div>
   );
 }
 

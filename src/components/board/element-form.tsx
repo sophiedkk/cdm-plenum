@@ -90,12 +90,14 @@ function fromCardinality(cardinality: Cardinality | null) {
 
 /**
  * The element form. Adding asks for a name and a description only (EL1, EL21); editing (EL5, the
- * facilitator's) also sets the data type and the cardinality, in any phase. A refusal from the
- * server shows at the top of the form; a failed call shows the general error there.
+ * facilitator's) also sets the data type and the cardinality while `detailFields` shows them.
+ * Without them the form keeps their saved values. A refusal from the server shows at the top of
+ * the form; a failed call shows the general error there.
  */
 export function ElementForm({
   initial,
   mode,
+  detailFields = false,
   submitLabel,
   submit,
   onDone,
@@ -103,6 +105,8 @@ export function ElementForm({
 }: Readonly<{
   initial?: ElementFields;
   mode: "add" | "edit";
+  /** Whether the phase shows data type and cardinality (EL21, `detailFieldsShown`). */
+  detailFields?: boolean;
   submitLabel: string;
   submit: (fields: ElementFields) => Promise<ElementOutcome>;
   onDone: (fields: ElementFields) => Promise<void> | void;
@@ -170,7 +174,7 @@ export function ElementForm({
           />
         )}
       </form.AppField>
-      {mode === "edit" && (
+      {mode === "edit" && detailFields && (
         <>
           <form.AppField name="dataType">{() => <DataTypeField />}</form.AppField>
           <fieldset className="flex flex-col gap-3">
