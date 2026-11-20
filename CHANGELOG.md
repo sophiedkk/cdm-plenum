@@ -11,6 +11,24 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A new project starts with a private brainstorm: each participant sees only
+  the elements they added, until the facilitator selects "Reveal the board"
+  on the element board. Until then the board shows the facilitator how many
+  participants added elements, and the confirmation lists the count per
+  participant. After the reveal everyone sees every element, still without
+  the name of who added it. The facilitator can switch the private step off
+  on the members page, before the reveal only. Elements added by different
+  people can be merged only after the reveal. Existing projects keep their
+  shared board.
+- The Brainstorm tab asks four questions: what you record or measure, what
+  about the patient you need to know to interpret it, how it was measured,
+  and in which situation it is recorded. Under each question you add an
+  element with a name and one optional line; press Enter to add the next one.
+  Data type, cardinality and values stay on the element board, which "More
+  details" opens at that element.
+- After the reveal, the Brainstorm tab lists up to 5 elements with a similar
+  name while you type, each with a link to the element on the board, so you
+  can comment there instead of adding a duplicate.
 - Round 1 ends with an open question: "Is an element missing? Propose it".
   You give a name and a one-line description, can propose several elements
   and delete your own until the round closes. Other participants never see
@@ -25,6 +43,14 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The element board shows each element as one row of a table, with its
+  number, name, description, data type, cardinality, number of sources, CKM
+  link and number of comments. At 1280 by 800 pixels you see at least 10
+  elements without scrolling. Select an element's name to open its details
+  below the row: the full description, proposed values, sources, CKM link,
+  comments and the facilitator's actions (Edit, Edit values, Link to CKM).
+- "Merge duplicates" and "Import CSV" moved into the "More actions" menu
+  next to "Search CKM" on the element board.
 - The rating question now asks whether an element belongs in the data
   model, for any use case in scope: the model holds every element that one of
   those use cases needs, whichever standard implements it later. The scale
@@ -33,7 +59,6 @@ the project uses [Semantic Versioning](https://semver.org/).
 - The outcomes of a round read "In the model", "Not in the model" and "No
   consensus". An element that is not in the model stays on the board and in
   the elements CSV.
-
 - The results of a round show one row per element: the outcome, the median,
   a small chart of the scores and the number of answers. "Details" opens
   every score, the share in each band and the result per stakeholder group.

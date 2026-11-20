@@ -7,8 +7,12 @@ import { PhaseBadge, RoleBadge } from "@/components/projects/project-badges";
 import { projectTitle } from "@/components/projects/project-title";
 import { NotFoundState } from "@/components/shell/route-states";
 import { m } from "@/i18n/messages";
+import type { ProjectPhase } from "@/lib/project-phases";
 import { projectQueryOptions } from "@/server/projects/query-options";
 import { idSchema } from "@/server/projects/schemas";
+
+/** The phases that show the Brainstorm tab (EL14). */
+const BRAINSTORM_PHASES: readonly ProjectPhase[] = ["scope", "discover"];
 
 const TAB_LINK =
   "-mb-px inline-flex border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground aria-[current=page]:border-foreground aria-[current=page]:text-foreground";
@@ -37,6 +41,10 @@ function ProjectLayout() {
   const project = data.value;
   const tabs = [
     { to: "/projects/$projectId/scope", label: m.projects_tab_scope() },
+    // The brainstorm belongs before the Delphi; the page itself stays reachable in any phase.
+    ...(BRAINSTORM_PHASES.includes(project.phase)
+      ? [{ to: "/projects/$projectId/brainstorm", label: m.projects_tab_brainstorm() } as const]
+      : []),
     { to: "/projects/$projectId/board", label: m.projects_tab_board() },
     { to: "/projects/$projectId/rounds", label: m.projects_tab_rounds() },
     { to: "/projects/$projectId/members", label: m.projects_tab_members() },

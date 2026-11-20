@@ -6,6 +6,7 @@
 import type { Page } from "@playwright/test";
 import type { Kysely } from "kysely";
 import type { DB } from "../../src/server/db/schema.gen.ts";
+import { revealBoard } from "../../src/server/elements/brainstorm.ts";
 import { addElement } from "../../src/server/elements/queries.ts";
 import { addElementInput } from "../../src/server/elements/schemas.ts";
 import { updateScope } from "../../src/server/scope/queries.ts";
@@ -31,6 +32,16 @@ export async function seedElement(
   const added = await addElement(db, userId, addElementInput.parse({ projectId, ...fields }));
   if (!added.ok) throw new Error(`addElement refused: ${added.error}`);
   return added.value.elementId;
+}
+
+/** Ends the private step of the brainstorm, so participants see every element (EL13). */
+export async function seedReveal(
+  db: Kysely<DB>,
+  facilitatorId: string,
+  projectId: string,
+): Promise<void> {
+  const result = await revealBoard(db, facilitatorId, projectId);
+  if (!result.ok) throw new Error(`revealBoard refused: ${result.error}`);
 }
 
 /** Writes the three texts of the scope statement as the facilitator. */

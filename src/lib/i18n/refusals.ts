@@ -63,6 +63,8 @@ export const REFUSAL_MESSAGE_KEYS = {
   reason_required: "common_refusal_reason_required",
   rater_group_required: "common_refusal_rater_group_required",
   rater_group_locked: "common_refusal_rater_group_locked",
+  board_already_revealed: "common_refusal_board_already_revealed",
+  merge_before_reveal: "common_refusal_merge_before_reveal",
   minimum_reason_required: "common_refusal_minimum_reason_required",
   proposals_first_round_only: "common_refusal_proposals_first_round_only",
   proposal_not_found: "common_refusal_proposal_not_found",

@@ -280,6 +280,8 @@ function OpeningSnapshot({
 
 function DraftSetup({ round }: Readonly<{ round: RoundDetail }>) {
   const { projectId } = Route.useParams();
+  const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
+  const revealsBoard = detail.ok && detail.value.privateBrainstorm && !detail.value.boardRevealed;
   const { data: boardResult } = useSuspenseQuery(roundBoardQueryOptions(projectId));
   const { data: panelResult } = useSuspenseQuery(panelStatusQueryOptions(projectId));
   const board = valueOrNotFound(boardResult);
@@ -337,6 +339,7 @@ function DraftSetup({ round }: Readonly<{ round: RoundDetail }>) {
         <div>
           <OpenRoundDialog
             number={round.number}
+            revealsBoard={revealsBoard}
             open={(reason) =>
               openRound({
                 data: {

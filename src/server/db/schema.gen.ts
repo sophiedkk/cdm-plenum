@@ -57,6 +57,7 @@ export interface Element {
   min_occurs: number | null;
   name: string;
   project_id: string;
+  prompt: string | null;
   updated_at: Generated<Timestamp>;
 }
 
@@ -125,12 +126,14 @@ export interface Organization {
 }
 
 export interface Project {
+  board_revealed_at: Timestamp | null;
   change_class: Generated<string>;
   created_at: Generated<Timestamp>;
   group_names_visible: Generated<boolean>;
   id: string;
   panel_minimum_reason: string | null;
   phase: Generated<string>;
+  private_brainstorm: Generated<boolean>;
 }
 
 export interface ProjectPanelMinimum {

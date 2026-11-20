@@ -10,6 +10,7 @@ import * as m0003 from "./0003_access.ts";
 import * as m0004 from "./0004_panel.ts";
 import * as m0005 from "./0005_accounts.ts";
 import * as m0006 from "./0006_group_names_and_raters.ts";
+import * as m0007 from "./0007_private_brainstorm.ts";
 import * as m0008 from "./0008_round_proposals.ts";
 
 export const migrations: Record<string, Migration> = {
@@ -19,6 +20,7 @@ export const migrations: Record<string, Migration> = {
   "0004_panel": m0004,
   "0005_accounts": m0005,
   "0006_group_names_and_raters": m0006,
+  "0007_private_brainstorm": m0007,
   "0008_round_proposals": m0008,
 };
 

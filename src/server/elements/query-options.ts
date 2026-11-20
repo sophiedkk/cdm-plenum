@@ -7,15 +7,19 @@ import { queryOptions } from "@tanstack/react-query";
 import { STALE_TIME } from "@/lib/query-config";
 import { listArchetypeElementsFn } from "../ckm/functions.ts";
 import {
+  brainstormStatusFn,
   listElementCommentsFn,
   listElementCommentsWithAuthorsFn,
   listElementsFn,
   listElementsWithAuthorsFn,
+  listOwnElementsFn,
 } from "./functions.ts";
 
 export const elementKeys = {
   all: (projectId: string) => ["elements", projectId] as const,
   board: (projectId: string) => [...elementKeys.all(projectId), "board"] as const,
+  own: (projectId: string) => [...elementKeys.all(projectId), "own"] as const,
+  brainstorm: (projectId: string) => [...elementKeys.all(projectId), "brainstorm"] as const,
   comments: (projectId: string, elementId: string) =>
     [...elementKeys.all(projectId), "comments", elementId] as const,
   archetype: (projectId: string, cid: string) =>
@@ -39,6 +43,24 @@ export function boardQueryOptions(projectId: string, withAuthors: boolean) {
           }
         : result;
     },
+    staleTime: STALE_TIME.board,
+  });
+}
+
+/** The elements the signed-in member added, for the brainstorm page (EL14). */
+export function ownElementsQueryOptions(projectId: string) {
+  return queryOptions({
+    queryKey: elementKeys.own(projectId),
+    queryFn: () => listOwnElementsFn({ data: { projectId } }),
+    staleTime: STALE_TIME.board,
+  });
+}
+
+/** The private step with the elements per participant, for the facilitator (EL13). */
+export function brainstormStatusQueryOptions(projectId: string) {
+  return queryOptions({
+    queryKey: elementKeys.brainstorm(projectId),
+    queryFn: () => brainstormStatusFn({ data: { projectId } }),
     staleTime: STALE_TIME.board,
   });
 }

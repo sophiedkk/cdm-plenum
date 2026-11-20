@@ -133,9 +133,14 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
       // The board shows the element with its source.
       await facilitator.goto(`/projects/${projectId}/board`);
-      const card = facilitator.getByRole("article").filter({ hasText: "Body position" });
-      await expect(card).toContainText(fill(text.board_source_kind_delphi, { number: 1 }));
-      await expect(card).toContainText("Lying, sitting or standing");
+      const toggle = facilitator.getByRole("button", { name: "Body position", exact: true });
+      await expectHydrated(toggle);
+      await toggle.click();
+      const details = facilitator.getByRole("region", {
+        name: fill(text.board_details_label, { name: "Body position" }),
+      });
+      await expect(details).toContainText(fill(text.board_source_kind_delphi, { number: 1 }));
+      await expect(details).toContainText("Lying, sitting or standing");
       await expectAxeClean(facilitator);
       await facilitator.context().close();
     });
