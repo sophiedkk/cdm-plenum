@@ -90,6 +90,18 @@ the project uses [Semantic Versioning](https://semver.org/).
   stakeholder group under a disclosure.
 - The demo project of `pnpm db:seed-demo` is now in the decide phase, since
   its second round is open.
+- Participants see only the steps of the current phase. In scope they see
+  Overview, Scope and Members and can comment on the scope. In discover the
+  Brainstorm tab and the element board appear: participants add elements and
+  comment on them, and the scope becomes read-only. In decide the Brainstorm
+  tab goes, the board becomes read-only and the Rounds tab appears for rating.
+  In hand-off every earlier step stays readable. A read-only step shows "This
+  step is closed" where its comment form or add button was, and a link to a
+  step that has not started leads to the project overview.
+- The facilitator sees every tab in every phase and can prepare ahead: edit
+  the scope, add or import elements and set up a round. A round opens in the
+  decide phase only, the board is revealed by hand in the discover phase only,
+  and the project cannot leave the decide phase while a round is open.
 
 ## [0.1.0] - 2026-11-19
 
