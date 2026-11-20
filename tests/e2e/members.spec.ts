@@ -59,10 +59,8 @@ async function openAbout(page: Page, project: SeededProject, locale: Locale) {
 
 /** The people of one group in "About this project": the group's name and what follows it. */
 function aboutGroup(panel: ReturnType<Page["getByRole"]>, name: string) {
-  return panel
-    .locator("div")
-    .filter({ has: panel.getByRole("heading", { name, exact: true }) })
-    .last();
+  // The heading and the people of its group share one parent.
+  return panel.getByRole("heading", { name, exact: true }).locator("xpath=..");
 }
 
 function settingsUrl(project: SeededProject): string {

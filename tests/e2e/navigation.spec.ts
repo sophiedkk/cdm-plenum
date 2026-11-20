@@ -121,6 +121,14 @@ async function seedDeciding(db: Kysely<DB>): Promise<Deciding> {
   };
 }
 
+/** A screenshot for review, once the colours have faded to the current theme. */
+async function snap(page: Page, options: { path: string; fullPage?: boolean }): Promise<void> {
+  await page.waitForFunction(() =>
+    document.getAnimations().every((animation) => animation.playState !== "running"),
+  );
+  await page.screenshot(options);
+}
+
 /** Whether the page scrolls sideways. */
 async function scrollsSideways(page: Page): Promise<boolean> {
   return page.evaluate(
@@ -152,7 +160,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
           "",
       );
       await expectAxeCleanInBothThemes(page);
-      await page.screenshot({ path: test.info().outputPath(`projects-${locale}.png`) });
+      await snap(page, { path: test.info().outputPath(`projects-${locale}.png`) });
 
       await expectHydrated(row);
       await row.click();
@@ -189,12 +197,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         decided.getByRole("link", { name: fill(text.projects_decided_results, { number: 1 }) }),
       ).toBeVisible();
       await expectAxeCleanInBothThemes(page);
-      await page.screenshot({
+      await snap(page, {
         path: test.info().outputPath(`home-decide-${locale}.png`),
         fullPage: true,
       });
       await page.emulateMedia({ colorScheme: "dark" });
-      await page.screenshot({
+      await snap(page, {
         path: test.info().outputPath(`home-decide-dark-${locale}.png`),
         fullPage: true,
       });
@@ -244,9 +252,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       expect(await groupScores.boundingBox()).toEqual(spot);
       await groupScores.click();
       await expectAxeCleanInBothThemes(page);
-      await page.screenshot({ path: test.info().outputPath(`rating-${locale}.png`) });
+      await snap(page, { path: test.info().outputPath(`rating-${locale}.png`) });
       await page.emulateMedia({ colorScheme: "dark" });
-      await page.screenshot({ path: test.info().outputPath(`rating-dark-${locale}.png`) });
+      await snap(page, { path: test.info().outputPath(`rating-dark-${locale}.png`) });
       await page.emulateMedia({ colorScheme: "light" });
     });
 
@@ -283,9 +291,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         ),
       ).toBeVisible();
       await expectAxeCleanInBothThemes(page);
-      await page.screenshot({ path: test.info().outputPath(`overview-discover-${locale}.png`) });
+      await snap(page, { path: test.info().outputPath(`overview-discover-${locale}.png`) });
       await page.emulateMedia({ colorScheme: "dark" });
-      await page.screenshot({
+      await snap(page, {
         path: test.info().outputPath(`overview-discover-dark-${locale}.png`),
       });
       await page.emulateMedia({ colorScheme: "light" });
@@ -296,7 +304,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await reveal.click();
       await page.getByRole("button", { name: text.board_reveal_confirm }).click();
       await expect(page.getByText(text.board_revealed)).toBeVisible();
-      await expect(page.getByText(text.projects_check_revealed)).toBeVisible();
+      await expect(page.getByText(text.projects_check_revealed, { exact: true })).toBeVisible();
       await expect(page.getByRole("button", { name: text.board_reveal })).toHaveCount(0);
 
       // On to decide, through the confirmation below the buttons.
@@ -346,9 +354,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         page.getByRole("link", { name: fill(text.projects_check_round_go, { number: 2 }) }),
       ).toBeVisible();
       await expectAxeCleanInBothThemes(page);
-      await page.screenshot({ path: test.info().outputPath(`overview-decide-${locale}.png`) });
+      await snap(page, { path: test.info().outputPath(`overview-decide-${locale}.png`) });
       await page.emulateMedia({ colorScheme: "dark" });
-      await page.screenshot({ path: test.info().outputPath(`overview-decide-dark-${locale}.png`) });
+      await snap(page, { path: test.info().outputPath(`overview-decide-dark-${locale}.png`) });
     });
   });
 }
@@ -366,7 +374,7 @@ test("a participant's discover home asks for elements and shows no decisions yet
   await expect(card).toContainText(text.projects_home_fact_added);
   await expect(page.getByRole("region", { name: text.projects_decided_title })).toHaveCount(0);
   await expectAxeCleanInBothThemes(page);
-  await page.screenshot({ path: test.info().outputPath("home-discover-en.png"), fullPage: true });
+  await snap(page, { path: test.info().outputPath("home-discover-en.png"), fullPage: true });
   await card.getByRole("link", { name: text.projects_task_discover_action }).click();
   await expect(page).toHaveURL(
     (url) => url.pathname === `/projects/${project.projectId}/brainstorm`,
@@ -383,10 +391,10 @@ test.describe("on a phone", () => {
       page.getByRole("region", { name: fill(MESSAGES.en.projects_home_turn_rate, { number: 2 }) }),
     ).toBeVisible();
     expect(await scrollsSideways(page)).toBe(false);
-    await page.screenshot({ path: test.info().outputPath("home-phone.png"), fullPage: true });
+    await snap(page, { path: test.info().outputPath("home-phone.png"), fullPage: true });
     await page.goto(`/projects/${seeded.projectId}/rounds/${seeded.round2}/rate`);
     await expect(page.getByRole("region", { name: "Cuff size" })).toBeVisible();
     expect(await scrollsSideways(page)).toBe(false);
-    await page.screenshot({ path: test.info().outputPath("rating-phone.png"), fullPage: true });
+    await snap(page, { path: test.info().outputPath("rating-phone.png"), fullPage: true });
   });
 });
