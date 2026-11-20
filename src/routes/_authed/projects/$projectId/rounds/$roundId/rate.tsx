@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { z } from "zod";
@@ -121,6 +121,7 @@ function RatePage() {
   const queryKey = myRatingsQueryOptions(projectId, roundId).queryKey;
   const total = elements.length;
   const shown = shownCard(card, total);
+  const navigate = useNavigate({ from: Route.fullPath });
 
   /** Keeps the cached element in step with a save, so the progress counts it at once. */
   const remember = (elementId: string, change: (element: MyElement) => MyElement) => {
@@ -146,32 +147,20 @@ function RatePage() {
             {m.rounds_closes_at_short()} <LocalDateTime iso={round.closesAt} />
           </span>
           <span className="font-medium">{m.rounds_rate_progress({ rated, total })}</span>
-        </p>
-        <p className="text-sm text-muted-foreground">
-          {m.rounds_rate_intro()}{" "}
-          {m.rounds_rate_bands({
-            bottomFrom: round.rule.scaleMin,
-            bottomTo: round.rule.bottomBandMax,
-            topFrom: round.rule.topBandMin,
-            topTo: round.rule.scaleMax,
-          })}
-        </p>
-        <p className="flex items-start gap-2 text-sm">
-          {round.facilitatorSeesRaters ? (
-            <EyeIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          ) : (
-            <EyeOffIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          )}
-          <span>
+          <span className="flex items-center gap-2">
+            {round.facilitatorSeesRaters ? (
+              <EyeIcon aria-hidden="true" className="size-4 shrink-0" />
+            ) : (
+              <EyeOffIcon aria-hidden="true" className="size-4 shrink-0" />
+            )}
             <strong className="font-medium">
               {round.facilitatorSeesRaters
                 ? m.rounds_rate_visible_title()
                 : m.rounds_rate_hidden_title()}
             </strong>
-            {". "}
-            {round.facilitatorSeesRaters ? m.rounds_raters_visible() : m.rounds_raters_hidden()}
           </span>
         </p>
+        <p className="text-sm text-muted-foreground">{m.rounds_rate_intro()}</p>
       </div>
       {!canRate && (
         <Alert>
@@ -199,22 +188,28 @@ function RatePage() {
         number={round.number}
         elements={elements}
         shown={shown}
-        cardLink={(index, children, className) => (
+        cardLink={(index, children, className, current) => (
           <Link
             to="/projects/$projectId/rounds/$roundId/rate"
             params={{ projectId, roundId }}
             search={{ card: index }}
             className={className}
+            // The router marks the link to the URL's own card the same way.
+            aria-current={current ? "page" : undefined}
           >
             {children}
           </Link>
         )}
-        renderCard={(element, position, headingRef) => (
+        go={(index) => {
+          void navigate({ search: { card: index } });
+        }}
+        renderCard={(element, position, headingRef, progress) => (
           <RatingElement
             key={element.id}
             element={element}
             details={detailsOf(boardElements.get(element.id))}
             position={position}
+            progress={progress}
             headingRef={headingRef}
             rule={round.rule}
             editable={editable}
@@ -268,6 +263,7 @@ function RatePage() {
         }
       />
       <p className="text-sm text-muted-foreground">
+        {round.facilitatorSeesRaters ? m.rounds_raters_visible() : m.rounds_raters_hidden()}{" "}
         {m.rounds_rate_autosave()}{" "}
         <Link
           to="/projects/$projectId/rounds"

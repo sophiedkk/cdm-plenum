@@ -229,8 +229,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expectAxeClean(page);
       await page.screenshot({ path: test.info().outputPath(`rate-${locale}.png`) });
 
-      await position.getByText(fill(text.rounds_rate_previous_details, { count: 1 })).click();
+      // The reason of round 1 shows on the card; the figures are behind the details.
       await expect(position).toContainText("Recorded at every visit");
+      await position.getByText(text.rounds_rate_previous_figures).click();
       await expect(position).toContainText(text.rounds_result_top_band);
       await expectAxeClean(page);
       await page.screenshot({

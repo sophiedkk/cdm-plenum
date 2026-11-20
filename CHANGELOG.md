@@ -61,6 +61,22 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The rating card shows the scale as large buttons, grouped in the round's
+  three bands with a label under each: does not belong in the model, unsure,
+  belongs in the model. "Unable to rate" stands apart. A chosen button is
+  filled and has a check mark, and "Saved" now names the score.
+- In round 2 and later, the card marks your own earlier score: an outline and
+  "you" on its bar in the distribution, and "Round 1: 6" above its button.
+  The first three reasons of the earlier round show on the card, with "Show
+  all" for the rest; the median and band shares stay under the details.
+- Next to "Element 3 of 8" a dot per element shows which ones you rated.
+  Select a dot to go to that element.
+- Keys on the rating card: 1 to 9 choose a score, U chooses "unable to
+  rate", N goes to the next element and P to the previous one. They do
+  nothing while you type in a field.
+- The top of the rating page is shorter: it no longer explains the bands,
+  and "Your ratings are anonymous" sits on the status line. The full
+  sentence about who sees your ratings moved under the cards.
 - `pnpm db:seed-demo` loads one demo project per phase: Body temperature in
   scope, Heart rate in discover with a private brainstorm not yet revealed,
   Blood pressure in decide and Respiratory rate in hand-off with two closed

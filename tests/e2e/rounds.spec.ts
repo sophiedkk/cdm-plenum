@@ -177,7 +177,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         await expect(systolic.getByRole("radio", { name: String(score) })).toBeChecked();
         await rater.keyboard.up("ArrowRight");
       }
-      await expect(systolic.getByRole("status").first()).toHaveText(text.rounds_rate_saved);
+      await expect(systolic.getByRole("status").first()).toHaveText(
+        fill(text.rounds_rate_saved_score, { score: 8 }),
+      );
       // "Next" moves to the next card and puts focus on its heading.
       const next = rater.getByRole("link", { name: text.rounds_card_next });
       await tabTo(rater, next, 30);
@@ -187,7 +189,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await cuff
         .getByRole("radio", { name: fill(text.rounds_rate_score_highest, { score: 9 }) })
         .click();
-      await expect(cuff.getByRole("status").first()).toHaveText(text.rounds_rate_saved);
+      await expect(cuff.getByRole("status").first()).toHaveText(
+        fill(text.rounds_rate_saved_score, { score: 9 }),
+      );
       await expect(
         rater.getByText(fill(text.rounds_rate_progress, { rated: 2, total: 2 })),
       ).toBeVisible();
@@ -200,11 +204,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const unable = otherSystolic.getByRole("radio", { name: text.rounds_rate_unable });
       await expectHydrated(unable);
       await unable.click();
-      await expect(otherSystolic.getByRole("status").first()).toHaveText(text.rounds_rate_saved);
+      await expect(otherSystolic.getByRole("status").first()).toHaveText(
+        text.rounds_rate_saved_unable,
+      );
       await other.getByRole("link", { name: text.rounds_card_next }).click();
       const otherCuff = other.getByRole("region", { name: "Cuff size" });
       await otherCuff.getByRole("radio", { name: "2" }).click();
-      await expect(otherCuff.getByRole("status").first()).toHaveText(text.rounds_rate_saved);
+      await expect(otherCuff.getByRole("status").first()).toHaveText(
+        fill(text.rounds_rate_saved_score, { score: 2 }),
+      );
 
       // The facilitator sees the response, then closes the round after its date.
       await page.reload();
@@ -296,7 +304,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       });
       await expectHydrated(highest);
       await highest.click();
-      await expect(heartRate.getByRole("status").first()).toHaveText(text.rounds_rate_saved);
+      await expect(heartRate.getByRole("status").first()).toHaveText(
+        fill(text.rounds_rate_saved_score, { score: 9 }),
+      );
       await expect(
         page.getByText(fill(text.rounds_rate_progress, { rated: 1, total: 1 })),
       ).toBeVisible();
