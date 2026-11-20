@@ -127,11 +127,19 @@ scripts/dev/compose.sh exec dev pnpm db:migrate
 scripts/dev/compose.sh exec dev pnpm admin:grant you@example.test --facilitator
 ```
 
-To try the whole flow at once, load the demo project "Blood pressure
-(demo)": a scope, eight elements, eight invented participants in five
-stakeholder groups, a closed first round with results, and an open second
-round. Your address becomes facilitator and administrator of it; a second run
-changes nothing.
+To try every phase at once, load the demo projects. Each has the same eight
+invented participants in five stakeholder groups and stands in another
+phase:
+
+| Project | Phase | What it shows |
+| --- | --- | --- |
+| Body temperature (demo) | Scope | A scope statement with three comments |
+| Heart rate (demo) | Discover | A private brainstorm by five participants, board not revealed yet |
+| Blood pressure (demo) | Decide | A closed first round with results and an open second round |
+| Respiratory rate (demo) | Hand-off | Two closed rounds, ready for export |
+
+Your address becomes facilitator of every project and administrator of the
+app. A second run adds only the projects that are missing.
 
 ```sh
 scripts/dev/compose.sh exec dev pnpm db:seed-demo --facilitator you@example.test
@@ -139,7 +147,8 @@ scripts/dev/compose.sh exec dev pnpm db:seed-demo --facilitator you@example.test
 
 The participants have `example.test` addresses (for example
 `nurse.a@example.test`); sign in as one in a private window to see the
-participant's view and rate in round 2.
+participant's view: their task on each project's overview, their own
+brainstorm in Heart rate, and round 2 to rate in Blood pressure.
 
 Run the checks (typecheck, lint, unit tests) with `scripts/dev/pnpm.sh check`,
 and the browser tests with `scripts/dev/e2e.sh`.

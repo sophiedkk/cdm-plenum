@@ -59,6 +59,11 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `pnpm db:seed-demo` loads one demo project per phase: Body temperature in
+  scope, Heart rate in discover with a private brainstorm not yet revealed,
+  Blood pressure in decide and Respiratory rate in hand-off with two closed
+  rounds. A database that already has the blood pressure demo gets the other
+  three.
 - You now rate one element at a time. Each card shows the element's name and
   description, your score and the scores of the previous round, the scale
   and a reason field, and says where you are, such as "Element 3 of 8". Use
