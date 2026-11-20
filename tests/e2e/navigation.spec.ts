@@ -13,10 +13,9 @@ import type { DB } from "../../src/server/db/schema.gen.ts";
 import { closeRound } from "../../src/server/rounds/queries.ts";
 import { saveRating } from "../../src/server/rounds/ratings.ts";
 import { openedRound } from "../../src/server/rounds/test-round.ts";
-import { insertElement, joinedParticipant } from "../../src/server/test-fixtures.ts";
+import { emailOf, insertElement, joinedParticipant } from "../../src/server/test-fixtures.ts";
 import { seedElement, seedScope, signInTo, userIdOf } from "./board-seed.ts";
 import {
-  addressOf,
   BROWSER_LOCALE,
   expect,
   expectAxeClean,
@@ -119,7 +118,7 @@ async function seedDeciding(db: Kysely<DB>): Promise<Deciding> {
     projectId,
     round2,
     facilitator: project.facilitator.email,
-    nurse: addressOf(names[0] ?? ""),
+    nurse: emailOf(raters[0] ?? ""),
   };
 }
 

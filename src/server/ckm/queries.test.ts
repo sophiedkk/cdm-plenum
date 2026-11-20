@@ -9,7 +9,7 @@ import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
 import { acceptInvitationsOnSignIn } from "../invitations/acceptance.ts";
 import { invite } from "../invitations/queries.ts";
-import { facilitatorWithProject, groupId, insertUser } from "../test-fixtures.ts";
+import { emailOf, facilitatorWithProject, groupId, insertUser } from "../test-fixtures.ts";
 import type {
   CkmArchetype,
   CkmArchetypeElements,
@@ -90,7 +90,7 @@ async function setup() {
     {
       projectId,
       groupId: await groupId(db, projectId, "Nursing"),
-      email: "par@example.test",
+      email: emailOf(participant),
     },
     { baseUrl: "http://localhost:3000", mailer: null, now: new Date() },
   );

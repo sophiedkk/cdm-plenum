@@ -7,6 +7,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
+import { emailOf } from "../test-fixtures.ts";
 import { createRound } from "./queries.ts";
 import { clearRating, myRatings, ratingsByParticipant, saveRating } from "./ratings.ts";
 import {
@@ -298,10 +299,21 @@ describe("ratingsByParticipant (DE4)", () => {
     const byRater = ok(
       await ratingsByParticipant(db, p.facilitator, { projectId: p.projectId, roundId }),
     );
-    expect(byRater.map((r) => [r.email, r.groupName, r.ratings])).toEqual([
-      ["n1@example.test", "Nursing", [{ elementId: p.elements[0], score: 7, reason: "Core item" }]],
-      ["t1@example.test", "Terminology", [{ elementId: p.elements[0], score: null, reason: null }]],
-    ]);
+    const byEmail = (a: unknown[], b: unknown[]) => String(a[0]).localeCompare(String(b[0]));
+    expect(byRater.map((r) => [r.email, r.groupName, r.ratings]).sort(byEmail)).toEqual(
+      [
+        [
+          emailOf(p.raters.n1),
+          "Nursing",
+          [{ elementId: p.elements[0], score: 7, reason: "Core item" }],
+        ],
+        [
+          emailOf(p.raters.t1),
+          "Terminology",
+          [{ elementId: p.elements[0], score: null, reason: null }],
+        ],
+      ].sort(byEmail),
+    );
   });
 
   it("refuses a participant (forbidden), a non-member (not_found) and an unknown round", async () => {

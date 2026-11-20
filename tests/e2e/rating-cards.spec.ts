@@ -16,11 +16,10 @@ import { saveDetailFlag } from "../../src/server/rounds/flags.ts";
 import { closeRound } from "../../src/server/rounds/queries.ts";
 import { saveRating } from "../../src/server/rounds/ratings.ts";
 import { openedRound } from "../../src/server/rounds/test-round.ts";
-import { insertElement, joinedParticipant } from "../../src/server/test-fixtures.ts";
+import { emailOf, insertElement, joinedParticipant } from "../../src/server/test-fixtures.ts";
 import { expectAxeCleanAfterToasts } from "./axe.ts";
 import { userIdOf } from "./board-seed.ts";
 import {
-  addressOf,
   BROWSER_LOCALE,
   expect,
   expectAxeClean,
@@ -129,7 +128,7 @@ async function seedRoundTwo(db: Kysely<DB>) {
   );
   if (!closed.ok) throw new Error(`close refused: ${closed.error}`);
   const round2 = await openedRound(db, facilitator, projectId, {}, "An invented test panel");
-  return { projectId, round2, nurse: addressOf(names[0] ?? "") };
+  return { projectId, round2, nurse: emailOf(raters[0] ?? "") };
 }
 
 for (const locale of ["en", "nl"] as const satisfies Locale[]) {

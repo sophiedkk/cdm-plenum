@@ -9,7 +9,7 @@ import { grantAppRole, userHasAppRole } from "../admin/app-roles.ts";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
 import type { Mailer, MailMessage } from "../mail.ts";
-import { facilitatorWithProject, groupId, insertUser } from "../test-fixtures.ts";
+import { emailOf, facilitatorWithProject, groupId, insertUser } from "../test-fixtures.ts";
 import { acceptInvitationsOnSignIn, hasPendingInvitation, mayCreateAccount } from "./acceptance.ts";
 import { INVITATION_LIFETIME_SECONDS } from "./lifetime.ts";
 import { invitationPreview, invite, listInvitations, revokeInvitation } from "./queries.ts";
@@ -37,9 +37,9 @@ function capture(): Mailer & { sent: MailMessage[] } {
 }
 
 async function setup() {
-  const { userId: facilitator, projectId } = await facilitatorWithProject(db);
+  const { userId: facilitator, projectId, email } = await facilitatorWithProject(db);
   const nursing = await groupId(db, projectId, "Nursing");
-  return { facilitator, projectId, nursing };
+  return { facilitator, facilitatorEmail: email, projectId, nursing };
 }
 
 async function inviteAddress(
@@ -124,10 +124,10 @@ describe("invite (PR3)", () => {
   });
 
   it("refuses a member of the project and an address with a pending invitation", async () => {
-    const { facilitator, projectId, nursing } = await setup();
+    const { facilitator, facilitatorEmail, projectId, nursing } = await setup();
     const input = { projectId, groupId: nursing };
     const deps = { baseUrl: BASE, mailer: null, now: new Date() };
-    expect(await invite(db, facilitator, { ...input, email: "fac@example.test" }, deps)).toEqual({
+    expect(await invite(db, facilitator, { ...input, email: facilitatorEmail }, deps)).toEqual({
       ok: false,
       error: "already_member",
     });
@@ -147,8 +147,8 @@ describe("invite (PR3)", () => {
 
   it("refuses a participant (forbidden) and a non-member (not_found)", async () => {
     const { facilitator, projectId, nursing } = await setup();
-    await inviteAddress(facilitator, projectId, nursing, "par@example.test");
     const participant = await insertUser(db, "par");
+    await inviteAddress(facilitator, projectId, nursing, emailOf(participant));
     await acceptInvitationsOnSignIn(db, participant, new Date());
     const outsider = await insertUser(db, "out");
     const input = { projectId, groupId: nursing, email: "x@example.test" };
@@ -188,8 +188,9 @@ describe("listInvitations and revokeInvitation", () => {
     );
     const revoked = await inviteAddress(facilitator, projectId, nursing, "r@example.test");
     await revokeInvitation(db, facilitator, { projectId, invitationId: revoked.invitationId });
-    const accepted = await inviteAddress(facilitator, projectId, nursing, "a@example.test");
-    await acceptInvitationsOnSignIn(db, await insertUser(db, "a"), new Date());
+    const joiner = await insertUser(db, "a");
+    const accepted = await inviteAddress(facilitator, projectId, nursing, emailOf(joiner));
+    await acceptInvitationsOnSignIn(db, joiner, new Date());
     const listed = await listInvitations(db, facilitator, projectId, {
       baseUrl: BASE,
       now: new Date(),
@@ -232,13 +233,14 @@ describe("invitationPreview", () => {
   it("shows the project name for a pending invitation only (a used or expired link is refused)", async () => {
     const { facilitator, projectId, nursing } = await setup();
     const now = new Date();
-    const created = await inviteAddress(facilitator, projectId, nursing, "a@example.test", now);
+    const joiner = await insertUser(db, "a");
+    const created = await inviteAddress(facilitator, projectId, nursing, emailOf(joiner), now);
     expect(await invitationPreview(db, created.invitationId, now)).toEqual({
       projectName: "Blood pressure",
     });
     const later = new Date(now.getTime() + INVITATION_LIFETIME_SECONDS * 1000);
     expect(await invitationPreview(db, created.invitationId, later)).toBeNull();
-    await acceptInvitationsOnSignIn(db, await insertUser(db, "a"), now);
+    await acceptInvitationsOnSignIn(db, joiner, now);
     expect(await invitationPreview(db, created.invitationId, now)).toBeNull();
     expect(await invitationPreview(db, "no-such-invitation", now)).toBeNull();
   });
@@ -247,8 +249,8 @@ describe("invitationPreview", () => {
 describe("acceptInvitationsOnSignIn", () => {
   it("makes the user participant, member of the group, and gives a rating code", async () => {
     const { facilitator, projectId, nursing } = await setup();
-    const created = await inviteAddress(facilitator, projectId, nursing, "a@example.test");
     const userId = await insertUser(db, "a");
+    const created = await inviteAddress(facilitator, projectId, nursing, emailOf(userId));
     expect(await acceptInvitationsOnSignIn(db, userId, new Date())).toBe(1);
     const member = await db
       .selectFrom("member")
@@ -274,28 +276,28 @@ describe("acceptInvitationsOnSignIn", () => {
   });
 
   it("never grants the application role facilitator", async () => {
-    const { facilitator, projectId, nursing } = await setup();
-    await inviteAddress(facilitator, projectId, nursing, "a@example.test");
+    const { facilitator, facilitatorEmail, projectId, nursing } = await setup();
     const userId = await insertUser(db, "a");
+    await inviteAddress(facilitator, projectId, nursing, emailOf(userId));
     await acceptInvitationsOnSignIn(db, userId, new Date());
     expect(await userHasAppRole(db, userId, "facilitator")).toBe(false);
     expect(await db.selectFrom("app_role").select("email").execute()).toEqual([
-      { email: "fac@example.test" },
+      { email: facilitatorEmail },
     ]);
   });
 
   it("accepts nothing that expired or was revoked", async () => {
     const { facilitator, projectId, nursing } = await setup();
+    const userId = await insertUser(db, "a");
     const expired = await inviteAddress(
       facilitator,
       projectId,
       nursing,
-      "a@example.test",
+      emailOf(userId),
       new Date(Date.now() - 49 * HOUR),
     );
-    const userId = await insertUser(db, "a");
     expect(await acceptInvitationsOnSignIn(db, userId, new Date())).toBe(0);
-    const revoked = await inviteAddress(facilitator, projectId, nursing, "a@example.test");
+    const revoked = await inviteAddress(facilitator, projectId, nursing, emailOf(userId));
     await revokeInvitation(db, facilitator, { projectId, invitationId: revoked.invitationId });
     expect(await acceptInvitationsOnSignIn(db, userId, new Date())).toBe(0);
     expect(
@@ -322,8 +324,8 @@ describe("acceptInvitationsOnSignIn", () => {
 
   it("keeps the role of a member who joined while the invitation was pending", async () => {
     const { facilitator, projectId, nursing } = await setup();
-    await inviteAddress(facilitator, projectId, nursing, "a@example.test");
     const userId = await insertUser(db, "a");
+    await inviteAddress(facilitator, projectId, nursing, emailOf(userId));
     await db
       .insertInto("member")
       .values({
@@ -356,7 +358,7 @@ describe("acceptInvitationsOnSignIn", () => {
     const { facilitator, projectId } = await setup();
     const other = await facilitatorWithProject(db, "other");
     const patient = await groupId(db, projectId, "Patient");
-    await inviteAddress(facilitator, projectId, patient, "other@example.test");
+    await inviteAddress(facilitator, projectId, patient, other.email);
     expect(await acceptInvitationsOnSignIn(db, other.userId, new Date())).toBe(1);
     const roles = await db
       .selectFrom("member")

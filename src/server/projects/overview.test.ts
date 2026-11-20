@@ -18,6 +18,7 @@ import { saveRating } from "../rounds/ratings.ts";
 import { closedNow, ok, openedRound, panelProject } from "../rounds/test-round.ts";
 import { addScopeComment, updateScope } from "../scope/queries.ts";
 import {
+  emailOf,
   facilitatorWithProject,
   groupId,
   insertElement,
@@ -311,7 +312,7 @@ describe("listProjectRows (PR2, PR8)", () => {
       {
         projectId: other.projectId,
         groupId: await groupId(db, other.projectId, "Nursing"),
-        email: "n1@example.test",
+        email: emailOf(a.raters.n1),
       },
       { baseUrl: "http://localhost:3000", mailer: null, now: new Date() },
     );
@@ -355,7 +356,7 @@ describe("sendBrainstormReminder (EL13)", () => {
     expect(sent).toEqual({ ok: true, value: { sent: 1 } });
     expect(mail.send).toHaveBeenCalledTimes(1);
     const [message] = mail.send.mock.calls[0] as unknown as [{ to: string; text: string }];
-    expect(message.to).toBe("par2@example.test");
+    expect(message.to).toBe(emailOf(p.otherParticipant));
     expect(message.text).toContain(`http://localhost:3000/projects/${p.projectId}/brainstorm`);
     const log = await db
       .selectFrom("activity_log")
@@ -382,7 +383,7 @@ describe("sendBrainstormReminder (EL13)", () => {
     });
     expect(sent).toEqual({ ok: true, value: { sent: 1 } });
     const [message] = mail.send.mock.calls[0] as unknown as [{ to: string; text: string }];
-    expect(message.to).toBe("par2@example.test");
+    expect(message.to).toBe(emailOf(p.otherParticipant));
     expect(message.text).toContain(`http://localhost:3000/projects/${p.projectId}/first-look`);
   });
 
@@ -408,7 +409,7 @@ describe("sendBrainstormReminder (EL13)", () => {
     const p = await projectWithMembers(db, "discover");
     const mail = {
       send: vi.fn(async ({ to }: { to: string }) => {
-        if (to.startsWith("par@")) throw new Error("smtp down");
+        if (to === emailOf(p.participant)) throw new Error("smtp down");
       }),
     };
     const quiet = vi.spyOn(console, "error").mockImplementation(() => {});

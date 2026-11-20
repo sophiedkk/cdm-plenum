@@ -153,7 +153,7 @@ describe("closing a realistic round (DE5)", () => {
 
   it("counts a participant who has not started, and leaves out one who joined after closing", async () => {
     const { facilitator, projectId, roundId } = await realisticRound();
-    await joinedParticipant(db, facilitator, projectId, "Nursing", "n5");
+    const n5 = await joinedParticipant(db, facilitator, projectId, "Nursing", "n5");
     let rate = ok(await responseRate(db, facilitator, { projectId, roundId }, { now: new Date() }));
     expect(rate.total).toEqual({ invited: 11, started: 10, completed: 9 });
     const closedAt = new Date(Date.now() + 2 * 86_400_000);
@@ -161,7 +161,7 @@ describe("closing a realistic round (DE5)", () => {
     await db
       .updateTable("member")
       .set({ createdAt: new Date(closedAt.getTime() + 1000) })
-      .where("userId", "=", "user-n5")
+      .where("userId", "=", n5)
       .execute();
     rate = ok(await responseRate(db, facilitator, { projectId, roundId }, { now: new Date() }));
     expect(rate.total.invited).toBe(10);

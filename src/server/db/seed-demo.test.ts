@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { PROJECT_PHASES, type ProjectPhase } from "@/lib/project-phases";
 import { grantAppRole } from "../admin/app-roles.ts";
 import { createProject } from "../projects/queries.ts";
-import { insertUser } from "../test-fixtures.ts";
+import { emailOf, insertUser } from "../test-fixtures.ts";
 import type { DB } from "./schema.gen.ts";
 import {
   DEMO_BRAINSTORM,
@@ -206,7 +206,7 @@ describe("seedDemo", () => {
   it("adds the missing projects next to one that exists", async () => {
     db = await createTestDb();
     const userId = await insertUser(db, "earlier");
-    await grantAppRole(db, "earlier@example.test", "facilitator");
+    await grantAppRole(db, emailOf(userId), "facilitator");
     const earlier = await createProject(db, userId, { name: DEMO_PROJECTS.decide }, "en");
     if (!earlier.ok) throw new Error(earlier.error);
     const summary = await seedDemo(db, "facilitator@example.test");

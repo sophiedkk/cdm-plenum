@@ -21,7 +21,7 @@ import { createTestDb } from "../db/test-db.ts";
 import type { FhirClient, FhirFailure, FhirResult } from "../fhir/client.ts";
 import { type FhirStructure, parseStructureDefinition } from "../fhir/parse.ts";
 import { fhirFixtureJson } from "../fhir/test-package.ts";
-import { setPhase } from "../test-fixtures.ts";
+import { emailOf, setPhase } from "../test-fixtures.ts";
 import { personLeaks, projectWithMembers } from "../test-project-members.ts";
 import {
   acceptSuggestion,
@@ -467,7 +467,7 @@ describe("suggestions", () => {
     const listed = await listSourceModelsWithAuthors(db, facilitator, { projectId });
     expect(listed).toMatchObject({
       ok: true,
-      value: [{ addedBy: { email: "par@example.test" } }],
+      value: [{ addedBy: { email: emailOf(participant) } }],
     });
     expect(await listSourceModelsWithAuthors(db, participant, { projectId })).toEqual({
       ok: false,
@@ -601,7 +601,9 @@ describe("importSourceModel", () => {
       .selectFrom("element")
       .select("id")
       .where("name", "=", "SystolicBloodPressure")
+      .where("project_id", "=", projectId)
       .orderBy("created_at")
+      .orderBy("id")
       .executeTakeFirstOrThrow();
     const imported = await importSourceModel(db, facilitator, { projectId, sourceModelId: model });
     if (!imported.ok) throw new Error(imported.error);

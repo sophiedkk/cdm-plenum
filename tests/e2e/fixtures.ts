@@ -14,6 +14,7 @@ import type { ProjectPhase } from "../../src/lib/project-phases.ts";
 import type { DB } from "../../src/server/db/schema.gen.ts";
 import { invite } from "../../src/server/invitations/queries.ts";
 import {
+  emailOf,
   facilitatorWithProject,
   joinedParticipant,
   setPhase,
@@ -62,9 +63,9 @@ export async function seedProject(
   phase: ProjectPhase = "scope",
 ): Promise<SeededProject> {
   const name = uniqueName("facilitator");
-  const { userId, projectId } = await facilitatorWithProject(db, name);
+  const { userId, projectId, email } = await facilitatorWithProject(db, name);
   await setPhase(db, projectId, phase);
-  return { projectId, facilitator: { userId, email: addressOf(name) } };
+  return { projectId, facilitator: { userId, email } };
 }
 
 async function firstGroup(
@@ -84,8 +85,14 @@ async function firstGroup(
 export async function seedParticipant(db: Kysely<DB>, project: SeededProject): Promise<string> {
   const name = uniqueName("participant");
   const group = await firstGroup(db, project.projectId);
-  await joinedParticipant(db, project.facilitator.userId, project.projectId, group.name, name);
-  return addressOf(name);
+  const userId = await joinedParticipant(
+    db,
+    project.facilitator.userId,
+    project.projectId,
+    group.name,
+    name,
+  );
+  return emailOf(userId);
 }
 
 /** A pending invitation for a new address, without e-mail; returns its id and the address. */

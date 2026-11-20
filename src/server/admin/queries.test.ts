@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { APP_ROLE_KEYS } from "../db/migrations/0003_access.ts";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
-import { facilitatorWithProject, insertUser } from "../test-fixtures.ts";
+import { emailOf, facilitatorWithProject, insertUser } from "../test-fixtures.ts";
 import { grantAppRole, userHasAppRole } from "./app-roles.ts";
 import {
   deactivateAccount,
@@ -37,7 +37,7 @@ const NOW = new Date("2026-11-19T12:00:00Z");
 
 async function administrator(name = "admin"): Promise<string> {
   const id = await insertUser(db, name);
-  await grantAppRole(db, `${name}@example.test`, "administrator");
+  await grantAppRole(db, emailOf(id), "administrator");
   return id;
 }
 
@@ -56,7 +56,7 @@ async function insertSession(userId: string): Promise<void> {
 
 describe("access (Q-SEC-1)", () => {
   it("refuses every function to a user without the administrator right", async () => {
-    const { userId: facilitator } = await facilitatorWithProject(db);
+    const { userId: facilitator, email } = await facilitatorWithProject(db);
     const target = await insertUser(db, "target");
     const forbidden = { ok: false, error: "forbidden" };
     const role = { email: "x@example.test", role: "facilitator" } as const;
@@ -67,9 +67,7 @@ describe("access (Q-SEC-1)", () => {
     expect(await deactivateAccount(db, facilitator, { userId: target }, NOW)).toEqual(forbidden);
     expect(await reactivateAccount(db, facilitator, { userId: target })).toEqual(forbidden);
     expect(await listActivity(db, facilitator, {})).toEqual(forbidden);
-    expect(await db.selectFrom("app_role").select("email").execute()).toEqual([
-      { email: "fac@example.test" },
-    ]);
+    expect(await db.selectFrom("app_role").select("email").execute()).toEqual([{ email }]);
     expect(await isDeactivated(db, target)).toBe(false);
   });
 });
@@ -78,11 +76,11 @@ describe("application rights (AD1)", () => {
   it("lists the rights by address, with whether an account exists", async () => {
     const admin = await administrator();
     await grantAppRole(db, "later@example.test", "facilitator");
-    await grantAppRole(db, "admin@example.test", "facilitator");
+    await grantAppRole(db, emailOf(admin), "facilitator");
     expect(await listAppRoles(db, admin)).toEqual({
       ok: true,
       value: [
-        { email: "admin@example.test", roles: ["administrator", "facilitator"], hasAccount: true },
+        { email: emailOf(admin), roles: ["administrator", "facilitator"], hasAccount: true },
         { email: "later@example.test", roles: ["facilitator"], hasAccount: false },
       ],
     });
@@ -93,19 +91,19 @@ describe("application rights (AD1)", () => {
     const other = await insertUser(db, "other");
     const done = { ok: true, value: null };
     expect(
-      await grantRole(db, admin, { email: "Other@Example.test", role: "facilitator" }),
+      await grantRole(db, admin, { email: emailOf(other).toUpperCase(), role: "facilitator" }),
     ).toEqual(done);
-    expect(
-      await grantRole(db, admin, { email: "other@example.test", role: "administrator" }),
-    ).toEqual(done);
+    expect(await grantRole(db, admin, { email: emailOf(other), role: "administrator" })).toEqual(
+      done,
+    );
     expect(await userHasAppRole(db, other, "facilitator")).toBe(true);
     expect(await userHasAppRole(db, other, "administrator")).toBe(true);
-    expect(
-      await revokeRole(db, admin, { email: "other@example.test", role: "facilitator" }),
-    ).toEqual(done);
-    expect(
-      await revokeRole(db, admin, { email: "other@example.test", role: "administrator" }),
-    ).toEqual(done);
+    expect(await revokeRole(db, admin, { email: emailOf(other), role: "facilitator" })).toEqual(
+      done,
+    );
+    expect(await revokeRole(db, admin, { email: emailOf(other), role: "administrator" })).toEqual(
+      done,
+    );
     expect(await userHasAppRole(db, other, "facilitator")).toBe(false);
     expect(await userHasAppRole(db, other, "administrator")).toBe(false);
     const logged = await db
@@ -125,14 +123,15 @@ describe("application rights (AD1)", () => {
 
   it("refuses to revoke the administrator right from yourself (own_account)", async () => {
     const admin = await administrator();
-    await grantAppRole(db, "admin@example.test", "facilitator");
+    await grantAppRole(db, emailOf(admin), "facilitator");
     expect(
-      await revokeRole(db, admin, { email: "Admin@example.test", role: "administrator" }),
+      await revokeRole(db, admin, { email: emailOf(admin).toUpperCase(), role: "administrator" }),
     ).toEqual({ ok: false, error: "own_account" });
     expect(await userHasAppRole(db, admin, "administrator")).toBe(true);
-    expect(
-      await revokeRole(db, admin, { email: "admin@example.test", role: "facilitator" }),
-    ).toEqual({ ok: true, value: null });
+    expect(await revokeRole(db, admin, { email: emailOf(admin), role: "facilitator" })).toEqual({
+      ok: true,
+      value: null,
+    });
   });
 });
 
@@ -147,7 +146,7 @@ describe("deactivateAccount and reactivateAccount (AD1)", () => {
       value: null,
     });
     expect(await isDeactivated(db, target)).toBe(true);
-    expect(await isDeactivatedEmail(db, "Target@example.test")).toBe(true);
+    expect(await isDeactivatedEmail(db, emailOf(target).toUpperCase())).toBe(true);
     const sessions = await db.selectFrom("session").select("userId").execute();
     expect(sessions).toEqual([{ userId: admin }]);
     const accounts = await listAccounts(db, admin);

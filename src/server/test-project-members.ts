@@ -8,7 +8,7 @@ import type { ProjectPhase } from "@/lib/project-phases";
 import type { DB } from "./db/schema.gen.ts";
 import { acceptInvitationsOnSignIn } from "./invitations/acceptance.ts";
 import { invite } from "./invitations/queries.ts";
-import { facilitatorWithProject, groupId, insertUser, setPhase } from "./test-fixtures.ts";
+import { emailOf, facilitatorWithProject, groupId, insertUser, setPhase } from "./test-fixtures.ts";
 
 export interface ProjectMembers {
   projectId: string;
@@ -31,7 +31,7 @@ async function addParticipant(
   const invited = await invite(
     db,
     facilitator,
-    { projectId, groupId: await groupId(db, projectId, "Nursing"), email: `${name}@example.test` },
+    { projectId, groupId: await groupId(db, projectId, "Nursing"), email: emailOf(userId) },
     { baseUrl: "http://localhost:3000", mailer: null, now: new Date() },
   );
   if (!invited.ok) throw new Error(`invite refused: ${invited.error}`);
