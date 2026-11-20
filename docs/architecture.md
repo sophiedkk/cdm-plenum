@@ -46,8 +46,8 @@ earlier phases stay readable.
 | Phase | What happens | Requirements | Method and source |
 |---|---|---|---|
 | Scope | The facilitator writes the scope statement; participants comment; optionally the group consents to it. | SC1 to SC3 | Consent decision making, Sociocracy 3.0 |
-| Discover | Participants add candidate elements anonymously; the facilitator imports CSV files and CKM archetypes, links elements to CKM, merges duplicates. | EL1 to EL8 | Brainwriting (Diehl and Stroebe 1987, <https://doi.org/10.1037/0022-3514.53.3.497>); card sorting |
-| Decide | One or more e-Delphi rounds rate the elements on a fixed scale against a fixed rule; results per stakeholder group feed the next round. | DE1 to DE10 | e-Delphi; consensus definition from the COMET Handbook (<https://doi.org/10.1186/s13063-017-1978-4>) |
+| Discover | Participants and the facilitator collect sources; participants add candidate elements privately, guided by four questions, until the facilitator reveals the board; then they mark support and duplicates. Volunteers may sort the elements; the facilitator imports CSV files and CKM archetypes, links elements to CKM, merges duplicates and groups the list ([ADR 0012](adr/0012-discover-phase-sources-private-brainstorm-sort.md)). | EL1 to EL19 | Nominal group technique (Delbecq and Van de Ven 1971, <https://doi.org/10.1177/002188637100700404>); productivity loss in groups (Diehl and Stroebe 1987, <https://doi.org/10.1037/0022-3514.53.3.497>); long list from sources (COMET Handbook); open card sort (Reese et al. 2018, <https://doi.org/10.1093/jamia/ocy045>) |
+| Decide | One or more e-Delphi rounds rate the elements on a fixed scale against a fixed rule; results per stakeholder group feed the next round. | DE1 to DE16 | e-Delphi; consensus definition from the COMET Handbook (<https://doi.org/10.1186/s13063-017-1978-4>) |
 | Hand-off | Exports for the modellers and for the study report. | EX1 to EX5 | ACCORD reporting guideline (<https://doi.org/10.1371/journal.pmed.1004326>) |
 
 The first version (the Must rows) covers scope, the board with CSV import and
