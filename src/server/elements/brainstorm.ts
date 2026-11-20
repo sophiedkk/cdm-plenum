@@ -5,6 +5,7 @@
 // per participant, the setting and the reveal. The reveal is final, so the setting can change
 // only before it.
 import type { Kysely } from "kysely";
+import { REVEAL_PHASE } from "@/lib/phase-access";
 import type { DB } from "../db/schema.gen.ts";
 import { done, type ProjectResult, readProject, refused, withProject } from "../projects/access.ts";
 import type { Author } from "../projects/member.ts";
@@ -68,7 +69,9 @@ export async function brainstormStatus(
 
 /**
  * Reveals the board to every participant (facilitator only, EL13): from now on everyone sees
- * every element, still without authors (EL2). Refused once revealed (`board_already_revealed`).
+ * every element, still without authors (EL2). Refused once revealed (`board_already_revealed`)
+ * and outside the discover phase (`reveal_outside_discover`, PR10); opening a round in the
+ * decide phase still reveals it.
  */
 export async function revealBoard(
   db: Kysely<DB>,
@@ -76,6 +79,7 @@ export async function revealBoard(
   projectId: string,
 ): Promise<ProjectResult<null>> {
   return withProject(db, userId, projectId, { project: ["update"] }, async (trx, project) => {
+    if (project.phase !== REVEAL_PHASE) return refused("reveal_outside_discover");
     const row = await trx
       .selectFrom("project")
       .select("board_revealed_at")

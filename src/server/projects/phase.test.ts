@@ -150,7 +150,8 @@ describe("movePhase (PR4)", () => {
 
 describe("projectOverview (PR8)", () => {
   it("counts the participant's own elements only, and names nobody (Q-ANON-1)", async () => {
-    const p = await projectWithMembers(db);
+    // Participants add elements in the discover phase (PR9).
+    const p = await projectWithMembers(db, "discover");
     await add(p.participant, p.projectId, "Systolic");
     await add(p.participant, p.projectId, "Diastolic");
     await add(p.otherParticipant, p.projectId, "Cuff");
@@ -158,7 +159,7 @@ describe("projectOverview (PR8)", () => {
       await projectOverview(db, p.participant, p.projectId, { now: new Date() }),
     );
     expect(result).toEqual({
-      phase: "scope",
+      phase: "discover",
       role: "participant",
       elements: 3,
       ownElements: 2,

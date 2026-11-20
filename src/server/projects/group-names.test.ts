@@ -17,6 +17,7 @@ import {
 } from "../elements/queries.ts";
 import { addElementInput } from "../elements/schemas.ts";
 import { addScopeComment, listScopeComments } from "../scope/queries.ts";
+import { setPhase } from "../test-fixtures.ts";
 import { type ProjectMembers, personLeaks, projectWithMembers } from "../test-project-members.ts";
 import { getProject, listGroups, setGroupNamesVisible, setRaterGroup } from "./queries.ts";
 
@@ -137,6 +138,13 @@ describe("group names setting (PR7)", () => {
   it("when on, still names no author of an element or comment (Q-ANON-1)", async () => {
     await visible(true);
     const projectId = m.projectId;
+    // The scope takes comments in the scope phase, the board in the discover phase (PR9).
+    const commented = await addScopeComment(db, m.otherParticipant, {
+      projectId,
+      body: "A scope comment",
+    });
+    if (!commented.ok) throw new Error(commented.error);
+    await setPhase(db, projectId, "discover");
     // After the reveal the participant reads the other participant's element (EL13).
     const revealed = await revealBoard(db, m.facilitator, projectId);
     if (!revealed.ok) throw new Error(revealed.error);
@@ -148,7 +156,6 @@ describe("group names setting (PR7)", () => {
     if (!added.ok) throw new Error(added.error);
     const elementId = added.value.elementId;
     await addElementComment(db, m.otherParticipant, { projectId, elementId, body: "A comment" });
-    await addScopeComment(db, m.otherParticipant, { projectId, body: "A scope comment" });
     const responses = [
       await listElements(db, m.participant, projectId),
       await listElementComments(db, m.participant, { projectId, elementId }),

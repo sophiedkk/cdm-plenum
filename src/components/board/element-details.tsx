@@ -87,7 +87,8 @@ export function ElementDetails({
   projectId: string;
   element: CardElement;
   isFacilitator: boolean;
-  addComment: (body: string) => Promise<CommentOutcome>;
+  /** Left out when the phase closed comments on the board (PR9). */
+  addComment?: ((body: string) => Promise<CommentOutcome>) | undefined;
   onCommentAdded: () => Promise<void> | void;
   onEdit: () => void;
   onValues: () => void;

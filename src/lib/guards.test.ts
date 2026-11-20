@@ -5,7 +5,7 @@
 import { isRedirect } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
 import type { SessionUser } from "@/server/session/queries";
-import { hasAppRole, requireAppRole, requireUser } from "./guards.ts";
+import { hasAppRole, requireAppRole, requireStep, requireUser } from "./guards.ts";
 
 const user: SessionUser = {
   id: "user-fac",
@@ -43,5 +43,32 @@ describe("route guards", () => {
     expect(hasAppRole(user, "facilitator")).toBe(true);
     expect(hasAppRole(user, "administrator")).toBe(false);
     expect(hasAppRole(null, "facilitator")).toBe(false);
+  });
+});
+
+describe("requireStep (PR9, PR10)", () => {
+  const params = { projectId: "0190a8f0-0000-7000-8000-000000000000" };
+
+  it("sends a participant from a hidden step to the project overview", () => {
+    const error = thrown(() =>
+      requireStep("rounds")({
+        context: { project: { role: "participant", phase: "discover" } },
+        params,
+      }),
+    );
+    expect(isRedirect(error) && error.options.to).toBe("/projects/$projectId");
+    expect(isRedirect(error) && error.options.params).toEqual(params);
+  });
+
+  it("lets a participant open a step the phase shows", () => {
+    const context = { project: { role: "participant", phase: "discover" } } as const;
+    expect(thrown(() => requireStep("board")({ context, params }))).toBeUndefined();
+    expect(thrown(() => requireStep("scope")({ context, params }))).toBeUndefined();
+  });
+
+  it("lets the facilitator open every step in any phase", () => {
+    const context = { project: { role: "facilitator", phase: "scope" } } as const;
+    expect(thrown(() => requireStep("rounds")({ context, params }))).toBeUndefined();
+    expect(thrown(() => requireStep("brainstorm")({ context, params }))).toBeUndefined();
   });
 });

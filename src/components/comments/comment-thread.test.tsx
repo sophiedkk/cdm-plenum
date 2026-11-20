@@ -23,6 +23,20 @@ function renderThread(
 }
 
 describe("CommentThread", () => {
+  it("shows the comments and a closed note, without a form, when the phase closed the step (PR9)", () => {
+    render(
+      <CommentThread
+        comments={[{ id: "c1", body: "Too broad", createdAt: AT }]}
+        max={20}
+        label="Comments"
+      />,
+    );
+    expect(screen.getByRole("list", { name: "Comments" }).textContent).toContain("Too broad");
+    expect(screen.getByText(/This step is closed/)).toBeTruthy();
+    expect(screen.queryByLabelText("Your comment")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add comment" })).toBeNull();
+  });
+
   it("shows no author in a participant's list", () => {
     renderThread([{ id: "c1", body: "Too broad", createdAt: AT }]);
     const list = screen.getByRole("list", { name: "Comments" });

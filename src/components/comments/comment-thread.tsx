@@ -3,11 +3,12 @@
 
 // The comments under the scope (SC2) and under an element (EL6): the list, oldest first, and a
 // form to add one. The author shows only when the list carries one, which only the facilitator's
-// queries do (EL2, ADR 0005).
+// queries do (EL2, ADR 0005). Without `add` the step is closed (PR9): a note takes the form's place.
 import { revalidateLogic } from "@tanstack/react-form";
 import { useRef } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
+import { StepClosedNote } from "@/components/status/step-closed-note";
 import { m } from "@/i18n/messages";
 import { getLocale } from "@/i18n/runtime";
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
@@ -64,8 +65,9 @@ export function CommentThread({
   max: number;
   /** Names the list and the form, such as "Comments on Systolic". */
   label: string;
-  add: (body: string) => Promise<CommentOutcome>;
-  onAdded: () => Promise<void> | void;
+  /** Left out when the phase closed the step, so the server would refuse the comment. */
+  add?: ((body: string) => Promise<CommentOutcome>) | undefined;
+  onAdded?: (() => Promise<void> | void) | undefined;
 }>) {
   const formRef = useRef<HTMLFormElement>(null);
   const form = useAppForm({
@@ -73,6 +75,7 @@ export function CommentThread({
     validationLogic: revalidateLogic(),
     validators: { onDynamic: commentSchema(max) },
     onSubmit: async ({ value, formApi }) => {
+      if (!add) return;
       let outcome: CommentOutcome;
       try {
         outcome = await add(value.body.trim());
@@ -87,7 +90,7 @@ export function CommentThread({
       formApi.reset();
       // The submit button was disabled while sending, which drops focus; the field takes it back.
       formRef.current?.querySelector<HTMLElement>('textarea[name="body"]')?.focus();
-      await onAdded();
+      await onAdded?.();
     },
   });
 
@@ -111,33 +114,37 @@ export function CommentThread({
           })}
         </ol>
       )}
-      <form
-        ref={formRef}
-        noValidate
-        className="flex flex-col gap-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        <form.AppForm>
-          <form.FormErrors />
-        </form.AppForm>
-        <form.AppField name="body">
-          {(field) => (
-            <field.TextareaField
-              label={m.common_comment_label()}
-              description={m.common_comment_description({ max })}
-              rows={3}
-            />
-          )}
-        </form.AppField>
-        <div>
+      {add === undefined ? (
+        <StepClosedNote />
+      ) : (
+        <form
+          ref={formRef}
+          noValidate
+          className="flex flex-col gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void form.handleSubmit();
+          }}
+        >
           <form.AppForm>
-            <form.SubmitButton>{m.common_comment_submit()}</form.SubmitButton>
+            <form.FormErrors />
           </form.AppForm>
-        </div>
-      </form>
+          <form.AppField name="body">
+            {(field) => (
+              <field.TextareaField
+                label={m.common_comment_label()}
+                description={m.common_comment_description({ max })}
+                rows={3}
+              />
+            )}
+          </form.AppField>
+          <div>
+            <form.AppForm>
+              <form.SubmitButton>{m.common_comment_submit()}</form.SubmitButton>
+            </form.AppForm>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

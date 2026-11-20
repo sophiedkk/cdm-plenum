@@ -8,6 +8,8 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { baseLocale, overwriteGetLocale } from "@/i18n/runtime";
+import { PROJECT_STEPS, type ProjectStep, stepVisible } from "@/lib/phase-access";
+import { PROJECT_PHASES } from "@/lib/project-phases";
 import type { ProjectOverview } from "@/lib/project-tasks";
 import { FacilitatorPhasePanel, ParticipantTaskCard, PhaseSteps } from "./project-overview";
 
@@ -102,6 +104,22 @@ describe("ParticipantTaskCard", () => {
     expect(screen.getByText(/There is nothing for you to do now/)).toBeTruthy();
     expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
+
+  it.each(PROJECT_PHASES)(
+    "links only to a step the %s phase shows a participant (PR9)",
+    (phase) => {
+      const round = phase === "decide" ? {} : { round: null };
+      render(<ParticipantTaskCard projectId="p1" overview={overview({ phase, ...round })} />);
+      const links = screen.getAllByRole("link").map((link) => link.getAttribute("href") ?? "");
+      expect(links).toHaveLength(1);
+      for (const href of links) {
+        const segment = href.split("/")[3];
+        const step = (segment === undefined ? "overview" : segment) as ProjectStep;
+        expect(PROJECT_STEPS).toContain(step);
+        expect(stepVisible("participant", phase, step)).toBe(true);
+      }
+    },
+  );
 
   it("speaks Dutch when the locale is Dutch", () => {
     overwriteGetLocale(() => "nl");

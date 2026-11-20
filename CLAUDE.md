@@ -108,6 +108,9 @@ page from these patterns; each has a real use and a test you can copy.
   project page starts with `PageHeader level={2}` and sets its title with
   `projectTitle(match.context, m.<area>_title())`
   (`src/components/projects/project-title.ts`).
+- **Phase access:** `src/lib/phase-access.ts` says which step a participant
+  sees and writes in per phase (PR9, PR10); a step page uses `requireStep`,
+  `writeOpen` and `StepClosedNote`, its server function `phaseOpenFor`.
 - **Data:** each area keeps a key factory and query options in
   `src/server/<area>/query-options.ts` (example:
   `src/server/projects/query-options.ts`, staleness in

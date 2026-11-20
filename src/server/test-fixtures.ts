@@ -3,6 +3,7 @@
 
 // Invented accounts and projects for database tests. Addresses use the reserved `.test` domain.
 import type { Kysely } from "kysely";
+import type { ProjectPhase } from "@/lib/project-phases";
 import { grantAppRole } from "./admin/app-roles.ts";
 import type { DB } from "./db/schema.gen.ts";
 import { acceptInvitationsOnSignIn } from "./invitations/acceptance.ts";
@@ -79,4 +80,16 @@ export async function insertElement(
     .returning("id")
     .executeTakeFirstOrThrow();
   return row.id;
+}
+
+/**
+ * Puts the project in `phase` straight in the database, for tests whose setup needs the steps of
+ * that phase (PR9, PR10). The facilitator's moves are tested in projects/phase.test.ts.
+ */
+export async function setPhase(
+  db: Kysely<DB>,
+  projectId: string,
+  phase: ProjectPhase,
+): Promise<void> {
+  await db.updateTable("project").set({ phase }).where("id", "=", projectId).execute();
 }

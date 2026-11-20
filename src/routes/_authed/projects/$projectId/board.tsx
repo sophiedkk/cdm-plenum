@@ -29,6 +29,7 @@ import { MergeForm } from "@/components/board/merge-form";
 import { ValuesForm } from "@/components/board/values-form";
 import { projectTitle } from "@/components/projects/project-title";
 import { EmptyState, PageHeader } from "@/components/shell/route-states";
+import { StepClosedNote } from "@/components/status/step-closed-note";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -39,6 +40,8 @@ import {
 import { m } from "@/i18n/messages";
 import { isPrivateStep } from "@/lib/brainstorm";
 import { dataTypeByKey } from "@/lib/data-types";
+import { requireStep } from "@/lib/guards";
+import { REVEAL_PHASE, writeOpen } from "@/lib/phase-access";
 import { importArchetypeFn, linkElementFn, searchCkmFn } from "@/server/ckm/functions";
 import {
   addElementCommentFn,
@@ -61,6 +64,7 @@ import { projectKeys, projectQueryOptions } from "@/server/projects/query-option
  */
 export const Route = createFileRoute("/_authed/projects/$projectId/board")({
   validateSearch: z.object({ element: z.string().max(64).optional() }),
+  beforeLoad: requireStep("board"),
   loader: async ({ context, params }) => {
     const isFacilitator = context.project.role === "facilitator";
     const board = await context.queryClient.ensureQueryData(
@@ -84,6 +88,9 @@ function Board() {
   const { projectId } = Route.useParams();
   const { project } = Route.useRouteContext();
   const isFacilitator = project.role === "facilitator";
+  // The phase opens or closes the participant's forms; the server checks it again (PR9).
+  const canAdd = writeOpen(project.role, project.phase, "element_add");
+  const canComment = writeOpen(project.role, project.phase, "element_comment");
   const queryClient = useQueryClient();
   const { element: openElementId } = Route.useSearch();
   const { data: board } = useSuspenseQuery(boardQueryOptions(projectId, isFacilitator));
@@ -136,7 +143,7 @@ function Board() {
         description={m.board_purpose()}
         actions={
           <>
-            {addButton}
+            {canAdd && addButton}
             {isFacilitator && (
               <>
                 <Button
@@ -176,22 +183,28 @@ function Board() {
         }
       />
 
+      {!canAdd && !canComment && <StepClosedNote className="-mt-3 mb-4" />}
       {privateStep && !isFacilitator && <PrivateStepNote />}
       {privateStep && isFacilitator && status?.ok && (
         <PrivateStepStatus
           participants={status.value.participants}
           action={
-            <RevealButton
-              participants={status.value.participants}
-              reveal={() => revealBoard({ data: { projectId } })}
-              onRevealed={async () => {
-                await Promise.all([
-                  queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) }),
-                  queryClient.invalidateQueries({ queryKey: elementKeys.all(projectId) }),
-                ]);
-                await router.invalidate();
-              }}
-            />
+            // NOTE: PR10. The facilitator reveals by hand in the discover phase only.
+            project.phase !== REVEAL_PHASE ? (
+              <span className="text-muted-foreground">{m.board_reveal_in_discover()}</span>
+            ) : (
+              <RevealButton
+                participants={status.value.participants}
+                reveal={() => revealBoard({ data: { projectId } })}
+                onRevealed={async () => {
+                  await Promise.all([
+                    queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) }),
+                    queryClient.invalidateQueries({ queryKey: elementKeys.all(projectId) }),
+                  ]);
+                  await router.invalidate();
+                }}
+              />
+            )
           }
         />
       )}
@@ -209,8 +222,9 @@ function Board() {
           isFacilitator={isFacilitator}
           openElementId={openElementId}
           actions={{
-            addComment: (element, body) =>
-              addComment({ data: { projectId, elementId: element.id, body } }),
+            addComment: canComment
+              ? (element, body) => addComment({ data: { projectId, elementId: element.id, body } })
+              : undefined,
             onCommentAdded: async (element) => {
               await Promise.all([
                 queryClient.invalidateQueries({

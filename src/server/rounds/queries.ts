@@ -17,6 +17,7 @@ import {
   panelShortfall,
   type Shortfall,
 } from "@/lib/panel";
+import { ROUND_PHASE } from "@/lib/phase-access";
 import { RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
 import { log } from "../projects/queries.ts";
@@ -390,7 +391,8 @@ export interface OpenedRound {
 /**
  * Opens a draft round (DE12). In one transaction it counts the joined panel per expert type and
  * compares it with the minimum; below it, the round opens only with a reason, and otherwise
- * returns `reason_required` so the screen asks for one. Never refused for the panel alone.
+ * returns `reason_required` so the screen asks for one. Never refused for the panel alone. A
+ * round opens in the decide phase only (`round_outside_decide`, PR10).
  */
 export async function openRound(
   db: Kysely<DB>,
@@ -402,6 +404,7 @@ export async function openRound(
     const round = await findRound(trx, project.id, input.roundId, "update");
     if (!round) return refused("round_not_found");
     if (round.opened_at !== null) return refused("round_not_draft");
+    if (project.phase !== ROUND_PHASE) return refused("round_outside_decide");
     if (round.closes_at <= deps.now) return refused("closes_at_past");
     const elements = await trx
       .selectFrom("round_element")
@@ -491,14 +494,18 @@ export async function closeRound(
   });
 }
 
-/** The rounds of a project, newest first; a participant does not see a draft. */
+/**
+ * The rounds of a project, newest first; a participant does not see a draft, and before the
+ * rounds' step no round at all (PR9).
+ */
 export async function listRounds(
   db: Kysely<DB>,
   userId: string,
   projectId: string,
   deps: { now: Date },
 ): Promise<RoundResult<RoundSummary[]>> {
-  return asMember(db, userId, projectId, async (trx, role) => {
+  return asMember(db, userId, projectId, async (trx, role, roundsVisible) => {
+    if (!roundsVisible) return done([]);
     let query = trx.selectFrom("round").selectAll().where("project_id", "=", projectId);
     if (role !== "facilitator") query = query.where("opened_at", "is not", null);
     const rows = await query.orderBy("number", "desc").execute();
@@ -512,16 +519,19 @@ export interface RoundDetail extends RoundSummary {
   snapshot: PanelSnapshot | null;
 }
 
-/** One round with its elements and opening snapshot; a participant gets no draft. */
+/**
+ * One round with its elements and opening snapshot; a participant gets no draft, and before the
+ * rounds' step no round (PR9).
+ */
 export async function getRound(
   db: Kysely<DB>,
   userId: string,
   input: RoundInput,
   deps: { now: Date },
 ): Promise<RoundResult<RoundDetail>> {
-  return asMember(db, userId, input.projectId, async (trx, role) => {
+  return asMember(db, userId, input.projectId, async (trx, role, roundsVisible) => {
     const round = await findRound(trx, input.projectId, input.roundId);
-    if (!round || (round.opened_at === null && role !== "facilitator")) {
+    if (!round || !roundsVisible || (round.opened_at === null && role !== "facilitator")) {
       return refused("round_not_found");
     }
     return done({

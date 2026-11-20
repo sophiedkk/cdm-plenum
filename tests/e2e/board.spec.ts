@@ -87,7 +87,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       page,
       db,
     }) => {
-      const project = await seedProject(db);
+      const project = await seedProject(db, "discover");
       const participant = await seedParticipant(db, project);
       await seedElement(db, project.facilitator.userId, project.projectId, {
         name: "Diastolic",
@@ -148,7 +148,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
     });
 
     test("the facilitator sees authors and merges two elements", async ({ page, db }) => {
-      const project = await seedProject(db);
+      const project = await seedProject(db, "discover");
       const participant = await seedParticipant(db, project);
       const author = await userIdOf(db, participant);
       await seedElement(db, author, project.projectId, { name: "Systolic", description: "Peak" });
@@ -182,7 +182,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       page,
       db,
     }) => {
-      const project = await seedProject(db);
+      const project = await seedProject(db, "discover");
       const author = project.facilitator.userId;
       await seedElement(db, author, project.projectId, { name: "Top pressure" });
       await seedElement(db, author, project.projectId, { name: "Bottom pressure" });
@@ -223,7 +223,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       page,
       db,
     }) => {
-      const project = await seedProject(db);
+      const project = await seedProject(db, "discover");
       await signInTo(
         page,
         project.facilitator.email,
@@ -269,7 +269,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       page,
       db,
     }) => {
-      const project = await seedProject(db);
+      const project = await seedProject(db, "discover");
       await signInTo(
         page,
         project.facilitator.email,
@@ -315,7 +315,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
     const text = MESSAGES[locale];
 
     test("shows 10 elements on the first screen at 1280 by 800 (Q-USE-1)", async ({ page, db }) => {
-      const project = await seedProject(db);
+      const project = await seedProject(db, "discover");
       for (let index = 1; index <= 10; index++) {
         await seedElement(db, project.facilitator.userId, project.projectId, {
           name: `Element ${index}`,
@@ -347,7 +347,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
 test("the facilitator links an element to a CKM archetype element", async ({ page, db }) => {
   const text = MESSAGES.en;
-  const project = await seedProject(db);
+  const project = await seedProject(db, "discover");
   await seedElement(db, project.facilitator.userId, project.projectId, { name: "Top pressure" });
   await signInTo(page, project.facilitator.email, "en", `/projects/${project.projectId}/board`);
   const card = await openDetails(page, text, "Top pressure");

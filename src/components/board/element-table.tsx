@@ -40,7 +40,8 @@ function CkmStatus({ element }: Readonly<{ element: CardElement }>) {
 
 /** What the board does with one element; the table passes the element along. */
 export interface ElementActions {
-  addComment: (element: CardElement, body: string) => Promise<CommentOutcome>;
+  /** Left out when the phase closed comments on the board (PR9). */
+  addComment?: ((element: CardElement, body: string) => Promise<CommentOutcome>) | undefined;
   onCommentAdded: (element: CardElement) => Promise<void> | void;
   onEdit: (element: CardElement) => void;
   onValues: (element: CardElement) => void;
@@ -73,6 +74,7 @@ function ElementRows({
     toggle.current?.scrollIntoView({ block: "center" });
     toggle.current?.focus({ preventScroll: true });
   }, [opened]);
+  const { addComment } = actions;
   const notDecided = <span className="text-muted-foreground">{m.board_not_decided()}</span>;
 
   return (
@@ -127,7 +129,7 @@ function ElementRows({
                 projectId={projectId}
                 element={element}
                 isFacilitator={isFacilitator}
-                addComment={(body) => actions.addComment(element, body)}
+                addComment={addComment && ((body: string) => addComment(element, body))}
                 onCommentAdded={() => actions.onCommentAdded(element)}
                 onEdit={() => actions.onEdit(element)}
                 onValues={() => actions.onValues(element)}

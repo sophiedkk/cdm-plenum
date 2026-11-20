@@ -5,17 +5,20 @@
 // facilitator edits, merges, sets proposed values and sees who wrote what. The author columns are
 // selected only in the `...WithAuthors` queries, which require the facilitator (ADR 0005).
 // During the private step of the brainstorm (EL13) a participant reads only their own elements
-// and the comments on them; `visibleAuthor` decides that once per request.
+// and the comments on them; `visibleAuthor` decides that once per request. Before the board's
+// step starts a participant reads no element at all (PR9, `boardVisible`).
 import { type Kysely, sql, type Transaction } from "kysely";
 import { type ElementPrompt, isElementPrompt } from "@/lib/brainstorm";
 import type { Cardinality } from "@/lib/cardinality";
 import { CODED_DATA_TYPE_KEYS, type DataTypeKey, isDataTypeKey } from "@/lib/data-types";
+import { stepVisible } from "@/lib/phase-access";
 import type { DB } from "../db/schema.gen.ts";
 import {
   done,
   type LockedProject,
   type ProjectActionError,
   type ProjectResult,
+  phaseOpenFor,
   readProject,
   refused,
   withProject,
@@ -227,6 +230,11 @@ export async function visibleAuthor(
   return actorMemberId(db, project.id, userId);
 }
 
+/** Whether the member may read the board in the current phase (PR9). */
+function boardVisible(project: LockedProject): boolean {
+  return stepVisible(project.role, project.phase, "board");
+}
+
 /**
  * The active elements of a project in the order they were added, without authors; with
  * `onlyAuthor`, only the elements of that member.
@@ -312,27 +320,32 @@ async function boardElements(
 
 /**
  * The board for any member, without authors (EL1, EL2). In the private step a participant gets
- * only their own elements (EL13).
+ * only their own elements (EL13); before the board's step, none (PR9).
  */
 export async function listElements(
   db: Kysely<DB>,
   userId: string,
   projectId: string,
 ): Promise<ProjectResult<BoardElement[]>> {
-  return readProject(db, userId, projectId, null, async (db, project) =>
-    done(await boardElements(db, project.id, await visibleAuthor(db, project, userId))),
-  );
+  return readProject(db, userId, projectId, null, async (db, project) => {
+    if (!boardVisible(project)) return done([]);
+    return done(await boardElements(db, project.id, await visibleAuthor(db, project, userId)));
+  });
 }
 
-/** The elements the user added themselves, for the brainstorm page (EL14), any member. */
+/**
+ * The elements the user added themselves, for the brainstorm page (EL14), any member; for a
+ * participant before the board's step, none (PR9).
+ */
 export async function listOwnElements(
   db: Kysely<DB>,
   userId: string,
   projectId: string,
 ): Promise<ProjectResult<BoardElement[]>> {
-  return readProject(db, userId, projectId, null, async (db, project) =>
-    done(await boardElements(db, project.id, await actorMemberId(db, project.id, userId))),
-  );
+  return readProject(db, userId, projectId, null, async (db, project) => {
+    if (!boardVisible(project)) return done([]);
+    return done(await boardElements(db, project.id, await actorMemberId(db, project.id, userId)));
+  });
 }
 
 async function authorsOf(db: Db, memberIds: (string | null)[]): Promise<Map<string, Author>> {
@@ -395,7 +408,10 @@ async function activeElement(
   return query.executeTakeFirst();
 }
 
-/** Adds an element with a `brainstorm` source (any member, EL1). */
+/**
+ * Adds an element with a `brainstorm` source (any member, EL1). A participant adds in the
+ * discover phase only (`phase_closed`, PR9); the facilitator in any phase (PR10).
+ */
 export async function addElement(
   db: Kysely<DB>,
   userId: string,
@@ -403,6 +419,7 @@ export async function addElement(
 ): Promise<ProjectResult<{ elementId: string }>> {
   return db.transaction().execute((trx) =>
     readProject(trx, userId, input.projectId, null, async (trx, project) => {
+      if (!(await phaseOpenFor(trx, project, "element_add"))) return refused("phase_closed");
       const authorMemberId = await actorMemberId(trx, project.id, userId);
       const row = await trx
         .insertInto("element")
@@ -634,7 +651,8 @@ export async function mergeElements(
 
 /**
  * Adds a comment under an element (any member, EL6). In the private step a participant comments
- * only on their own elements; another's is `element_not_found` (EL13).
+ * only on their own elements; another's is `element_not_found` (EL13). A participant comments in
+ * the discover phase only (`phase_closed`, PR9); before it no element is found.
  */
 export async function addElementComment(
   db: Kysely<DB>,
@@ -643,10 +661,12 @@ export async function addElementComment(
 ): Promise<ProjectResult<{ commentId: string }>> {
   return db.transaction().execute((trx) =>
     readProject(trx, userId, input.projectId, null, async (trx, project) => {
+      if (!boardVisible(project)) return refused("element_not_found");
       const element = await activeElement(trx, project.id, input.elementId, {
         onlyAuthor: await visibleAuthor(trx, project, userId),
       });
       if (!element) return refused("element_not_found");
+      if (!(await phaseOpenFor(trx, project, "element_comment"))) return refused("phase_closed");
       const authorMemberId = await actorMemberId(trx, project.id, userId);
       const row = await trx
         .insertInto("element_comment")
@@ -661,7 +681,8 @@ export async function addElementComment(
 
 /**
  * The comments under an element, oldest first, without authors (any member, EL6). In the private
- * step a participant reads only the comments on their own elements (EL13).
+ * step a participant reads only the comments on their own elements (EL13); before the board's
+ * step no element is found (PR9).
  */
 export async function listElementComments(
   db: Kysely<DB>,
@@ -669,6 +690,7 @@ export async function listElementComments(
   input: ElementInput,
 ): Promise<ProjectResult<ElementComment[]>> {
   return readProject(db, userId, input.projectId, null, async (db, project) => {
+    if (!boardVisible(project)) return refused("element_not_found");
     const element = await activeElement(db, project.id, input.elementId, {
       onlyAuthor: await visibleAuthor(db, project, userId),
     });

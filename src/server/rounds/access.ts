@@ -7,6 +7,8 @@
 import type { Kysely, Transaction } from "kysely";
 import type { RuleError } from "@/lib/consensus";
 import type { Shortfall } from "@/lib/panel";
+import { stepVisible } from "@/lib/phase-access";
+import { isProjectPhase, type ProjectPhase } from "@/lib/project-phases";
 import { isProjectRole, type ProjectRole } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
 import { type LockedProject, lockProject } from "../projects/access.ts";
@@ -35,6 +37,7 @@ export const ROUND_ACTION_ERRORS = [
   "proposals_first_round_only",
   "proposal_not_found",
   "proposal_already_on_board",
+  "round_outside_decide",
 ] as const;
 export type RoundActionError = (typeof ROUND_ACTION_ERRORS)[number];
 
@@ -56,20 +59,22 @@ export function refused<T>(error: PlainError): RoundResult<T> {
   return { ok: false, error };
 }
 
-/** The actor's role in the project, without a lock, or `null` for a non-member. */
+/** The actor's role in the project and its phase, without a lock, or `null` for a non-member. */
 export async function projectRole(
   db: Kysely<DB>,
   projectId: string,
   userId: string,
-): Promise<ProjectRole | null> {
+): Promise<{ role: ProjectRole; phase: ProjectPhase } | null> {
   const row = await db
     .selectFrom("member")
     .innerJoin("project", "project.id", "member.organizationId")
-    .select("member.role")
+    .select(["member.role", "project.phase"])
     .where("member.organizationId", "=", projectId)
     .where("member.userId", "=", userId)
     .executeTakeFirst();
-  return row && isProjectRole(row.role) ? row.role : null;
+  return row && isProjectRole(row.role) && isProjectPhase(row.phase)
+    ? { role: row.role, phase: row.phase }
+    : null;
 }
 
 /**
@@ -92,17 +97,22 @@ export async function asFacilitator<T>(
 
 /**
  * Runs `action` in one transaction for any member of the project, without locking the project
- * row, so participants rating at the same moment do not wait for each other.
+ * row, so participants rating at the same moment do not wait for each other. `roundsVisible`
+ * says whether the member may read the rounds in the current phase (PR9).
  */
 export async function asMember<T>(
   db: Kysely<DB>,
   userId: string,
   projectId: string,
-  action: (trx: Transaction<DB>, role: ProjectRole) => Promise<RoundResult<T>>,
+  action: (
+    trx: Transaction<DB>,
+    role: ProjectRole,
+    roundsVisible: boolean,
+  ) => Promise<RoundResult<T>>,
 ): Promise<RoundResult<T>> {
   return db.transaction().execute(async (trx) => {
-    const role = await projectRole(trx, projectId, userId);
-    if (!role) return refused<T>("not_found");
-    return action(trx, role);
+    const member = await projectRole(trx, projectId, userId);
+    if (!member) return refused<T>("not_found");
+    return action(trx, member.role, stepVisible(member.role, member.phase, "rounds"));
   });
 }

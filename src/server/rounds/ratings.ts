@@ -204,9 +204,9 @@ export async function myRatings(
   input: RoundInput,
   deps: { now: Date },
 ): Promise<RoundResult<MyRatings>> {
-  return asMember(db, userId, input.projectId, async (trx, role) => {
+  return asMember(db, userId, input.projectId, async (trx, role, roundsVisible) => {
     const round = await findRound(trx, input.projectId, input.roundId);
-    if (!round) return refused("round_not_found");
+    if (!round || !roundsVisible) return refused("round_not_found");
     if (round.opened_at === null) {
       return refused(role === "facilitator" ? "round_not_open" : "round_not_found");
     }

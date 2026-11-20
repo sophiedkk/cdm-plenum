@@ -131,9 +131,9 @@ export async function myProposals(
   userId: string,
   input: RoundInput,
 ): Promise<RoundResult<OwnProposal[]>> {
-  return asMember(db, userId, input.projectId, async (trx, role) => {
+  return asMember(db, userId, input.projectId, async (trx, role, roundsVisible) => {
     const round = await findRound(trx, input.projectId, input.roundId);
-    if (!round || (round.opened_at === null && role !== "facilitator")) {
+    if (!round || !roundsVisible || (round.opened_at === null && role !== "facilitator")) {
       return refused("round_not_found");
     }
     const code = await ownRatingCode(trx, input.projectId, userId);

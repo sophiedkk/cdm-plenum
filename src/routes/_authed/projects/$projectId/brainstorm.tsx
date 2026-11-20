@@ -12,6 +12,7 @@ import { projectTitle } from "@/components/projects/project-title";
 import { NotFoundState, PageHeader } from "@/components/shell/route-states";
 import { m } from "@/i18n/messages";
 import { ELEMENT_PROMPTS, type ElementPrompt, isPrivateStep } from "@/lib/brainstorm";
+import { requireStep } from "@/lib/guards";
 import { promptQuestion } from "@/lib/i18n/labels";
 import { addElementFn } from "@/server/elements/functions";
 import type { BoardElement } from "@/server/elements/queries";
@@ -29,6 +30,7 @@ import { scopeQueryOptions } from "@/server/scope/query-options";
  * on the board. Similar names show only after the reveal, from the board the member may read.
  */
 export const Route = createFileRoute("/_authed/projects/$projectId/brainstorm")({
+  beforeLoad: requireStep("brainstorm"),
   loader: async ({ context, params }) => {
     const [own, scope] = await Promise.all([
       context.queryClient.ensureQueryData(ownElementsQueryOptions(params.projectId)),

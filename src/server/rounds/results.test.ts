@@ -12,6 +12,7 @@ import {
   insertElement,
   insertUser,
   joinedParticipant,
+  setPhase,
 } from "../test-fixtures.ts";
 import { closeRound, createRound, setChangeClass } from "./queries.ts";
 import { saveRating } from "./ratings.ts";
@@ -46,6 +47,8 @@ const SCORES: Record<string, (number | null | undefined)[]> = {
 
 async function realisticRound() {
   const { userId: facilitator, projectId } = await facilitatorWithProject(db);
+  // A round opens in the decide phase only (PR10).
+  await setPhase(db, projectId, "decide");
   await setChangeClass(db, facilitator, { projectId, changeClass: "B" });
   const raters: string[] = [];
   for (const [group, names] of Object.entries(RATERS)) {

@@ -105,7 +105,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
     test("private first, then the facilitator reveals the board", async ({ db, browser }) => {
       test.setTimeout(180_000);
-      const project = await seedProject(db);
+      const project = await seedProject(db, "discover");
       await seedScope(db, project.facilitator.userId, project.projectId, {
         concept: "The blood pressure of an adult at the outpatient clinic.",
         useCases: "Outpatient visit.",
