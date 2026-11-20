@@ -46,9 +46,16 @@ export interface RoundSummary {
   status: RoundStatus;
   rule: ConsensusRule;
   facilitatorSeesRaters: boolean;
+  /** The rule for adding proposed elements (DE16); round 1 only, null when none is set. */
+  proposalRule: string | null;
   closesAt: string;
   openedAt: string | null;
   closedAt: string | null;
+}
+
+/** Only round 1 asks for missing elements (DE16). */
+export function takesProposals(round: Pick<RoundRow, "number">): boolean {
+  return round.number === 1;
 }
 
 export function summaryOf(round: RoundRow, now: Date): RoundSummary {
@@ -58,6 +65,7 @@ export function summaryOf(round: RoundRow, now: Date): RoundSummary {
     status: statusOf(round, now),
     rule: ruleOf(round),
     facilitatorSeesRaters: round.facilitator_sees_raters,
+    proposalRule: round.proposal_rule,
     closesAt: round.closes_at.toISOString(),
     openedAt: round.opened_at?.toISOString() ?? null,
     closedAt: round.closed_at?.toISOString() ?? null,

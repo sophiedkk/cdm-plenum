@@ -9,10 +9,12 @@ import { listElementsFn } from "../elements/functions.ts";
 import {
   getRoundFn,
   listRoundsFn,
+  myProposalsFn,
   myRatingsFn,
   panelStatusFn,
   ratingsByParticipantFn,
   responseRateFn,
+  roundProposalsFn,
   roundResultsFn,
 } from "./functions.ts";
 
@@ -34,6 +36,10 @@ export const roundKeys = {
     [...roundKeys.round(projectId, roundId), "response-rate"] as const,
   byParticipant: (projectId: string, roundId: string) =>
     [...roundKeys.round(projectId, roundId), "by-participant"] as const,
+  myProposals: (projectId: string, roundId: string) =>
+    [...roundKeys.round(projectId, roundId), "my-proposals"] as const,
+  proposals: (projectId: string, roundId: string) =>
+    [...roundKeys.round(projectId, roundId), "proposals"] as const,
 };
 
 /** The rounds of the project, newest first; a participant gets no drafts. */
@@ -104,6 +110,24 @@ export function ratingsByParticipantQueryOptions(projectId: string, roundId: str
   return queryOptions({
     queryKey: roundKeys.byParticipant(projectId, roundId),
     queryFn: () => ratingsByParticipantFn({ data: { projectId, roundId } }),
+    staleTime: STALE_TIME.rounds,
+  });
+}
+
+/** The signed-in rater's own proposals for missing elements in round 1 (DE16). */
+export function myProposalsQueryOptions(projectId: string, roundId: string) {
+  return queryOptions({
+    queryKey: roundKeys.myProposals(projectId, roundId),
+    queryFn: () => myProposalsFn({ data: { projectId, roundId } }),
+    staleTime: STALE_TIME.rounds,
+  });
+}
+
+/** Every proposal of a round, without its proposer (facilitator, DE16). */
+export function roundProposalsQueryOptions(projectId: string, roundId: string) {
+  return queryOptions({
+    queryKey: roundKeys.proposals(projectId, roundId),
+    queryFn: () => roundProposalsFn({ data: { projectId, roundId } }),
     staleTime: STALE_TIME.rounds,
   });
 }

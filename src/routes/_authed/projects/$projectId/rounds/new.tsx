@@ -89,6 +89,8 @@ function NewRound() {
           rule: DEFAULT_RULE,
           facilitatorSeesRaters: false,
           closesAt: "",
+          // DE16: only round 1 asks for missing elements.
+          ...(latest ? {} : { proposalRule: m.rounds_proposal_rule_default() }),
         }}
         submitLabel={m.rounds_create()}
         save={async (setup) => {

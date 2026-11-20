@@ -12,6 +12,7 @@ import {
   ListOrderedIcon,
   type LucideIcon,
   PencilIcon,
+  VoteIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { type CommentOutcome, CommentThread } from "@/components/comments/comment-thread";
@@ -34,13 +35,20 @@ const SOURCE_ICONS: Record<ElementSourceKind, LucideIcon> = {
   brainstorm: LightbulbIcon,
   csv: FileSpreadsheetIcon,
   ckm: LinkIcon,
+  delphi: VoteIcon,
 };
 
-const SOURCE_LABELS: Record<ElementSourceKind, () => string> = {
-  brainstorm: () => m.board_source_kind_brainstorm(),
-  csv: () => m.board_source_kind_csv(),
-  ckm: () => m.board_source_kind_ckm(),
+/** A source in words; the label of a `delphi` source is the round number (DE16). */
+const SOURCE_LABELS: Record<ElementSourceKind, (label: string) => string> = {
+  brainstorm: (label) => withLabel(m.board_source_kind_brainstorm(), label),
+  csv: (label) => withLabel(m.board_source_kind_csv(), label),
+  ckm: (label) => withLabel(m.board_source_kind_ckm(), label),
+  delphi: (label) => m.board_source_kind_delphi({ number: label }),
 };
+
+function withLabel(kind: string, label: string): string {
+  return label === "" ? kind : `${kind}: ${label}`;
+}
 
 /** The data type as ADR 0009 shows it, or the RM type of a CKM link outside the list. */
 export function dataTypeText(element: Pick<BoardElement, "dataType" | "ckmLink">): string {
@@ -106,11 +114,7 @@ export function ElementDetails({
                 <li key={index}>
                   <StatusBadge
                     icon={SOURCE_ICONS[source.kind]}
-                    label={
-                      source.label === ""
-                        ? SOURCE_LABELS[source.kind]()
-                        : `${SOURCE_LABELS[source.kind]()}: ${source.label}`
-                    }
+                    label={SOURCE_LABELS[source.kind](source.label)}
                   />
                 </li>
               ))}
