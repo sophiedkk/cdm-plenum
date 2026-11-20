@@ -125,10 +125,10 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(
         a.page.getByRole("heading", { level: 2, name: text.board_brainstorm_title }),
       ).toBeVisible();
-      // The steps show the phase only; the way on is back to the project home.
+      // Only the done scope step links, to its recap; the way on is back to the project home.
       await expect(
         a.page.getByRole("list", { name: text.projects_steps_label }).getByRole("link"),
-      ).toHaveCount(0);
+      ).toHaveCount(1);
       await expect(a.page.getByRole("link", { name: text.projects_back_home })).toHaveAttribute(
         "href",
         `/projects/${project.projectId}`,

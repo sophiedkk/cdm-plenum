@@ -50,3 +50,7 @@ export type MovePhaseInput = z.infer<typeof movePhaseInput>;
 /** A null group takes the facilitator out of the group they rate in (DE14). */
 export const raterGroupInput = z.object({ projectId: idSchema, groupId: idSchema.nullable() });
 export type RaterGroupInput = z.infer<typeof raterGroupInput>;
+
+/** A phase whose recap to read (PR13). */
+export const phaseRecapInput = z.object({ projectId: idSchema, phase: z.enum(PROJECT_PHASES) });
+export type PhaseRecapInput = z.infer<typeof phaseRecapInput>;

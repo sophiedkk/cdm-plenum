@@ -180,14 +180,18 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(page).toHaveURL((url) => url.pathname === `/projects/${seeded.projectId}`);
       await expect(page.getByRole("heading", { level: 1, name: "Blood pressure" })).toBeVisible();
       await expect(page).toHaveTitle(/^Blood pressure \|/);
-      // A participant has no tabs: the home is the navigation, and the steps show the phase only.
+      // A participant has no tabs: the home is the navigation. The current step is no link; the
+      // done steps open their recaps (PR13).
       await expect(
         page.getByRole("navigation", { name: text.projects_tabs_label, exact: true }),
       ).toHaveCount(0);
       await expect(steps(page, text).locator('[aria-current="step"]')).toContainText(
         text.projects_phase_decide,
       );
-      await expect(steps(page, text).getByRole("link")).toHaveCount(0);
+      await expect(
+        steps(page, text).locator('[aria-current="step"]').getByRole("link"),
+      ).toHaveCount(0);
+      await expect(steps(page, text).getByRole("link")).toHaveCount(2);
       const edge = await leftEdges(page);
 
       const card = page.getByRole("region", {
@@ -251,7 +255,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(steps(page, text).locator('[aria-current="step"]')).toContainText(
         text.projects_phase_decide,
       );
-      await expect(steps(page, text).getByRole("link")).toHaveCount(0);
+      await expect(
+        steps(page, text).locator('[aria-current="step"]').getByRole("link"),
+      ).toHaveCount(0);
       expect(await leftEdges(page)).toEqual(edge);
       await expectAxeClean(page);
       await snap(page, { path: test.info().outputPath(`scope-in-decide-${locale}.png`) });
@@ -305,8 +311,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         "aria-current",
         "page",
       );
-      // The facilitator's steps show the status only; the tabs navigate.
-      await expect(steps(page, text).getByRole("link")).toHaveCount(0);
+      // The facilitator's tabs navigate; of the steps only the done scope links, to its recap.
+      await expect(steps(page, text).getByRole("link")).toHaveCount(1);
+      await expect(steps(page, text).getByRole("link")).toHaveAttribute(
+        "href",
+        `/projects/${project.projectId}/recap/scope`,
+      );
       const edge = await leftEdges(page);
       await expect(
         page.getByRole("heading", {

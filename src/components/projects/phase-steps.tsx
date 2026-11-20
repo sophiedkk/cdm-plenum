@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The phases of a project as one row of steps (PR4, PR11): a check on a finished phase, the
+// The phases of a project as one row of steps (PR4, PR11, PR13): a check on a finished phase, the
 // current one marked, later ones dashed. The state is in the text for a screen reader; the
-// icon and the border only show it. NOTE: owner decision 2026-11-20. The steps show the status
-// only and link nowhere, for every role: the phase's work starts on the home or the Overview.
+// icon and the border only show it. NOTE: owner decision 2026-11-20 (ADR 0020). A done phase
+// links to its recap; the current phase is no link, its work starts on the home or the Overview;
+// later phases are no links.
+import { Link } from "@tanstack/react-router";
 import { CheckIcon } from "lucide-react";
 import { m } from "@/i18n/messages";
 import { projectPhaseLabel } from "@/lib/i18n/labels";
@@ -27,21 +29,51 @@ function stateText(state: PhaseStepState): string {
   return m.projects_step_later();
 }
 
-export function PhaseSteps({ phase }: Readonly<{ phase: ProjectPhase }>) {
+export function PhaseSteps({
+  projectId,
+  phase,
+  here,
+}: Readonly<{
+  projectId: string;
+  phase: ProjectPhase;
+  /** The phase whose recap the page shows, if any (PR13). */
+  here?: ProjectPhase | undefined;
+}>) {
   return (
     <ol aria-label={m.projects_steps_label()} className="flex flex-wrap gap-1">
       {phaseSteps(phase).map((step) => {
+        const content = (
+          <>
+            {step.state === "done" && <CheckIcon aria-hidden="true" className="size-4" />}
+            {projectPhaseLabel(step.phase)}
+            <span className="sr-only">
+              , {stateText(step.state)}
+              {step.state === "done" && step.phase !== here && `, ${m.projects_step_recap()}`}
+            </span>
+          </>
+        );
         return (
           <li
             key={step.phase}
             aria-current={step.state === "current" ? "step" : undefined}
             className="flex"
           >
-            <span className={cn(STEP, STATE_CLASS[step.state])}>
-              {step.state === "done" && <CheckIcon aria-hidden="true" className="size-4" />}
-              {projectPhaseLabel(step.phase)}
-              <span className="sr-only">, {stateText(step.state)}</span>
-            </span>
+            {step.state === "done" ? (
+              <Link
+                to="/projects/$projectId/recap/$phase"
+                params={{ projectId, phase: step.phase }}
+                aria-current={step.phase === here ? "page" : undefined}
+                className={cn(
+                  STEP,
+                  STATE_CLASS.done,
+                  "hover:bg-muted aria-[current=page]:border-foreground aria-[current=page]:font-semibold",
+                )}
+              >
+                {content}
+              </Link>
+            ) : (
+              <span className={cn(STEP, STATE_CLASS[step.state])}>{content}</span>
+            )}
           </li>
         );
       })}

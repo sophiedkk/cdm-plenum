@@ -4,6 +4,7 @@
 // Query keys and options of the project screens. A mutation invalidates keys from this
 // factory, never the whole cache.
 import { queryOptions } from "@tanstack/react-query";
+import type { ProjectPhase } from "@/lib/project-phases";
 import { STALE_TIME } from "@/lib/query-config";
 import {
   decidedSoFarFn,
@@ -12,6 +13,7 @@ import {
   listGroupsFn,
   listProjectRowsFn,
   overviewFactsFn,
+  phaseRecapFn,
   projectOverviewFn,
 } from "./functions.ts";
 
@@ -27,6 +29,8 @@ export const projectKeys = {
   /** The facilitator's checklist facts; a change on any project page can change them. */
   facts: (projectId: string) => [...projectKeys.overview(projectId), "facts"] as const,
   decided: (projectId: string) => [...projectKeys.overview(projectId), "decided"] as const,
+  recap: (projectId: string, phase: ProjectPhase) =>
+    [...projectKeys.detail(projectId), "recap", phase] as const,
 };
 
 /** The phase, the user's own task counts and, for the facilitator, the status (PR4, PR8). */
@@ -89,6 +93,15 @@ export function projectQueryOptions(projectId: string) {
   return queryOptions({
     queryKey: projectKeys.detail(projectId),
     queryFn: () => getProjectFn({ data: { projectId } }),
+    staleTime: STALE_TIME.projects,
+  });
+}
+
+/** The read-only recap of a done phase (PR13). */
+export function phaseRecapQueryOptions(projectId: string, phase: ProjectPhase) {
+  return queryOptions({
+    queryKey: projectKeys.recap(projectId, phase),
+    queryFn: () => phaseRecapFn({ data: { projectId, phase } }),
     staleTime: STALE_TIME.projects,
   });
 }

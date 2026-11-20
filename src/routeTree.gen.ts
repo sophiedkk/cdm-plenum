@@ -32,6 +32,7 @@ import { Route as AuthedProjectsProjectIdRoundsRouteImport } from './routes/_aut
 import { Route as AuthedProjectsProjectIdScopeRouteImport } from './routes/_authed/projects/$projectId/scope'
 import { Route as AuthedProjectsProjectIdSettingsRouteImport } from './routes/_authed/projects/$projectId/settings'
 import { Route as AuthedProjectsProjectIdBoardImportRouteImport } from './routes/_authed/projects/$projectId/board_.import'
+import { Route as AuthedProjectsProjectIdRecapPhaseRouteImport } from './routes/_authed/projects/$projectId/recap.$phase'
 import { Route as AuthedProjectsProjectIdRoundsIndexRouteImport } from './routes/_authed/projects/$projectId/rounds/index'
 import { Route as AuthedProjectsProjectIdRoundsNewRouteImport } from './routes/_authed/projects/$projectId/rounds/new'
 import { Route as AuthedProjectsProjectIdRoundsRoundIdIndexRouteImport } from './routes/_authed/projects/$projectId/rounds/$roundId/index'
@@ -164,6 +165,12 @@ const AuthedProjectsProjectIdBoardImportRoute =
     path: '/board/import',
     getParentRoute: () => AuthedProjectsProjectIdRoute,
   } as any)
+const AuthedProjectsProjectIdRecapPhaseRoute =
+  AuthedProjectsProjectIdRecapPhaseRouteImport.update({
+    id: '/recap/$phase',
+    path: '/recap/$phase',
+    getParentRoute: () => AuthedProjectsProjectIdRoute,
+  } as any)
 const AuthedProjectsProjectIdRoundsIndexRoute =
   AuthedProjectsProjectIdRoundsIndexRouteImport.update({
     id: '/',
@@ -212,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/settings': typeof AuthedProjectsProjectIdSettingsRoute
   '/projects/$projectId/': typeof AuthedProjectsProjectIdIndexRoute
   '/projects/$projectId/board/import': typeof AuthedProjectsProjectIdBoardImportRoute
+  '/projects/$projectId/recap/$phase': typeof AuthedProjectsProjectIdRecapPhaseRoute
   '/projects/$projectId/rounds/new': typeof AuthedProjectsProjectIdRoundsNewRoute
   '/projects/$projectId/rounds/': typeof AuthedProjectsProjectIdRoundsIndexRoute
   '/projects/$projectId/rounds/$roundId/rate': typeof AuthedProjectsProjectIdRoundsRoundIdRateRoute
@@ -238,6 +246,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/settings': typeof AuthedProjectsProjectIdSettingsRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdIndexRoute
   '/projects/$projectId/board/import': typeof AuthedProjectsProjectIdBoardImportRoute
+  '/projects/$projectId/recap/$phase': typeof AuthedProjectsProjectIdRecapPhaseRoute
   '/projects/$projectId/rounds/new': typeof AuthedProjectsProjectIdRoundsNewRoute
   '/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsIndexRoute
   '/projects/$projectId/rounds/$roundId/rate': typeof AuthedProjectsProjectIdRoundsRoundIdRateRoute
@@ -268,6 +277,7 @@ export interface FileRoutesById {
   '/_authed/projects/$projectId/settings': typeof AuthedProjectsProjectIdSettingsRoute
   '/_authed/projects/$projectId/': typeof AuthedProjectsProjectIdIndexRoute
   '/_authed/projects/$projectId/board_/import': typeof AuthedProjectsProjectIdBoardImportRoute
+  '/_authed/projects/$projectId/recap/$phase': typeof AuthedProjectsProjectIdRecapPhaseRoute
   '/_authed/projects/$projectId/rounds/new': typeof AuthedProjectsProjectIdRoundsNewRoute
   '/_authed/projects/$projectId/rounds/': typeof AuthedProjectsProjectIdRoundsIndexRoute
   '/_authed/projects/$projectId/rounds/$roundId/rate': typeof AuthedProjectsProjectIdRoundsRoundIdRateRoute
@@ -298,6 +308,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/settings'
     | '/projects/$projectId/'
     | '/projects/$projectId/board/import'
+    | '/projects/$projectId/recap/$phase'
     | '/projects/$projectId/rounds/new'
     | '/projects/$projectId/rounds/'
     | '/projects/$projectId/rounds/$roundId/rate'
@@ -324,6 +335,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/settings'
     | '/projects/$projectId'
     | '/projects/$projectId/board/import'
+    | '/projects/$projectId/recap/$phase'
     | '/projects/$projectId/rounds/new'
     | '/projects/$projectId/rounds'
     | '/projects/$projectId/rounds/$roundId/rate'
@@ -353,6 +365,7 @@ export interface FileRouteTypes {
     | '/_authed/projects/$projectId/settings'
     | '/_authed/projects/$projectId/'
     | '/_authed/projects/$projectId/board_/import'
+    | '/_authed/projects/$projectId/recap/$phase'
     | '/_authed/projects/$projectId/rounds/new'
     | '/_authed/projects/$projectId/rounds/'
     | '/_authed/projects/$projectId/rounds/$roundId/rate'
@@ -531,6 +544,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedProjectsProjectIdBoardImportRouteImport
       parentRoute: typeof AuthedProjectsProjectIdRoute
     }
+    '/_authed/projects/$projectId/recap/$phase': {
+      id: '/_authed/projects/$projectId/recap/$phase'
+      path: '/recap/$phase'
+      fullPath: '/projects/$projectId/recap/$phase'
+      preLoaderRoute: typeof AuthedProjectsProjectIdRecapPhaseRouteImport
+      parentRoute: typeof AuthedProjectsProjectIdRoute
+    }
     '/_authed/projects/$projectId/rounds/': {
       id: '/_authed/projects/$projectId/rounds/'
       path: '/'
@@ -600,6 +620,7 @@ interface AuthedProjectsProjectIdRouteChildren {
   AuthedProjectsProjectIdSettingsRoute: typeof AuthedProjectsProjectIdSettingsRoute
   AuthedProjectsProjectIdIndexRoute: typeof AuthedProjectsProjectIdIndexRoute
   AuthedProjectsProjectIdBoardImportRoute: typeof AuthedProjectsProjectIdBoardImportRoute
+  AuthedProjectsProjectIdRecapPhaseRoute: typeof AuthedProjectsProjectIdRecapPhaseRoute
 }
 
 const AuthedProjectsProjectIdRouteChildren: AuthedProjectsProjectIdRouteChildren =
@@ -621,6 +642,8 @@ const AuthedProjectsProjectIdRouteChildren: AuthedProjectsProjectIdRouteChildren
     AuthedProjectsProjectIdIndexRoute: AuthedProjectsProjectIdIndexRoute,
     AuthedProjectsProjectIdBoardImportRoute:
       AuthedProjectsProjectIdBoardImportRoute,
+    AuthedProjectsProjectIdRecapPhaseRoute:
+      AuthedProjectsProjectIdRecapPhaseRoute,
   }
 
 const AuthedProjectsProjectIdRouteWithChildren =

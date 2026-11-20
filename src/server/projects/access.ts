@@ -53,6 +53,7 @@ export const PROJECT_ACTION_ERRORS = [
   "groups_after_discover",
   "group_check_before_reveal",
   "group_check_not_asked",
+  "recap_not_ready",
 ] as const;
 export type ProjectActionError = (typeof PROJECT_ACTION_ERRORS)[number];
 
