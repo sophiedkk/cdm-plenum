@@ -6,8 +6,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { PlusIcon, VoteIcon } from "lucide-react";
 import { projectTitle } from "@/components/projects/project-title";
 import { valueOrNotFound } from "@/components/rounds/result-value";
-import { LocalDateTime, RoundStatusBadge } from "@/components/rounds/round-badges";
+import { RoundStatusBadge } from "@/components/rounds/round-badges";
 import { EmptyState, PageHeader } from "@/components/shell/route-states";
+import { DateTime } from "@/components/status/date-time";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -43,14 +44,12 @@ function RoundAction({
   canRate,
 }: Readonly<{ round: RoundSummary; projectId: string; canRate: boolean }>) {
   const params = { projectId, roundId: round.id };
+  // A plain link: the header's task line carries the main button to rate (PR11).
   if (round.status === "open" && canRate) {
     return (
-      <Button asChild size="sm">
-        <Link to="/projects/$projectId/rounds/$roundId/rate" params={params}>
-          <VoteIcon aria-hidden="true" />
-          {m.rounds_rate_now({ number: round.number })}
-        </Link>
-      </Button>
+      <Link to="/projects/$projectId/rounds/$roundId/rate" params={params} className={LINK}>
+        {m.rounds_rate_now({ number: round.number })}
+      </Link>
     );
   }
   if (round.status === "closed") {
@@ -149,7 +148,7 @@ function Rounds() {
                     <RoundStatusBadge status={round.status} />
                   </TableCell>
                   <TableCell>
-                    <LocalDateTime iso={round.closesAt} />
+                    <DateTime value={round.closesAt} />
                   </TableCell>
                   <TableCell>
                     <RoundAction round={round} projectId={projectId} canRate={canRate} />

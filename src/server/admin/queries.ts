@@ -15,7 +15,7 @@ import {
   userHasAppRole,
 } from "./app-roles.ts";
 import {
-  ACTIVITY_LIMIT,
+  ACTIVITY_PAGE_SIZE,
   type AccountInput,
   type ActivityInput,
   type AppRoleInput,
@@ -259,7 +259,10 @@ export async function isDeactivatedEmail(db: Kysely<DB>, email: string): Promise
   return row?.deactivated_at != null;
 }
 
-/** One activity log entry: ids, the action code and the actor's name, never content (AD2). */
+/**
+ * One activity log entry: ids, the action code, the project's name and the actor's name, never
+ * content (AD2).
+ */
 export interface ActivityEntry {
   id: string;
   occurredAt: string;
@@ -268,6 +271,8 @@ export interface ActivityEntry {
   /** The actor's account name; empty when they set none or there is no actor. */
   actorName: string;
   projectId: string | null;
+  /** The project's name; null without a project or when it was removed. */
+  projectName: string | null;
   targetType: string | null;
   targetId: string | null;
 }
@@ -276,18 +281,33 @@ export interface ActivityLog {
   entries: ActivityEntry[];
   /** Every action code in the log, for the filter. */
   actions: string[];
+  /** The page shown, from 1; a page after the last shows the last. */
+  page: number;
+  /** The number of pages, at least 1. */
+  pages: number;
 }
 
-/** The newest activity log entries, optionally of one action, newest first (AD2). */
+/**
+ * One page of the activity log, optionally of one action, newest first (AD2). A page holds
+ * `ACTIVITY_PAGE_SIZE` entries.
+ */
 export async function listActivity(
   db: Kysely<DB>,
   userId: string,
   input: ActivityInput,
 ): Promise<AdminResult<ActivityLog>> {
   return asAdministrator(db, userId, async (trx) => {
+    let counted = trx
+      .selectFrom("activity_log")
+      .select((eb) => eb.fn.countAll<string>().as("count"));
+    if (input.action !== undefined) counted = counted.where("action", "=", input.action);
+    const { count } = await counted.executeTakeFirstOrThrow();
+    const pages = Math.max(1, Math.ceil(Number(count) / ACTIVITY_PAGE_SIZE));
+    const page = Math.min(input.page ?? 1, pages);
     let query = trx
       .selectFrom("activity_log")
       .leftJoin("user", "user.id", "activity_log.actor_user_id")
+      .leftJoin("organization", "organization.id", "activity_log.project_id")
       .select([
         "activity_log.id",
         "activity_log.occurred_at",
@@ -295,12 +315,14 @@ export async function listActivity(
         "activity_log.actor_user_id",
         "user.name as actorName",
         "activity_log.project_id",
+        "organization.name as projectName",
         "activity_log.target_type",
         "activity_log.target_id",
       ])
       .orderBy("activity_log.occurred_at", "desc")
       .orderBy("activity_log.id", "desc")
-      .limit(ACTIVITY_LIMIT);
+      .limit(ACTIVITY_PAGE_SIZE)
+      .offset((page - 1) * ACTIVITY_PAGE_SIZE);
     if (input.action !== undefined) query = query.where("activity_log.action", "=", input.action);
     const rows = await query.execute();
     const actions = await trx
@@ -317,10 +339,13 @@ export async function listActivity(
         actorUserId: row.actor_user_id,
         actorName: row.actorName ?? "",
         projectId: row.project_id,
+        projectName: row.projectName ?? null,
         targetType: row.target_type,
         targetId: row.target_id,
       })),
       actions: actions.map((row) => row.action),
+      page,
+      pages,
     });
   });
 }

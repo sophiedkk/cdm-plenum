@@ -5,7 +5,7 @@
 // scope, the phases as steps with the current one marked in text, and the task line with one
 // main button. The facilitator reads the status of the phase there and moves the phase after a
 // confirmation shown in the page.
-import { Link } from "@tanstack/react-router";
+import { Link, useMatchRoute } from "@tanstack/react-router";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
 import { toast } from "sonner";
-import { LocalDateTime } from "@/components/rounds/round-badges";
+import { DateTime } from "@/components/status/date-time";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import type { Outcome } from "@/lib/forms/outcome";
@@ -103,6 +103,9 @@ function ActionLink({
   children,
 }: Readonly<{ projectId: string; link: TaskLink; icon?: LucideIcon; children: ReactNode }>) {
   const params = "roundId" in link ? { projectId, roundId: link.roundId } : { projectId };
+  const matchRoute = useMatchRoute();
+  // A button to the page the person is on goes nowhere; the task sentence stays on its own.
+  if (matchRoute({ to: link.to, params })) return null;
   return (
     <Button asChild size="sm">
       <Link to={link.to} params={params}>
@@ -189,7 +192,7 @@ const LINE = "flex flex-wrap items-center gap-x-3 gap-y-1 text-sm";
 function Closes({ iso }: Readonly<{ iso: string }>) {
   return (
     <span className="text-muted-foreground">
-      {m.projects_task_closes()}: <LocalDateTime iso={iso} />
+      {m.projects_task_closes()}: <DateTime value={iso} />
     </span>
   );
 }

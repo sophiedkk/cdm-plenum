@@ -448,7 +448,10 @@ export function RatingElement({
             previous={element.previous}
             onChoose={choose}
           />
-          <p className="min-w-56 flex-1 pb-5 text-xs text-muted-foreground">
+          <p
+            data-testid="rating-keys"
+            className="min-w-56 flex-1 pb-5 text-xs text-muted-foreground touch:hidden"
+          >
             {editable && digits
               ? m.rounds_rate_keys({ first: digits.first, last: digits.last })
               : m.rounds_rate_keys_move()}

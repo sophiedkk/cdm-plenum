@@ -9,7 +9,7 @@
 // round 1 on the distribution and above the scale, and the reasons of round 1 (DE8, DE15); the
 // participant rates with the keys and jumps to a card by its dot, in light and dark.
 import { randomBytes } from "node:crypto";
-import type { Browser, Locator, Page } from "@playwright/test";
+import type { Browser, BrowserContextOptions, Locator, Page } from "@playwright/test";
 import { type Kysely, sql } from "kysely";
 import type { DB } from "../../src/server/db/schema.gen.ts";
 import { closeRound } from "../../src/server/rounds/queries.ts";
@@ -41,13 +41,19 @@ function fill(message: string, values: Record<string, string | number>): string 
 }
 
 /** A signed-in page for `email` at 1280 by 800, in a context with its own client address. */
-async function pageFor(browser: Browser, locale: Locale, email: string): Promise<Page> {
+async function pageFor(
+  browser: Browser,
+  locale: Locale,
+  email: string,
+  device: BrowserContextOptions = {},
+): Promise<Page> {
   const [a, b, c] = randomBytes(3);
   const context = await browser.newContext({
     baseURL: appUrl(),
     locale: BROWSER_LOCALE[locale],
     viewport: SCREEN,
     extraHTTPHeaders: { "X-Forwarded-For": `10.${a}.${b}.${c}` },
+    ...device,
   });
   const page = await context.newPage();
   await page.goto(await requestSignInLink(page, email, locale));
@@ -249,9 +255,13 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await next.click();
       await expect(heading(text.rounds_overview_heading)).toBeFocused();
       const overview = rater.getByRole("region", { name: text.rounds_overview_heading });
+      // The header's task line holds the count; the rating screen does not repeat it.
+      await expect(
+        rater.getByText(fill(text.projects_task_rated_count, { rated: 3, total: 3 })),
+      ).toHaveCount(1);
       await expect(
         rater.getByText(fill(text.rounds_rate_progress, { rated: 3, total: 3 })),
-      ).toHaveCount(1);
+      ).toHaveCount(0);
       const rows = overview.getByRole("row");
       await expect(rows.filter({ hasText: "Systolic pressure" })).toContainText("7");
       await expect(rows.filter({ hasText: "Systolic pressure" })).toContainText(
@@ -419,3 +429,33 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
     });
   });
 }
+
+test("the keys line shows with a mouse and a keyboard, not on a touch screen (DE18)", async ({
+  db,
+  browser,
+}) => {
+  const project = await seedProject(db, "decide");
+  const participant = await seedParticipant(db, project);
+  await insertElement(db, project.projectId, "Systolic pressure");
+  const roundId = await openedRound(
+    db,
+    project.facilitator.userId,
+    project.projectId,
+    {},
+    "An invented test panel",
+  );
+  const ratePath = `/projects/${project.projectId}/rounds/${roundId}/rate`;
+  for (const [device, shown] of [
+    [{}, true],
+    [{ hasTouch: true, isMobile: true, viewport: { width: 412, height: 915 } }, false],
+  ] as const) {
+    const rater = await pageFor(browser, "en", participant, device);
+    await rater.goto(ratePath);
+    await expectHydrated(rater.getByRole("radio", { name: "7", exact: true }));
+    const keys = rater.getByText(/^Keys:/);
+    if (shown) await expect(keys).toBeVisible();
+    else await expect(keys).toBeHidden();
+    await expectAxeClean(rater);
+    await rater.context().close();
+  }
+});

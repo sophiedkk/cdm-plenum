@@ -11,6 +11,7 @@ import { magicLink, organization } from "better-auth/plugins";
 import type { BetterAuthPlugin } from "better-auth/types";
 import type { Kysely } from "kysely";
 import { m } from "@/i18n/messages";
+import type { ActivityAction } from "@/lib/activity-actions";
 import { projectAccessControl, projectRoles } from "@/lib/project-roles";
 import { SIGN_IN_LINK_MINUTES, SIGN_UP_REFUSED } from "@/lib/sign-in";
 import { isDeactivated, isDeactivatedEmail } from "./admin/queries.ts";
@@ -141,7 +142,10 @@ export function createAuth(env: Env, db: Kysely<DB>, deps: AuthDeps) {
             // AD2: a sign-in, by account id only. A failed log entry does not refuse the sign-in.
             await db
               .insertInto("activity_log")
-              .values({ actor_user_id: session.userId, action: "signed_in" })
+              .values({
+                actor_user_id: session.userId,
+                action: "signed_in" satisfies ActivityAction,
+              })
               .execute()
               .catch(() => console.error(`sign_in_log_failed user=${session.userId}`));
             try {

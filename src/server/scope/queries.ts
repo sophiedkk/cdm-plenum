@@ -230,29 +230,40 @@ export interface ScopeComment {
   id: string;
   body: string;
   createdAt: string;
+  /** Whether the requester wrote it; the only thing a participant learns about an author. */
+  mine: boolean;
 }
 
-export interface ScopeCommentWithAuthor extends ScopeComment {
+export interface ScopeCommentWithAuthor extends Omit<ScopeComment, "mine"> {
   /** Null when the author left the project. */
   author: Author | null;
 }
 
-/** The comments on the scope, oldest first, without authors (any member, SC2, ADR 0005). */
+/**
+ * The comments on the scope, oldest first, without authors (any member, SC2, ADR 0005). Each
+ * comment says only whether the requester wrote it, decided here so no identity leaves the server.
+ */
 export async function listScopeComments(
   db: Kysely<DB>,
   userId: string,
   projectId: string,
 ): Promise<ProjectResult<ScopeComment[]>> {
   return readProject(db, userId, projectId, null, async (db, project) => {
+    const self = await actorMemberId(db, project.id, userId);
     const rows = await db
       .selectFrom("scope_comment")
-      .select(["id", "body", "created_at"])
+      .select(["id", "body", "created_at", "author_member_id"])
       .where("project_id", "=", project.id)
       .orderBy("created_at")
       .orderBy("id")
       .execute();
     return done(
-      rows.map((row) => ({ id: row.id, body: row.body, createdAt: iso(row.created_at) })),
+      rows.map((row) => ({
+        id: row.id,
+        body: row.body,
+        createdAt: iso(row.created_at),
+        mine: row.author_member_id === self,
+      })),
     );
   });
 }

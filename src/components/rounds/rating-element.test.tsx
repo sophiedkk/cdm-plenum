@@ -346,6 +346,11 @@ describe("the scale in the round's bands (DE1)", () => {
     expect(screen.getByText(/Keys: 1 to 5 choose a score/)).toBeTruthy();
   });
 
+  it("hides the keys line on a touch device only", () => {
+    renderWithRule(DEFAULT_RULE);
+    expect(screen.getByTestId("rating-keys").className.split(" ")).toContain("touch:hidden");
+  });
+
   it("shows the chosen score filled and with a check, the others without", () => {
     renderWithRule(DEFAULT_RULE, { ...ELEMENT, own: { rated: true, score: 6, reason: null } });
     const six = screen.getByRole("radio", { name: "6" });

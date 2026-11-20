@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import {
   facilitatorStatus,
+  headerCovers,
   type OverviewRound,
   type ProjectOverview,
   participantTask,
@@ -121,5 +122,34 @@ describe("facilitatorStatus", () => {
     expect(facilitatorStatus(overview({ phase: "decide", role: "facilitator" }))).toEqual({
       kind: "no_round",
     });
+  });
+});
+
+describe("headerCovers", () => {
+  const deciding = (changes: Partial<ProjectOverview> = {}) =>
+    overview({ phase: "decide", round: round(), ...changes });
+
+  it("covers the round a participant is asked to rate, rated in full or not", () => {
+    expect(headerCovers(deciding(), "round-2")).toEqual({ rate: true, closesAt: true });
+    expect(headerCovers(deciding({ round: round({ rated: 40 }) }), "round-2")).toEqual({
+      rate: true,
+      closesAt: true,
+    });
+  });
+
+  it("covers no other round, and none once the round waits to be closed", () => {
+    expect(headerCovers(deciding(), "round-1")).toEqual({ rate: false, closesAt: false });
+    expect(
+      headerCovers(deciding({ round: round({ status: "awaiting_close" }) }), "round-2"),
+    ).toEqual({ rate: false, closesAt: false });
+  });
+
+  it("covers only the closing date of the facilitator's open round", () => {
+    const facilitator = deciding({
+      role: "facilitator",
+      round: round({ rated: 3, completed: 1, raters: 2 }),
+    });
+    expect(headerCovers(facilitator, "round-2")).toEqual({ rate: false, closesAt: true });
+    expect(headerCovers(facilitator, "round-1")).toEqual({ rate: false, closesAt: false });
   });
 });

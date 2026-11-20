@@ -22,8 +22,19 @@ import {
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 
+function resolve(to: string, params: Record<string, string>): string {
+  return Object.entries(params).reduce((path, [key, value]) => path.replace(`$${key}`, value), to);
+}
+
+// The page the test pretends to be on; null for a page without a task link.
+const here = vi.hoisted(() => ({ path: null as string | null }));
+
 // The router's Link needs a router; the test checks where a link points, not navigation.
 vi.mock("@tanstack/react-router", () => ({
+  useMatchRoute:
+    () =>
+    ({ to, params }: { to: string; params: Record<string, string> }) =>
+      resolve(to, params) === here.path ? params : false,
   Link: ({
     to,
     params,
@@ -35,13 +46,7 @@ vi.mock("@tanstack/react-router", () => ({
     children: ReactNode;
     className?: string;
   }) => (
-    <a
-      href={Object.entries(params).reduce(
-        (path, [key, value]) => path.replace(`$${key}`, value),
-        to,
-      )}
-      className={className}
-    >
+    <a href={resolve(to, params)} className={className}>
       {children}
     </a>
   ),
@@ -49,6 +54,7 @@ vi.mock("@tanstack/react-router", () => ({
 
 afterEach(() => {
   cleanup();
+  here.path = null;
   vi.clearAllMocks();
   overwriteGetLocale(() => baseLocale);
 });
@@ -179,9 +185,44 @@ describe("ParticipantTaskLine", () => {
     },
   );
 
+  it.each([
+    ["rating", overview(), "/projects/p1/rounds/round-2/rate"],
+    ["scope", overview({ phase: "scope" }), "/projects/p1/scope"],
+    ["brainstorm", overview({ phase: "discover" }), "/projects/p1/brainstorm"],
+  ])(
+    "keeps the task sentence but drops the button on the %s page it points to",
+    (_, view, path) => {
+      render(<ParticipantTaskLine projectId="p1" overview={view} />);
+      const sentence = screen.getByRole("region", { name: "Your task now" }).querySelector("p");
+      const text = sentence?.textContent ?? "";
+      cleanup();
+      here.path = path;
+      render(<ParticipantTaskLine projectId="p1" overview={view} />);
+      expect(
+        screen.getByRole("region", { name: "Your task now" }).querySelector("p")?.textContent,
+      ).toBe(text);
+      expect(text).not.toBe("");
+      expect(screen.queryAllByRole("link")).toHaveLength(0);
+    },
+  );
+
+  it("keeps the button on another round's rating page", () => {
+    here.path = "/projects/p1/rounds/round-1/rate";
+    render(<ParticipantTaskLine projectId="p1" overview={overview()} />);
+    expect(screen.getByRole("link", { name: "Rate round 2" })).toBeTruthy();
+  });
+
+  it("asks whether an element belongs in the data model, not how important it is", () => {
+    render(<ParticipantTaskLine projectId="p1" overview={overview()} />);
+    const line = screen.getByRole("region", { name: "Your task now" }).textContent ?? "";
+    expect(line).toContain("Rate whether each element of round 2 belongs in the data model.");
+    expect(line).not.toMatch(/important/);
+  });
+
   it("speaks Dutch when the locale is Dutch", () => {
     overwriteGetLocale(() => "nl");
     render(<ParticipantTaskLine projectId="p1" overview={overview()} />);
+    expect(screen.getByText(/of het in het datamodel hoort/)).toBeTruthy();
     expect(screen.getByText("12 van 40 beoordeeld")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Ronde 2 beoordelen" })).toBeTruthy();
   });
@@ -272,6 +313,21 @@ describe("FacilitatorStatusLine", () => {
     expect(screen.getByRole("link", { name: "Go to round 2" }).getAttribute("href")).toBe(
       "/projects/p1/rounds/round-2",
     );
+  });
+
+  it("drops the board button on the board but keeps the status and the phase moves", () => {
+    here.path = "/projects/p1/board";
+    render(
+      <FacilitatorStatusLine
+        projectId="p1"
+        overview={facilitator}
+        move={vi.fn()}
+        onMoved={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("region", { name: "Status of this phase" }).textContent).toMatch(/8/);
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+    expect(screen.getAllByRole("button").length).toBeGreaterThan(0);
   });
 });
 

@@ -82,6 +82,28 @@ export function participantTask(overview: ProjectOverview): ParticipantTask {
   }
 }
 
+/** What the header's task or status line already shows about one round. */
+export interface HeaderCover {
+  /** The button to the round's rating screen and the count of rated elements. */
+  rate: boolean;
+  closesAt: boolean;
+}
+
+/**
+ * What the header already shows about round `roundId`, so a round page does not repeat it: a
+ * participant's task to rate it, or the facilitator's status of it while it is open.
+ */
+export function headerCovers(overview: ProjectOverview, roundId: string): HeaderCover {
+  if (overview.role === "facilitator") {
+    const status = facilitatorStatus(overview);
+    const open = status.kind === "round" && status.roundId === roundId && status.status === "open";
+    return { rate: false, closesAt: open };
+  }
+  const task = participantTask(overview);
+  const covered = (task.kind === "rate" || task.kind === "rated_all") && task.roundId === roundId;
+  return { rate: covered, closesAt: covered };
+}
+
 /** The facilitator's status line for the current phase. */
 export type FacilitatorStatus =
   | { kind: "elements"; count: number }

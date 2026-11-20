@@ -5,6 +5,7 @@
 // the uploaded text on the server with the same reader; the import never trusts rows a client
 // sends back.
 import { type Kysely, sql } from "kysely";
+import type { ActivityAction } from "@/lib/activity-actions";
 import { type CsvParseResult, parseElementCsv } from "@/lib/element-csv";
 import type { DB } from "../db/schema.gen.ts";
 import { done, type ProjectResult, readProject, withProject } from "../projects/access.ts";
@@ -83,7 +84,7 @@ export async function importCsv(
           elementIds.map((id) => ({
             actor_user_id: userId,
             project_id: project.id,
-            action: "element_imported",
+            action: "element_imported" satisfies ActivityAction,
             target_type: "element",
             target_id: id,
           })),

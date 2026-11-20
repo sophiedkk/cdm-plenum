@@ -94,9 +94,11 @@ export interface ElementComment {
   id: string;
   body: string;
   createdAt: string;
+  /** Whether the requester wrote it; the only thing a participant learns about an author. */
+  mine: boolean;
 }
 
-export interface ElementCommentWithAuthor extends ElementComment {
+export interface ElementCommentWithAuthor extends Omit<ElementComment, "mine"> {
   author: Author | null;
 }
 
@@ -697,9 +699,9 @@ export async function addElementComment(
 }
 
 /**
- * The comments under an element, oldest first, without authors (any member, EL6). In the private
- * step a participant reads only the comments on their own elements (EL13); before the board's
- * step no element is found (PR9).
+ * The comments under an element, oldest first, without authors (any member, EL6). Each comment
+ * says only whether the requester wrote it. In the private step a participant reads only the
+ * comments on their own elements (EL13); before the board's step no element is found (PR9).
  */
 export async function listElementComments(
   db: Kysely<DB>,
@@ -712,15 +714,21 @@ export async function listElementComments(
       onlyAuthor: await visibleAuthor(db, project, userId),
     });
     if (!element) return refused("element_not_found");
+    const self = await actorMemberId(db, project.id, userId);
     const rows = await db
       .selectFrom("element_comment")
-      .select(["id", "body", "created_at"])
+      .select(["id", "body", "created_at", "author_member_id"])
       .where("element_id", "=", element.id)
       .orderBy("created_at")
       .orderBy("id")
       .execute();
     return done(
-      rows.map((row) => ({ id: row.id, body: row.body, createdAt: row.created_at.toISOString() })),
+      rows.map((row) => ({
+        id: row.id,
+        body: row.body,
+        createdAt: row.created_at.toISOString(),
+        mine: row.author_member_id === self,
+      })),
     );
   });
 }

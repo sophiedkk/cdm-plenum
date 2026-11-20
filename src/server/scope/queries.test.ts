@@ -194,9 +194,13 @@ describe("scope comments (SC2)", () => {
         id: added.value.commentId,
         body: "Include home measurements?",
         createdAt: expect.any(String),
+        mine: false,
       },
     ]);
     expect(personLeaks(forParticipant, m)).toEqual([]);
+    const forAuthor = await listScopeComments(db, m.participant, m.projectId);
+    expect(forAuthor.ok && forAuthor.value.map((comment) => comment.mine)).toEqual([true]);
+    expect(personLeaks(forAuthor, m)).toEqual([]);
 
     const forFacilitator = await listScopeCommentsWithAuthors(db, m.facilitator, m.projectId);
     if (!forFacilitator.ok) throw new Error(forFacilitator.error);

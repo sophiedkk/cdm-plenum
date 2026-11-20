@@ -375,6 +375,21 @@ describe("comments (EL6)", () => {
     expect((await board())[0]?.commentCount).toBe(2);
   });
 
+  it("tells the reader which comments are their own and nothing more about the author", async () => {
+    const id = await add(m.participant, { name: "Systolic" });
+    const input = { projectId: m.projectId, elementId: id };
+    await addElementComment(db, m.participant, { ...input, body: "Mine" });
+    await addElementComment(db, m.otherParticipant, { ...input, body: "Theirs" });
+    const forParticipant = await listElementComments(db, m.participant, input);
+    expect(forParticipant.ok && forParticipant.value.map((c) => [c.body, c.mine])).toEqual([
+      ["Mine", true],
+      ["Theirs", false],
+    ]);
+    const forOther = await listElementComments(db, m.otherParticipant, input);
+    expect(forOther.ok && forOther.value.map((c) => c.mine)).toEqual([false, true]);
+    expect(personLeaks([forParticipant, forOther], m)).toEqual([]);
+  });
+
   it("refuses an element of another project or none with element_not_found", async () => {
     for (const elementId of [UNKNOWN_ID, await elsewhereElement()]) {
       const input = { projectId: m.projectId, elementId };

@@ -15,7 +15,6 @@ import { StatusBadge, type StatusTone } from "@/components/status/status-badge";
 import type { Outcome } from "@/lib/consensus";
 import { outcomeLabel, roundStatusLabel } from "@/lib/i18n/round-labels";
 import type { RoundStatus } from "@/server/rounds/round";
-import { formatDateTime, useTimeZone } from "./format";
 
 const STATUS_STYLE: Record<RoundStatus, { tone: StatusTone; icon: LucideIcon }> = {
   draft: { tone: "neutral", icon: PencilIcon },
@@ -40,10 +39,4 @@ export function RoundStatusBadge({ status }: Readonly<{ status: RoundStatus }>) 
 export function OutcomeBadge({ outcome }: Readonly<{ outcome: Outcome }>) {
   const style = OUTCOME_STYLE[outcome];
   return <StatusBadge tone={style.tone} icon={style.icon} label={outcomeLabel(outcome)} />;
-}
-
-/** A moment in the browser's time zone, with the zone named, in a `time` element. */
-export function LocalDateTime({ iso }: Readonly<{ iso: string }>) {
-  const timeZone = useTimeZone();
-  return <time dateTime={iso}>{formatDateTime(iso, timeZone)}</time>;
 }

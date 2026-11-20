@@ -16,10 +16,11 @@ import { OpenRoundDialog } from "@/components/rounds/open-round-dialog";
 import { PanelTable } from "@/components/rounds/panel-setup";
 import { ProposalList } from "@/components/rounds/proposals";
 import { valueOrNotFound } from "@/components/rounds/result-value";
-import { LocalDateTime, RoundStatusBadge } from "@/components/rounds/round-badges";
+import { RoundStatusBadge } from "@/components/rounds/round-badges";
 import { RoundForm, ruleSentences } from "@/components/rounds/round-form";
 import { RatingsByParticipantTable, ResponseRateTable } from "@/components/rounds/round-tables";
 import { NotFoundState } from "@/components/shell/route-states";
+import { DateTime } from "@/components/status/date-time";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -37,8 +38,9 @@ import { m } from "@/i18n/messages";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import { ROUND_PHASE } from "@/lib/phase-access";
 import { mayRate } from "@/lib/project-roles";
+import { headerCovers } from "@/lib/project-tasks";
 import { elementKeys } from "@/server/elements/query-options";
-import { projectQueryOptions } from "@/server/projects/query-options";
+import { projectOverviewQueryOptions, projectQueryOptions } from "@/server/projects/query-options";
 import {
   addProposalToBoardFn,
   closeRoundFn,
@@ -150,7 +152,7 @@ function RoundFacts({ round }: Readonly<{ round: RoundDetail }>) {
       <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
         <RoundStatusBadge status={round.status} />
         <span>
-          {m.rounds_closes_at_short()} <LocalDateTime iso={round.closesAt} />
+          {m.rounds_closes_at_short()} <DateTime value={round.closesAt} />
         </span>
         <span>{m.rounds_summary_element_count({ count: round.elements.length })}</span>
       </p>
@@ -233,9 +235,12 @@ function RoundPage() {
   const { project } = Route.useRouteContext();
   const { data } = useSuspenseQuery(roundQueryOptions(projectId, roundId));
   const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
+  const { data: overview } = useSuspenseQuery(projectOverviewQueryOptions(projectId));
   const round = valueOrNotFound(data);
   const isFacilitator = project.role === "facilitator";
   const canRate = detail.ok && mayRate(detail.value.role, detail.value.ownGroupId);
+  // The header's task line carries the way to rate this round when it is the participant's task.
+  const rateInHeader = overview.ok && headerCovers(overview.value, roundId).rate;
   const closed = round.status === "closed";
 
   return (
@@ -244,7 +249,7 @@ function RoundPage() {
         <h2 className="text-xl font-semibold">{m.rounds_round_name({ number: round.number })}</h2>
         <RoundFacts round={round} />
       </div>
-      {canRate && round.status === "open" && <RateCall round={round} />}
+      {canRate && round.status === "open" && !rateInHeader && <RateCall round={round} />}
       {closed && <Results projectId={projectId} roundId={roundId} />}
       {isFacilitator && round.status === "draft" && <DraftSetup round={round} />}
       {isFacilitator && round.status !== "draft" && <RoundProgress round={round} />}
