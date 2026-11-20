@@ -113,7 +113,7 @@ export async function setPanelMinimums(
  * Joined raters per expert type: members of a stakeholder group of the project, a facilitator
  * who joined one included (DE14).
  */
-async function joinedPanel(trx: Kysely<DB>, projectId: string): Promise<PanelCounts> {
+export async function joinedPanel(trx: Kysely<DB>, projectId: string): Promise<PanelCounts> {
   const rows = await trx
     .selectFrom("member")
     .innerJoin("teamMember", "teamMember.userId", "member.userId")
@@ -142,7 +142,7 @@ interface ProjectPanel {
   minimum: PanelCounts;
 }
 
-async function projectPanel(trx: Kysely<DB>, projectId: string): Promise<ProjectPanel> {
+export async function projectPanel(trx: Kysely<DB>, projectId: string): Promise<ProjectPanel> {
   const project = await trx
     .selectFrom("project")
     .select(["change_class", "panel_minimum_reason"])

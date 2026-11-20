@@ -45,6 +45,18 @@ export function formatDateTime(iso: string, timeZone: string): string {
   }).format(new Date(iso));
 }
 
+/** A short day and date, such as "Thu 26 Nov", for a deadline in a list line. */
+export function formatShortDate(iso: string, timeZone: string): string {
+  return new Intl.DateTimeFormat(getLocale(), {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone,
+  })
+    .format(new Date(iso))
+    .replace(/,/g, "");
+}
+
 /** The value of a `datetime-local` input for `iso` in `timeZone`, such as "2026-12-01T17:00". */
 export function toLocalInput(iso: string, timeZone: string): string {
   const parts = new Intl.DateTimeFormat("en-GB", {

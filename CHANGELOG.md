@@ -77,27 +77,45 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Every project page shows a header with the project name, one line of the
-  scope, the phases as steps with the current one marked, and your task with
-  one button. As a facilitator you see the status of the phase there and
-  move the project to the next or the previous phase. The header replaces
-  the Overview tab and the Phase and Role badges.
-- Opening a project takes you to the page of the current step: as a
-  participant the page of your task, as a facilitator the main page of the
-  phase. The tabs start with the work of the current phase; Members and
-  Settings sit at the far end.
-- The Members page shows one table of people per stakeholder group. You
+- As a participant, a project opens on its home page. A "Your turn" card
+  says what to do now, with its facts and one button, such as "Start
+  rating"; when nothing waits, one line says so. From the decide phase,
+  "Decided so far" shows which elements are in the model, not in it, still
+  open or not rated yet, with a link to the newest round results. The
+  stakeholder groups and "Leave project" sit under "About this project" at
+  the bottom. There are no tabs: the phase steps at the top open the scope,
+  the elements and the round, and every other page has a link back to the
+  project.
+- As a facilitator, a project opens on Overview, the first of six tabs that
+  keep their order in every phase: Overview, Scope, Elements, Rounds, People
+  and Settings. Overview lists what to do before the next phase, with a
+  check on what is done, such as revealing the board or reviewing likely
+  duplicates, and a "Send a reminder" to participants who added nothing
+  yet when the server can send e-mail. "Go on to" and "Move back to" move
+  the project after a confirmation on the page. You add elements on
+  Elements; the export is on Overview in the hand-off phase.
+- The projects list shows each project's phase and what waits for you there
+  with its closing date, such as "Rate round 2, 2 elements, closes Thu Nov
+  26", or "Nothing for you now". Projects with something waiting come first.
+- On the rating screen the question sits right under the element, in large
+  type. Your score from the previous round shows on one line, and "How the
+  group scored" opens the group's scores and reasons below it. The reason
+  field takes the full width under the scale, and its help shows while you
+  type. "Element 1 of 2" replaces the dots.
+- The top bar shows Projects and Administration only to administrators;
+  the app name leads to your projects.
+- The People tab shows one table of people per stakeholder group. You
   invite a participant and add a group in a dialog. Only open invitations
   are listed; accepted, expired and revoked ones are under "Earlier
   invitations".
 - In the discover phase the element board shows the brainstorm question
   instead of data type, cardinality and CKM; these show from the decide
   phase on. Adding an element asks for a name and a description only. As a
-  participant you add elements on the Brainstorm tab only.
-- The Brainstorm tab has one form: choose the question, type a name and
+  participant you add elements on the Brainstorm page only.
+- The Brainstorm page has one form: choose the question, type a name and
   press Enter. Your elements show below it, grouped by question.
-- A participant who opens the export page lands on the page of the current
-  step, no longer on Scope.
+- A participant who opens the export page lands on the project home, no
+  longer on Scope.
 - Shorter texts on the project pages; the CSV help on the export page is
   folded.
 - The rating card shows the scale as large buttons, grouped in the round's
@@ -184,16 +202,6 @@ the project uses [Semantic Versioning](https://semver.org/).
 - Comments no longer show "By a former member" for people who are still in
   the project. As a participant you see "By you" on your own comments and
   "By a participant" on the others; the name stays hidden.
-- The task line in the decide phase asks you to rate whether each element
-  belongs in the data model, the question the rating card asks, instead of
-  how important it is.
-- The button in the task line is gone on the page it leads to, such as
-  "Rate round 2" on the rating page or "Add elements" on the Brainstorm tab.
-  The task sentence stays.
-- "Rate round 2" shows once per page. The task line holds the button; the
-  rounds table has a plain link, and the round page no longer repeats the
-  call to rate. The rating page shows the closing date, your progress and
-  "Your ratings are anonymous" once each.
 - The keys line under the rating scale is hidden on touch screens without a
   mouse, such as phones.
 - Every date and time reads the same way, with the time zone named, such as

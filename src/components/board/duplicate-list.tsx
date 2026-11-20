@@ -20,14 +20,17 @@ export interface DuplicatePair {
 
 export function DuplicateList({
   pairs,
+  defaultExpanded = false,
   onMerge,
 }: Readonly<{
   pairs: readonly DuplicatePair[];
+  /** Opens the list at once, as when the Overview's checklist leads here. */
+  defaultExpanded?: boolean;
   /** Opens the merge with `first` as the element to keep and `second` as the duplicate. */
   onMerge: (pair: DuplicatePair) => void;
 }>) {
   const listId = `${useId()}duplicates`;
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   if (pairs.length === 0) return null;
   return (
     <section aria-label={m.board_duplicates_title({ count: pairs.length })} className="mb-1">

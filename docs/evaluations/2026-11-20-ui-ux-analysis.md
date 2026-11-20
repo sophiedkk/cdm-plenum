@@ -6,8 +6,11 @@
 2026-11-20. Written and discussed in a shared document
 (<https://claude.ai/artifact/1YCzjwWnQ7tkkeW9ha64YW>); this file is the copy
 kept with the code. The owner asked to execute the plan on 2026-11-20; the
-participant tab bar (option A without, option B with a small one) is decided
-on the clickable mock-ups of step 2.
+participant tab bar was decided on the clickable mock-ups of step 2: option A,
+without a tab bar. The approved prototype (iteration 3) is
+[2026-11-20-prototype.html](2026-11-20-prototype.html); open it in a browser.
+Its review added one rule above all others: show each piece of information
+once, in its best form.
 
 ## Verdict
 

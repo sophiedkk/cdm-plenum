@@ -4,16 +4,13 @@
 import { describe, expect, it } from "vitest";
 import {
   detailFieldsShown,
-  mainStep,
   PARTICIPANT_ACCESS,
   PARTICIPANT_WRITES,
   PROJECT_STEPS,
   participantAccess,
   preparesAhead,
   SOURCE_PHASE,
-  STEP_ORDER,
   stepVisible,
-  visibleSteps,
   writeOpen,
 } from "./phase-access.ts";
 import { PROJECT_PHASES } from "./project-phases.ts";
@@ -70,45 +67,6 @@ describe("the phase table (PR9)", () => {
         expect(stepVisible("facilitator", phase, step)).toBe(true);
       }
     }
-  });
-});
-
-describe("tab order and the page a project opens on (PR11)", () => {
-  it("orders every step once per phase, with members and settings last", () => {
-    for (const phase of PROJECT_PHASES) {
-      expect([...STEP_ORDER[phase]].sort()).toEqual([...PROJECT_STEPS].sort());
-      expect(STEP_ORDER[phase].slice(-2)).toEqual(["members", "settings"]);
-    }
-  });
-
-  it("puts the work of the phase first and follows the phase table for a participant", () => {
-    expect(visibleSteps("participant", "scope")).toEqual(["scope", "members"]);
-    expect(visibleSteps("participant", "discover")).toEqual([
-      "brainstorm",
-      "board",
-      "scope",
-      "members",
-    ]);
-    expect(visibleSteps("participant", "decide")).toEqual(["rounds", "board", "scope", "members"]);
-    expect(visibleSteps("facilitator", "discover")).toEqual([
-      "brainstorm",
-      "board",
-      "scope",
-      "rounds",
-      "export",
-      "members",
-      "settings",
-    ]);
-  });
-
-  it("opens the project on a step the role sees in that phase", () => {
-    for (const phase of PROJECT_PHASES) {
-      for (const role of ["participant", "facilitator"] as const) {
-        expect(stepVisible(role, phase, mainStep(role, phase))).toBe(true);
-      }
-    }
-    expect(mainStep("participant", "discover")).toBe("brainstorm");
-    expect(mainStep("facilitator", "discover")).toBe("board");
   });
 });
 

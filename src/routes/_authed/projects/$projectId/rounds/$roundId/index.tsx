@@ -38,9 +38,8 @@ import { m } from "@/i18n/messages";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import { ROUND_PHASE } from "@/lib/phase-access";
 import { mayRate } from "@/lib/project-roles";
-import { headerCovers } from "@/lib/project-tasks";
 import { elementKeys } from "@/server/elements/query-options";
-import { projectOverviewQueryOptions, projectQueryOptions } from "@/server/projects/query-options";
+import { projectQueryOptions } from "@/server/projects/query-options";
 import {
   addProposalToBoardFn,
   closeRoundFn,
@@ -235,12 +234,9 @@ function RoundPage() {
   const { project } = Route.useRouteContext();
   const { data } = useSuspenseQuery(roundQueryOptions(projectId, roundId));
   const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
-  const { data: overview } = useSuspenseQuery(projectOverviewQueryOptions(projectId));
   const round = valueOrNotFound(data);
   const isFacilitator = project.role === "facilitator";
   const canRate = detail.ok && mayRate(detail.value.role, detail.value.ownGroupId);
-  // The header's task line carries the way to rate this round when it is the participant's task.
-  const rateInHeader = overview.ok && headerCovers(overview.value, roundId).rate;
   const closed = round.status === "closed";
 
   return (
@@ -249,7 +245,7 @@ function RoundPage() {
         <h2 className="text-xl font-semibold">{m.rounds_round_name({ number: round.number })}</h2>
         <RoundFacts round={round} />
       </div>
-      {canRate && round.status === "open" && !rateInHeader && <RateCall round={round} />}
+      {canRate && round.status === "open" && <RateCall round={round} />}
       {closed && <Results projectId={projectId} roundId={roundId} />}
       {isFacilitator && round.status === "draft" && <DraftSetup round={round} />}
       {isFacilitator && round.status !== "draft" && <RoundProgress round={round} />}

@@ -47,6 +47,8 @@ export const PROJECT_ACTION_ERRORS = [
   "round_still_open",
   "marks_before_reveal",
   "same_as_itself",
+  "mail_not_configured",
+  "reminder_outside_discover",
 ] as const;
 export type ProjectActionError = (typeof PROJECT_ACTION_ERRORS)[number];
 

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// A participant leaves the project (PR5), after a confirmation.
+// A participant leaves the project (PR5), after a confirmation in a dialog.
 import { LogOutIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -49,10 +49,7 @@ export function LeaveProject({
   }
 
   return (
-    <section aria-labelledby="leave-title" className="flex flex-col items-start gap-3">
-      <h3 id="leave-title" className="text-lg font-semibold">
-        {m.members_leave_title()}
-      </h3>
+    <div className="flex flex-col items-start gap-3">
       <p className="text-muted-foreground">{m.members_leave_description()}</p>
       <AlertDialog>
         <AlertDialogTrigger asChild>
@@ -82,6 +79,6 @@ export function LeaveProject({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </div>
   );
 }

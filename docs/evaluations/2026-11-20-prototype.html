@@ -1,0 +1,1176 @@
+<!doctype html>
+<!-- SPDX-FileCopyrightText: Sophie de Klerk -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- The clickable prototype the owner approved on 2026-11-20 (iteration 3), kept as the design reference for the task-centred navigation; see 2026-11-20-ui-ux-analysis.md. Open it in a browser; it needs no server. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>cdm-plenum prototype</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600&display=swap">
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #0a0a0a;
+  --muted: #f5f5f5;
+  --muted-fg: #636363;
+  --faint-fg: #8a8a8a;
+  --border: #e5e5e5;
+  --border-strong: #d4d4d4;
+  --card: #ffffff;
+  --primary: #171717;
+  --primary-fg: #fafafa;
+  --accent: #2f5fb3;
+  --accent-soft: #eef3fb;
+  --ring: #2f5fb3;
+  --in: #1d6b3a;
+  --in-soft: #edf7f0;
+  --out: #a1321f;
+  --out-soft: #fbefec;
+  --open: #8a5a00;
+  --open-soft: #fdf5e4;
+  --bar: #a3a3a3;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --pop-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b0b0c;
+    --fg: #f2f2f2;
+    --muted: #1a1a1c;
+    --muted-fg: #a3a3a3;
+    --faint-fg: #8c8c8c;
+    --border: #2a2a2d;
+    --border-strong: #3a3a3e;
+    --card: #121214;
+    --primary: #f2f2f2;
+    --primary-fg: #121214;
+    --accent: #8fb3f0;
+    --accent-soft: #17233a;
+    --ring: #8fb3f0;
+    --in: #7fd19b;
+    --in-soft: #12271a;
+    --out: #f2a090;
+    --out-soft: #2e1713;
+    --open: #e9c26b;
+    --open-soft: #2b2210;
+    --bar: #6b6b70;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --pop-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b0b0c;
+  --fg: #f2f2f2;
+  --muted: #1a1a1c;
+  --muted-fg: #a3a3a3;
+  --faint-fg: #8c8c8c;
+  --border: #2a2a2d;
+  --border-strong: #3a3a3e;
+  --card: #121214;
+  --primary: #f2f2f2;
+  --primary-fg: #121214;
+  --accent: #8fb3f0;
+  --accent-soft: #17233a;
+  --ring: #8fb3f0;
+  --in: #7fd19b;
+  --in-soft: #12271a;
+  --out: #f2a090;
+  --out-soft: #2e1713;
+  --open: #e9c26b;
+  --open-soft: #2b2210;
+  --bar: #6b6b70;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --pop-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+  overflow-x: hidden;
+}
+h1, h2, h3, p, ul, ol, dl, dd, figure { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+h1 { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.01em; }
+h2 { font-size: 18px; line-height: 28px; font-weight: 600; }
+h3 { font-size: 16px; line-height: 24px; font-weight: 600; }
+a { color: inherit; }
+button, input, textarea { font: inherit; color: inherit; }
+svg.icon { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }
+[tabindex="-1"]:focus { outline: none; }
+
+.gutter {
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.meta { font-size: 14px; line-height: 20px; color: var(--muted-fg); }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+[hidden] { display: none !important; }
+
+/* Prototype switcher */
+.switcher {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  height: 40px;
+  display: flex; align-items: center; gap: 12px;
+  background: var(--muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.switcher-label { color: var(--muted-fg); white-space: nowrap; font-weight: 600; }
+.switcher ul { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.switcher ul::-webkit-scrollbar { display: none; }
+.switcher a {
+  display: block; padding: 4px 8px; border-radius: 6px; text-decoration: none;
+  color: var(--muted-fg); white-space: nowrap;
+}
+.switcher a:hover { color: var(--fg); }
+.switcher a[aria-current="page"] { background: var(--bg); color: var(--fg); box-shadow: var(--shadow); }
+
+.screen { padding-top: 40px; }
+.wrap { max-width: 720px; margin: 0 auto; padding-top: 32px; padding-bottom: 48px; }
+.wrap-wide { max-width: 880px; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 40px; padding: 8px 16px;
+  border-radius: 8px; border: 1px solid var(--border-strong);
+  background: var(--bg); color: var(--fg);
+  font-size: 14px; line-height: 20px; font-weight: 600;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+}
+.btn:hover { background: var(--muted); }
+.btn-primary { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary); opacity: 0.9; }
+.btn-lg { min-height: 48px; padding: 12px 24px; font-size: 16px; }
+.btn-danger { color: var(--out); }
+.btn[disabled], .btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+.btn[disabled]:hover { background: var(--bg); }
+.link-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: none; border: 0; padding: 4px 0; cursor: pointer;
+  color: var(--muted-fg); font-size: 14px; line-height: 20px;
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--border-strong);
+}
+.link-btn:hover { color: var(--fg); text-decoration-color: currentColor; }
+.text-link { color: var(--fg); text-underline-offset: 3px; text-decoration-color: var(--border-strong); }
+.text-link:hover { text-decoration-color: currentColor; }
+
+/* App bar */
+.appbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  max-width: 720px; margin: 0 auto; padding-top: 16px;
+}
+.wordmark { font-weight: 600; font-size: 16px; text-decoration: none; }
+.person { position: relative; }
+.person-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 40px; padding: 4px 12px 4px 4px;
+  background: none; border: 1px solid transparent; border-radius: 8px; cursor: pointer; font-size: 14px;
+}
+.person-btn:hover, .person-btn[aria-expanded="true"] { background: var(--muted); }
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--muted); border: 1px solid var(--border); font-size: 14px; font-weight: 600;
+}
+.menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 40;
+  width: 232px; padding: 4px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--pop-shadow);
+}
+.menu-label { padding: 8px 8px 4px; font-size: 14px; color: var(--muted-fg); }
+.menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
+.menu-item {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 8px; border: 0; border-radius: 6px; background: none;
+  text-align: left; font-size: 14px; cursor: pointer;
+}
+.menu-item:hover { background: var(--muted); }
+.menu-item .check { margin-left: auto; visibility: hidden; }
+.menu-item[aria-pressed="true"] .check { visibility: visible; }
+.menu-item .value { margin-left: auto; color: var(--muted-fg); }
+
+/* Projects list */
+.project-list { margin-top: 24px; border-top: 1px solid var(--border); }
+.project-list li { border-bottom: 1px solid var(--border); }
+.project-row {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 16px;
+  padding: 16px 8px; margin: 0 -8px; border-radius: 8px; text-decoration: none;
+}
+.project-row:hover { background: var(--muted); }
+.project-row .name { font-size: 18px; line-height: 28px; font-weight: 600; }
+.project-row .phase { grid-column: 1; }
+.project-row .waiting { grid-column: 1; display: flex; align-items: baseline; gap: 8px; }
+.project-row .chev { grid-column: 2; grid-row: 1 / span 3; color: var(--muted-fg); }
+.project-row .waiting { margin-top: 4px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; transform: translateY(-1px); }
+.project-row.quiet .name { font-weight: 400; font-size: 16px; line-height: 24px; color: var(--muted-fg); }
+.project-row.quiet .waiting { color: var(--faint-fg); font-size: 14px; }
+
+/* Project header */
+.back { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; color: var(--muted-fg); text-decoration: none; padding: 4px 0; }
+.back:hover { color: var(--fg); }
+.proj-head { margin-top: 8px; }
+.proj-head .meta { margin-top: 4px; }
+.variant {
+  margin-bottom: 16px; padding: 8px 12px;
+  border: 1px dashed var(--border-strong); border-radius: 8px;
+  font-size: 14px; color: var(--muted-fg);
+}
+.variant strong { color: var(--fg); font-weight: 600; }
+
+/* Tabs */
+.tabs { margin-top: 16px; border-bottom: 1px solid var(--border); }
+.tabs ul { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.tabs ul::-webkit-scrollbar { display: none; }
+.tabs a {
+  display: block; padding: 8px 12px; font-size: 14px; color: var(--muted-fg); text-decoration: none;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+}
+.tabs a:hover { color: var(--fg); }
+.tabs a[aria-current="page"] { color: var(--fg); font-weight: 600; border-bottom-color: var(--accent); }
+
+/* Task card */
+.task {
+  margin-top: 24px; padding: 24px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--card); box-shadow: var(--shadow);
+}
+.task-eyebrow { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--accent); font-weight: 600; }
+.task h2 { font-size: 30px; line-height: 36px; letter-spacing: -0.015em; margin-top: 8px; }
+.facts { display: flex; flex-wrap: wrap; gap: 4px 24px; margin-top: 12px; }
+.facts div { display: flex; flex-direction: column; }
+.facts dt { font-size: 14px; color: var(--muted-fg); }
+.facts dd { font-size: 16px; }
+.progress { margin-top: 24px; }
+.progress-track { height: 8px; border-radius: 4px; background: var(--muted); border: 1px solid var(--border); overflow: hidden; }
+.progress-fill { height: 100%; width: 0; background: var(--accent); }
+.progress-text { margin-top: 8px; }
+.task .btn-primary { margin-top: 24px; }
+
+/* Sections */
+.section { margin-top: 48px; }
+.section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+.outcomes { display: grid; gap: 24px; margin-top: 16px; }
+.status {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 14px; font-weight: 600; line-height: 20px;
+  padding: 2px 8px; border-radius: 6px;
+}
+.status-in { color: var(--in); background: var(--in-soft); }
+.status-out { color: var(--out); background: var(--out-soft); }
+.status-open { color: var(--open); background: var(--open-soft); }
+.status-done { color: var(--in); background: var(--in-soft); }
+.status-todo { color: var(--muted-fg); background: var(--muted); }
+.el-list { margin-top: 8px; padding-left: 4px; }
+.el-list li { padding: 2px 0; }
+.el-list .meta { margin-left: 4px; }
+
+.timeline { display: flex; flex-wrap: wrap; gap: 8px 0; margin-top: 12px; }
+.timeline li { display: flex; align-items: center; font-size: 14px; color: var(--muted-fg); }
+.timeline li + li::before { content: ""; width: 24px; height: 1px; background: var(--border-strong); margin: 0 8px; }
+.timeline .step { display: inline-flex; align-items: center; gap: 6px; }
+.timeline .now { color: var(--accent); font-weight: 600; }
+.timeline .done { color: var(--fg); }
+.timeline .later { color: var(--faint-fg); }
+
+.quiet-links { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); }
+
+.panel {
+  margin-top: 24px; padding: 24px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--card);
+}
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px 24px; margin-top: 16px; }
+.groups h3 { font-size: 14px; line-height: 20px; color: var(--muted-fg); font-weight: 600; }
+.groups li { padding: 2px 0; }
+.confirm {
+  margin-top: 16px; padding: 16px;
+  border: 1px solid var(--border-strong); border-radius: 8px; background: var(--muted);
+}
+.confirm p + p { margin-top: 4px; }
+.confirm .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.result-note { margin-top: 16px; display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted-fg); }
+
+/* Mini phase steps (projects list) */
+.mini-phase { grid-column: 1; display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.mini-steps { display: inline-grid; grid-template-columns: repeat(4, 20px); gap: 3px; }
+.mini-steps span { height: 6px; border-radius: 3px; background: var(--border-strong); }
+.mini-steps span.done { background: var(--muted-fg); }
+.mini-steps span.now { background: var(--accent); }
+.mini-phase .label { font-size: 14px; line-height: 20px; color: var(--muted-fg); }
+.mini-phase .label strong { color: var(--fg); font-weight: 600; }
+.project-row.quiet .mini-steps span.now { background: var(--muted-fg); }
+
+/* Decided so far, visual */
+.split { display: flex; height: 12px; border-radius: 6px; overflow: hidden; margin-top: 16px; gap: 2px; }
+.split span { display: block; }
+.split .s-in { background: var(--in); }
+.split .s-out { background: var(--out); }
+.split .s-open { background: var(--open); opacity: 0.7; }
+.split-legend { display: flex; flex-wrap: wrap; gap: 4px 24px; margin-top: 8px; font-size: 14px; color: var(--muted-fg); }
+.split-legend strong { color: var(--fg); font-weight: 600; }
+.outcome-row { display: grid; grid-template-columns: 168px 1fr; gap: 8px 16px; align-items: start; padding: 12px 0; border-top: 1px solid var(--border); }
+.outcome-row:first-child { border-top: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--border); font-size: 14px; line-height: 22px; background: var(--card); }
+.chip .meta { font-size: 12px; }
+@media (max-width: 480px) { .outcome-row { grid-template-columns: 1fr; } }
+
+/* Phase stepper: one place for where the project stands */
+.stepper { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 12px; }
+.stepper li { display: flex; }
+.stepper a, .stepper span.st { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 14px; line-height: 20px; border: 1px solid var(--border); text-decoration: none; }
+.stepper a { color: var(--fg); }
+.stepper a:hover { background: var(--muted); }
+.stepper .now { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.stepper .later { color: var(--faint-fg); border-style: dashed; }
+.gs-toggle { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 4px 0; cursor: pointer; font-size: 14px; color: var(--muted-fg); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--border-strong); }
+.gs-toggle:hover { color: var(--fg); }
+.gs-toggle[aria-expanded="true"] .chev-r { transform: rotate(90deg); }
+.gs-panel { margin-top: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; display: grid; gap: 12px; }
+
+/* Facilitator checklist */
+.glance { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.glance strong { color: var(--fg); font-weight: 600; }
+.checklist { margin-top: 16px; border-top: 1px solid var(--border); }
+.checklist li {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px 16px;
+  padding: 16px 0; border-bottom: 1px solid var(--border);
+}
+.checklist .item-text { min-width: 0; }
+.checklist .is-done .item-text { color: var(--muted-fg); }
+.go-on { margin-top: 32px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; }
+
+/* Toast */
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60;
+  max-width: calc(100vw - 32px);
+  padding: 8px 16px; border-radius: 8px;
+  background: var(--primary); color: var(--primary-fg); font-size: 14px; box-shadow: var(--pop-shadow);
+}
+
+/* Rating */
+.rate-wrap { max-width: 880px; margin: 0 auto; padding-top: 16px; padding-bottom: 32px; }
+.rate-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; }
+.dots { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted-fg); }
+.dots span.d { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--border-strong); background: transparent; }
+.dots span.d.rated { background: var(--muted-fg); border-color: var(--muted-fg); }
+.dots span.d.current { background: var(--accent); border-color: var(--accent); width: 20px; border-radius: 4px; }
+.rate-card {
+  margin-top: 12px; padding: 24px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--card); box-shadow: var(--shadow);
+}
+.el-name { font-size: 24px; line-height: 32px; }
+.el-def { margin-top: 4px; color: var(--muted-fg); }
+.question { margin-top: 16px; font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.01em; }
+.prev-block { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.prev-score { display: flex; align-items: center; gap: 6px; }
+.tri { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--accent); display: inline-block; }
+.scale { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: start; }
+.band-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.band-label { margin-top: 6px; text-align: center; font-size: 14px; color: var(--muted-fg); }
+.unable-cell { grid-column: 1 / -1; }
+.score {
+  position: relative;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  height: 56px; min-width: 0; padding: 0 4px;
+  border: 1px solid var(--border-strong); border-radius: 8px; background: var(--bg);
+  font-size: 18px; font-weight: 600; cursor: pointer;
+}
+.score:hover { background: var(--muted); }
+.score[aria-checked="true"] { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+.score .ck { display: none; width: 16px; height: 16px; }
+.score[aria-checked="true"] .ck { display: inline-block; }
+.score .mark { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); }
+.score.unable { font-size: 14px; height: 40px; width: 100%; }
+.after-scale { margin-top: 8px; min-height: 20px; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.saved { display: inline-flex; align-items: center; gap: 6px; color: var(--in); font-size: 14px; font-weight: 600; }
+.lower { margin-top: 12px; display: grid; gap: 16px; }
+.field label { display: block; font-size: 14px; font-weight: 600; }
+.field label .meta { font-weight: 400; }
+.field textarea {
+  display: block; width: 100%; margin-top: 6px; padding: 8px 12px; resize: vertical;
+  border: 1px solid var(--border-strong); border-radius: 8px; background: var(--bg); font-size: 16px; line-height: 24px;
+}
+.field textarea:focus-visible { outline: 2px solid var(--ring); outline-offset: 0; }
+details.group-scores { border: 0; }
+details.group-scores[open] { border: 1px solid var(--border); border-radius: 8px; }
+details.group-scores summary {
+  display: flex; align-items: center; gap: 8px; padding: 4px 8px; min-height: 32px;
+  cursor: pointer; font-size: 14px; font-weight: 400; color: var(--muted-fg); list-style: none; border-radius: 8px; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--border-strong);
+}
+details.group-scores summary::-webkit-details-marker { display: none; }
+details.group-scores summary .chev-r { transition: transform 0.15s; }
+details.group-scores[open] summary .chev-r { transform: rotate(90deg); }
+.gs-body { padding: 4px 12px 12px; display: grid; gap: 12px; }
+.hist { width: 100%; max-width: 320px; height: auto; display: block; }
+.hist .b { fill: var(--bar); }
+.hist .b.you { fill: var(--accent); }
+.hist text { fill: var(--muted-fg); font-size: 11px; font-family: inherit; }
+.hist text.you { fill: var(--accent); font-weight: 600; }
+.reasons li { font-size: 14px; padding: 4px 0 4px 12px; border-left: 2px solid var(--border-strong); }
+.reasons li + li { margin-top: 8px; }
+.rate-nav { margin-top: 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.rate-nav .mid { display: flex; justify-content: center; flex: 1; }
+.summary-list { margin-top: 16px; border-top: 1px solid var(--border); }
+.summary-list li { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.summary-score { font-weight: 600; }
+
+@media (min-width: 720px) {
+  .scale { grid-template-columns: 1fr 1fr 1fr 140px; gap: 16px; }
+  .unable-cell { grid-column: auto; }
+  .score.unable { height: 56px; }
+  .lower { grid-template-columns: 1fr 1fr; align-items: start; }
+}
+@media (max-width: 480px) {
+  .task { padding: 16px; }
+  .task h2 { font-size: 24px; line-height: 32px; }
+  .rate-card { padding: 16px; }
+  .question { font-size: 20px; line-height: 28px; }
+  .checklist li { grid-template-columns: auto 1fr; }
+  .checklist li .btn { grid-column: 2; justify-self: start; }
+  .switcher-label { display: none; }
+  .scale { gap: 8px; }
+  .score { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-open" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/></symbol>
+  <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+</svg>
+
+<nav class="switcher gutter" aria-labelledby="switcher-label">
+  <span class="switcher-label" id="switcher-label">Prototype screens</span>
+  <ul>
+    <li><a href="#projects" data-route="projects">Projects</a></li>
+    <li><a href="#home" data-route="home">Home</a></li>
+    <li><a href="#overview" data-route="overview">Facilitator overview</a></li>
+    <li><a href="#rate" data-route="rate">Rating</a></li>
+  </ul>
+</nav>
+
+<!-- Screen 1: projects -->
+<main class="screen" id="screen-projects" data-screen="projects" hidden>
+  <div class="gutter">
+    <header class="appbar">
+      <a class="wordmark" href="#projects">cdm-plenum</a>
+      <div class="person">
+        <button type="button" class="person-btn" id="person-btn" aria-expanded="false" aria-controls="person-menu">
+          <span class="avatar" aria-hidden="true">NA</span>
+          <span>Nurse A</span>
+          <svg class="icon" aria-hidden="true"><use href="#i-down"/></svg>
+        </button>
+        <div class="menu" id="person-menu" hidden>
+          <div class="menu-label">nurse.a@example.test</div>
+          <div class="menu-sep"></div>
+          <button type="button" class="menu-item" data-note="Language: English. Switching to Dutch is not in this prototype.">Language<span class="value">English</span></button>
+          <div class="menu-sep"></div>
+          <div class="menu-label" id="theme-label">Theme</div>
+          <div role="group" aria-labelledby="theme-label">
+            <button type="button" class="menu-item" data-theme-set="system" aria-pressed="true">System<svg class="icon check" aria-hidden="true"><use href="#i-check"/></svg></button>
+            <button type="button" class="menu-item" data-theme-set="light" aria-pressed="false">Light<svg class="icon check" aria-hidden="true"><use href="#i-check"/></svg></button>
+            <button type="button" class="menu-item" data-theme-set="dark" aria-pressed="false">Dark<svg class="icon check" aria-hidden="true"><use href="#i-check"/></svg></button>
+          </div>
+          <div class="menu-sep"></div>
+          <button type="button" class="menu-item" data-note="Signing out is not in this prototype.">Sign out</button>
+        </div>
+      </div>
+    </header>
+    <div class="wrap" style="padding-top:24px">
+      <h1 tabindex="-1">Projects</h1>
+      <ul class="project-list">
+        <li>
+          <a class="project-row" href="#home">
+            <span class="name">Blood pressure</span>
+            <span class="mini-phase"><span class="mini-steps" aria-hidden="true"><span class="done"></span><span class="done"></span><span class="now"></span><span></span></span><span class="label"><strong>Decide</strong></span></span>
+            <span class="waiting"><span class="dot" aria-hidden="true"></span><span>Rate round 2, 2 elements, closes Thu&nbsp;26&nbsp;Nov</span></span>
+            <svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg>
+          </a>
+        </li>
+        <li>
+          <a class="project-row" href="#overview">
+            <span class="name">Heart rate</span>
+            <span class="mini-phase"><span class="mini-steps" aria-hidden="true"><span class="done"></span><span class="now"></span><span></span><span></span></span><span class="label"><strong>Discover</strong> · you facilitate</span></span>
+            <span class="waiting"><span class="dot" aria-hidden="true"></span><span>3 steps before round 1 can open</span></span>
+            <svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg>
+          </a>
+        </li>
+        <li>
+          <a class="project-row quiet" href="#projects" data-note="This project is not in this prototype.">
+            <span class="name">Respiratory rate</span>
+            <span class="mini-phase"><span class="mini-steps" aria-hidden="true"><span class="now"></span><span></span><span></span><span></span></span><span class="label"><strong>Scope</strong></span></span>
+            <span class="waiting">Nothing for you now</span>
+            <svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg>
+          </a>
+        </li>
+        <li>
+          <a class="project-row quiet" href="#projects" data-note="This project is not in this prototype.">
+            <span class="name">Body temperature</span>
+            <span class="mini-phase"><span class="mini-steps" aria-hidden="true"><span class="done"></span><span class="done"></span><span class="done"></span><span class="now"></span></span><span class="label"><strong>Hand-off</strong></span></span>
+            <span class="waiting">Nothing for you now</span>
+            <svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</main>
+
+<!-- Screens 2 and 3: participant home, variant A (#home) and B (#home-tabs) -->
+<main class="screen" id="screen-home" data-screen="home" hidden>
+  <div class="gutter">
+    <div class="wrap" style="padding-top:24px">
+      <a class="back" href="#projects"><svg class="icon" aria-hidden="true"><use href="#i-left"/></svg>Projects</a>
+      <header class="proj-head">
+        <h1 tabindex="-1" id="home-title">Blood pressure</h1>
+        <ol class="stepper" aria-label="Phases">
+        <li><a href="#" data-note="Opens the scope (not in this prototype)."><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Scope<span class="visually-hidden">, done</span></a></li>
+        <li><a href="#" data-note="Opens all elements (not in this prototype)."><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Discover<span class="visually-hidden">, done</span></a></li>
+        <li><span class="st now" aria-current="step">Decide<span class="visually-hidden">, now</span></span></li>
+        <li><span class="st later">Hand-off<span class="visually-hidden">, later</span></span></li>
+        </ol>
+      </header>
+
+      <nav class="tabs" id="home-tabbar" aria-label="Project" hidden>
+        <ul>
+          <li><a href="#home-tabs" aria-current="page">Home</a></li>
+          <li><a href="#home-tabs" data-note="The Elements tab is not in this prototype.">Elements</a></li>
+          <li><a href="#home-tabs" data-note="The Results tab is not in this prototype.">Results</a></li>
+        </ul>
+      </nav>
+
+      <section class="task" aria-labelledby="task-title">
+        <h2 id="task-title" style="margin-top:0">Your turn: rate round 2</h2>
+        <dl class="facts">
+          <div><dt>Elements</dt><dd>2</dd></div>
+          <div><dt>Time</dt><dd>About 3 minutes</dd></div>
+          <div><dt>Closes</dt><dd>Thu&nbsp;26&nbsp;Nov 23:05</dd></div>
+          <div><dt>Done</dt><dd id="home-progress-text">0 of 2 rated</dd></div>
+        </dl>
+        <a class="btn btn-primary btn-lg" href="#rate" id="home-start">Start rating</a>
+      </section>
+
+      <section class="section" aria-labelledby="decided-title">
+        <div class="section-head">
+          <h2 id="decided-title">Decided so far</h2>
+          <a class="text-link meta" href="#home" data-note="Round 1 results are not in this prototype.">Round 1 results</a>
+        </div>
+        <div class="split" role="img" aria-label="5 in the model, 1 not in the model, 2 still open">
+          <span class="s-in" style="flex:5"></span><span class="s-out" style="flex:1"></span><span class="s-open" style="flex:2"></span>
+        </div>
+        <div class="outcomes" style="gap:0;margin-top:16px">
+          <div class="outcome-row">
+            <span class="status status-in"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>In the model · 5</span>
+            <ul class="chips"><li class="chip">Systolic</li><li class="chip">Diastolic</li><li class="chip">Position</li><li class="chip">Location of measurement</li><li class="chip">Comment</li></ul>
+          </div>
+          <div class="outcome-row">
+            <span class="status status-out"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg>Not in the model · 1</span>
+            <ul class="chips"><li class="chip">Pulse pressure</li></ul>
+          </div>
+          <div class="outcome-row">
+            <span class="status status-open"><svg class="icon" aria-hidden="true"><use href="#i-open"/></svg>Still open · 2</span>
+            <ul class="chips"><li class="chip">Mean arterial pressure</li><li class="chip">Cuff size</li></ul>
+          </div>
+        </div>
+      </section>
+
+
+      <div class="quiet-links">
+        <button type="button" class="link-btn" id="about-btn" aria-expanded="false" aria-controls="about-panel">About this project</button>
+      </div>
+
+      <section class="panel" id="about-panel" aria-labelledby="about-title" hidden>
+        <div class="panel-head">
+          <h2 id="about-title" tabindex="-1">About this project</h2>
+          <button type="button" class="btn" id="about-close">Close</button>
+        </div>
+        <p class="meta" style="margin-top:4px">Facilitator: Modeller A</p>
+        <div class="groups">
+          <div>
+            <h3>Clinicians</h3>
+            <ul><li>Doctor A</li><li>Doctor B</li><li>Doctor C</li></ul>
+          </div>
+          <div>
+            <h3>Nurses</h3>
+            <ul><li>Nurse A (you)</li><li>Nurse B</li></ul>
+          </div>
+          <div>
+            <h3>Information modellers</h3>
+            <ul><li>Modeller A</li><li>Modeller B</li></ul>
+          </div>
+          <div>
+            <h3>Terminologists</h3>
+            <ul><li>Terminologist A</li></ul>
+          </div>
+        </div>
+        <div style="margin-top:24px">
+          <button type="button" class="btn btn-danger" id="leave-btn" aria-expanded="false" aria-controls="leave-confirm">Leave project</button>
+          <div class="confirm" id="leave-confirm" role="group" aria-labelledby="leave-q" hidden>
+            <p id="leave-q" tabindex="-1"><strong>Leave Blood pressure?</strong></p>
+            <p class="meta">Your scores so far stay in the results. A facilitator can add you again.</p>
+            <div class="actions">
+              <button type="button" class="btn btn-danger" id="leave-yes">Leave project</button>
+              <button type="button" class="btn" id="leave-no">Cancel</button>
+            </div>
+          </div>
+          <p class="result-note" id="leave-done" role="status"></p>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<!-- Screen 4: facilitator overview -->
+<main class="screen" id="screen-overview" data-screen="overview" hidden>
+  <div class="gutter">
+    <div class="wrap wrap-wide" style="padding-top:24px">
+      <a class="back" href="#projects"><svg class="icon" aria-hidden="true"><use href="#i-left"/></svg>Projects</a>
+      <header class="proj-head">
+        <h1 tabindex="-1">Heart rate</h1>
+        <ol class="stepper" aria-label="Phases">
+        <li><span class="st"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Scope<span class="visually-hidden">, done</span></span></li>
+        <li><span class="st now" aria-current="step">Discover<span class="visually-hidden">, now</span></span></li>
+        <li><span class="st later">Decide<span class="visually-hidden">, later</span></span></li>
+        <li><span class="st later">Hand-off<span class="visually-hidden">, later</span></span></li>
+        </ol>
+      </header>
+      <nav class="tabs" aria-label="Project">
+        <ul>
+          <li><a href="#overview" aria-current="page">Overview</a></li>
+          <li><a href="#overview" data-note="The Scope tab is not in this prototype.">Scope</a></li>
+          <li><a href="#overview" data-note="The Elements tab is not in this prototype.">Elements</a></li>
+          <li><a href="#overview" data-note="The Rounds tab is not in this prototype.">Rounds</a></li>
+          <li><a href="#overview" data-note="The People tab is not in this prototype.">People</a></li>
+          <li><a href="#overview" data-note="The Settings tab is not in this prototype.">Settings</a></li>
+        </ul>
+      </nav>
+
+      <p class="glance meta"><span>Your group at a glance:</span><span><strong>8</strong> participants</span><span><strong>11</strong> elements</span><span><strong>0</strong> comments</span></p>
+
+      <section class="section" style="margin-top:32px" aria-labelledby="before-title">
+        <div class="section-head">
+          <h2 id="before-title">Before you open round 1</h2>
+        </div>
+        <ul class="checklist">
+          <li class="is-done">
+            <span class="status status-done"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="visually-hidden">Done</span></span>
+            <span class="item-text">5 of 8 participants added elements</span>
+            <button type="button" class="btn" data-note="Reminder sent to 3 participants (prototype: nothing was sent).">Send reminder</button>
+          </li>
+          <li id="reveal-item">
+            <span class="status status-todo" id="reveal-status"><svg class="icon" aria-hidden="true"><use href="#i-circle"/></svg><span class="visually-hidden">To do</span></span>
+            <span class="item-text">Reveal the board to everyone</span>
+            <button type="button" class="btn" id="reveal-btn">Reveal board</button>
+          </li>
+          <li>
+            <span class="status status-todo"><svg class="icon" aria-hidden="true"><use href="#i-circle"/></svg><span class="visually-hidden">To do</span></span>
+            <span class="item-text">Merge duplicates: 2 likely pairs</span>
+            <button type="button" class="btn" data-note="Reviewing duplicates is not in this prototype.">Review</button>
+          </li>
+          <li>
+            <span class="status status-todo"><svg class="icon" aria-hidden="true"><use href="#i-circle"/></svg><span class="visually-hidden">To do</span></span>
+            <span class="item-text">Compare with existing models (FHIR, openEHR, zib)</span>
+            <button type="button" class="btn" data-note="The comparison is not in this prototype.">Compare</button>
+          </li>
+        </ul>
+
+        <div class="go-on">
+          <button type="button" class="btn btn-primary btn-lg" id="decide-btn" aria-expanded="false" aria-controls="decide-confirm">Go on to Decide</button>
+          <button type="button" class="link-btn" id="back-btn" aria-expanded="false" aria-controls="back-confirm">Move back to Scope</button>
+        </div>
+        <div class="confirm" id="decide-confirm" role="group" aria-labelledby="decide-q" hidden>
+          <p id="decide-q" tabindex="-1"><strong>Go on to Decide?</strong></p>
+          <p class="meta">Every participant moves to Decide. You can move back.</p>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="decide-yes">Confirm</button>
+            <button type="button" class="btn" id="decide-no">Cancel</button>
+          </div>
+        </div>
+        <div class="confirm" id="back-confirm" role="group" aria-labelledby="back-q" hidden>
+          <p id="back-q" tabindex="-1"><strong>Move back to Scope?</strong></p>
+          <p class="meta">Every participant moves back to Scope. The board and its elements stay as they are.</p>
+          <div class="actions">
+            <button type="button" class="btn" id="back-yes">Move back</button>
+            <button type="button" class="btn" id="back-no">Cancel</button>
+          </div>
+        </div>
+        <p class="result-note" id="phase-done" role="status"></p>
+      </section>
+    </div>
+  </div>
+</main>
+
+<!-- Screen 5: rating card -->
+<main class="screen" id="screen-rate" data-screen="rate" hidden>
+  <div class="gutter">
+    <div class="rate-wrap">
+      <div class="rate-top">
+        <a class="back" href="#home"><svg class="icon" aria-hidden="true"><use href="#i-left"/></svg>Blood pressure, round 2</a>
+        <span class="meta" id="dots-text">Element 1 of 2</span>
+      </div>
+
+      <section class="rate-card" id="rate-card" aria-labelledby="el-name">
+        <h1 class="el-name" id="el-name" tabindex="-1">Mean arterial pressure</h1>
+        <p class="el-def" id="el-def">The average arterial pressure over one cardiac cycle.</p>
+
+        <p class="question" id="question">Does this element belong in the data model?</p>
+        <div class="prev-block">
+          <p class="prev-score meta"><span class="tri" aria-hidden="true"></span><span id="prev-text">Your round 1 score: 5</span></p>
+          <button type="button" class="gs-toggle" id="gs-toggle" aria-expanded="false" aria-controls="gs-panel"><svg class="icon chev-r" aria-hidden="true"><use href="#i-right"/></svg>How the group scored in round 1</button>
+        </div>
+        <div class="gs-panel" id="gs-panel" hidden>
+          <figure id="hist-fig"></figure>
+          <ul class="reasons" id="reasons" aria-label="Reasons from round 1, anonymous"></ul>
+        </div>
+
+        <div class="scale" role="radiogroup" aria-labelledby="question" id="scale"></div>
+
+        <div class="after-scale">
+          <span id="saved" class="saved" role="status" aria-live="polite"></span>
+        </div>
+
+        <div class="field" style="margin-top:12px">
+          <label for="reason">Reason <span class="meta">(optional)</span></label>
+          <textarea id="reason" rows="2"></textarea>
+        </div>
+      </section>
+
+      <section class="rate-card" id="rate-summary" aria-labelledby="sum-title" hidden>
+        <h1 class="el-name" id="sum-title" tabindex="-1">Your scores for round 2</h1>
+        <ul class="summary-list" id="summary-list"></ul>
+        <p class="meta" style="margin-top:16px">You can change your scores until Thu 26 Nov 23:05.</p>
+      </section>
+
+      <nav class="rate-nav" aria-label="Elements">
+        <button type="button" class="btn" id="prev-btn"><svg class="icon" aria-hidden="true"><use href="#i-left"/></svg>Previous</button>
+        <div class="mid"><button type="button" class="link-btn" id="ov-btn">Overview</button></div>
+        <button type="button" class="btn btn-primary" id="next-btn">Next<svg class="icon" aria-hidden="true"><use href="#i-right"/></svg></button>
+      </nav>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var ROUTES = ["projects", "home", "home-tabs", "overview", "rate"];
+  var TITLES = {
+    projects: "Projects",
+    home: "Blood pressure (option A)",
+    "home-tabs": "Blood pressure (option B)",
+    overview: "Heart rate overview",
+    rate: "Rate round 2"
+  };
+
+  var ELEMENTS = [
+    {
+      name: "Mean arterial pressure",
+      def: "The average arterial pressure over one cardiac cycle.",
+      prev: 5,
+      counts: [0, 0, 1, 1, 2, 2, 1, 0, 0],
+      reasons: [
+        "Most monitors report it, so recording it costs nothing.",
+        "It can be calculated from systolic and diastolic, so storing it twice risks conflicting values."
+      ]
+    },
+    {
+      name: "Cuff size",
+      def: "The size of the cuff used for the measurement, such as adult or small adult.",
+      prev: 7,
+      counts: [0, 0, 0, 1, 1, 2, 3, 1, 0],
+      reasons: [
+        "A wrong cuff size changes the reading, so we need it to judge the value.",
+        "Useful, but rarely recorded in daily practice."
+      ]
+    }
+  ];
+
+  var state = { index: 0, scores: [null, null], reasons: ["", ""] };
+
+  function $(id) { return document.getElementById(id); }
+
+  /* Toast for parts that are not in the prototype */
+  var toastTimer = null;
+  function note(text) {
+    var t = $("toast");
+    t.textContent = text;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 4000);
+  }
+  document.addEventListener("click", function (e) {
+    var el = e.target.closest("[data-note]");
+    if (!el) return;
+    e.preventDefault();
+    note(el.getAttribute("data-note"));
+  });
+
+  /* Router */
+  function route() {
+    var name = location.hash.replace(/^#/, "");
+    if (ROUTES.indexOf(name) === -1) name = "projects";
+    var screen = name === "home-tabs" ? "home" : name;
+    var screens = document.querySelectorAll("[data-screen]");
+    for (var i = 0; i < screens.length; i++) {
+      screens[i].hidden = screens[i].getAttribute("data-screen") !== screen;
+    }
+    var links = document.querySelectorAll(".switcher a");
+    for (var j = 0; j < links.length; j++) {
+      if (links[j].getAttribute("data-route") === name) links[j].setAttribute("aria-current", "page");
+      else links[j].removeAttribute("aria-current");
+    }
+    if (screen === "home") {
+      var tabs = name === "home-tabs";
+      $("home-tabbar").hidden = !tabs;
+      $("home-start").setAttribute("href", "#rate");
+      updateHome();
+    }
+    if (screen === "rate") renderRate();
+    closeMenu(false);
+    document.title = TITLES[name] + " · cdm-plenum prototype";
+    window.scrollTo(0, 0);
+    var h1 = document.querySelector("[data-screen='" + screen + "'] h1:not([hidden])");
+    if (screen === "rate") h1 = state.index < ELEMENTS.length ? $("el-name") : $("sum-title");
+    if (h1 && routed) h1.focus({ preventScroll: true });
+    routed = true;
+  }
+  var routed = false;
+  window.addEventListener("hashchange", route);
+
+  /* Person menu and theme */
+  var menuBtn = $("person-btn");
+  var menu = $("person-menu");
+  function openMenu() {
+    menu.hidden = false;
+    menuBtn.setAttribute("aria-expanded", "true");
+    var first = menu.querySelector("button");
+    if (first) first.focus();
+  }
+  function closeMenu(returnFocus) {
+    if (menu.hidden) return;
+    menu.hidden = true;
+    menuBtn.setAttribute("aria-expanded", "false");
+    if (returnFocus) menuBtn.focus();
+  }
+  menuBtn.addEventListener("click", function () {
+    if (menu.hidden) openMenu(); else closeMenu(false);
+  });
+  document.addEventListener("click", function (e) {
+    if (!menu.hidden && !e.target.closest(".person")) closeMenu(false);
+  });
+  menu.addEventListener("keydown", function (e) {
+    var items = Array.prototype.slice.call(menu.querySelectorAll("button"));
+    var i = items.indexOf(document.activeElement);
+    if (e.key === "Escape") { e.preventDefault(); closeMenu(true); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+  });
+  var themeBtns = menu.querySelectorAll("[data-theme-set]");
+  for (var t = 0; t < themeBtns.length; t++) {
+    themeBtns[t].addEventListener("click", function () {
+      var v = this.getAttribute("data-theme-set");
+      if (v === "system") document.documentElement.removeAttribute("data-theme");
+      else document.documentElement.setAttribute("data-theme", v);
+      for (var k = 0; k < themeBtns.length; k++) {
+        themeBtns[k].setAttribute("aria-pressed", String(themeBtns[k] === this));
+      }
+    });
+  }
+
+  /* Disclosure with an in-page confirmation */
+  function toggle(btn, panel, focusEl) {
+    var open = panel.hidden;
+    panel.hidden = !open;
+    btn.setAttribute("aria-expanded", String(open));
+    if (open && focusEl) focusEl.focus();
+  }
+
+  /* Home */
+  function ratedCount() {
+    var n = 0;
+    for (var i = 0; i < state.scores.length; i++) if (state.scores[i] !== null) n++;
+    return n;
+  }
+  function updateHome() {
+    var n = ratedCount();
+    var total = ELEMENTS.length;
+    $("home-progress-text").textContent = n + " of " + total + " rated";
+    $("home-start").textContent = n === total ? "Review your scores" : n > 0 ? "Go on rating" : "Start rating";
+  }
+  $("about-btn").addEventListener("click", function () { toggle(this, $("about-panel"), $("about-title")); });
+  $("about-close").addEventListener("click", function () {
+    $("about-panel").hidden = true;
+    $("about-btn").setAttribute("aria-expanded", "false");
+    $("about-btn").focus();
+  });
+  $("leave-btn").addEventListener("click", function () {
+    $("leave-done").textContent = "";
+    toggle(this, $("leave-confirm"), $("leave-q"));
+  });
+  $("leave-no").addEventListener("click", function () {
+    $("leave-confirm").hidden = true;
+    $("leave-btn").setAttribute("aria-expanded", "false");
+    $("leave-btn").focus();
+  });
+  $("leave-yes").addEventListener("click", function () {
+    $("leave-confirm").hidden = true;
+    $("leave-btn").setAttribute("aria-expanded", "false");
+    $("leave-done").textContent = "You would now leave the project. In this prototype nothing changed.";
+    $("leave-btn").focus();
+  });
+
+  /* Facilitator overview */
+  $("reveal-btn").addEventListener("click", function () {
+    var item = $("reveal-item");
+    item.classList.add("is-done");
+    var s = $("reveal-status");
+    s.className = "status status-done";
+    s.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span class="visually-hidden">Done</span>';
+    var label = document.createElement("span");
+    label.className = "meta";
+    label.textContent = "Board revealed";
+    this.replaceWith(label);
+    note("The board is visible to everyone.");
+  });
+  function hideConfirm(id, btnId) {
+    $(id).hidden = true;
+    $(btnId).setAttribute("aria-expanded", "false");
+  }
+  $("decide-btn").addEventListener("click", function () {
+    hideConfirm("back-confirm", "back-btn");
+    $("phase-done").textContent = "";
+    $("decide-confirm").hidden = false;
+    this.hidden = true;
+    this.setAttribute("aria-expanded", "true");
+    $("decide-q").focus();
+  });
+  function closeDecide(msg) {
+    hideConfirm("decide-confirm", "decide-btn");
+    $("decide-btn").hidden = false;
+    $("phase-done").textContent = msg || "";
+    $("decide-btn").focus();
+  }
+  $("decide-no").addEventListener("click", function () { closeDecide(""); });
+  $("decide-yes").addEventListener("click", function () {
+    closeDecide("Everyone would now move to Decide. In this prototype nothing changed.");
+  });
+  $("back-btn").addEventListener("click", function () {
+    closeDecide("");
+    $("phase-done").textContent = "";
+    toggle(this, $("back-confirm"), $("back-q"));
+  });
+  $("back-no").addEventListener("click", function () {
+    hideConfirm("back-confirm", "back-btn");
+    $("back-btn").focus();
+  });
+  $("back-yes").addEventListener("click", function () {
+    hideConfirm("back-confirm", "back-btn");
+    $("phase-done").textContent = "Everyone would now move back to Scope. In this prototype nothing changed.";
+    $("back-btn").focus();
+  });
+
+  /* Rating */
+  var BANDS = [
+    { label: "Does not belong", range: "1-3", from: 1 },
+    { label: "Unsure", range: "4-6", from: 4 },
+    { label: "Belongs", range: "7-9", from: 7 }
+  ];
+  var CHECK = '<svg class="icon ck" aria-hidden="true"><use href="#i-check"/></svg>';
+
+  function buildScale() {
+    var scale = $("scale");
+    var html = "";
+    for (var b = 0; b < BANDS.length; b++) {
+      var band = BANDS[b];
+      var bandId = "band-" + b;
+      html += '<div><div class="band-buttons">';
+      for (var v = band.from; v < band.from + 3; v++) {
+        html += '<button type="button" class="score" role="radio" aria-checked="false" tabindex="-1" data-value="' + v +
+          '" aria-label="' + v + '" aria-describedby="' + bandId + '">' + CHECK + '<span aria-hidden="true">' + v + "</span>" +
+          '<span class="mark tri" aria-hidden="true" hidden></span></button>';
+      }
+      html += '</div><p class="band-label" id="' + bandId + '">' + band.label + " " + band.range + "</p></div>";
+    }
+    html += '<div class="unable-cell"><button type="button" class="score unable" role="radio" aria-checked="false" tabindex="-1" data-value="unable">' +
+      CHECK + "<span>Unable to rate</span></button></div>";
+    scale.innerHTML = html;
+  }
+
+  function radios() { return Array.prototype.slice.call($("scale").querySelectorAll("[role='radio']")); }
+
+  function syncScale() {
+    var cur = state.scores[state.index];
+    var prev = ELEMENTS[state.index].prev;
+    var rs = radios();
+    var tabbable = null;
+    for (var i = 0; i < rs.length; i++) {
+      var val = rs[i].getAttribute("data-value");
+      var on = cur !== null && String(cur) === val;
+      rs[i].setAttribute("aria-checked", String(on));
+      rs[i].tabIndex = -1;
+      if (on) tabbable = rs[i];
+      var mark = rs[i].querySelector(".mark");
+      if (mark) mark.hidden = String(prev) !== val;
+    }
+    (tabbable || rs[0]).tabIndex = 0;
+  }
+
+  function select(radio, announce) {
+    var val = radio.getAttribute("data-value");
+    state.scores[state.index] = val === "unable" ? "unable" : Number(val);
+    syncScale();
+    radio.focus();
+    if (announce) {
+      $("saved").innerHTML = '<svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>' +
+        (val === "unable" ? "Saved: unable to rate" : "Saved: " + val);
+    }
+    renderDots();
+  }
+
+  $("scale").addEventListener("click", function (e) {
+    var r = e.target.closest("[role='radio']");
+    if (r) select(r, true);
+  });
+  $("scale").addEventListener("keydown", function (e) {
+    var rs = radios();
+    var i = rs.indexOf(document.activeElement);
+    if (i === -1) return;
+    var n = null;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") n = (i + 1) % rs.length;
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") n = (i - 1 + rs.length) % rs.length;
+    else if (e.key === "Home") n = 0;
+    else if (e.key === "End") n = rs.length - 1;
+    else if (e.key === " ") { e.preventDefault(); select(rs[i], true); return; }
+    if (n !== null) { e.preventDefault(); select(rs[n], true); }
+  });
+
+  function histogram(el) {
+    var counts = el.counts;
+    var max = Math.max.apply(null, counts) || 1;
+    var bw = 24, gap = 8, top = 32, h = 56, w = counts.length * (bw + gap) - gap;
+    var svg = '<svg class="hist" viewBox="0 0 ' + w + " " + (top + h + 18) + '" aria-hidden="true">';
+    for (var i = 0; i < counts.length; i++) {
+      var x = i * (bw + gap);
+      var bh = counts[i] === 0 ? 1 : Math.round(counts[i] / max * h);
+      var you = i + 1 === el.prev;
+      svg += '<rect class="b' + (you ? " you" : "") + '" x="' + x + '" y="' + (top + h - bh) + '" width="' + bw + '" height="' + bh + '" rx="2"/>';
+      if (counts[i] > 0) {
+        svg += '<text x="' + (x + bw / 2) + '" y="' + (top + h - bh - 4) + '" text-anchor="middle">' + counts[i] + "</text>";
+      }
+      if (you) {
+        svg += '<text class="you" x="' + (x + bw / 2) + '" y="' + (top + h - bh - 18) + '" text-anchor="middle">you</text>';
+      }
+      svg += '<text x="' + (x + bw / 2) + '" y="' + (top + h + 14) + '" text-anchor="middle">' + (i + 1) + "</text>";
+    }
+    svg += "</svg>";
+    var parts = [];
+    for (var j = 0; j < counts.length; j++) parts.push("score " + (j + 1) + ": " + counts[j]);
+    var total = counts.reduce(function (a, c) { return a + c; }, 0);
+    return svg + '<figcaption class="meta">' + total + " scores. Your bar is marked “you”.</figcaption>" +
+      '<p class="visually-hidden">Number of people per score in round 1: ' + parts.join(", ") + ". You scored " + el.prev + ".</p>";
+  }
+
+  function renderDots() {
+    $("dots-text").textContent = state.index < ELEMENTS.length ? "Element " + (state.index + 1) + " of " + ELEMENTS.length : "Your scores";
+  }
+
+  function renderRate() {
+    var onSummary = state.index >= ELEMENTS.length;
+    $("rate-card").hidden = onSummary;
+    $("rate-summary").hidden = !onSummary;
+    $("prev-btn").disabled = state.index === 0;
+    $("ov-btn").hidden = onSummary;
+    var next = $("next-btn");
+    if (onSummary) {
+      next.innerHTML = "Back to project";
+      var list = "";
+      for (var i = 0; i < ELEMENTS.length; i++) {
+        var s = state.scores[i];
+        var txt = s === null ? "Not rated" : s === "unable" ? "Unable to rate" : String(s);
+        list += '<li><span>' + ELEMENTS[i].name + '<br><span class="summary-score">' + txt + "</span></span>" +
+          '<button type="button" class="btn" data-goto="' + i + '">Change<span class="visually-hidden"> score for ' + ELEMENTS[i].name + "</span></button></li>";
+      }
+      $("summary-list").innerHTML = list;
+    } else {
+      var el = ELEMENTS[state.index];
+      next.innerHTML = 'Next<svg class="icon" aria-hidden="true"><use href="#i-right"/></svg>';
+      $("el-name").textContent = el.name;
+      $("el-def").textContent = el.def;
+      $("prev-text").textContent = "Your round 1 score: " + el.prev;
+      $("reason").value = state.reasons[state.index];
+      $("saved").innerHTML = "";
+      $("gs-panel").hidden = true;
+      $("gs-toggle").setAttribute("aria-expanded", "false");
+      $("hist-fig").innerHTML = histogram(el);
+      $("reasons").innerHTML = el.reasons.map(function (r) { return "<li>" + r + "</li>"; }).join("");
+      syncScale();
+    }
+    renderDots();
+  }
+
+  function go(index) {
+    state.index = index;
+    renderRate();
+    var h = state.index < ELEMENTS.length ? $("el-name") : $("sum-title");
+    h.focus({ preventScroll: true });
+    window.scrollTo(0, 0);
+  }
+
+  $("gs-toggle").addEventListener("click", function () {
+    var open = $("gs-panel").hidden;
+    $("gs-panel").hidden = !open;
+    this.setAttribute("aria-expanded", String(open));
+  });
+  $("reason").addEventListener("input", function () { state.reasons[state.index] = this.value; });
+  $("prev-btn").addEventListener("click", function () { if (state.index > 0) go(state.index - 1); });
+  $("ov-btn").addEventListener("click", function () { go(ELEMENTS.length); });
+  $("next-btn").addEventListener("click", function () {
+    if (state.index >= ELEMENTS.length) {
+      state.index = 0;
+      location.hash = "#home";
+      return;
+    }
+    go(state.index + 1);
+  });
+  $("summary-list").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-goto]");
+    if (b) go(Number(b.getAttribute("data-goto")));
+  });
+
+  buildScale();
+  route();
+})();
+</script>
+</body>
+</html>

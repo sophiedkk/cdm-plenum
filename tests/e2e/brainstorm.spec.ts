@@ -132,15 +132,19 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
       // Participant A adds under two questions and sees only their own elements.
       const a = await pageFor(browser, locale, first);
-      await a.page.goto(`/projects/${project.projectId}/scope`);
-      await a.page.getByRole("link", { name: text.projects_tab_brainstorm }).click();
+      // The task card on the project home leads to the brainstorm (PR8, ADR 0019).
+      await a.page.goto(`/projects/${project.projectId}`);
+      const task = a.page.getByRole("region", { name: text.projects_home_turn_discover });
+      await task.getByRole("link", { name: text.projects_task_discover_action }).click();
       await expect(
         a.page.getByRole("heading", { level: 2, name: text.board_brainstorm_title }),
       ).toBeVisible();
-      // The header carries the one line of the scope (PR11).
-      await expect(a.page.getByTestId("project-scope-line")).toHaveText(
-        "The blood pressure of an adult at the outpatient clinic.",
-      );
+      // The scope stays one step away, from the phase steps.
+      await expect(
+        a.page
+          .getByRole("list", { name: text.projects_steps_label })
+          .getByRole("link", { name: new RegExp(`^${text.projects_phase_scope}`) }),
+      ).toHaveAttribute("href", `/projects/${project.projectId}/scope`);
       await expect(a.page.getByText(text.board_brainstorm_private_note)).toBeVisible();
       await expect(
         a.page.getByRole("heading", { name: fill(text.board_brainstorm_yours, { count: 0 }) }),
@@ -151,10 +155,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(
         a.page.getByRole("heading", { name: fill(text.board_brainstorm_yours, { count: 2 }) }),
       ).toBeVisible();
-      // The task line in the header counts the participant's own elements.
-      await expect(a.page.getByRole("region", { name: text.projects_task_heading })).toContainText(
-        fill(text.projects_task_discover_many, { count: 2 }),
-      );
+      // The task card on the home counts the participant's own elements.
+      await a.page.getByRole("link", { name: text.projects_back_home }).click();
+      await expect(
+        a.page.getByRole("region", { name: text.projects_home_turn_discover }).locator("dd"),
+      ).toHaveText("2");
+      await a.page.goto(brainstorm);
       await axeClean(a.page);
       await expectAxeCleanInBothThemes(a.page);
 

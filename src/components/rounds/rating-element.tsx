@@ -1,15 +1,15 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// One card of the rating screen (DE3, DE7, DE8, DE15, DE18): the element's name and description,
-// the scale as a radio group of large buttons in the round's three bands with "unable to rate"
-// after them, an optional reason and the folded details. The rating covers inclusion only (DE1),
-// so data type, cardinality and values are marked "not rated" and can be flagged (DE17). A choice
-// saves at once; a changed reason saves when the field loses focus. In a later round the card
-// shows the participant's own earlier rating on the distribution and above the scale, and the
-// first anonymous reasons; the median and the band shares sit behind "details". No outcome label
-// of the earlier round shows: it can push ratings toward the group (ADR 0013).
-import { CheckIcon } from "lucide-react";
+// One card of the rating screen (DE3, DE7, DE8, DE15, DE18, ADR 0019): the element's name and
+// description with the question right under them, the scale as a radio group of large buttons in
+// the round's three bands with "unable to rate" after them, the reason at full width and the
+// folded details. The rating covers inclusion only (DE1), so data type, cardinality and values
+// are marked "not rated" and can be flagged (DE17). A choice saves at once; a changed reason saves
+// when the field loses focus. In a later round the card shows the own earlier score in a line and
+// above the scale; how the group scored, with the anonymous reasons, opens below that line. No
+// outcome label of the earlier round shows: it can push ratings toward the group (ADR 0013).
+import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
 import { type ReactNode, type Ref, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -102,9 +102,10 @@ function PreviousMarker({ id, children }: Readonly<{ id: string; children: React
     <span
       id={id}
       data-previous-marker=""
-      className="absolute bottom-full left-1/2 mb-0.5 -translate-x-1/2 text-xs leading-none font-medium whitespace-nowrap"
+      className="absolute bottom-full left-1/2 mb-0.5 -translate-x-1/2 text-sm leading-none whitespace-nowrap"
     >
-      {children}
+      {/* The line above the scale says the score in words; the mark only points at it. */}
+      <span className="sr-only">{children}</span>
       <span aria-hidden="true"> ▾</span>
     </span>
   );
@@ -251,6 +252,10 @@ function PreviousReasons({
   );
 }
 
+/**
+ * The participant's own score in the previous round, with a button beside it that opens how the
+ * group scored. The panel opens below the row, so the button stays where it is.
+ */
 function PreviousRound({
   base,
   element,
@@ -260,23 +265,49 @@ function PreviousRound({
 }>) {
   const previous = element.previous;
   const groups = shownGroups(previous.groups);
+  const [open, setOpen] = useState(false);
+  const panelId = `${base}-group-scores`;
   return (
-    // From md up: the own score and the distributions left with the details under them, the
-    // reasons right; open details take the full width below both.
-    <div className="grid gap-x-8 gap-y-2 rounded-md bg-muted/50 px-3 py-2 text-sm md:grid-cols-[auto_minmax(0,1fr)]">
-      <div className="flex flex-col gap-1.5 md:col-start-1 md:row-start-1">
+    <div className="flex flex-col gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <p className="font-medium">
           {m.rounds_rate_previous_own_value({
             number: previous.number,
             value: ownText(previous.own),
           })}
         </p>
+        <Button
+          type="button"
+          variant="link"
+          size="sm"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen(!open)}
+          className="h-auto px-0 text-muted-foreground"
+        >
+          <ChevronRightIcon
+            aria-hidden="true"
+            data-icon="inline-start"
+            className={
+              open
+                ? "rotate-90 motion-safe:transition-transform"
+                : "motion-safe:transition-transform"
+            }
+          />
+          {m.rounds_rate_group_scores({ number: previous.number })}
+        </Button>
+      </div>
+      <div
+        id={panelId}
+        hidden={!open}
+        className="grid gap-x-8 gap-y-3 rounded-md border p-3 md:grid-cols-[auto_minmax(0,1fr)]"
+      >
         <ul
           aria-label={m.rounds_rate_previous_distribution({
             number: previous.number,
             name: element.name,
           })}
-          className="flex flex-wrap items-start gap-x-5 gap-y-2"
+          className="flex flex-col gap-2 md:col-start-1 md:row-start-1"
         >
           <li className="flex items-center gap-2">
             <span className="text-muted-foreground">{m.rounds_rate_previous_everyone()}</span>
@@ -289,26 +320,28 @@ function PreviousRound({
             </li>
           ))}
         </ul>
-      </div>
-      <div className="md:col-start-2 md:row-span-2 md:row-start-1">
-        <PreviousReasons base={base} reasons={previous.reasons} />
-      </div>
-      <details className="self-end md:col-start-1 md:row-start-2 md:open:col-span-2 md:open:row-start-3">
-        <summary className="cursor-pointer font-medium">{m.rounds_rate_previous_figures()}</summary>
-        <div className="mt-3 flex flex-col gap-4">
-          <div className="grid gap-6 md:grid-cols-2">
-            <ResultFigures result={previous.result} />
-            <DistributionTable
-              result={previous.result}
-              caption={m.rounds_rate_previous_table({
-                number: previous.number,
-                name: element.name,
-              })}
-            />
-          </div>
-          <GroupResultsTable name={element.name} groups={previous.groups} showOutcome={false} />
+        <div className="md:col-start-2 md:row-span-2 md:row-start-1">
+          <PreviousReasons base={base} reasons={previous.reasons} />
         </div>
-      </details>
+        <details className="self-end md:col-start-1 md:row-start-2 md:open:col-span-2 md:open:row-start-3">
+          <summary className="cursor-pointer font-medium">
+            {m.rounds_rate_previous_figures()}
+          </summary>
+          <div className="mt-3 flex flex-col gap-4">
+            <div className="grid gap-6 md:grid-cols-2">
+              <ResultFigures result={previous.result} />
+              <DistributionTable
+                result={previous.result}
+                caption={m.rounds_rate_previous_table({
+                  number: previous.number,
+                  name: element.name,
+                })}
+              />
+            </div>
+            <GroupResultsTable name={element.name} groups={previous.groups} showOutcome={false} />
+          </div>
+        </details>
+      </div>
     </div>
   );
 }
@@ -318,7 +351,6 @@ export function RatingElement({
   element,
   details,
   position,
-  progress,
   headingRef,
   rule,
   editable,
@@ -332,8 +364,6 @@ export function RatingElement({
   details: ElementDetails;
   /** The card's place among the round's elements, from 1. */
   position: { index: number; total: number };
-  /** The links to every card, shown next to the place. */
-  progress?: ReactNode;
   /** The heading, which takes focus when the participant moves to this card. */
   headingRef?: Ref<HTMLHeadingElement>;
   rule: ConsensusRule;
@@ -353,6 +383,7 @@ export function RatingElement({
   const [reason, setReason] = useState(element.own.reason ?? "");
   const savedReason = useRef(element.own.reason ?? "");
   const [state, setState] = useState<SaveState>("idle");
+  const [reasonFocused, setReasonFocused] = useState(false);
 
   // Arrow keys in the radio group change the choice on every press; the saves run one after the
   // other, so the last choice is the one the server keeps.
@@ -410,10 +441,10 @@ export function RatingElement({
   return (
     <section
       aria-labelledby={`${base}-heading`}
-      className="flex flex-col gap-2 rounded-lg border px-4 py-3"
+      className="flex flex-col gap-4 rounded-lg border bg-card px-4 py-4 text-card-foreground shadow-xs sm:px-6"
     >
       <div className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h3
             id={`${base}-heading`}
             ref={headingRef}
@@ -422,22 +453,21 @@ export function RatingElement({
           >
             {element.name}
           </h3>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <p className="text-sm text-muted-foreground">
-              {m.rounds_card_position({ index: position.index, total: position.total })}
-            </p>
-            {progress}
-          </div>
+          <p className="text-sm text-muted-foreground">
+            {m.rounds_card_position({ index: position.index, total: position.total })}
+          </p>
         </div>
-        {element.description && <p className="break-words">{element.description}</p>}
+        {element.description && (
+          <p className="break-words text-muted-foreground">{element.description}</p>
+        )}
+        <p id={`${base}-scale`} className="mt-3 text-2xl font-semibold tracking-tight">
+          {m.rounds_rate_question()}
+        </p>
       </div>
       {element.previous && (
         <PreviousRound base={base} element={{ ...element, previous: element.previous }} />
       )}
       <div className="flex flex-col gap-2">
-        <p id={`${base}-scale`} className="font-medium">
-          {m.rounds_rate_question()}
-        </p>
         {/* The keys line sits beside the scale where it fits, under it where it does not. */}
         <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
           <Scale
@@ -450,64 +480,66 @@ export function RatingElement({
           />
           <p
             data-testid="rating-keys"
-            className="min-w-56 flex-1 pb-5 text-xs text-muted-foreground touch:hidden"
+            className="min-w-56 flex-1 pb-5 text-sm text-muted-foreground touch:hidden"
           >
             {editable && digits
               ? m.rounds_rate_keys({ first: digits.first, last: digits.last })
               : m.rounds_rate_keys_move()}
           </p>
         </div>
+        <div className="flex min-h-8 flex-wrap items-center gap-x-4 gap-y-2">
+          <p
+            role="status"
+            className={
+              typeof state === "object" && "error" in state
+                ? "text-sm text-destructive"
+                : "text-sm text-muted-foreground"
+            }
+          >
+            {statusText}
+          </p>
+          {editable && choice !== "" && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                if (await run(clear, "cleared")) {
+                  setChoice("");
+                  savedReason.current = "";
+                  setReason("");
+                }
+              }}
+            >
+              {m.rounds_rate_clear()}
+            </Button>
+          )}
+        </div>
       </div>
-      <div className="grid gap-x-3 gap-y-1.5 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
+      <div className="flex flex-col gap-1.5">
         <FieldLabel htmlFor={`${base}-reason`}>{m.rounds_rate_reason_label()}</FieldLabel>
         <Textarea
           id={`${base}-reason`}
           value={reason}
-          rows={1}
-          className="min-h-9 py-1.5"
+          rows={2}
           maxLength={RATING_REASON_MAX}
           disabled={!editable}
-          aria-describedby={`${base}-reason-help`}
+          aria-describedby={reasonFocused ? `${base}-reason-help` : undefined}
           onChange={(event) => setReason(event.target.value)}
+          onFocus={() => setReasonFocused(true)}
           onBlur={() => {
+            setReasonFocused(false);
             if (choice !== "" && reason !== savedReason.current) void saveChoice(choice, reason);
           }}
         />
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 md:col-start-2">
-          <FieldDescription id={`${base}-reason-help`} className="min-w-60 flex-1">
+        {/* Help on demand: the note shows while the field has focus. */}
+        {reasonFocused && (
+          <FieldDescription id={`${base}-reason-help`}>
             {choice === ""
               ? m.rounds_rate_reason_help_unrated()
               : m.rounds_rate_reason_help({ max: RATING_REASON_MAX })}
           </FieldDescription>
-          <div className="flex flex-wrap items-center gap-3">
-            {editable && choice !== "" && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  if (await run(clear, "cleared")) {
-                    setChoice("");
-                    savedReason.current = "";
-                    setReason("");
-                  }
-                }}
-              >
-                {m.rounds_rate_clear()}
-              </Button>
-            )}
-            <p
-              role="status"
-              className={
-                typeof state === "object" && "error" in state
-                  ? "text-sm text-destructive"
-                  : "text-sm text-muted-foreground"
-              }
-            >
-              {statusText}
-            </p>
-          </div>
-        </div>
+        )}
       </div>
       <ElementDetailsDisclosure
         details={details}

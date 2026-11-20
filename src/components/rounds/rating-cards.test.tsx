@@ -60,13 +60,12 @@ function Harness({ start = 1 }: Readonly<{ start?: ShownCard }>) {
           </a>
         )}
         go={setShown}
-        renderCard={(item, position, headingRef, progress) => (
+        renderCard={(item, position, headingRef) => (
           <RatingElement
             key={item.id}
             element={item}
             details={{ dataType: null, cardinality: null, values: [] }}
             position={position}
-            progress={progress}
             headingRef={headingRef}
             rule={DEFAULT_RULE}
             editable
@@ -123,7 +122,7 @@ describe("RatingCards (DE18)", () => {
       "Cuff sizeUnable to rateNone",
       "PositionNot rated yetNone",
     ]);
-    // The page header carries the count; the overview does not repeat it.
+    // The page carries the count; the overview does not repeat it.
     expect(overview.textContent).not.toContain("elements rated");
     expect(screen.getByText("The open question of round 1")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Next" })).toBeNull();
@@ -152,30 +151,24 @@ describe("RatingCards (DE18)", () => {
   });
 });
 
-describe("the dots per card (DE18)", () => {
-  const dots = () =>
-    within(screen.getByRole("list", { name: "Every element of this round" })).getAllByRole("link");
-
-  it("name every element with its answer and mark the shown card", () => {
+describe("the place of the card (DE18)", () => {
+  it("names the place in words once, without a dot per card", () => {
     render(<Harness start={2} />);
-    expect(dots().map((dot) => dot.textContent)).toEqual([
-      "Element 1, Systolic pressure, rated 8",
-      "Element 2, Cuff size, unable to rate",
-      "Element 3, Position, not rated yet",
-    ]);
-    expect(dots().map((dot) => dot.getAttribute("aria-current"))).toEqual([null, "page", null]);
-    // Filled when answered, open when not: the shape tells, not only the colour.
-    const shapes = dots().map((dot) =>
-      dot.querySelector("[aria-hidden]")?.hasAttribute("data-rated"),
-    );
-    expect(shapes).toEqual([true, true, false]);
+    const card = screen.getByRole("region", { name: "Cuff size" });
+    expect(card.textContent?.match(/Element 2 of 3/g)).toHaveLength(1);
+    expect(screen.queryByRole("list", { name: "Every element of this round" })).toBeNull();
   });
 
-  it("link to their card and move focus to its heading", () => {
-    render(<Harness />);
-    fireEvent.click(link("Element 3, Position, not rated yet"));
+  it("leaves naming each element with its answer and the link to its card to the overview", () => {
+    render(<Harness start="overview" />);
+    const overview = screen.getByRole("region", { name: "Overview of your ratings" });
+    expect(
+      within(overview)
+        .getAllByRole("link")
+        .map((item) => item.textContent),
+    ).toEqual(["Systolic pressure", "Cuff size", "Position"]);
+    fireEvent.click(link("Position"));
     expect(document.activeElement).toBe(heading("Position"));
-    expect(link("Element 3, Position, not rated yet").getAttribute("aria-current")).toBe("page");
   });
 });
 

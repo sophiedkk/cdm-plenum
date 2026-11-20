@@ -1,13 +1,12 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// Phase-bound access (PR9, PR10, PR11): a participant sees only the steps of the current phase,
-// the work of the phase first, reads earlier steps without their forms, and lands on the current
-// step from a hidden step's URL; the facilitator sees every step and gets a refusal when opening
-// a round outside the decide phase.
+// Phase-bound access (PR9, PR10, PR11, ADR 0019): a participant reaches only the steps the
+// current phase opens, from the phase steps of the header, reads earlier steps without their
+// forms, and lands on the project home from a hidden step's URL; the facilitator sees the same
+// fixed tabs in every phase and gets a refusal when opening a round outside the decide phase.
 // The read-only scope is axe-clean in English and Dutch (Q-ACC-1, Q-I18N-1).
 import type { Page } from "@playwright/test";
-import { STEP_ORDER } from "../../src/lib/phase-access.ts";
 import { PROJECT_PHASES, type ProjectPhase } from "../../src/lib/project-phases.ts";
 import { createRound } from "../../src/server/rounds/queries.ts";
 import { addScopeComment } from "../../src/server/scope/queries.ts";
@@ -39,7 +38,19 @@ async function tabNames(page: Page, locale: Locale): Promise<string[]> {
   return nav.getByRole("link").allTextContents();
 }
 
-test("a participant in the scope phase sees the scope and members, and comments", async ({
+/**
+ * The phase steps a participant can open, by their text; a participant has no tabs. The text of
+ * a step ends in its state for a screen reader, such as ", done".
+ */
+async function stepLinks(page: Page, locale: Locale): Promise<string[]> {
+  const text = MESSAGES[locale];
+  await expect(page.getByRole("navigation", { name: text.projects_tabs_label })).toHaveCount(0);
+  const steps = page.getByRole("list", { name: text.projects_steps_label });
+  await expect(steps).toBeVisible();
+  return (await steps.getByRole("link").allTextContents()).map((name) => name.split(",")[0] ?? "");
+}
+
+test("a participant in the scope phase reaches the scope only, and comments", async ({
   page,
   db,
 }) => {
@@ -47,7 +58,7 @@ test("a participant in the scope phase sees the scope and members, and comments"
   const project = await seedProject(db, "scope");
   const participant = await seedParticipant(db, project);
   await signInTo(page, participant, "en", `/projects/${project.projectId}/scope`);
-  expect(await tabNames(page, "en")).toEqual([text.projects_tab_scope, text.projects_tab_members]);
+  expect(await stepLinks(page, "en")).toEqual([text.projects_phase_scope]);
   const field = page.getByLabel(text.common_comment_label);
   await expectHydrated(field);
   await field.fill("Do home readings count?");
@@ -76,13 +87,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       });
       expect(comment.ok).toBe(true);
       await signInTo(page, participant, locale, `/projects/${project.projectId}/scope`);
-      // The work of the discover phase comes first (PR11).
-      expect(await tabNames(page, locale)).toEqual([
-        text.projects_tab_brainstorm,
-        text.projects_tab_board,
-        text.projects_tab_scope,
-        text.projects_tab_members,
+      // Scope and Discover open; the brainstorm is the task on the home (PR8, PR11).
+      expect(await stepLinks(page, locale)).toEqual([
+        text.projects_phase_scope,
+        text.projects_phase_discover,
       ]);
+      await expect(page.getByRole("link", { name: text.projects_back_home })).toHaveAttribute(
+        "href",
+        `/projects/${project.projectId}`,
+      );
       await expect(page.getByRole("list", { name: text.scope_comments_heading })).toContainText(
         "Agreed in the scope phase.",
       );
@@ -117,45 +130,46 @@ test("a participant in the decide phase reads the board without the add button o
   await expectAxeClean(page);
 });
 
-test("a participant opening the rounds URL in the discover phase lands on their current step", async ({
+test("a participant opening the rounds URL in the discover phase lands on their task", async ({
   page,
   db,
 }) => {
   const project = await seedProject(db, "discover");
   const participant = await seedParticipant(db, project);
   await signInTo(page, participant, "en", `/projects/${project.projectId}/rounds`);
-  await expect(page).toHaveURL(
-    (url) => url.pathname === `/projects/${project.projectId}/brainstorm`,
-  );
-  await expect(page.getByRole("region", { name: MESSAGES.en.projects_task_heading })).toBeVisible();
+  await expect(page).toHaveURL((url) => url.pathname === `/projects/${project.projectId}`);
+  await expect(
+    page.getByRole("region", { name: MESSAGES.en.projects_home_turn_discover }),
+  ).toBeVisible();
 });
 
-test("the facilitator sees every tab in every phase, the work of the phase first", async ({
+test("the facilitator sees the same tabs in the same order in every phase (ADR 0019)", async ({
   page,
   db,
 }) => {
   const text = MESSAGES.en;
   const project = await seedProject(db, "scope");
   const projectUrl = `/projects/${project.projectId}`;
-  const tabs: Record<string, string> = {
-    scope: text.projects_tab_scope,
-    brainstorm: text.projects_tab_brainstorm,
-    board: text.projects_tab_board,
-    rounds: text.projects_tab_rounds,
-    export: text.projects_tab_export,
-    members: text.projects_tab_members,
-    settings: text.projects_tab_settings,
-  };
+  const tabs = [
+    text.projects_tab_overview,
+    text.projects_tab_scope,
+    text.projects_tab_elements,
+    text.projects_tab_rounds,
+    text.projects_tab_people,
+    text.projects_tab_settings,
+  ];
   await signInTo(page, project.facilitator.email, "en", projectUrl);
   for (const phase of PROJECT_PHASES) {
     await setPhase(db, project.projectId, phase);
     await page.goto(projectUrl);
     await expect(page.locator('[aria-current="step"]')).toContainText(PHASE_NAMES[phase]);
-    expect(await tabNames(page, "en")).toEqual(STEP_ORDER[phase].map((step) => tabs[step]));
-    expect((await tabNames(page, "en")).slice(-2)).toEqual([
-      text.projects_tab_members,
-      text.projects_tab_settings,
-    ]);
+    expect(await tabNames(page, "en")).toEqual(tabs);
+    // The project opens on the Overview in every phase.
+    await expect(
+      page
+        .getByRole("navigation", { name: text.projects_tabs_label })
+        .getByRole("link", { name: text.projects_tab_overview }),
+    ).toHaveAttribute("aria-current", "page");
   }
 });
 

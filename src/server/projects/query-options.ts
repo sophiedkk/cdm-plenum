@@ -6,10 +6,12 @@
 import { queryOptions } from "@tanstack/react-query";
 import { STALE_TIME } from "@/lib/query-config";
 import {
+  decidedSoFarFn,
   getProjectFn,
   listGroupMembersFn,
   listGroupsFn,
-  listProjectsFn,
+  listProjectRowsFn,
+  overviewFactsFn,
   projectOverviewFn,
 } from "./functions.ts";
 
@@ -22,6 +24,9 @@ export const projectKeys = {
   groupCounts: (projectId: string) => [...projectKeys.groups(projectId), "counts"] as const,
   groupMembers: (projectId: string) => [...projectKeys.groups(projectId), "members"] as const,
   overview: (projectId: string) => [...projectKeys.detail(projectId), "overview"] as const,
+  /** The facilitator's checklist facts; a change on any project page can change them. */
+  facts: (projectId: string) => [...projectKeys.overview(projectId), "facts"] as const,
+  decided: (projectId: string) => [...projectKeys.overview(projectId), "decided"] as const,
 };
 
 /** The phase, the user's own task counts and, for the facilitator, the status (PR4, PR8). */
@@ -29,6 +34,24 @@ export function projectOverviewQueryOptions(projectId: string) {
   return queryOptions({
     queryKey: projectKeys.overview(projectId),
     queryFn: () => projectOverviewFn({ data: { projectId } }),
+    staleTime: STALE_TIME.overview,
+  });
+}
+
+/** The facts of the facilitator's Overview checklist (PR4). */
+export function overviewFactsQueryOptions(projectId: string) {
+  return queryOptions({
+    queryKey: projectKeys.facts(projectId),
+    queryFn: () => overviewFactsFn({ data: { projectId } }),
+    staleTime: STALE_TIME.overview,
+  });
+}
+
+/** Where each element of the board stands, for the participant's home (PR8). */
+export function decidedSoFarQueryOptions(projectId: string) {
+  return queryOptions({
+    queryKey: projectKeys.decided(projectId),
+    queryFn: () => decidedSoFarFn({ data: { projectId } }),
     staleTime: STALE_TIME.overview,
   });
 }
@@ -51,12 +74,13 @@ export function groupMembersQueryOptions(projectId: string) {
   });
 }
 
-/** The projects of the signed-in user, with their role and the phase. */
+/** The projects of the signed-in user, with their role, the phase and what waits for them. */
 export function projectsQueryOptions() {
   return queryOptions({
     queryKey: projectKeys.list(),
-    queryFn: () => listProjectsFn(),
-    staleTime: STALE_TIME.projects,
+    queryFn: () => listProjectRowsFn(),
+    // What waits changes on every project page, so the list is read again on each visit.
+    staleTime: STALE_TIME.overview,
   });
 }
 

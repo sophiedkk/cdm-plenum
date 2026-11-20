@@ -54,8 +54,10 @@ export function PersonMenu({ user }: Readonly<{ user: SessionUser }>) {
 }
 
 /**
- * The page frame for a signed-in user: skip link, header with the main navigation and the
- * person menu, then the `main` landmark the page renders into.
+ * The page frame for a signed-in user: skip link, header with the app name (a link to the
+ * projects), the main navigation for an administrator and the person menu, then the `main`
+ * landmark the page renders into. Without the administration there is one area, so no
+ * navigation: the project pages lead back to the projects themselves (ADR 0019).
  */
 export function AppShell({ user, children }: Readonly<{ user: SessionUser; children: ReactNode }>) {
   return (
@@ -66,22 +68,22 @@ export function AppShell({ user, children }: Readonly<{ user: SessionUser; child
           <Link to="/projects" className="font-semibold tracking-tight">
             {m.app_name()}
           </Link>
-          <nav aria-label={m.shell_nav_label()}>
-            <ul className="flex flex-wrap gap-1">
-              <li>
-                <Link to="/projects" className={NAV_LINK}>
-                  {m.shell_nav_projects()}
-                </Link>
-              </li>
-              {hasAppRole(user, "administrator") && (
+          {hasAppRole(user, "administrator") && (
+            <nav aria-label={m.shell_nav_label()}>
+              <ul className="flex flex-wrap gap-1">
+                <li>
+                  <Link to="/projects" className={NAV_LINK}>
+                    {m.shell_nav_projects()}
+                  </Link>
+                </li>
                 <li>
                   <Link to="/admin" className={NAV_LINK}>
                     {m.shell_nav_admin()}
                   </Link>
                 </li>
-              )}
-            </ul>
-          </nav>
+              </ul>
+            </nav>
+          )}
           <div className="ml-auto">
             <PersonMenu user={user} />
           </div>

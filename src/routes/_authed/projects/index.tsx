@@ -4,25 +4,20 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { FolderOpenIcon, PlusIcon } from "lucide-react";
-import { PhaseBadge, RoleBadge } from "@/components/projects/project-badges";
+import { ProjectRow } from "@/components/projects/project-row";
 import { EmptyState, PageHeader } from "@/components/shell/route-states";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { m } from "@/i18n/messages";
 import { hasAppRole } from "@/lib/guards";
 import { projectsQueryOptions } from "@/server/projects/query-options";
 
-/** The user's projects with their role and the phase (PR2, PR4). */
+/**
+ * The user's projects (PR2, PR8): each with its phase and what waits for this person there,
+ * the projects with something waiting first.
+ */
 export const Route = createFileRoute("/_authed/projects/")({
-  loader: ({ context }) => context.queryClient.ensureQueryData(projectsQueryOptions()),
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData({ ...projectsQueryOptions(), revalidateIfStale: true }),
   head: () => ({ meta: [{ title: `${m.projects_title()} | ${m.app_name()}` }] }),
   component: Projects,
 });
@@ -31,63 +26,47 @@ function Projects() {
   const { data: projects } = useSuspenseQuery(projectsQueryOptions());
   const { user } = Route.useRouteContext();
   const mayCreate = hasAppRole(user, "facilitator");
-  const newProject = mayCreate && (
-    <Button asChild>
-      <Link to="/projects/new">
-        <PlusIcon aria-hidden="true" />
-        {m.projects_new()}
-      </Link>
-    </Button>
-  );
+  const newProject = (primary: boolean) =>
+    mayCreate && (
+      <Button asChild variant={primary ? "default" : "outline"}>
+        <Link to="/projects/new">
+          <PlusIcon aria-hidden="true" />
+          {m.projects_new()}
+        </Link>
+      </Button>
+    );
 
   return (
-    <>
-      <PageHeader
-        title={m.projects_title()}
-        description={m.projects_description()}
-        actions={projects.length > 0 && newProject}
-      />
+    <div className="mx-auto w-full max-w-3xl">
+      <PageHeader title={m.projects_title()} actions={projects.length > 0 && newProject(false)} />
       {projects.length === 0 ? (
         <EmptyState
           icon={<FolderOpenIcon aria-hidden="true" />}
           title={m.projects_empty_title()}
           description={mayCreate ? m.projects_empty_facilitator() : m.projects_empty_participant()}
         >
-          {newProject}
+          {newProject(true)}
         </EmptyState>
       ) : (
-        <Table>
-          <TableCaption className="sr-only">{m.projects_table_caption()}</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead scope="col">{m.projects_column_name()}</TableHead>
-              <TableHead scope="col">{m.projects_column_role()}</TableHead>
-              <TableHead scope="col">{m.projects_column_phase()}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {projects.map((project) => (
-              <TableRow key={project.id}>
-                <TableCell>
+        <ul aria-label={m.projects_list_label()} className="border-t">
+          {projects.map((project) => (
+            <li key={project.id} className="border-b">
+              <ProjectRow
+                project={project}
+                link={(children, className) => (
                   <Link
                     to="/projects/$projectId"
                     params={{ projectId: project.id }}
-                    className="font-medium underline underline-offset-4 hover:decoration-2"
+                    className={className}
                   >
-                    {project.name}
+                    {children}
                   </Link>
-                </TableCell>
-                <TableCell>
-                  <RoleBadge projectRole={project.role} />
-                </TableCell>
-                <TableCell>
-                  <PhaseBadge phase={project.phase} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                )}
+              />
+            </li>
+          ))}
+        </ul>
       )}
-    </>
+    </div>
   );
 }

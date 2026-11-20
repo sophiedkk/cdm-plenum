@@ -110,7 +110,8 @@ page from these patterns; each has a real use and a test you can copy.
   whose layout redirects to `/sign-in` and renders the app shell
   (`src/components/shell/app-shell.tsx`). Its `PersonMenu` under the
   person's name holds language, theme (`LanguageMenuGroup`, `ThemeMenuGroup`)
-  and sign out; Administration stays a nav link for administrators. Guards
+  and sign out; only an administrator gets a nav, with Projects and
+  Administration. Guards
   in `src/lib/guards.ts` steer navigation only; the server function checks
   again. Every route sets a translated `title` in `head()`.
 - **Project pages:** `src/routes/_authed/projects/$projectId.tsx` loads the
@@ -121,13 +122,30 @@ page from these patterns; each has a real use and a test you can copy.
   one intro line, and sets its title with
   `projectTitle(match.context, m.<area>_title())`
   (`src/components/projects/project-title.ts`).
+- **Project navigation (ADR 0019):** the header
+  (`src/components/projects/project-header.tsx`) shows a back link, the
+  name and the phase steps. A participant has no tabs: the project index
+  route is their home (`TaskCard`, `DecidedSoFarSection`, `AboutProject`),
+  the steps link where `stepTarget` in `src/lib/project-home.ts` gives a
+  page, and every other page links back to the home. The facilitator gets
+  `ProjectTabs`, fixed as Overview, Scope, Elements, Rounds, People,
+  Settings; a page without its own tab (export, brainstorm, import) marks
+  the tab it belongs to in `UNDER`. Overview is the index route for the
+  facilitator: `checklist(phase, facts)` decides the items, with
+  `done: null` for an item that only informs, and `PhaseMove` holds the
+  phase move. A new checklist fact goes into `overviewFacts`
+  (`src/server/projects/overview.ts`) and its test; a new participant task
+  goes into `src/lib/project-tasks.ts`. The layout's loader revalidates the
+  overview query on every navigation; a mutation that changes a count on the
+  home or the Overview (an element, a rating) invalidates
+  `projectKeys.overview`, which covers the facts and "Decided so far".
 - **Phase access:** `src/lib/phase-access.ts` says which step a participant
   sees and writes in per phase (PR9, PR10); a step page uses `requireStep`,
-  `writeOpen` and `StepClosedNote`, its server function `phaseOpenFor`. The
-  same file holds the tab order per phase (`STEP_ORDER`, members and settings
-  last), the page a project opens on (`MAIN_STEP`) and the phase from which
-  the board shows data type, cardinality and values (`detailFieldsShown`,
-  EL21). A new step is a new column in each table.
+  `writeOpen` and `StepClosedNote`, its server function `phaseOpenFor`; a
+  hidden step's URL sends a participant to the project home. The same file
+  holds the phase from which the board shows data type, cardinality and
+  values (`detailFieldsShown`, EL21). A new step is a new column in the
+  table.
 - **Data:** each area keeps a key factory and query options in
   `src/server/<area>/query-options.ts` (example:
   `src/server/projects/query-options.ts`, staleness in
@@ -153,13 +171,6 @@ page from these patterns; each has a real use and a test you can copy.
   shows its text; colour and icon only add to it (Q-ACC-2). Example:
   `PhaseBadge` and `RoleBadge` in `src/components/projects/project-badges.tsx`,
   with labels from `src/lib/i18n/labels.ts`.
-- **Project header:** every project page shows the steps and the task line
-  (`ProjectHeader`); `/projects/$projectId/` redirects to `mainStep(role,
-  phase)`. The task and the facilitator's status come from
-  `src/lib/project-tasks.ts`; a new phase task goes there with a test. The
-  layout's loader revalidates the overview query on every navigation; a
-  mutation that changes a count in the header (adding an element, a rating)
-  invalidates `projectKeys.overview`.
 - **Settings page:** `/projects/$projectId/settings` is the facilitator's
   (`requireStep("settings")`, PR12) and holds project-wide choices: the
   panel (`PanelSetup`) and the forms in
@@ -184,7 +195,8 @@ page from these patterns; each has a real use and a test you can copy.
   for what participants read, a table only for facilitator comparisons of four
   rows or more; no description under a page title and help under a field only
   on focus or error; show a value only when it says something; settings save
-  on change or with one save bar per page.
+  on change or with one save bar per page; controls do not move when a panel
+  opens: it opens below them.
 - **Standard-agnostic wording:** the tool builds a common data model of a
   concept, whatever standard implements it later. UI text, requirements and
   docs say "the model" or "the data model", not "the archetype"; name openEHR,

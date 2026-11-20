@@ -27,6 +27,7 @@ Each significant architecture or technology decision is recorded here in the
 | [0016](0016-start-from-existing-models.md) | Discover starts from existing models; one link to any standard | Proposed |
 | [0017](0017-detail-structure-then-terminology.md) | The detail phase settles structure first, then terminology | Proposed |
 | [0018](0018-simpler-pages.md) | Simpler pages: where you are, one task, fields in their phase | Proposed |
+| [0019](0019-task-centred-navigation.md) | Task-centred navigation: a project home and a facilitator Overview | Proposed |
 
 ## Adding a record
 
