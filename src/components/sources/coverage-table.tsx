@@ -166,7 +166,9 @@ export function CoverageTable({
       </div>
       <div className="sticky bottom-0 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-4 py-3 shadow-lg">
         <span id={countId} aria-live="polite" className="text-sm">
-          {m.board_models_chosen({ chosen: chosen.length, total: open.length })}
+          {open.length === 0
+            ? m.board_models_all_listed()
+            : m.board_models_chosen({ chosen: chosen.length, total: open.length })}
         </span>
         <Button
           type="button"

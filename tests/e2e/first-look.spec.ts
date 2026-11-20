@@ -99,13 +99,17 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         `/projects/${project.projectId}/board`,
       );
       await expect(
-        page.getByRole("columnheader", { name: text.board_column_first_look }),
+        page.getByRole("columnheader", { name: text.board_column_first_look_belongs }),
       ).toBeVisible();
-      await expect(
-        page.getByText(
-          fill(text.board_first_look_counts, { belongs: 1, notSure: 0, notBelongs: 0 }),
-        ),
-      ).toBeVisible();
+      // Systolic: one "belongs"; Diastolic: one "not sure". No column names who answered.
+      const systolic = page
+        .getByRole("row")
+        .filter({ has: page.getByRole("rowheader", { name: "Systolic" }) });
+      await expect(systolic.getByRole("cell")).toContainText(["1", "0", "0"]);
+      const diastolic = page
+        .getByRole("row")
+        .filter({ has: page.getByRole("rowheader", { name: "Diastolic" }) });
+      await expect(diastolic.getByRole("cell").nth(-2)).toHaveText("1");
       await expectAxeCleanInBothThemes(page);
     });
   });

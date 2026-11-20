@@ -20,13 +20,20 @@ import {
 } from "@/components/ui/table";
 import { m } from "@/i18n/messages";
 import { formatCardinality } from "@/lib/cardinality";
-import type { FirstLookCounts } from "@/lib/first-look";
+import { FIRST_LOOK_ANSWERS, type FirstLookAnswer, type FirstLookCounts } from "@/lib/first-look";
 import type { Outcome } from "@/lib/forms/outcome";
 import { promptLabel } from "@/lib/i18n/labels";
 import { cn } from "@/lib/utils";
 import { dataTypeName } from "./data-type-text";
 import { type CardElement, ElementDetails } from "./element-details";
 import type { ElementMarkProps, MarkTarget } from "./element-marks";
+
+/** The column headers of the first look's counts (EL22): one column per answer. */
+const FIRST_LOOK_HEADERS: Record<FirstLookAnswer, () => string> = {
+  belongs: () => m.board_column_first_look_belongs(),
+  not_sure: () => m.board_column_first_look_not_sure(),
+  not_belongs: () => m.board_column_first_look_not_belongs(),
+};
 
 /** The data type in a few words: its plain name, or the RM type of a CKM link outside the list. */
 export function shortDataType(element: Pick<CardElement, "dataType" | "ckmLink">): string {
@@ -185,17 +192,12 @@ function ElementRows({
         {supportCount !== undefined && (
           <TableCell className="text-right tabular-nums">{supportCount}</TableCell>
         )}
-        {firstLook !== undefined && (
-          <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
-            {firstLook === null
-              ? ""
-              : m.board_first_look_counts({
-                  belongs: firstLook.belongs,
-                  notSure: firstLook.not_sure,
-                  notBelongs: firstLook.not_belongs,
-                })}
-          </TableCell>
-        )}
+        {firstLook !== undefined &&
+          FIRST_LOOK_ANSWERS.map((answer) => (
+            <TableCell key={answer} className="text-right tabular-nums">
+              {firstLook === null ? "" : firstLook[answer]}
+            </TableCell>
+          ))}
       </TableRow>
       <TableRow id={detailsId} hidden={!expanded} className="hover:bg-transparent">
         <TableCell colSpan={columnCount} className="px-4 pt-2 pb-6 whitespace-normal">
@@ -257,7 +259,7 @@ export function ElementTable({
     (detailFields ? 1 : 0) +
     (ckmColumn ? 1 : 0) +
     (supportCounts === undefined ? 0 : 1) +
-    (firstLookCounts === undefined ? 0 : 1);
+    (firstLookCounts === undefined ? 0 : FIRST_LOOK_ANSWERS.length);
   return (
     <Table aria-label={m.board_list_label()}>
       <TableHeader>
@@ -287,9 +289,12 @@ export function ElementTable({
               {m.board_column_support()}
             </TableHead>
           )}
-          {firstLookCounts !== undefined && (
-            <TableHead scope="col">{m.board_column_first_look()}</TableHead>
-          )}
+          {firstLookCounts !== undefined &&
+            FIRST_LOOK_ANSWERS.map((answer) => (
+              <TableHead key={answer} scope="col" className="text-right">
+                {FIRST_LOOK_HEADERS[answer]()}
+              </TableHead>
+            ))}
         </TableRow>
       </TableHeader>
       <TableBody>

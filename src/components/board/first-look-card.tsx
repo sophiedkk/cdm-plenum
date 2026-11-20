@@ -110,25 +110,27 @@ export function FirstLookCard({
             ))}
           </ul>
         </div>
-        <fieldset className="mt-auto min-w-0 pt-8">
-          <legend className="text-lg font-semibold">
-            {m.board_first_look_question({ concept: look.concept })}
-          </legend>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {FIRST_LOOK_ANSWERS.map((value) => (
-              <Button
-                key={value}
-                type="button"
-                variant={current === value ? "default" : "outline"}
-                aria-pressed={current === value}
-                disabled={!canAnswer || pending}
-                onClick={() => void choose(value)}
-              >
-                {ANSWER_LABELS[value]()}
-              </Button>
-            ))}
-          </div>
-        </fieldset>
+        <div className="mt-auto pt-8">
+          <fieldset className="min-w-0">
+            <legend className="text-lg font-semibold">
+              {m.board_first_look_question({ concept: look.concept })}
+            </legend>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {FIRST_LOOK_ANSWERS.map((value) => (
+                <Button
+                  key={value}
+                  type="button"
+                  variant={current === value ? "default" : "outline"}
+                  aria-pressed={current === value}
+                  disabled={!canAnswer || pending}
+                  onClick={() => void choose(value)}
+                >
+                  {ANSWER_LABELS[value]()}
+                </Button>
+              ))}
+            </div>
+          </fieldset>
+        </div>
         <div className="mt-6 flex items-center justify-between gap-2">
           <Button
             type="button"
