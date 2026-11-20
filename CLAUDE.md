@@ -18,6 +18,8 @@ ADR 0002); check it for a pattern before inventing one.
   complete a requirement; ask the owner.
 - `docs/architecture.md`: the design authority. An ADR overrides it.
 - `docs/adr/`: decision records in MADR format.
+- `docs/evaluations/`: dated design evaluations with their findings and sources;
+  the ADRs cite them. Kept as the record of why, not updated afterwards.
 - `src/routes/`: TanStack Router file routes; `src/routeTree.gen.ts` is
   generated.
 - `src/server/<area>/`: server-only code per area (`functions.ts`,
