@@ -121,6 +121,25 @@ page from these patterns; each has a real use and a test you can copy.
   one intro line, and sets its title with
   `projectTitle(match.context, m.<area>_title())`
   (`src/components/projects/project-title.ts`).
+- **Project navigation (ADR 0019):** the header
+  (`src/components/projects/project-header.tsx`) shows a back link, the
+  name and the phase steps. A participant has no tabs: the project index
+  route is their home (`TaskCard`, `DecidedSoFarSection`, `AboutProject`),
+  the steps link where `stepTarget` in `src/lib/project-home.ts` gives a
+  page, and every other page links back to the home. The facilitator gets
+  `ProjectTabs`, fixed as Overview, Scope, Elements, Rounds, People,
+  Settings; a page without its own tab (export, brainstorm, import) marks
+  the tab it belongs to in `UNDER`. Overview is the index route for the
+  facilitator: `checklist(phase, facts)` decides the items, with
+  `done: null` for an item that only informs, and `PhaseMove` holds the
+  phase move. A new checklist fact goes into `overviewFacts`
+  (`src/server/projects/overview.ts`) and its test.
+- **Show once:** each fact appears once, in its best form: no picture plus
+  text that says the same, no link beside a status that could be the link,
+  no count line that repeats the rows below; screen-reader text carries what
+  a picture shows. One filled button per view (the next step); a card only
+  for the task card and repeated independent items; controls do not move
+  when a panel opens below them.
 - **Phase access:** `src/lib/phase-access.ts` says which step a participant
   sees and writes in per phase (PR9, PR10); a step page uses `requireStep`,
   `writeOpen` and `StepClosedNote`, its server function `phaseOpenFor`. The
