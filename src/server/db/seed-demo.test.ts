@@ -26,6 +26,14 @@ describe("seedDemo", () => {
     const summary = await seedDemo(db, "facilitator@example.test");
     expect(summary.status).toBe("seeded");
 
+    // Round 2 is open, so the project is in the decide phase (PR4).
+    const project = await db
+      .selectFrom("project")
+      .select("phase")
+      .where("id", "=", summary.projectId)
+      .executeTakeFirstOrThrow();
+    expect(project.phase).toBe("decide");
+
     const members = await db
       .selectFrom("member")
       .select("role")

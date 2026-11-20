@@ -13,6 +13,7 @@ import { grantAppRole, normalizeEmail } from "../admin/app-roles.ts";
 import { addElement, addElementComment, setElementValues } from "../elements/queries.ts";
 import { acceptInvitationsOnSignIn } from "../invitations/acceptance.ts";
 import { invite } from "../invitations/queries.ts";
+import { movePhase } from "../projects/phase.ts";
 import { createProject } from "../projects/queries.ts";
 import { closeRound, createRound, openRound } from "../rounds/queries.ts";
 import { saveRating } from "../rounds/ratings.ts";
@@ -232,6 +233,10 @@ export async function seedDemo(
     }),
   );
 
+  must(
+    "phase discover",
+    await movePhase(db, facilitatorId, { projectId, from: "scope", direction: "next" }),
+  );
   const elementIds: string[] = [];
   for (const [index, element] of DEMO_ELEMENTS.entries()) {
     const author = raterIds[index % raterIds.length] ?? facilitatorId;
@@ -270,6 +275,10 @@ export async function seedDemo(
     );
   }
 
+  must(
+    "phase decide",
+    await movePhase(db, facilitatorId, { projectId, from: "discover", direction: "next" }),
+  );
   // Round 1: rated by everyone, then closed, so results exist.
   const oneDay = 24 * 60 * 60 * 1000;
   const round1 = must(
