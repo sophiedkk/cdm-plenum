@@ -597,6 +597,7 @@
   "rounds_proposals_intro": "Proposals from the open question of round 1. Add a proposal to the board when it meets the rule, so the next round can rate it.",
   "rounds_proposals_on_board": "On the board",
   "rounds_propose_added": "Proposal saved",
+  "rounds_propose_delete": "Delete",
   "rounds_propose_delete_named": "Delete: {name}",
   "rounds_propose_deleted": "Proposal deleted",
   "rounds_propose_description_help": "At most {max} characters.",

@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The setup of a draft round (DE1, DE2, DE4, DE7): the elements to rate, the scale and the
-// consensus rule, the closing date and whether the facilitator sees who rated what.
+// The setup of a draft round (DE1, DE2, DE4, DE7, DE16): the elements to rate, the scale and
+// the consensus rule, the closing date, whether the facilitator sees who rated what and, for
+// round 1, the rule for adding proposed elements.
 import { type AnyFieldApi, revalidateLogic, useStore } from "@tanstack/react-form";
 import { type ReactNode, useId } from "react";
 import { z } from "zod";
@@ -24,6 +25,7 @@ import { type ConsensusRule, DEFAULT_RULE, type RuleError, ruleError } from "@/l
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
 import { type RefusalCode, refusalMessage } from "@/lib/i18n/refusals";
 import { ruleErrorMessage } from "@/lib/i18n/round-labels";
+import { PROPOSAL_RULE_MAX } from "@/server/rounds/schemas";
 import { formatNumber, fromLocalInput, useTimeZone } from "./format";
 
 /** An element the round can rate. */
@@ -39,6 +41,8 @@ export interface RoundSetup {
   rule: ConsensusRule;
   facilitatorSeesRaters: boolean;
   closesAt: string;
+  /** Round 1 only (DE16): null when the facilitator left the rule empty. */
+  proposalRule?: string | null;
 }
 
 /** What a create or update answers. */
@@ -129,6 +133,9 @@ export function roundSetupSchema(now: () => Date = () => new Date()) {
         }
       }),
       facilitatorSeesRaters: z.boolean(),
+      proposalRule: z.string().max(PROPOSAL_RULE_MAX, {
+        error: () => m.rounds_proposal_rule_too_long({ max: PROPOSAL_RULE_MAX }),
+      }),
     })
     .superRefine((values, ctx) => {
       const rule = ruleOfValues(values);
@@ -216,6 +223,8 @@ export function RoundForm({
     rule: ConsensusRule;
     facilitatorSeesRaters: boolean;
     closesAt: string;
+    /** The rule for adding proposed elements of round 1 (DE16); left out for a later round. */
+    proposalRule?: string;
   };
   submitLabel: string;
   save: (setup: RoundSetup) => Promise<RoundSetupOutcome>;
@@ -223,12 +232,14 @@ export function RoundForm({
   actions?: ReactNode;
 }>) {
   const timeZone = useTimeZone();
+  const takesProposals = initial.proposalRule !== undefined;
   const form = useAppForm({
     defaultValues: {
       elementIds: initial.elementIds,
       ...textOf(initial.rule),
       closesAt: initial.closesAt,
       facilitatorSeesRaters: initial.facilitatorSeesRaters,
+      proposalRule: initial.proposalRule ?? "",
     },
     validationLogic: revalidateLogic(),
     validators: { onDynamic: roundSetupSchema() },
@@ -243,6 +254,9 @@ export function RoundForm({
           rule,
           facilitatorSeesRaters: value.facilitatorSeesRaters,
           closesAt,
+          ...(takesProposals
+            ? { proposalRule: value.proposalRule.trim() === "" ? null : value.proposalRule.trim() }
+            : {}),
         });
       } catch {
         applyServerRefusal(formApi, { form: m.common_error_unexpected() });
@@ -402,6 +416,18 @@ export function RoundForm({
           />
         )}
       </form.Field>
+
+      {takesProposals && (
+        <form.AppField name="proposalRule">
+          {(field) => (
+            <field.TextField
+              label={m.rounds_proposal_rule_label()}
+              description={m.rounds_proposal_rule_help({ max: PROPOSAL_RULE_MAX })}
+              autoComplete="off"
+            />
+          )}
+        </form.AppField>
+      )}
 
       <p className="text-sm text-muted-foreground">{m.rounds_fixed_after_opening()}</p>
 

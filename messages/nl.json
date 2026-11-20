@@ -597,6 +597,7 @@
   "rounds_proposals_intro": "Voorstellen uit de open vraag van ronde 1. Zet een voorstel op het bord als het aan de regel voldoet. Dan kan de volgende ronde het beoordelen.",
   "rounds_proposals_on_board": "Op het bord",
   "rounds_propose_added": "Voorstel opgeslagen",
+  "rounds_propose_delete": "Verwijderen",
   "rounds_propose_delete_named": "Verwijderen: {name}",
   "rounds_propose_deleted": "Voorstel verwijderd",
   "rounds_propose_description_help": "Hoogstens {max} tekens.",

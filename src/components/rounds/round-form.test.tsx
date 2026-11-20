@@ -140,6 +140,46 @@ describe("RoundForm", () => {
     expect(alert.textContent).toContain("Close the previous round before you start a new one.");
   });
 
+  it("asks round 1 for the rule for proposed elements and sends it trimmed, or null when empty (DE16)", async () => {
+    const save = vi.fn(async () => ({ ok: true }) as const);
+    const { submit, onSaved } = renderForm(save, {
+      proposalRule: "Proposed by at least two participants",
+    });
+    const rule = screen.getByLabelText("Rule for adding proposed elements");
+    expect((rule as HTMLInputElement).value).toBe("Proposed by at least two participants");
+    fireEvent.change(rule, { target: { value: " Proposed by at least three participants " } });
+    fireEvent.click(submit);
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+    expect(save).toHaveBeenLastCalledWith(
+      expect.objectContaining({ proposalRule: "Proposed by at least three participants" }),
+    );
+    fireEvent.change(rule, { target: { value: "  " } });
+    fireEvent.click(submit);
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(2));
+    expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ proposalRule: null }));
+  });
+
+  it("refuses a proposal rule longer than the server takes, at the field (DE16)", async () => {
+    const save = vi.fn();
+    const { submit } = renderForm(save, { proposalRule: "" });
+    const rule = screen.getByLabelText("Rule for adding proposed elements");
+    fireEvent.change(rule, { target: { value: "x".repeat(501) } });
+    fireEvent.click(submit);
+    expect(await screen.findByText("Use at most 500 characters.")).toBeTruthy();
+    expect(rule.getAttribute("aria-invalid")).toBe("true");
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("has no proposal rule in a later round and shows the rating question", () => {
+    renderForm(vi.fn());
+    expect(screen.queryByLabelText("Rule for adding proposed elements")).toBeNull();
+    expect(
+      screen.getByText(
+        'Participants answer for each element: "Does this element belong in the archetype, for any use case in scope?"',
+      ),
+    ).toBeTruthy();
+  });
+
   it("speaks Dutch when the locale is Dutch", () => {
     overwriteGetLocale(() => "nl");
     renderForm(vi.fn());

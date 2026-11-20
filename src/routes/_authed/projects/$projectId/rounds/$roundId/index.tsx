@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronRightIcon, EyeIcon, EyeOffIcon, VoteIcon } from "lucide-react";
@@ -13,6 +13,7 @@ import { ResultsTable } from "@/components/rounds/element-result";
 import { toLocalInput, useTimeZone } from "@/components/rounds/format";
 import { OpenRoundDialog } from "@/components/rounds/open-round-dialog";
 import { PanelTable } from "@/components/rounds/panel-setup";
+import { ProposalList } from "@/components/rounds/proposals";
 import { valueOrNotFound } from "@/components/rounds/result-value";
 import { LocalDateTime, RoundStatusBadge } from "@/components/rounds/round-badges";
 import { RoundForm, ruleSentences } from "@/components/rounds/round-form";
@@ -34,8 +35,14 @@ import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import { mayRate } from "@/lib/project-roles";
+import { elementKeys } from "@/server/elements/query-options";
 import { projectQueryOptions } from "@/server/projects/query-options";
-import { closeRoundFn, openRoundFn, updateRoundFn } from "@/server/rounds/functions";
+import {
+  addProposalToBoardFn,
+  closeRoundFn,
+  openRoundFn,
+  updateRoundFn,
+} from "@/server/rounds/functions";
 import type { RoundDetail } from "@/server/rounds/queries";
 import {
   myRatingsQueryOptions,
@@ -44,6 +51,7 @@ import {
   responseRateQueryOptions,
   roundBoardQueryOptions,
   roundKeys,
+  roundProposalsQueryOptions,
   roundQueryOptions,
   roundResultsQueryOptions,
 } from "@/server/rounds/query-options";
@@ -65,6 +73,9 @@ export const Route = createFileRoute("/_authed/projects/$projectId/rounds/$round
     }
     if (isFacilitator && round.status !== "draft") {
       loads.push(queryClient.ensureQueryData(responseRateQueryOptions(projectId, roundId)));
+      if (round.number === 1) {
+        loads.push(queryClient.ensureQueryData(roundProposalsQueryOptions(projectId, roundId)));
+      }
       if (round.facilitatorSeesRaters) {
         loads.push(
           queryClient.ensureQueryData(ratingsByParticipantQueryOptions(projectId, roundId)),
@@ -173,6 +184,12 @@ function RoundSetupDetails({ round }: Readonly<{ round: RoundDetail }>) {
           <dd>
             {round.facilitatorSeesRaters ? m.rounds_raters_visible() : m.rounds_raters_hidden()}
           </dd>
+          {round.proposalRule !== null && (
+            <>
+              <dt className="text-muted-foreground">{m.rounds_summary_proposal_rule()}</dt>
+              <dd className="whitespace-pre-line">{round.proposalRule}</dd>
+            </>
+          )}
         </dl>
         {round.snapshot && <OpeningSnapshot snapshot={round.snapshot} />}
       </div>
@@ -227,6 +244,9 @@ function RoundPage() {
       {closed && <Results projectId={projectId} roundId={roundId} />}
       {isFacilitator && round.status === "draft" && <DraftSetup round={round} />}
       {isFacilitator && round.status !== "draft" && <RoundProgress round={round} />}
+      {isFacilitator && round.status !== "draft" && round.number === 1 && (
+        <Proposals round={round} />
+      )}
       {!closed && round.status !== "draft" && (
         <p className="text-sm text-muted-foreground">{m.rounds_results_after_close()}</p>
       )}
@@ -278,13 +298,14 @@ function DraftSetup({ round }: Readonly<{ round: RoundDetail }>) {
           {m.rounds_setup_heading()}
         </h3>
         <RoundForm
-          key={`${timeZone}-${round.closesAt}-${round.elements.length}-${JSON.stringify(round.rule)}-${round.facilitatorSeesRaters}`}
+          key={`${timeZone}-${round.closesAt}-${round.elements.length}-${JSON.stringify(round.rule)}-${round.facilitatorSeesRaters}-${round.proposalRule}`}
           elements={board}
           initial={{
             elementIds: round.elements.map((element) => element.id),
             rule: round.rule,
             facilitatorSeesRaters: round.facilitatorSeesRaters,
             closesAt: toLocalInput(round.closesAt, timeZone),
+            ...(round.number === 1 ? { proposalRule: round.proposalRule ?? "" } : {}),
           }}
           submitLabel={m.rounds_save_draft()}
           save={async (setup) => {
@@ -452,5 +473,51 @@ function Results({ projectId, roundId }: Readonly<{ projectId: string; roundId: 
       <ResultsTable elements={results.elements} />
       <p className="text-sm text-muted-foreground">{m.rounds_results_intro()}</p>
     </section>
+  );
+}
+
+/** Who proposed what, from the ratings by participant, when the round allows it (DE4, DE16). */
+function useProposers(round: RoundDetail): ReadonlyMap<string, string> | undefined {
+  const { projectId, roundId } = Route.useParams();
+  const { data } = useQuery({
+    ...ratingsByParticipantQueryOptions(projectId, roundId),
+    enabled: round.facilitatorSeesRaters,
+  });
+  if (!round.facilitatorSeesRaters || !data?.ok) return undefined;
+  const proposers = new Map<string, string>();
+  for (const participant of data.value) {
+    for (const id of participant.proposalIds) {
+      proposers.set(id, participant.name.trim() || participant.email);
+    }
+  }
+  return proposers;
+}
+
+/** The proposals for missing elements of round 1, for the facilitator (DE16). */
+function Proposals({ round }: Readonly<{ round: RoundDetail }>) {
+  const { projectId, roundId } = Route.useParams();
+  const { data } = useSuspenseQuery(roundProposalsQueryOptions(projectId, roundId));
+  const proposals = valueOrNotFound(data);
+  const proposers = useProposers(round);
+  const addToBoard = useServerFn(addProposalToBoardFn);
+  const queryClient = useQueryClient();
+  return (
+    <ProposalList
+      proposals={proposals}
+      proposers={proposers}
+      addToBoard={async (proposal) => {
+        const result = await addToBoard({
+          data: { projectId, roundId, proposalId: proposal.id },
+        });
+        if (!result.ok) return result;
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: roundKeys.proposals(projectId, roundId) }),
+          queryClient.invalidateQueries({ queryKey: roundKeys.elements(projectId) }),
+          queryClient.invalidateQueries({ queryKey: elementKeys.all(projectId) }),
+        ]);
+        toast.success(m.rounds_proposals_added({ name: proposal.name }));
+        return { ok: true };
+      }}
+    />
   );
 }
