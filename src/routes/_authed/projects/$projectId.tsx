@@ -7,12 +7,19 @@ import { PhaseBadge, RoleBadge } from "@/components/projects/project-badges";
 import { projectTitle } from "@/components/projects/project-title";
 import { NotFoundState } from "@/components/shell/route-states";
 import { m } from "@/i18n/messages";
-import type { ProjectPhase } from "@/lib/project-phases";
+import { type ProjectStep, stepVisible } from "@/lib/phase-access";
 import { projectQueryOptions } from "@/server/projects/query-options";
 import { idSchema } from "@/server/projects/schemas";
 
-/** The phases that show the Brainstorm tab (EL14). */
-const BRAINSTORM_PHASES: readonly ProjectPhase[] = ["scope", "discover"];
+/** The tab of each project step, in the order of the process. */
+const STEP_TABS = [
+  { step: "overview", to: "/projects/$projectId", label: m.projects_tab_overview },
+  { step: "scope", to: "/projects/$projectId/scope", label: m.projects_tab_scope },
+  { step: "brainstorm", to: "/projects/$projectId/brainstorm", label: m.projects_tab_brainstorm },
+  { step: "board", to: "/projects/$projectId/board", label: m.projects_tab_board },
+  { step: "rounds", to: "/projects/$projectId/rounds", label: m.projects_tab_rounds },
+  { step: "members", to: "/projects/$projectId/members", label: m.projects_tab_members },
+] as const satisfies readonly { step: ProjectStep; to: string; label: () => string }[];
 
 const TAB_LINK =
   "-mb-px inline-flex border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground aria-[current=page]:border-foreground aria-[current=page]:text-foreground";
@@ -39,20 +46,14 @@ function ProjectLayout() {
   const { data } = useSuspenseQuery(projectQueryOptions(projectId));
   if (!data.ok) return <NotFoundState title={m.projects_not_found_title()} />;
   const project = data.value;
+  // The phase table decides which steps a member sees (PR9, PR10); the export is the facilitator's.
+  const steps = STEP_TABS.filter((tab) => stepVisible(project.role, project.phase, tab.step));
   const tabs = [
-    { to: "/projects/$projectId", label: m.projects_tab_overview() },
-    { to: "/projects/$projectId/scope", label: m.projects_tab_scope() },
-    // The brainstorm belongs before the Delphi; the page itself stays reachable in any phase.
-    ...(BRAINSTORM_PHASES.includes(project.phase)
-      ? [{ to: "/projects/$projectId/brainstorm", label: m.projects_tab_brainstorm() } as const]
-      : []),
-    { to: "/projects/$projectId/board", label: m.projects_tab_board() },
-    { to: "/projects/$projectId/rounds", label: m.projects_tab_rounds() },
-    { to: "/projects/$projectId/members", label: m.projects_tab_members() },
+    ...steps,
     ...(project.role === "facilitator"
-      ? [{ to: "/projects/$projectId/export", label: m.projects_tab_export() } as const]
+      ? [{ to: "/projects/$projectId/export", label: m.projects_tab_export } as const]
       : []),
-  ] as const;
+  ];
 
   return (
     <>
@@ -84,7 +85,7 @@ function ProjectLayout() {
                 activeOptions={{ exact: tab.to === "/projects/$projectId" }}
                 className={TAB_LINK}
               >
-                {tab.label}
+                {tab.label()}
               </Link>
             </li>
           ))}

@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/shell/route-states";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import { refusalMessage } from "@/lib/i18n/refusals";
+import { writeOpen } from "@/lib/phase-access";
 import {
   addScopeCommentFn,
   addScopeSourceFn,
@@ -52,6 +53,8 @@ function Scope() {
   const { projectId } = Route.useParams();
   const { project } = Route.useRouteContext();
   const isFacilitator = project.role === "facilitator";
+  // A participant comments in the scope phase only; the server checks it again (PR9).
+  const canComment = writeOpen(project.role, project.phase, "scope_comment");
   const queryClient = useQueryClient();
   const { data: scope } = useSuspenseQuery(scopeQueryOptions(projectId));
   const { data: comments } = useSuspenseQuery(scopeCommentsQueryOptions(projectId, isFacilitator));
@@ -199,7 +202,7 @@ function Scope() {
             comments={comments.value}
             max={COMMENT_MAX}
             label={m.scope_comments_heading()}
-            add={(body) => addComment({ data: { projectId, body } })}
+            add={canComment ? (body) => addComment({ data: { projectId, body } }) : undefined}
             onAdded={async () => {
               await queryClient.invalidateQueries({ queryKey: scopeKeys.comments(projectId) });
               toast.success(m.common_comment_added());

@@ -249,6 +249,29 @@ describe("ElementTable", () => {
     expect(actions.onValues).toHaveBeenCalledWith(POSITION);
   });
 
+  it("shows the comments without a form when the phase closed comments (PR9)", async () => {
+    commentsAnswer.mockResolvedValue({
+      ok: true,
+      value: [{ id: "c1", body: "Too broad", createdAt: "2026-11-01T10:00:00Z", author: null }],
+    });
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <ElementTable
+          projectId="p1"
+          elements={[SYSTOLIC]}
+          isFacilitator={false}
+          actions={{ onCommentAdded: vi.fn(), onEdit: vi.fn(), onValues: vi.fn(), onLink: vi.fn() }}
+        />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Systolic" }));
+    const region = screen.getByRole("region", { name: "Details of Systolic" });
+    expect(await within(region).findByText("Too broad")).toBeTruthy();
+    expect(within(region).getByText(/This step is closed/)).toBeTruthy();
+    expect(within(region).queryByLabelText("Your comment")).toBeNull();
+  });
+
   it("shows a refused comment list as a translated message", async () => {
     commentsAnswer.mockResolvedValue({ ok: false, error: "not_found" });
     renderTable(false);
