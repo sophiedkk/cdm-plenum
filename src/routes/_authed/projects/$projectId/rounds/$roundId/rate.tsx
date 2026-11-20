@@ -10,7 +10,7 @@ import { projectTitle } from "@/components/projects/project-title";
 import { RatingElement } from "@/components/rounds/rating-element";
 import { valueOrNotFound } from "@/components/rounds/result-value";
 import { LocalDateTime, RoundStatusBadge } from "@/components/rounds/round-badges";
-import { NotFoundState, PageHeader } from "@/components/shell/route-states";
+import { NotFoundState } from "@/components/shell/route-states";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { m } from "@/i18n/messages";
 import { dataTypeByKey } from "@/lib/data-types";
@@ -81,37 +81,41 @@ function RatePage() {
   };
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
-      <PageHeader
-        level={2}
-        title={m.rounds_rate_title({ number: round.number })}
-        description={m.rounds_rate_intro()}
-      />
-      <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-[auto_1fr]">
-        <dt className="text-muted-foreground">{m.rounds_column_status()}</dt>
-        <dd>
+    <div className="flex max-w-4xl flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <h2 className="text-xl font-semibold">{m.rounds_rate_title({ number: round.number })}</h2>
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <RoundStatusBadge status={round.status} />
-        </dd>
-        <dt className="text-muted-foreground">{m.rounds_column_closes()}</dt>
-        <dd>
-          <LocalDateTime iso={round.closesAt} />
-        </dd>
-      </dl>
-      <Alert>
-        {round.facilitatorSeesRaters ? (
-          <EyeIcon aria-hidden="true" />
-        ) : (
-          <EyeOffIcon aria-hidden="true" />
-        )}
-        <AlertTitle>
-          {round.facilitatorSeesRaters
-            ? m.rounds_rate_visible_title()
-            : m.rounds_rate_hidden_title()}
-        </AlertTitle>
-        <AlertDescription>
-          {round.facilitatorSeesRaters ? m.rounds_raters_visible() : m.rounds_raters_hidden()}
-        </AlertDescription>
-      </Alert>
+          <span>
+            {m.rounds_closes_at_short()} <LocalDateTime iso={round.closesAt} />
+          </span>
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {m.rounds_rate_intro()}{" "}
+          {m.rounds_rate_bands({
+            bottomFrom: round.rule.scaleMin,
+            bottomTo: round.rule.bottomBandMax,
+            topFrom: round.rule.topBandMin,
+            topTo: round.rule.scaleMax,
+          })}
+        </p>
+        <p className="flex items-start gap-2 text-sm">
+          {round.facilitatorSeesRaters ? (
+            <EyeIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          ) : (
+            <EyeOffIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          )}
+          <span>
+            <strong className="font-medium">
+              {round.facilitatorSeesRaters
+                ? m.rounds_rate_visible_title()
+                : m.rounds_rate_hidden_title()}
+            </strong>
+            {". "}
+            {round.facilitatorSeesRaters ? m.rounds_raters_visible() : m.rounds_raters_hidden()}
+          </span>
+        </p>
+      </div>
       {!canRate && (
         <Alert>
           <AlertTitle>{m.rounds_rate_no_group_title()}</AlertTitle>
@@ -135,7 +139,7 @@ function RatePage() {
         </Alert>
       )}
       <p className="font-medium">{m.rounds_rate_progress({ rated, total: elements.length })}</p>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
         {elements.map((element) => {
           const key = dataTypes.get(element.id) ?? null;
           return (

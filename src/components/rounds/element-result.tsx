@@ -1,11 +1,26 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
+// The results of a closed round (DE5, Q-USE-1): one row per element with its outcome, median,
+// a small distribution and the answers; "Details" opens the full distribution as a table and
+// the result per stakeholder group (Q-PRIV-3). No chart library: the numbers are text, the bars
+// only repeat them.
+import { ChevronDownIcon } from "lucide-react";
+import { useId, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { m } from "@/i18n/messages";
-// The result of one element (DE5): the outcome, the median, the share in the top and bottom
-// band and the full distribution as a table whose count cells carry a bar. No chart library: the
-// numbers are text, the bar only repeats them.
-import type { ElementResult } from "@/lib/consensus";
+import type { ElementResult, Outcome } from "@/lib/consensus";
+import type { GroupResult } from "@/server/rounds/round";
+import { MiniDistribution, shownGroups } from "./distribution";
 import { formatNumber, formatPercent } from "./format";
 import { OutcomeBadge } from "./round-badges";
 
@@ -16,7 +31,7 @@ export function DistributionTable({
 }: Readonly<{ result: ElementResult; caption: string }>) {
   const largest = Math.max(1, ...result.distribution.map((row) => row.count));
   return (
-    <table className="w-full max-w-md text-sm">
+    <table className="w-full max-w-md caption-top text-sm">
       <caption className="mb-1 text-left font-medium">{caption}</caption>
       <thead>
         <tr>
@@ -51,12 +66,22 @@ export function DistributionTable({
   );
 }
 
+/** The median of a result, or "No scores". */
+export function medianText(result: ElementResult): string {
+  return result.median === null ? m.rounds_result_no_scores() : formatNumber(result.median);
+}
+
+/** The answers of a result in a few words: the scores and "unable to rate". */
+export function answersText(result: ElementResult): string {
+  return m.rounds_result_answers_short({ rated: result.rated, unable: result.unableToRate });
+}
+
 /** The figures of a result as a description list. */
 export function ResultFigures({ result }: Readonly<{ result: ElementResult }>) {
   return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+    <dl className="grid content-start grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
       <dt className="text-muted-foreground">{m.rounds_result_median()}</dt>
-      <dd>{result.median === null ? m.rounds_result_no_scores() : formatNumber(result.median)}</dd>
+      <dd>{medianText(result)}</dd>
       <dt className="text-muted-foreground">{m.rounds_result_top_band()}</dt>
       <dd>{formatPercent(result.topPct)}</dd>
       <dt className="text-muted-foreground">{m.rounds_result_bottom_band()}</dt>
@@ -72,62 +97,167 @@ export function ResultFigures({ result }: Readonly<{ result: ElementResult }>) {
   );
 }
 
-/** The result of one element with its outcome, for every member after the round closed. */
-export function ElementResultView({
+/**
+ * The result per stakeholder group of one element as a compact table. Only groups with at
+ * least 3 scores show (Q-PRIV-3); without any, a sentence says why. The outcome column is for a
+ * closed round's results only, never on the rating screen (DE15).
+ */
+export function GroupResultsTable({
   name,
-  outcome,
-  result,
   groups,
-  headingLevel = 3,
-}: Readonly<{
-  name: string;
-  outcome: ElementResult["outcome"];
-  result: ElementResult;
-  groups: readonly { groupId: string; groupName: string; result: ElementResult }[];
-  headingLevel?: 3 | 4;
-}>) {
-  const Heading = headingLevel === 3 ? "h3" : "h4";
+  showOutcome,
+}: Readonly<{ name: string; groups: readonly GroupResult[]; showOutcome: boolean }>) {
+  const shown = shownGroups(groups);
+  if (shown.length === 0) {
+    return <p className="text-sm text-muted-foreground">{m.rounds_result_no_groups()}</p>;
+  }
   return (
-    <article className="flex flex-col gap-4 rounded-lg border p-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <Heading className="text-base font-semibold">{name}</Heading>
-        <OutcomeBadge outcome={outcome} />
-      </div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <ResultFigures result={result} />
-        <DistributionTable result={result} caption={m.rounds_result_distribution({ name })} />
-      </div>
-      {groups.length > 0 && (
-        <details>
-          <summary className="cursor-pointer text-sm font-medium">
-            {m.rounds_result_groups_summary({ count: groups.length })}
-          </summary>
-          <div className="mt-4 flex flex-col gap-6">
-            {groups.map((group) => (
-              <section
-                key={group.groupId}
-                aria-label={group.groupName}
-                className="flex flex-col gap-3 border-l-2 pl-4"
-              >
-                <p className="flex flex-wrap items-center gap-2 font-medium">
-                  {group.groupName}
+    <div className="overflow-x-auto">
+      <table className="w-full max-w-3xl caption-top text-sm">
+        <caption className="mb-1 text-left font-medium">
+          {m.rounds_result_groups_caption({ name })}
+        </caption>
+        <thead>
+          <tr className="text-left">
+            <th scope="col" className="py-1 pr-4 font-medium">
+              {m.rounds_response_group()}
+            </th>
+            {showOutcome && (
+              <th scope="col" className="py-1 pr-4 font-medium">
+                {m.rounds_result_outcome()}
+              </th>
+            )}
+            <th scope="col" className="py-1 pr-4 font-medium">
+              {m.rounds_result_median()}
+            </th>
+            <th scope="col" className="py-1 pr-4 font-medium">
+              {m.rounds_result_top_band()}
+            </th>
+            <th scope="col" className="py-1 pr-4 font-medium">
+              {m.rounds_result_bottom_band()}
+            </th>
+            <th scope="col" className="py-1 pr-4 font-medium">
+              {m.rounds_result_distribution_column()}
+            </th>
+            <th scope="col" className="py-1 font-medium">
+              {m.rounds_result_responses()}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((group) => (
+            <tr key={group.groupId}>
+              <th scope="row" className="py-1 pr-4 text-left font-normal">
+                {group.groupName}
+              </th>
+              {showOutcome && (
+                <td className="py-1 pr-4">
                   <OutcomeBadge outcome={group.result.outcome} />
-                </p>
-                <div className="grid gap-6 md:grid-cols-2">
-                  <ResultFigures result={group.result} />
-                  <DistributionTable
-                    result={group.result}
-                    caption={m.rounds_result_group_distribution({ name, group: group.groupName })}
-                  />
-                </div>
-              </section>
-            ))}
-          </div>
-        </details>
-      )}
-      {groups.length === 0 && (
-        <p className="text-sm text-muted-foreground">{m.rounds_result_no_groups()}</p>
-      )}
-    </article>
+                </td>
+              )}
+              <td className="py-1 pr-4">{medianText(group.result)}</td>
+              <td className="py-1 pr-4">{formatPercent(group.result.topPct)}</td>
+              <td className="py-1 pr-4">{formatPercent(group.result.bottomPct)}</td>
+              <td className="py-1 pr-4">
+                <MiniDistribution result={group.result} />
+              </td>
+              <td className="py-1 whitespace-nowrap">{answersText(group.result)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export interface ResultRowElement {
+  id: string;
+  name: string;
+  outcome: Outcome;
+  result: ElementResult;
+  groups: GroupResult[];
+}
+
+const COLUMNS = 6;
+
+function ResultRow({ element }: Readonly<{ element: ResultRowElement }>) {
+  const [open, setOpen] = useState(false);
+  const detailsId = useId();
+  return (
+    <>
+      <TableRow>
+        <TableHead scope="row" className="font-medium whitespace-normal">
+          {element.name}
+        </TableHead>
+        <TableCell>
+          <OutcomeBadge outcome={element.outcome} />
+        </TableCell>
+        <TableCell>{medianText(element.result)}</TableCell>
+        <TableCell>
+          <MiniDistribution result={element.result} />
+        </TableCell>
+        <TableCell>{answersText(element.result)}</TableCell>
+        <TableCell className="text-right">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-expanded={open}
+            aria-controls={detailsId}
+            aria-label={m.rounds_result_details_for({ name: element.name })}
+            onClick={() => setOpen((value) => !value)}
+          >
+            {m.rounds_result_details()}
+            <ChevronDownIcon
+              aria-hidden="true"
+              data-icon="inline-end"
+              className={open ? "rotate-180 transition-transform" : "transition-transform"}
+            />
+          </Button>
+        </TableCell>
+      </TableRow>
+      <TableRow id={detailsId} hidden={!open} className="hover:bg-transparent">
+        <TableCell colSpan={COLUMNS} className="whitespace-normal">
+          {open && (
+            <div className="flex flex-col gap-4 py-2">
+              <div className="grid gap-6 md:grid-cols-2">
+                <ResultFigures result={element.result} />
+                <DistributionTable
+                  result={element.result}
+                  caption={m.rounds_result_distribution({ name: element.name })}
+                />
+              </div>
+              <GroupResultsTable name={element.name} groups={element.groups} showOutcome />
+            </div>
+          )}
+        </TableCell>
+      </TableRow>
+    </>
+  );
+}
+
+/** The results of a closed round, one row per element, for every member (DE5, Q-USE-1). */
+export function ResultsTable({ elements }: Readonly<{ elements: readonly ResultRowElement[] }>) {
+  return (
+    <Table>
+      <TableCaption className="sr-only">{m.rounds_results_caption()}</TableCaption>
+      <TableHeader>
+        <TableRow>
+          <TableHead scope="col">{m.rounds_result_element()}</TableHead>
+          <TableHead scope="col">{m.rounds_result_outcome()}</TableHead>
+          <TableHead scope="col">{m.rounds_result_median()}</TableHead>
+          <TableHead scope="col">{m.rounds_result_distribution_column()}</TableHead>
+          <TableHead scope="col">{m.rounds_result_responses()}</TableHead>
+          <TableHead scope="col">
+            <span className="sr-only">{m.rounds_result_details()}</span>
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {elements.map((element) => (
+          <ResultRow key={element.id} element={element} />
+        ))}
+      </TableBody>
+    </Table>
   );
 }
