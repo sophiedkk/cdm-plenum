@@ -8,11 +8,11 @@ import { randomBytes } from "node:crypto";
 import type { Kysely } from "kysely";
 import { grantAppRole, userHasAppRole } from "../../src/server/admin/app-roles.ts";
 import type { DB } from "../../src/server/db/schema.gen.ts";
+import { expectAxeCleanAfterToasts } from "./axe.ts";
 import {
   addressOf,
   BROWSER_LOCALE,
   expect,
-  expectAxeClean,
   expectHydrated,
   type Locale,
   MESSAGES,
@@ -47,7 +47,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await page.goto("/admin");
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
       await expect(page.getByRole("heading", { level: 1, name: text.admin_title })).toBeVisible();
-      await expectAxeClean(page);
+      await expectAxeCleanAfterToasts(page);
 
       const email = addressOf(uniqueName("facilitator"));
       const field = page.getByLabel(text.admin_grant_email_label, { exact: true });
@@ -66,7 +66,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const row = page.getByRole("row").filter({ hasText: email });
       await expect(row).toBeVisible();
       await expect(row.getByText(text.admin_account_missing)).toBeVisible();
-      await expectAxeClean(page);
+      await expectAxeCleanAfterToasts(page);
       await expect.poll(() => hasRight(db, email)).toBe(true);
     });
   });
@@ -128,7 +128,7 @@ test("an administrator deactivates an account, which then cannot sign in", async
   await row.getByRole("button", { name: text.admin_deactivate }).click();
   const dialog = page.getByRole("alertdialog");
   await expect(dialog).toBeVisible();
-  await expectAxeClean(page);
+  await expectAxeCleanAfterToasts(page);
   await dialog.getByRole("button", { name: text.admin_deactivate_submit }).click();
   await expect(dialog).toBeHidden();
   await expect(row.getByText(text.admin_status_deactivated)).toBeVisible();
@@ -140,7 +140,7 @@ test("an administrator deactivates an account, which then cannot sign in", async
     log.getByRole("row").filter({ hasText: text.admin_action_account_deactivated }).first(),
   ).toBeVisible();
   await expect(log).not.toContainText("account_deactivated");
-  await expectAxeClean(page);
+  await expectAxeCleanAfterToasts(page);
 
   await context.clearCookies();
   await page.goto("/sign-in");
@@ -208,7 +208,7 @@ test("the activity log names actions and projects, a page at a time, in English 
     const pageWord = (n: number) =>
       text.admin_activity_page.split("{pages}")[0]?.replace("{page}", String(n)) ?? "";
     await expect(pages).toContainText(pageWord(1));
-    await expectAxeClean(page);
+    await expectAxeCleanAfterToasts(page);
 
     const next = pages.getByRole("link", { name: text.admin_activity_next });
     await expectHydrated(next);
@@ -217,7 +217,7 @@ test("the activity log names actions and projects, a page at a time, in English 
     await expect(pages).toContainText(pageWord(2));
     await expect(rows.first()).toContainText(projectName);
     await expect(pages.getByRole("link", { name: text.admin_activity_previous })).toBeVisible();
-    await expectAxeClean(page);
+    await expectAxeCleanAfterToasts(page);
     await context.close();
   }
 });
