@@ -68,13 +68,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const rater = await pageFor(browser, locale, participant);
       await rater.goto(`/projects/${projectId}/rounds/${roundId}/rate`);
       await expect(rater.getByText(text.rounds_rate_question)).toBeVisible();
-      await expect(
-        rater.getByText(
-          fill(text.rounds_rate_bands, { bottomFrom: 1, bottomTo: 3, topFrom: 7, topTo: 9 }),
-          { exact: false },
-        ),
-      ).toBeVisible();
       const systolic = rater.getByRole("region", { name: "Systolic pressure" });
+      // The card names its three bands under the scale.
+      for (const band of [
+        text.rounds_rate_band_bottom,
+        text.rounds_rate_band_middle,
+        text.rounds_rate_band_top,
+      ]) {
+        await expect(systolic.getByText(band, { exact: true })).toBeVisible();
+      }
       await expect(
         systolic.getByRole("radio", { name: fill(text.rounds_rate_score_lowest, { score: 1 }) }),
       ).toBeVisible();

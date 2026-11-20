@@ -9,7 +9,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { baseLocale, overwriteGetLocale } from "@/i18n/runtime";
-import { DEFAULT_RULE, elementResult } from "@/lib/consensus";
+import { type ConsensusRule, DEFAULT_RULE, elementResult } from "@/lib/consensus";
 import type { MyElement } from "@/server/rounds/ratings";
 import type { ElementDetails } from "./detail-flags";
 import { RatingElement } from "./rating-element";
@@ -132,7 +132,7 @@ describe("RatingElement", () => {
     });
     fireEvent.click(screen.getByRole("radio", { name: "8" }));
     await waitFor(() => expect(save).toHaveBeenCalledWith(8, "Needed for every reading"));
-    expect((await screen.findByText("Saved")).getAttribute("role")).toBe("status");
+    expect((await screen.findByText("Saved: 8")).getAttribute("role")).toBe("status");
   });
 
   it("saves unable to rate as no score", async () => {
@@ -173,10 +173,10 @@ describe("RatingElement", () => {
     expect(items.map((item) => item.textContent)).toEqual(["Everyone", "Nursing"]);
     expect(
       within(items[0] as HTMLElement).getByRole("img", {
-        name: "Distribution of the scores: score 5: 1, score 8: 2, score 9: 3",
+        name: "Distribution of the scores: score 5: 1, score 8: 2, score 9: 3. Your score: 5",
       }),
     ).toBeTruthy();
-    expect(screen.getByText("Details and reasons (2)")).toBeTruthy();
+    expect(screen.getByText("Median, band shares and all scores")).toBeTruthy();
     expect(screen.getByText("Used in every protocol")).toBeTruthy();
     expect(screen.getByRole("radio", { name: "7" }).getAttribute("aria-checked")).toBe("true");
     expect(
@@ -186,7 +186,7 @@ describe("RatingElement", () => {
 
   it("puts the median and the band shares behind details", () => {
     renderElement(LATER);
-    const summary = screen.getByText("Details and reasons (2)");
+    const summary = screen.getByText("Median, band shares and all scores");
     const details = summary.closest("details");
     expect(details?.open).toBe(false);
     expect(details?.textContent).toContain("Median");
@@ -216,6 +216,214 @@ describe("RatingElement", () => {
     expect(screen.getByText("Your rating in round 1: Not rated")).toBeTruthy();
   });
 
+  it("shows the reasons of round 1 on the card, the first three and then all (DE8)", () => {
+    const reasons = ["A first", "B second", "C third", "D fourth", "E fifth"];
+    renderElement({ ...LATER, previous: { ...LATER.previous, reasons } });
+    const list = screen.getByRole("list", { name: "Reasons given, without names" });
+    expect(
+      within(list)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual(reasons.slice(0, 3));
+    expect(list.closest("details")).toBeNull();
+    const all = screen.getByRole("button", { name: "Show all (5)" });
+    expect(all.getAttribute("aria-expanded")).toBe("false");
+    expect(all.getAttribute("aria-controls")).toBe(list.id);
+    fireEvent.click(all);
+    expect(
+      within(list)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual(reasons);
+    const fewer = screen.getByRole("button", { name: "Show fewer" });
+    expect(fewer.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("offers no Show all for three reasons or fewer", () => {
+    renderElement(LATER);
+    expect(screen.queryByRole("button", { name: /Show all/ })).toBeNull();
+  });
+
+  it("says so when nobody gave a reason", () => {
+    renderElement({ ...LATER, previous: { ...LATER.previous, reasons: [] } });
+    expect(screen.getByText("Nobody gave a reason.")).toBeTruthy();
+  });
+
+  it("marks the own earlier score on the distribution and above the scale (DE15)", () => {
+    renderElement(LATER);
+    const everyone = screen.getByRole("img", { name: /Your score: 5$/ });
+    expect(everyone.querySelector("[data-own]")).toBeTruthy();
+    expect(everyone.querySelector("[data-own-label]")?.getAttribute("data-own-label")).toBe("you");
+    // Only the participant's own result carries it, not a group's.
+    for (const nursing of screen.getAllByRole("img", {
+      name: "Distribution of the scores: score 8: 1, score 9: 2",
+    })) {
+      expect(nursing.querySelector("[data-own]")).toBeNull();
+    }
+    const five = screen.getByRole("radio", { name: "5" });
+    expect(description(five)).toBe("Unsure Round 1: 5");
+    expect(screen.getAllByText("Round 1: 5")).toHaveLength(1);
+    expect(description(screen.getByRole("radio", { name: "7" }))).toBe("Belongs in the model");
+  });
+
+  it("marks unable to rate when that was the earlier answer", () => {
+    renderElement({
+      ...LATER,
+      previous: { ...LATER.previous, own: { rated: true, score: null, reason: null } },
+    });
+    expect(description(screen.getByRole("radio", { name: "Unable to rate" }))).toBe("Round 1");
+    expect(screen.getByRole("img", { name: /score 9: 3$/ }).querySelector("[data-own]")).toBeNull();
+  });
+
+  it("shows no marker in the first round", () => {
+    renderElement();
+    expect(document.querySelector("[data-previous-marker]")).toBeNull();
+  });
+});
+
+/** The text of the elements that describe `element`, joined by a space. */
+function description(element: HTMLElement): string {
+  return (element.getAttribute("aria-describedby") ?? "")
+    .split(" ")
+    .filter(Boolean)
+    .map((id) => {
+      const node = document.getElementById(id)?.cloneNode(true) as HTMLElement | undefined;
+      for (const hidden of node?.querySelectorAll("[aria-hidden='true']") ?? []) hidden.remove();
+      return node?.textContent ?? "";
+    })
+    .join(" ");
+}
+
+function renderWithRule(rule: ConsensusRule, element: MyElement = ELEMENT, editable = true) {
+  const save = vi.fn(DONE);
+  render(
+    <RatingElement
+      element={element}
+      details={DETAILS}
+      position={{ index: 1, total: 1 }}
+      rule={rule}
+      editable={editable}
+      save={save}
+      clear={vi.fn(DONE)}
+      saveFlag={vi.fn(DONE)}
+      removeFlag={vi.fn(DONE)}
+    />,
+  );
+  return { save };
+}
+
+const bandOf = (band: string) => document.querySelector<HTMLElement>(`[data-band="${band}"]`);
+const scoresIn = (band: string) =>
+  within(bandOf(band) as HTMLElement)
+    .getAllByRole("radio")
+    .map((radio) => radio.textContent);
+
+describe("the scale in the round's bands (DE1)", () => {
+  it("groups the scores by the rule's bands and names each band under it", () => {
+    renderWithRule({ ...DEFAULT_RULE, scaleMin: 0, scaleMax: 10, bottomBandMax: 2, topBandMin: 8 });
+    expect(screen.getAllByRole("radio")).toHaveLength(12);
+    expect(scoresIn("bottom")).toEqual(["0", "1", "2"]);
+    expect(scoresIn("middle")).toEqual(["3", "4", "5", "6", "7"]);
+    expect(scoresIn("top")).toEqual(["8", "9", "10"]);
+    expect(bandOf("bottom")?.textContent).toContain("Does not belong in the model");
+    expect(bandOf("middle")?.textContent).toContain("Unsure");
+    expect(bandOf("top")?.textContent).toContain("Belongs in the model");
+    expect(screen.getByRole("radio", { name: "0, does not belong in the model" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "10, belongs in the model" })).toBeTruthy();
+    expect(description(screen.getByRole("radio", { name: "3" }))).toBe("Unsure");
+    // "Unable to rate" stands apart, in no band.
+    const unable = screen.getByRole("radio", { name: "Unable to rate" });
+    expect(unable.closest("[data-band]")).toBeNull();
+    expect(screen.getByText(/Keys: 0 to 9 choose a score/)).toBeTruthy();
+  });
+
+  it("leaves the middle band out when the rule has no scores in between", () => {
+    renderWithRule({ ...DEFAULT_RULE, scaleMin: 1, scaleMax: 5, bottomBandMax: 2, topBandMin: 3 });
+    expect(bandOf("middle")).toBeNull();
+    expect(scoresIn("bottom")).toEqual(["1", "2"]);
+    expect(scoresIn("top")).toEqual(["3", "4", "5"]);
+    expect(screen.queryByText("Unsure")).toBeNull();
+    expect(screen.getByText(/Keys: 1 to 5 choose a score/)).toBeTruthy();
+  });
+
+  it("shows the chosen score filled and with a check, the others without", () => {
+    renderWithRule(DEFAULT_RULE, { ...ELEMENT, own: { rated: true, score: 6, reason: null } });
+    const six = screen.getByRole("radio", { name: "6" });
+    expect(six.getAttribute("aria-checked")).toBe("true");
+    expect(six.getAttribute("data-state")).toBe("checked");
+    expect(six.querySelector("svg")).toBeTruthy();
+    const five = screen.getByRole("radio", { name: "5" });
+    expect(five.getAttribute("aria-checked")).toBe("false");
+    expect(five.querySelector("svg")).toBeNull();
+    // One tab stop for the whole scale; Radix moves focus from it to the chosen option.
+    const scale = screen.getByRole("radiogroup");
+    const stops = [scale, ...within(scale).getAllByRole("radio")].filter((el) => el.tabIndex === 0);
+    expect(stops).toHaveLength(1);
+  });
+});
+
+describe("the keys of the card (DE18)", () => {
+  it("choose a score with a digit and unable to rate with U, and announce the choice", async () => {
+    const { save } = renderWithRule(DEFAULT_RULE);
+    fireEvent.keyDown(document.body, { key: "7" });
+    await waitFor(() => expect(save).toHaveBeenCalledWith(7, ""));
+    expect(screen.getByRole("radio", { name: "7" }).getAttribute("aria-checked")).toBe("true");
+    expect(await screen.findByText("Saved: 7")).toBeTruthy();
+    fireEvent.keyDown(document.body, { key: "U" });
+    await waitFor(() => expect(save).toHaveBeenCalledWith(null, ""));
+    expect(await screen.findByText("Saved: unable to rate")).toBeTruthy();
+  });
+
+  it("save the reason typed so far with the chosen score", async () => {
+    const { save } = renderWithRule(DEFAULT_RULE);
+    fireEvent.change(screen.getByLabelText("Reason (optional)"), { target: { value: "Needed" } });
+    fireEvent.keyDown(screen.getByRole("heading", { name: "Systolic pressure" }), { key: "4" });
+    await waitFor(() => expect(save).toHaveBeenCalledWith(4, "Needed"));
+  });
+
+  it("are ignored while typing the reason, with a modifier, or off the scale", async () => {
+    const { save } = renderWithRule({
+      ...DEFAULT_RULE,
+      scaleMin: 1,
+      scaleMax: 5,
+      bottomBandMax: 2,
+      topBandMin: 4,
+    });
+    const reason = screen.getByLabelText("Reason (optional)");
+    fireEvent.keyDown(reason, { key: "3" });
+    fireEvent.keyDown(reason, { key: "u" });
+    fireEvent.keyDown(document.body, { key: "3", ctrlKey: true });
+    fireEvent.keyDown(document.body, { key: "7" });
+    fireEvent.keyDown(document.body, { key: "0" });
+    await Promise.resolve();
+    expect(save).not.toHaveBeenCalled();
+    expect(
+      screen.getAllByRole("radio").every((radio) => radio.getAttribute("aria-checked") === "false"),
+    ).toBe(true);
+  });
+
+  it("are ignored in the flag form", async () => {
+    const { save } = renderWithRule(DEFAULT_RULE);
+    fireEvent.click(screen.getByText("Data type, cardinality and values (not rated)"));
+    fireEvent.click(screen.getAllByRole("button", { name: /Flag as wrong/ })[0] as HTMLElement);
+    const form = document.querySelector("form") as HTMLFormElement;
+    fireEvent.keyDown(form, { key: "5" });
+    await Promise.resolve();
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("choose nothing once the round is closed, and the line names only the moves", async () => {
+    const { save } = renderWithRule(DEFAULT_RULE, ELEMENT, false);
+    fireEvent.keyDown(document.body, { key: "5" });
+    await Promise.resolve();
+    expect(save).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Keys: N goes to the next element and P to the previous one."),
+    ).toBeTruthy();
+  });
+});
+
+describe("RatingElement when closed", () => {
   it("cannot change a rating or flag a detail once the round is no longer open", () => {
     renderElement(ELEMENT, false);
     expect(screen.getByRole("radio", { name: "5" }).hasAttribute("disabled")).toBe(true);

@@ -41,10 +41,16 @@ function Harness({ start = 1 }: Readonly<{ start?: ShownCard }>) {
         number={1}
         elements={ELEMENTS}
         shown={shown}
-        cardLink={(index: ShownCard, children: ReactNode, className?: string) => (
+        cardLink={(
+          index: ShownCard,
+          children: ReactNode,
+          className?: string,
+          current?: boolean,
+        ) => (
           <a
             href={`?card=${index}`}
             className={className}
+            aria-current={current ? "page" : undefined}
             onClick={(event) => {
               event.preventDefault();
               setShown(index);
@@ -53,12 +59,14 @@ function Harness({ start = 1 }: Readonly<{ start?: ShownCard }>) {
             {children}
           </a>
         )}
-        renderCard={(item, position, headingRef) => (
+        go={setShown}
+        renderCard={(item, position, headingRef, progress) => (
           <RatingElement
             key={item.id}
             element={item}
             details={{ dataType: null, cardinality: null, values: [] }}
             position={position}
+            progress={progress}
             headingRef={headingRef}
             rule={DEFAULT_RULE}
             editable
@@ -141,6 +149,57 @@ describe("RatingCards (DE18)", () => {
       ).toBeTruthy();
       if (name !== "Position") fireEvent.click(link("Next"));
     }
+  });
+});
+
+describe("the dots per card (DE18)", () => {
+  const dots = () =>
+    within(screen.getByRole("list", { name: "Every element of this round" })).getAllByRole("link");
+
+  it("name every element with its answer and mark the shown card", () => {
+    render(<Harness start={2} />);
+    expect(dots().map((dot) => dot.textContent)).toEqual([
+      "Element 1, Systolic pressure, rated 8",
+      "Element 2, Cuff size, unable to rate",
+      "Element 3, Position, not rated yet",
+    ]);
+    expect(dots().map((dot) => dot.getAttribute("aria-current"))).toEqual([null, "page", null]);
+    // Filled when answered, open when not: the shape tells, not only the colour.
+    const shapes = dots().map((dot) =>
+      dot.querySelector("[aria-hidden]")?.hasAttribute("data-rated"),
+    );
+    expect(shapes).toEqual([true, true, false]);
+  });
+
+  it("link to their card and move focus to its heading", () => {
+    render(<Harness />);
+    fireEvent.click(link("Element 3, Position, not rated yet"));
+    expect(document.activeElement).toBe(heading("Position"));
+    expect(link("Element 3, Position, not rated yet").getAttribute("aria-current")).toBe("page");
+  });
+});
+
+describe("the keys N and P (DE18)", () => {
+  it("move to the next and the previous card, and from the last card to the overview", () => {
+    render(<Harness />);
+    fireEvent.keyDown(document.body, { key: "n" });
+    expect(document.activeElement).toBe(heading("Cuff size"));
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: "N" });
+    expect(document.activeElement).toBe(heading("Position"));
+    fireEvent.keyDown(document.body, { key: "p" });
+    expect(document.activeElement).toBe(heading("Cuff size"));
+    fireEvent.keyDown(document.body, { key: "n" });
+    fireEvent.keyDown(document.body, { key: "n" });
+    expect(document.activeElement).toBe(heading("Overview of your ratings"));
+  });
+
+  it("do nothing on the first card for P, with a modifier, or while typing a reason", () => {
+    render(<Harness />);
+    fireEvent.keyDown(document.body, { key: "p" });
+    fireEvent.keyDown(document.body, { key: "n", ctrlKey: true });
+    const reason = screen.getByLabelText("Reason (optional)");
+    fireEvent.keyDown(reason, { key: "n" });
+    expect(screen.getByRole("region", { name: "Systolic pressure" })).toBeTruthy();
   });
 });
 
