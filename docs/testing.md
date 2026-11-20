@@ -149,16 +149,27 @@ Sign in at <http://localhost:3000/sign-in> and open the link from Mailpit at
    the Overview, with the checklist for the scope phase; the Scope tab shows
    the concept, use cases and three comments. Move the project on to
    discover with "Go on to Discover" at the end of the checklist.
-2. **Discover:** open "Heart rate (demo)". Five of eight participants have
-   brainstormed privately; the Overview counts them and offers "Send a
-   reminder", and the Elements tab shows you their nine elements, with
-   "Heart rate" twice. Sign in as `nurse.c@example.test` in a private
-   window: the project home asks them to add their elements and shows none
-   of the others'. Add one under each question, then reveal the board as
-   facilitator and merge the duplicate.
+2. **Discover:** open "Heart rate (demo)". The Overview lists the parts of
+   discover. "Review" on the first item opens Existing models: the pulse
+   archetype from openEHR CKM (stored in `tests/fixtures/ckm`, no network)
+   with its elements on the list. Three participants took the first look, so
+   the Elements tab shows a "First look" column with counts; five of eight
+   brainstormed privately, with "Heart rate" twice. Sign in as
+   `gp.a@example.test` in a private window, who has not taken the first look
+   yet. "Your turn" starts the first look; answer a few, then
+   "Add what is missing" opens the board with one column per question, the
+   archetype's elements dashed and the others' elements as a count. Add one
+   in a column with Enter. As facilitator, reveal the board, merge the
+   duplicate, then "Group" on the Overview: drag an element to another group
+   (with the mouse or a finger) or click it and choose "Move here", rename a
+   group and "Ask the group to check". As `gp.a@example.test`, "Your turn"
+   now asks to check the groups.
 3. **Decide:** open "Blood pressure (demo)". On the Elements tab, look up a
    CKM archetype (this calls the live CKM). Round 1 is closed: 5 elements in
-   the model, 1 not in the model and 2 without consensus. Round 2 is open.
+   the model, 1 not in the model and 2 without consensus. Round 2 is open;
+   its rating card names each element's group and the overview lists the
+   ratings under group headings. "Scope" and "Discover" in the header are
+   done: each opens a read-only recap of that phase.
 4. Open the People tab. Eight participants sit in five stakeholder groups:
    Nursing, Primary care, General medicine, Terminology and Architecture.
    Invite a new address and open the invitation from Mailpit in a private
