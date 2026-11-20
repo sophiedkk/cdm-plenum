@@ -9,6 +9,7 @@ import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { projectTitle } from "@/components/projects/project-title";
+import { DetailFlagList } from "@/components/rounds/detail-flags";
 import { ResultsTable } from "@/components/rounds/element-result";
 import { toLocalInput, useTimeZone } from "@/components/rounds/format";
 import { OpenRoundDialog } from "@/components/rounds/open-round-dialog";
@@ -50,6 +51,7 @@ import {
   ratingsByParticipantQueryOptions,
   responseRateQueryOptions,
   roundBoardQueryOptions,
+  roundFlagsQueryOptions,
   roundKeys,
   roundProposalsQueryOptions,
   roundQueryOptions,
@@ -73,6 +75,7 @@ export const Route = createFileRoute("/_authed/projects/$projectId/rounds/$round
     }
     if (isFacilitator && round.status !== "draft") {
       loads.push(queryClient.ensureQueryData(responseRateQueryOptions(projectId, roundId)));
+      loads.push(queryClient.ensureQueryData(roundFlagsQueryOptions(projectId, roundId)));
       if (round.number === 1) {
         loads.push(queryClient.ensureQueryData(roundProposalsQueryOptions(projectId, roundId)));
       }
@@ -244,6 +247,7 @@ function RoundPage() {
       {closed && <Results projectId={projectId} roundId={roundId} />}
       {isFacilitator && round.status === "draft" && <DraftSetup round={round} />}
       {isFacilitator && round.status !== "draft" && <RoundProgress round={round} />}
+      {isFacilitator && round.status !== "draft" && <Flags round={round} />}
       {isFacilitator && round.status !== "draft" && round.number === 1 && (
         <Proposals round={round} />
       )}
@@ -479,21 +483,36 @@ function Results({ projectId, roundId }: Readonly<{ projectId: string; roundId: 
   );
 }
 
-/** Who proposed what, from the ratings by participant, when the round allows it (DE4, DE16). */
-function useProposers(round: RoundDetail): ReadonlyMap<string, string> | undefined {
+/**
+ * Who proposed what (DE16) or set which detail flag (DE17), from the ratings by participant,
+ * when the round allows it (DE4).
+ */
+function useAuthors(
+  round: RoundDetail,
+  ids: "proposalIds" | "flagIds",
+): ReadonlyMap<string, string> | undefined {
   const { projectId, roundId } = Route.useParams();
   const { data } = useQuery({
     ...ratingsByParticipantQueryOptions(projectId, roundId),
     enabled: round.facilitatorSeesRaters,
   });
   if (!round.facilitatorSeesRaters || !data?.ok) return undefined;
-  const proposers = new Map<string, string>();
+  const authors = new Map<string, string>();
   for (const participant of data.value) {
-    for (const id of participant.proposalIds) {
-      proposers.set(id, participant.name.trim() || participant.email);
+    for (const id of participant[ids]) {
+      authors.set(id, participant.name.trim() || participant.email);
     }
   }
-  return proposers;
+  return authors;
+}
+
+/** The detail flags of the round per element, for the facilitator (DE17). */
+function Flags({ round }: Readonly<{ round: RoundDetail }>) {
+  const { projectId, roundId } = Route.useParams();
+  const { data } = useSuspenseQuery(roundFlagsQueryOptions(projectId, roundId));
+  const flags = valueOrNotFound(data);
+  const flaggers = useAuthors(round, "flagIds");
+  return <DetailFlagList elements={round.elements} flags={flags} flaggers={flaggers} />;
 }
 
 /** The proposals for missing elements of round 1, for the facilitator (DE16). */
@@ -501,7 +520,7 @@ function Proposals({ round }: Readonly<{ round: RoundDetail }>) {
   const { projectId, roundId } = Route.useParams();
   const { data } = useSuspenseQuery(roundProposalsQueryOptions(projectId, roundId));
   const proposals = valueOrNotFound(data);
-  const proposers = useProposers(round);
+  const proposers = useAuthors(round, "proposalIds");
   const addToBoard = useServerFn(addProposalToBoardFn);
   const queryClient = useQueryClient();
   return (

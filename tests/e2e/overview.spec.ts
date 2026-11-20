@@ -107,6 +107,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(page).toHaveURL(
         (url) => url.pathname === `/projects/${project.projectId}/rounds/${roundId}/rate`,
       );
+      // The rating screen opens on the first card (DE18).
+      await expect(page.getByRole("region", { name: "Systolic pressure" })).toBeVisible();
       await expectAxeClean(page);
     });
 

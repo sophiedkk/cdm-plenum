@@ -14,6 +14,7 @@ import {
   panelStatusFn,
   ratingsByParticipantFn,
   responseRateFn,
+  roundFlagsFn,
   roundProposalsFn,
   roundResultsFn,
 } from "./functions.ts";
@@ -40,6 +41,8 @@ export const roundKeys = {
     [...roundKeys.round(projectId, roundId), "my-proposals"] as const,
   proposals: (projectId: string, roundId: string) =>
     [...roundKeys.round(projectId, roundId), "proposals"] as const,
+  flags: (projectId: string, roundId: string) =>
+    [...roundKeys.round(projectId, roundId), "flags"] as const,
 };
 
 /** The rounds of the project, newest first; a participant gets no drafts. */
@@ -128,6 +131,15 @@ export function roundProposalsQueryOptions(projectId: string, roundId: string) {
   return queryOptions({
     queryKey: roundKeys.proposals(projectId, roundId),
     queryFn: () => roundProposalsFn({ data: { projectId, roundId } }),
+    staleTime: STALE_TIME.rounds,
+  });
+}
+
+/** The detail flags of a round per element, without who set them (facilitator, DE17). */
+export function roundFlagsQueryOptions(projectId: string, roundId: string) {
+  return queryOptions({
+    queryKey: roundKeys.flags(projectId, roundId),
+    queryFn: () => roundFlagsFn({ data: { projectId, roundId } }),
     staleTime: STALE_TIME.rounds,
   });
 }

@@ -1,0 +1,90 @@
+// SPDX-FileCopyrightText: Sophie de Klerk
+// SPDX-License-Identifier: Apache-2.0
+
+// The overview after the last rating card (DE18): every element with the participant's own
+// rating, or "not rated yet", and the details they flagged, each with a link back to its card.
+import type { ReactNode, Ref } from "react";
+import { m } from "@/i18n/messages";
+import type { MyElement, OwnRating } from "@/server/rounds/ratings";
+import { detailLabel } from "./detail-flags";
+
+function ratingText(own: OwnRating): string {
+  if (!own.rated) return m.rounds_overview_not_rated();
+  if (own.score === null) return m.rounds_rate_unable();
+  return String(own.score);
+}
+
+/** The table of the participant's ratings; `cardLink` renders the link to one card. */
+export function RatingOverview({
+  number,
+  elements,
+  headingRef,
+  cardLink,
+}: Readonly<{
+  number: number;
+  elements: readonly MyElement[];
+  /** The heading, which takes focus when the participant moves to the overview. */
+  headingRef?: Ref<HTMLHeadingElement>;
+  cardLink: (index: number, name: string) => ReactNode;
+}>) {
+  const rated = elements.filter((element) => element.own.rated).length;
+  return (
+    <section aria-labelledby="rating-overview-heading" className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <h3
+          id="rating-overview-heading"
+          ref={headingRef}
+          tabIndex={-1}
+          className="text-lg font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {m.rounds_overview_heading()}
+        </h3>
+        <p className="font-medium">{m.rounds_rate_progress({ rated, total: elements.length })}</p>
+        <p className="text-sm text-muted-foreground">{m.rounds_overview_intro()}</p>
+      </div>
+      <div className="overflow-x-auto rounded-md border">
+        <table className="w-full text-sm">
+          <caption className="sr-only">{m.rounds_overview_caption({ number })}</caption>
+          <thead className="bg-muted/50 text-left">
+            <tr>
+              <th scope="col" className="px-3 py-2 font-medium">
+                {m.rounds_overview_element()}
+              </th>
+              <th scope="col" className="px-3 py-2 font-medium">
+                {m.rounds_overview_rating()}
+              </th>
+              <th scope="col" className="px-3 py-2 font-medium">
+                {m.rounds_overview_flags()}
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {elements.map((element, index) => (
+              <tr key={element.id}>
+                <th scope="row" className="px-3 py-1.5 text-left font-normal break-words">
+                  {cardLink(index + 1, element.name)}
+                </th>
+                <td
+                  className={
+                    element.own.rated ? "px-3 py-1.5" : "px-3 py-1.5 text-muted-foreground"
+                  }
+                >
+                  {ratingText(element.own)}
+                </td>
+                <td
+                  className={
+                    element.flags.length === 0 ? "px-3 py-1.5 text-muted-foreground" : "px-3 py-1.5"
+                  }
+                >
+                  {element.flags.length === 0
+                    ? m.rounds_overview_no_flags()
+                    : element.flags.map((flag) => detailLabel(flag.kind)).join(", ")}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
