@@ -147,6 +147,19 @@ page from these patterns; each has a real use and a test you can copy.
   `PageSkeleton` (the router's default pending state), `EmptyState`,
   `RouteErrorState` (the default error state, with a retry) and
   `NotFoundState`. A loader that gets `not_found` throws `notFound()`.
+- **Layout rules** (UI/UX analysis of 2026-11-20,
+  `docs/evaluations/2026-11-20-ui-ux-analysis.md`): show each piece of
+  information once, in its best form, never as a picture and a text that say
+  the same, and never a link next to a status that could itself be the link
+  (owner decision); one filled button per view,
+  for the next step, the rest outline or text; type sizes 14 meta (nothing
+  smaller for content), 16 body, 18 section, 24 page title, 30 the home card
+  heading, weights 400 and 600; spacing on 4 px (24 between blocks, 48 between
+  sections); a card for the task card and repeated independent items, a list
+  for what participants read, a table only for facilitator comparisons of four
+  rows or more; no description under a page title and help under a field only
+  on focus or error; show a value only when it says something; settings save
+  on change or with one save bar per page.
 - **Standard-agnostic wording:** the tool builds a common data model of a
   concept, whatever standard implements it later. UI text, requirements and
   docs say "the model" or "the data model", not "the archetype"; name openEHR,
