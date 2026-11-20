@@ -153,7 +153,7 @@ Sign in at <http://localhost:3000/sign-in> and open the link from Mailpit at
    discover. "Review" on the first item opens Existing models: the pulse
    archetype from openEHR CKM (stored in `tests/fixtures/ckm`, no network)
    with its elements on the list. Three participants took the first look, so
-   the Elements tab shows a "First look" column with counts; five of eight
+   the Elements tab shows their answers counted per element; five of eight
    brainstormed privately, with "Heart rate" twice. Sign in as
    `gp.a@example.test` in a private window, who has not taken the first look
    yet. "Your turn" starts the first look; answer a few, then

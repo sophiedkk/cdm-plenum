@@ -20,8 +20,8 @@ the project uses [Semantic Versioning](https://semver.org/).
 - First look: once elements from existing models are on the list, each
   participant goes through them one at a time and answers whether the element
   belongs to the concept: Belongs, Not sure or Does not belong. Your answers
-  are your own; the facilitator sees only the count per answer, in a "First
-  look" column on the element board. "Your turn" on the project home starts
+  are your own; the facilitator sees only the count per answer, in a column
+  per answer on the element board. "Your turn" on the project home starts
   here, and the Overview shows how many participants are done, with the
   reminder e-mail now pointing to the first look.
 - Participants can suggest an existing model, with a title and a link, from
