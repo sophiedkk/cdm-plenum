@@ -123,6 +123,14 @@ describe("phaseRecap (PR13)", () => {
     expect(JSON.stringify(facilitator)).toContain("Secret pulse");
   });
 
+  it("has no recap of hand-off, the last phase, while in hand-off", async () => {
+    await setPhase(db, m.projectId, "handoff");
+    expect(await phaseRecap(db, m.facilitator, m.projectId, "handoff")).toEqual({
+      ok: false,
+      error: "recap_not_ready",
+    });
+  });
+
   it("recaps decide in hand-off with its rounds", async () => {
     await setPhase(db, m.projectId, "handoff");
     const recap = await phaseRecap(db, m.facilitator, m.projectId, "decide");

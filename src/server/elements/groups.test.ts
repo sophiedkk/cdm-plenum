@@ -8,7 +8,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
-import { insertElement, setPhase } from "../test-fixtures.ts";
+import { facilitatorWithProject, insertElement, setPhase } from "../test-fixtures.ts";
 import { type ProjectMembers, personLeaks, projectWithMembers } from "../test-project-members.ts";
 import { revealBoard, setPrivateBrainstorm } from "./brainstorm.ts";
 import {
@@ -22,7 +22,7 @@ import {
   renameElementGroup,
   setElsewhere,
 } from "./groups.ts";
-import { addElement } from "./queries.ts";
+import { addElement, mergeElements } from "./queries.ts";
 import { addElementInput } from "./schemas.ts";
 
 let db: Kysely<DB>;
@@ -179,6 +179,125 @@ describe("the facilitator's grouping (EL18)", () => {
       ok: false,
       error: "groups_after_discover",
     });
+  });
+});
+
+describe("refusals across projects and roles (EL18, EL24)", () => {
+  /** A group and an element of a second project, which the first project's members must not reach. */
+  async function elsewhereProject(): Promise<{ groupId: string; elementId: string }> {
+    const other = await facilitatorWithProject(db, "fac-other");
+    const group = await db
+      .selectFrom("element_group")
+      .select("id")
+      .where("project_id", "=", other.projectId)
+      .where("prompt", "=", "recorded")
+      .executeTakeFirstOrThrow();
+    return { groupId: group.id, elementId: await insertElement(db, other.projectId, "Foreign") };
+  }
+
+  it("refuses a group or an element of another project (IDOR)", async () => {
+    const foreign = await elsewhereProject();
+    const recorded = await groupIdOf("recorded");
+    expect(
+      await moveElement(db, m.facilitator, {
+        projectId: m.projectId,
+        elementId: foreign.elementId,
+        groupId: recorded,
+      }),
+    ).toEqual({ ok: false, error: "element_not_found" });
+    expect(
+      await moveElement(db, m.facilitator, {
+        projectId: m.projectId,
+        elementId: csv,
+        groupId: foreign.groupId,
+      }),
+    ).toEqual({ ok: false, error: "element_group_not_found" });
+    expect(
+      await renameElementGroup(db, m.facilitator, {
+        projectId: m.projectId,
+        groupId: foreign.groupId,
+        name: "Taken over",
+      }),
+    ).toEqual({ ok: false, error: "element_group_not_found" });
+    await asked();
+    expect(
+      await addGroupMissing(db, m.participant, {
+        projectId: m.projectId,
+        groupId: foreign.groupId,
+        body: "Mean pressure",
+      }),
+    ).toEqual({ ok: false, error: "element_group_not_found" });
+    expect(
+      await setElsewhere(db, m.participant, {
+        projectId: m.projectId,
+        elementId: foreign.elementId,
+        elsewhere: true,
+      }),
+    ).toEqual({ ok: false, error: "element_not_found" });
+    const untouched = await db
+      .selectFrom("element_group")
+      .select("name")
+      .where("id", "=", foreign.groupId)
+      .executeTakeFirstOrThrow();
+    expect(untouched.name).toBeNull();
+    expect(await db.selectFrom("group_missing").selectAll().execute()).toEqual([]);
+    expect(await db.selectFrom("element_elsewhere").selectAll().execute()).toEqual([]);
+  });
+
+  it("refuses renaming for a participant and an outsider, and adding for an outsider", async () => {
+    const recorded = await groupIdOf("recorded");
+    const rename = { projectId: m.projectId, groupId: recorded, name: "Other" };
+    expect(await renameElementGroup(db, m.participant, rename)).toEqual({
+      ok: false,
+      error: "forbidden",
+    });
+    expect(await renameElementGroup(db, m.outsider, rename)).toEqual({
+      ok: false,
+      error: "not_found",
+    });
+    expect(
+      await addElementGroup(db, m.outsider, { projectId: m.projectId, name: "Other" }),
+    ).toEqual({ ok: false, error: "not_found" });
+  });
+
+  it("refuses a participant's remarks outside discover", async () => {
+    await asked();
+    const recorded = await groupIdOf("recorded");
+    for (const phase of ["scope", "decide", "handoff"] as const) {
+      await setPhase(db, m.projectId, phase);
+      expect(
+        await setElsewhere(db, m.participant, {
+          projectId: m.projectId,
+          elementId: systolic,
+          elsewhere: true,
+        }),
+      ).toEqual({ ok: false, error: "phase_closed" });
+      expect(
+        await addGroupMissing(db, m.participant, {
+          projectId: m.projectId,
+          groupId: recorded,
+          body: "Mean pressure",
+        }),
+      ).toEqual({ ok: false, error: "phase_closed" });
+    }
+  });
+
+  it("refuses to move a merged element", async () => {
+    expect((await revealBoard(db, m.facilitator, m.projectId)).ok).toBe(true);
+    const duplicate = await add(m.otherParticipant, "Systolic pressure", "recorded");
+    const merged = await mergeElements(db, m.facilitator, {
+      projectId: m.projectId,
+      intoId: systolic,
+      fromIds: [duplicate],
+    });
+    expect(merged.ok).toBe(true);
+    expect(
+      await moveElement(db, m.facilitator, {
+        projectId: m.projectId,
+        elementId: duplicate,
+        groupId: null,
+      }),
+    ).toEqual({ ok: false, error: "element_not_found" });
   });
 });
 
