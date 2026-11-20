@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The facilitator's own choices on the members page: whether participants see who is in each
-// stakeholder group (PR7), and the group the facilitator rates in (DE14).
+// stakeholder group (PR7), whether the brainstorm starts private (EL13), and the group the
+// facilitator rates in (DE14).
 import { revalidateLogic } from "@tanstack/react-form";
 import { LogOutIcon, SaveIcon, UserPlusIcon } from "lucide-react";
 import { useId, useState } from "react";
@@ -92,6 +93,84 @@ export function GroupNamesForm({
           </form.SubmitButton>
         </form.AppForm>
       </div>
+    </form>
+  );
+}
+
+/**
+ * The private-first brainstorm (EL13): on by default, saved with its own button. After the reveal
+ * the server refuses a change (`board_already_revealed`), so the form gives way to a note.
+ */
+export function PrivateBrainstormForm({
+  enabled,
+  revealed,
+  save,
+  onSaved,
+}: Readonly<{
+  enabled: boolean;
+  revealed: boolean;
+  save: (enabled: boolean) => Promise<Outcome<unknown>>;
+  onSaved: (enabled: boolean) => Promise<void> | void;
+}>) {
+  const id = useId();
+  const form = useAppForm({
+    defaultValues: { enabled },
+    onSubmit: async ({ value, formApi }) => {
+      if (await submitCall(formApi, () => save(value.enabled))) await onSaved(value.enabled);
+    },
+  });
+  return (
+    <form
+      noValidate
+      aria-labelledby="private-brainstorm-title"
+      className="flex flex-col gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void form.handleSubmit();
+      }}
+    >
+      <h3 id="private-brainstorm-title" className="text-lg font-semibold">
+        {m.members_private_title()}
+      </h3>
+      {revealed ? (
+        <p className="text-muted-foreground" data-testid="private-brainstorm-revealed">
+          {m.members_private_revealed()}
+        </p>
+      ) : (
+        <>
+          <form.AppForm>
+            <form.FormErrors />
+          </form.AppForm>
+          <form.Field name="enabled">
+            {(field) => (
+              <Field orientation="horizontal">
+                <Checkbox
+                  id={id}
+                  checked={field.state.value}
+                  aria-describedby={`${id}-description`}
+                  onCheckedChange={(checked) => field.handleChange(checked === true)}
+                />
+                <FieldContent>
+                  <FieldLabel htmlFor={id}>{m.members_private_label()}</FieldLabel>
+                  <FieldDescription id={`${id}-description`}>
+                    {m.members_private_help()}
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+            )}
+          </form.Field>
+          <div>
+            <form.AppForm>
+              <form.SubmitButton
+                variant="outline"
+                icon={<SaveIcon aria-hidden="true" data-icon="inline-start" />}
+              >
+                {m.members_private_save()}
+              </form.SubmitButton>
+            </form.AppForm>
+          </div>
+        </>
+      )}
     </form>
   );
 }

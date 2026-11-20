@@ -5,7 +5,7 @@
 // The compact board (Q-USE-1): one row per element, a disclosure button that opens the details,
 // the author and the actions for the facilitator only (EL2), and the comment refusals.
 import { QueryClient, QueryClientProvider, queryOptions } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CommentOutcome } from "@/components/comments/comment-thread";
 import type { CardElement } from "./element-details";
@@ -83,7 +83,11 @@ const UNDECIDED: CardElement = {
   mergedCkmLinks: [],
 };
 
-function renderTable(isFacilitator: boolean, elements = [SYSTOLIC, POSITION, UNDECIDED]) {
+function renderTable(
+  isFacilitator: boolean,
+  elements = [SYSTOLIC, POSITION, UNDECIDED],
+  openElementId?: string,
+) {
   const actions: ElementActions = {
     addComment: vi.fn(async (): Promise<CommentOutcome> => ({ ok: true })),
     onCommentAdded: vi.fn(),
@@ -98,6 +102,7 @@ function renderTable(isFacilitator: boolean, elements = [SYSTOLIC, POSITION, UND
         projectId="p1"
         elements={elements}
         isFacilitator={isFacilitator}
+        openElementId={openElementId}
         actions={actions}
       />
     </QueryClientProvider>,
@@ -113,6 +118,18 @@ function summaryRow(name: string): HTMLElement {
 }
 
 describe("ElementTable", () => {
+  it("opens the element a link names and moves focus to it (EL15)", async () => {
+    commentsAnswer.mockResolvedValue({ ok: true, value: [] });
+    Element.prototype.scrollIntoView ??= () => {};
+    renderTable(false, [SYSTOLIC, POSITION, UNDECIDED], POSITION.id);
+    const opened = screen.getByRole("button", { name: "Position" });
+    expect(opened.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("button", { name: "Systolic" }).getAttribute("aria-expanded")).toBe(
+      "false",
+    );
+    await waitFor(() => expect(document.activeElement).toBe(opened));
+  });
+
   it("shows one row per element with the short fields", () => {
     commentsAnswer.mockResolvedValue({ ok: true, value: [] });
     renderTable(false);

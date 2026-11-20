@@ -5,7 +5,7 @@
 // the name that opens the details in the row below. A table keeps the column headers, so a
 // screen reader announces "Data type" or "Comments" with each value.
 import { ChevronRightIcon, GitMergeIcon, LinkIcon } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { CommentOutcome } from "@/components/comments/comment-thread";
 import { StatusBadge } from "@/components/status/status-badge";
 import { Button } from "@/components/ui/button";
@@ -54,16 +54,25 @@ function ElementRows({
   element,
   position,
   isFacilitator,
+  opened,
   actions,
 }: Readonly<{
   projectId: string;
   element: CardElement;
   position: number;
   isFacilitator: boolean;
+  /** Open on arrival, from a link to this element (EL15). */
+  opened: boolean;
   actions: ElementActions;
 }>) {
   const detailsId = `${useId()}details`;
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(opened);
+  const toggle = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!opened) return;
+    toggle.current?.scrollIntoView({ block: "center" });
+    toggle.current?.focus({ preventScroll: true });
+  }, [opened]);
   const notDecided = <span className="text-muted-foreground">{m.board_not_decided()}</span>;
 
   return (
@@ -72,6 +81,7 @@ function ElementRows({
         <TableCell className="text-muted-foreground tabular-nums">{position}</TableCell>
         <TableHead scope="row" className="h-auto min-w-40 py-1 whitespace-normal md:min-w-56">
           <Button
+            ref={toggle}
             type="button"
             variant="ghost"
             size="sm"
@@ -135,11 +145,14 @@ export function ElementTable({
   projectId,
   elements,
   isFacilitator,
+  openElementId,
   actions,
 }: Readonly<{
   projectId: string;
   elements: readonly CardElement[];
   isFacilitator: boolean;
+  /** The element whose details are open when the board loads. */
+  openElementId?: string | undefined;
   actions: ElementActions;
 }>) {
   return (
@@ -170,6 +183,7 @@ export function ElementTable({
             element={element}
             position={index + 1}
             isFacilitator={isFacilitator}
+            opened={element.id === openElementId}
             actions={actions}
           />
         ))}

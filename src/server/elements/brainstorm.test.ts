@@ -171,7 +171,7 @@ describe("after the reveal (EL13, EL2)", () => {
       value: [{ id: theirs, name: "Systolic of A" }],
     });
     expect(responses[1]).toMatchObject({ ok: true, value: [{ body: "Comment of A" }] });
-    expect(responses[2].ok).toBe(true);
+    expect(responses[2]).toMatchObject({ ok: true });
     for (const response of responses) expect(personLeaks(response, m)).toEqual([]);
   });
 
