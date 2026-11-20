@@ -180,7 +180,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(page.getByRole("heading", { level: 1, name: "Blood pressure" })).toBeVisible();
       await expect(page).toHaveTitle(/^Blood pressure \|/);
       // A participant has no tabs: the home is the navigation, and the steps show the phase only.
-      await expect(page.getByRole("navigation", { name: text.projects_tabs_label })).toHaveCount(0);
+      await expect(
+        page.getByRole("navigation", { name: text.projects_tabs_label, exact: true }),
+      ).toHaveCount(0);
       await expect(steps(page, text).locator('[aria-current="step"]')).toContainText(
         text.projects_phase_decide,
       );
@@ -225,6 +227,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       // About this project opens below its button, with the groups and leaving.
       const about = page.getByRole("button", { name: text.projects_about_title });
       await expectHydrated(about);
+      // Below the fold the click scrolls first; the button must not move after that.
+      await about.scrollIntoViewIfNeeded();
       const before = await about.boundingBox();
       await about.click();
       await expect(about).toHaveAttribute("aria-expanded", "true");

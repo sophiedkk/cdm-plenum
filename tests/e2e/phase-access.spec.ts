@@ -45,7 +45,9 @@ async function tabNames(page: Page, locale: Locale): Promise<string[]> {
  */
 async function homeLinks(page: Page, locale: Locale): Promise<string[]> {
   const text = MESSAGES[locale];
-  await expect(page.getByRole("navigation", { name: text.projects_tabs_label })).toHaveCount(0);
+  await expect(
+    page.getByRole("navigation", { name: text.projects_tabs_label, exact: true }),
+  ).toHaveCount(0);
   const steps = page.getByRole("list", { name: text.projects_steps_label });
   await expect(steps).toBeVisible();
   await expect(steps.getByRole("link")).toHaveCount(0);
