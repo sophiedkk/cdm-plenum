@@ -9,6 +9,24 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The results of a round show one row per element: the outcome, the median,
+  a small chart of the scores and the number of answers. "Details" opens
+  every score, the share in each band and the result per stakeholder group.
+  Eight elements fit on a 1280 by 800 screen.
+- When you rate a later round, each element shows your own score from the
+  previous round and the scores of everyone and of each stakeholder group of
+  3 or more, in one line above the scale. The median, the bands and the
+  reasons are under "Details and reasons". The rating screen no longer shows
+  whether an element was included, excluded or without consensus in the
+  previous round, so that label does not push your rating.
+- The page of an open round starts with your progress and the "Rate round N
+  now" button, followed by the rule and the anonymity statement in short.
+  The full setup and the panel at opening are under "Setup of this round".
+  The facilitator sees the response as one line, with the table per
+  stakeholder group under a disclosure.
+
 ## [0.1.0] - 2026-11-19
 
 The first release: scope, element board with the CKM reuse check, e-Delphi
