@@ -446,7 +446,6 @@
   "board_source_kind_fhir": "FHIR",
   "board_source_kind_zib": "zib",
   "board_strip_added": "{count} nieuwe elementen",
-  "board_strip_added_hidden": "{count} nieuwe elementen, verborgen tot het bord vrij is",
   "board_strip_own": "Jij hebt er {count} toegevoegd",
   "board_strip_people": "{contributors} van {total} mensen hebben elementen toegevoegd",
   "board_suggest_description": "Noem een model, formulier of richtlijn die het concept al beschrijft. De facilitator beslist of het wordt geïmporteerd.",

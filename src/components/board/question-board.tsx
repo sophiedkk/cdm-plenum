@@ -48,7 +48,9 @@ export function BoardStrip({ board }: Readonly<{ board: BrainstormBoard }>) {
       </span>
       <span>
         {board.privateStep
-          ? m.board_strip_added_hidden({ count: board.added })
+          ? m.board_column_hidden({
+              count: board.columns.reduce((sum, column) => sum + column.hidden, 0),
+            })
           : m.board_strip_added({ count: board.added })}
       </span>
       <span>{m.board_strip_own({ count: board.own })}</span>

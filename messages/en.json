@@ -446,7 +446,6 @@
   "board_source_kind_fhir": "FHIR",
   "board_source_kind_zib": "zib",
   "board_strip_added": "{count} new elements",
-  "board_strip_added_hidden": "{count} new elements, hidden until the reveal",
   "board_strip_own": "You added {count}",
   "board_strip_people": "{contributors} of {total} people have added elements",
   "board_suggest_description": "Name a model, form or guideline that already describes the concept. The facilitator decides whether to import it.",

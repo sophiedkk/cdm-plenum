@@ -161,6 +161,11 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(
         b.page.getByText(fill(text.board_strip_people, { contributors: 2, total: 2 })),
       ).toBeVisible();
+      // The strip counts only the others' hidden elements, as the columns do, and B's own.
+      await expect(
+        b.page.getByText(fill(text.board_column_hidden, { count: 2 }), { exact: true }),
+      ).toBeVisible();
+      await expect(b.page.getByText(fill(text.board_strip_own, { count: 1 }))).toBeVisible();
       // Before the reveal a similar name shows no hint.
       const bName = columnForm(b.page, text, text.board_prompt_patient_state).getByRole("textbox");
       await bName.fill("Systolic");
