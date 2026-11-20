@@ -114,8 +114,7 @@ the project uses [Semantic Versioning](https://semver.org/).
   rate", N goes to the next element and P to the previous one. They do
   nothing while you type in a field.
 - The top of the rating page is shorter: it no longer explains the bands,
-  and "Your ratings are anonymous" sits on the status line. The full
-  sentence about who sees your ratings moved under the cards.
+  and "Your ratings are anonymous" sits on the status line.
 - `pnpm db:seed-demo` loads one demo project per phase: Body temperature in
   scope, Heart rate in discover with a private brainstorm not yet revealed,
   Blood pressure in decide and Respiratory rate in hand-off with two closed
@@ -141,7 +140,7 @@ the project uses [Semantic Versioning](https://semver.org/).
   below the row: the full description, proposed values, sources, CKM link,
   comments and the facilitator's actions (Edit, Edit values, Link to CKM).
 - "Merge duplicates" and "Import CSV" moved into the "More actions" menu
-  next to "Search CKM" on the element board.
+  next to "Search openEHR CKM" on the element board.
 - The rating question now asks whether an element belongs in the data
   model, for any use case in scope: the model holds every element that one of
   those use cases needs, whichever standard implements it later. The scale
@@ -179,6 +178,31 @@ the project uses [Semantic Versioning](https://semver.org/).
   the scope, add or import elements and set up a round. A round opens in the
   decide phase only, the board is revealed by hand in the discover phase only,
   and the project cannot leave the decide phase while a round is open.
+
+### Fixed
+
+- Comments no longer show "By a former member" for people who are still in
+  the project. As a participant you see "By you" on your own comments and
+  "By a participant" on the others; the name stays hidden.
+- The task line in the decide phase asks you to rate whether each element
+  belongs in the data model, the question the rating card asks, instead of
+  how important it is.
+- The button in the task line is gone on the page it leads to, such as
+  "Rate round 2" on the rating page or "Add elements" on the Brainstorm tab.
+  The task sentence stays.
+- "Rate round 2" shows once per page. The task line holds the button; the
+  rounds table has a plain link, and the round page no longer repeats the
+  call to rate. The rating page shows the closing date, your progress and
+  "Your ratings are anonymous" once each.
+- The keys line under the rating scale is hidden on touch screens without a
+  mouse, such as phones.
+- Every date and time reads the same way, with the time zone named, such as
+  "November 26, 2026 at 22:05 CET". Comments used a shorter format before.
+- The activity log on the administration page shows the project's name and
+  the action in words, in English or Dutch, 25 entries per page with
+  "Previous" and "Next". It logs the same as before.
+- The button that searches CKM is called "Search openEHR CKM", so you know
+  which model it searches.
 
 ## [0.1.0] - 2026-11-19
 
