@@ -4,7 +4,7 @@
 // The element board (EL1 to EL7): a participant adds an element with the keyboard and never sees
 // an author (EL2, Q-ANON-1); the facilitator merges duplicates, imports a CSV file and uses CKM
 // through the stub (tests/e2e/ckm-stub.ts); every page and dialog is axe-clean in English and
-// Dutch (Q-ACC-1, Q-I18N-1).
+// Dutch (Q-ACC-1, Q-I18N-1); 10 elements fit on the first screen at 1280 by 800 (Q-USE-1).
 import type { Page } from "@playwright/test";
 import { seedElement, signInTo, userIdOf } from "./board-seed.ts";
 import {
@@ -300,6 +300,44 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const systolic = await openDetails(page, text, "Systolic");
       await expect(systolic).toContainText(text.board_ckm_linked_badge);
       await expect(systolic).toContainText(`${BP_ID}`);
+      await expectAxeClean(page);
+    });
+  });
+
+  test.describe(`compact board in ${locale}`, () => {
+    test.use({
+      locale: BROWSER_LOCALE[locale],
+      reducedMotion: "reduce",
+      viewport: { width: 1280, height: 800 },
+    });
+    const text = MESSAGES[locale];
+
+    test("shows 10 elements on the first screen at 1280 by 800 (Q-USE-1)", async ({ page, db }) => {
+      const project = await seedProject(db);
+      for (let index = 1; index <= 10; index++) {
+        await seedElement(db, project.facilitator.userId, project.projectId, {
+          name: `Element ${index}`,
+          description: `What element ${index} records, written as a description long enough to be cut off in its column.`,
+        });
+      }
+      await signInTo(
+        page,
+        project.facilitator.email,
+        locale,
+        `/projects/${project.projectId}/board`,
+      );
+      const tenth = page.getByRole("rowheader", { name: "Element 10" });
+      await expect(tenth).toBeVisible();
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      const box = await page.getByRole("row").filter({ has: tenth }).boundingBox();
+      expect(box).not.toBeNull();
+      expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(800);
+      await expectAxeClean(page);
+
+      await openDetails(page, text, "Element 10");
+      await expectAxeClean(page);
+      await page.getByRole("button", { name: text.board_more_actions }).click();
+      await expect(page.getByRole("menuitem", { name: text.board_merge })).toBeVisible();
       await expectAxeClean(page);
     });
   });
