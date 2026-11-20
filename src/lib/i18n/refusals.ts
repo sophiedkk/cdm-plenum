@@ -71,6 +71,8 @@ export const REFUSAL_MESSAGE_KEYS = {
   phase_closed: "common_refusal_phase_closed",
   reveal_outside_discover: "common_refusal_reveal_outside_discover",
   round_still_open: "common_refusal_round_still_open",
+  marks_before_reveal: "common_refusal_marks_before_reveal",
+  same_as_itself: "common_refusal_same_as_itself",
   round_outside_decide: "common_refusal_round_outside_decide",
   minimum_reason_required: "common_refusal_minimum_reason_required",
   proposals_first_round_only: "common_refusal_proposals_first_round_only",

@@ -13,6 +13,8 @@ import {
   listElementsFn,
   listElementsWithAuthorsFn,
   listOwnElementsFn,
+  listOwnMarksFn,
+  markSummaryFn,
 } from "./functions.ts";
 
 export const elementKeys = {
@@ -20,6 +22,8 @@ export const elementKeys = {
   board: (projectId: string) => [...elementKeys.all(projectId), "board"] as const,
   own: (projectId: string) => [...elementKeys.all(projectId), "own"] as const,
   brainstorm: (projectId: string) => [...elementKeys.all(projectId), "brainstorm"] as const,
+  /** The member's own marks and, for the facilitator, the counts (EL16). */
+  marks: (projectId: string) => [...elementKeys.all(projectId), "marks"] as const,
   comments: (projectId: string, elementId: string) =>
     [...elementKeys.all(projectId), "comments", elementId] as const,
   archetype: (projectId: string, cid: string) =>
@@ -61,6 +65,24 @@ export function brainstormStatusQueryOptions(projectId: string) {
   return queryOptions({
     queryKey: elementKeys.brainstorm(projectId),
     queryFn: () => brainstormStatusFn({ data: { projectId } }),
+    staleTime: STALE_TIME.board,
+  });
+}
+
+/** The signed-in member's own "I support this" and "same as" marks (EL16). */
+export function ownMarksQueryOptions(projectId: string) {
+  return queryOptions({
+    queryKey: [...elementKeys.marks(projectId), "own"] as const,
+    queryFn: () => listOwnMarksFn({ data: { projectId } }),
+    staleTime: STALE_TIME.board,
+  });
+}
+
+/** The supporters per element and the proposed duplicates, as counts (facilitator only, EL16). */
+export function markSummaryQueryOptions(projectId: string) {
+  return queryOptions({
+    queryKey: [...elementKeys.marks(projectId), "summary"] as const,
+    queryFn: () => markSummaryFn({ data: { projectId } }),
     staleTime: STALE_TIME.board,
   });
 }
