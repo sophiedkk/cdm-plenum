@@ -102,9 +102,10 @@ function PreviousMarker({ id, children }: Readonly<{ id: string; children: React
     <span
       id={id}
       data-previous-marker=""
-      className="absolute bottom-full left-1/2 mb-0.5 -translate-x-1/2 text-xs leading-none font-medium whitespace-nowrap"
+      className="absolute bottom-full left-1/2 mb-0.5 -translate-x-1/2 text-sm leading-none whitespace-nowrap"
     >
-      {children}
+      {/* The line above the scale says the score in words; the mark only points at it. */}
+      <span className="sr-only">{children}</span>
       <span aria-hidden="true"> ▾</span>
     </span>
   );
