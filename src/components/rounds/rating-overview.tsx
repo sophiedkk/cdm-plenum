@@ -27,7 +27,6 @@ export function RatingOverview({
   headingRef?: Ref<HTMLHeadingElement>;
   cardLink: (index: number, name: string) => ReactNode;
 }>) {
-  const rated = elements.filter((element) => element.own.rated).length;
   return (
     <section aria-labelledby="rating-overview-heading" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
@@ -39,7 +38,6 @@ export function RatingOverview({
         >
           {m.rounds_overview_heading()}
         </h3>
-        <p className="font-medium">{m.rounds_rate_progress({ rated, total: elements.length })}</p>
         <p className="text-sm text-muted-foreground">{m.rounds_overview_intro()}</p>
       </div>
       <div className="overflow-x-auto rounded-md border">

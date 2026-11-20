@@ -115,7 +115,8 @@ describe("RatingCards (DE18)", () => {
       "Cuff sizeUnable to rateNone",
       "PositionNot rated yetNone",
     ]);
-    expect(overview.textContent).toContain("2 of 3 elements rated");
+    // The page header carries the count; the overview does not repeat it.
+    expect(overview.textContent).not.toContain("elements rated");
     expect(screen.getByText("The open question of round 1")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Next" })).toBeNull();
   });
