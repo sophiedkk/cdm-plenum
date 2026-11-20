@@ -9,7 +9,30 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Round 1 ends with an open question: "Is an element missing? Propose it".
+  You give a name and a one-line description, can propose several elements
+  and delete your own until the round closes. Other participants never see
+  your proposals. The facilitator sees them on the round page, with your
+  name only when the round lets the facilitator see who rated what.
+- When setting up round 1, the facilitator writes the rule for adding
+  proposed elements, prefilled with "Proposed by at least two
+  participants". Participants see the rule on the rating screen, and it
+  cannot change once the round is open.
+- On the round page the facilitator adds a proposal to the board with "Add
+  to the board". The new element shows the source "Round 1 proposal".
+
 ### Changed
+
+- The rating question now asks whether an element belongs in the archetype,
+  for any use case in scope: the archetype holds every element that one of
+  those use cases needs. The scale reads 1 to 3 "does not belong in the
+  archetype", 4 to 6 "unsure" and 7 to 9 "belongs in the archetype". The
+  scale and the consensus rule stay the same.
+- The outcomes of a round read "In the archetype", "Not in this archetype"
+  and "No consensus". An element that is not in this archetype stays on the
+  board and in the elements CSV.
 
 - The results of a round show one row per element: the outcome, the median,
   a small chart of the scores and the number of answers. "Details" opens

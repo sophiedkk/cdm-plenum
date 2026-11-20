@@ -144,13 +144,14 @@ access goes through Kysely ([ADR 0002](adr/0002-stack-follows-edulims.md)).
 | Scope statement | `scope_statement`, `scope_source`, `scope_comment` | one statement per project; SC3 objections later |
 | Candidate element | `element` | name, description, data type (a key from the data type list, or none), cardinality as `min_occurs` and `max_occurs` (null for many), `merged_into` for merged duplicates, `author_member_id` (never sent to participants) |
 | Proposed value | `element_value` | ordered values of a coded, ordinal or scale element: text and optional number (EL9) |
-| Element source | `element_source` | kind (`brainstorm`, `csv`, `ckm`), label (the participant's optional note, the file name or the archetype ID); every element has at least one |
+| Element source | `element_source` | kind (`brainstorm`, `csv`, `ckm`, `delphi`), label (the participant's optional note, the file name, the archetype ID or the number of the round a proposal came from); every element has at least one |
 | CKM link | `element_ckm_link` | archetype ID, CKM `cid`, revision at linking time, at-code, element name as CKM showed it |
 | Comment | `element_comment` | author hidden as for elements (EL6) |
-| Round | `round` | number, scale minimum and maximum, the rule's percentages and score bands, opens and closes at, `facilitator_sees_raters`; when it opens: `panel_*` and `minimum_*` per expert type and `below_minimum_reason` (DE12), held by one CHECK: a draft has no snapshot, an open round all of it, a reason exactly when below the minimum |
+| Round | `round` | number, scale minimum and maximum, the rule's percentages and score bands, opens and closes at, `facilitator_sees_raters`, `proposal_rule` (round 1 only, DE16); when it opens: `panel_*` and `minimum_*` per expert type and `below_minimum_reason` (DE12), held by one CHECK: a draft has no snapshot, an open round all of it, a reason exactly when below the minimum |
 | Elements in a round | `round_element` | which elements are rated; the outcome is written when the round closes |
 | Rating pseudonym | `rating_code` | one random code per participant per project ([ADR 0005](adr/0005-rating-pseudonyms-and-anonymity.md)) |
 | Rating | `rating` | round, element, rating code, score or "unable to rate", optional reason, and `team_id`: the rater's stakeholder group when the rating was saved, so group results never read the code-to-member table (ADR 0005) |
+| Proposal | `round_proposal` | a missing element proposed in round 1 (DE16): name, description, the proposer's rating code as on a rating (ADR 0005), and the board element made from it |
 | Activity log | `activity_log` | time, actor, action, target id; never a score, an element text or a name (Q-PRIV-2) |
 
 The database holds the rules it can check itself, so no code path can skip
@@ -158,10 +159,12 @@ them (`src/server/db/migrations/0002_projects.ts`):
 
 - `CHECK` constraints on the data type key, the cardinality, the phase, the
   outcome and the round's scale and percentages.
-- A trigger refuses a change to a round's rule, closing date, rater setting or
-  panel snapshot once the round is open (DE2, DE12).
+- A trigger refuses a change to a round's rule, closing date, rater setting,
+  proposal rule or panel snapshot once the round is open (DE2, DE12, DE16).
 - A trigger accepts a rating only while its round is open, with a score inside
   the round's scale and a rating code of the round's project (DE3).
+- A trigger accepts a proposal only in round 1 while it is open, with a rating
+  code of the round's project (DE16).
 - Rating codes are random version 4 UUIDs; other ids are `uuidv7()`.
 
 ### Element data types
