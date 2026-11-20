@@ -311,6 +311,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         `/projects/${project.projectId}/board`,
       );
       const open = page.getByRole("button", { name: text.board_ckm_search });
+      // The button names the one model it searches.
+      await expect(open).toHaveText(/openEHR CKM/);
       await expectHydrated(open);
       await tabTo(page, open, 40);
       await page.keyboard.press("Enter");
