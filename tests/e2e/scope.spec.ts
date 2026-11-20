@@ -127,6 +127,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const list = page.getByRole("list", { name: text.scope_comments_heading });
       await expect(list).toContainText("Home readings belong in scope.");
       await expect(list).not.toContainText(participant);
+      // The participant's own comment is theirs; nobody here has left the project.
+      await expect(list.getByRole("listitem")).toContainText(text.common_comment_author_you);
+      await expect(list).not.toContainText(text.common_comment_author_left);
       await expectAxeClean(page);
 
       const facilitator = await browser.newPage({ locale: BROWSER_LOCALE[locale] });
@@ -165,6 +168,13 @@ test("no response to a participant on the scope page names another member", asyn
   await page.getByLabel(MESSAGES.en.common_comment_label).fill("A comment.");
   await page.getByRole("button", { name: MESSAGES.en.common_comment_submit }).click();
   await expect(page.getByText("A comment.")).toBeVisible();
+  const items = page
+    .getByRole("list", { name: MESSAGES.en.scope_comments_heading })
+    .getByRole("listitem");
+  await expect(items).toHaveText([
+    new RegExp(`Seeded comment\\.${MESSAGES.en.common_comment_author_participant}`),
+    new RegExp(`A comment\\.${MESSAGES.en.common_comment_author_you}`),
+  ]);
   const html = await page.content();
   for (const text of [...bodies, html]) {
     expect(text).not.toContain(other);

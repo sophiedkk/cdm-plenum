@@ -312,6 +312,8 @@
   "common_comment_added": "Opmerking geplaatst.",
   "common_comment_author": "Door {name}",
   "common_comment_author_left": "Door een oud-lid",
+  "common_comment_author_participant": "Door een deelnemer",
+  "common_comment_author_you": "Door jou",
   "common_comment_description": "Andere deelnemers zien niet wie een opmerking schreef. De facilitator ziet dat wel. Hoogstens {max} tekens.",
   "common_comment_label": "Je opmerking",
   "common_comment_required": "Schrijf eerst een opmerking.",

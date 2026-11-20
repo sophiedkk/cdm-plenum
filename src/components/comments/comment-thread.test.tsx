@@ -44,6 +44,17 @@ describe("CommentThread", () => {
     expect(list.textContent).not.toMatch(/By /);
   });
 
+  it("shows a participant their own comments as theirs and others' as a participant's", () => {
+    renderThread([
+      { id: "c1", body: "Mine", createdAt: AT, mine: true },
+      { id: "c2", body: "Theirs", createdAt: AT, mine: false },
+    ]);
+    const items = screen.getAllByRole("listitem").map((item) => item.textContent);
+    expect(items[0]).toContain("By you");
+    expect(items[1]).toContain("By a participant");
+    expect(screen.queryByText(/former member/)).toBeNull();
+  });
+
   it("names the time zone of a comment's moment, as the rounds do", () => {
     renderThread([{ id: "c1", body: "A", createdAt: AT }]);
     const time = screen.getByRole("list", { name: "Comments" }).querySelector("time");

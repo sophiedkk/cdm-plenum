@@ -101,13 +101,7 @@ export function elementCommentsQueryOptions(
     queryFn: async () => {
       const data = { projectId, elementId };
       if (withAuthors) return listElementCommentsWithAuthorsFn({ data });
-      const result = await listElementCommentsFn({ data });
-      return result.ok
-        ? {
-            ok: true as const,
-            value: result.value.map((comment) => ({ ...comment, author: null })),
-          }
-        : result;
+      return listElementCommentsFn({ data });
     },
     staleTime: STALE_TIME.board,
   });

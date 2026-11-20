@@ -31,13 +31,7 @@ export function scopeCommentsQueryOptions(projectId: string, withAuthors: boolea
     queryKey: [...scopeKeys.comments(projectId), withAuthors ? "authors" : "public"] as const,
     queryFn: async () => {
       if (withAuthors) return listScopeCommentsWithAuthorsFn({ data: { projectId } });
-      const result = await listScopeCommentsFn({ data: { projectId } });
-      return result.ok
-        ? {
-            ok: true as const,
-            value: result.value.map((comment) => ({ ...comment, author: null })),
-          }
-        : result;
+      return listScopeCommentsFn({ data: { projectId } });
     },
     staleTime: STALE_TIME.scope,
   });

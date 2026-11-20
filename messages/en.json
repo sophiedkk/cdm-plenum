@@ -312,6 +312,8 @@
   "common_comment_added": "Comment added.",
   "common_comment_author": "By {name}",
   "common_comment_author_left": "By a former member",
+  "common_comment_author_participant": "By a participant",
+  "common_comment_author_you": "By you",
   "common_comment_description": "Other participants do not see who wrote a comment; the facilitator does. At most {max} characters.",
   "common_comment_label": "Your comment",
   "common_comment_required": "Write a comment first.",
