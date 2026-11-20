@@ -9,6 +9,26 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A new project starts with a private brainstorm: each participant sees only
+  the elements they added, until the facilitator selects "Reveal the board"
+  on the element board. Until then the board shows the facilitator how many
+  participants added elements, and the confirmation lists the count per
+  participant. After the reveal everyone sees every element, still without
+  the name of who added it. The facilitator can switch the private step off
+  on the members page, before the reveal only. Existing projects keep their
+  shared board.
+- The Brainstorm tab asks four questions: what you record or measure, what
+  about the patient you need to know to interpret it, how it was measured,
+  and in which situation it is recorded. Under each question you add an
+  element with a name and one optional line; press Enter to add the next one.
+  Data type, cardinality and values stay on the element board, which "More
+  details" opens at that element.
+- After the reveal, the Brainstorm tab lists up to 5 elements with a similar
+  name while you type, each with a link to the element on the board, so you
+  can comment there instead of adding a duplicate.
+
 ### Changed
 
 - The element board shows each element as one row of a table, with its
