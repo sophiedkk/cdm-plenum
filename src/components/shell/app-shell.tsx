@@ -9,8 +9,8 @@ import { m } from "@/i18n/messages";
 import { hasAppRole } from "@/lib/guards";
 import type { SessionUser } from "@/server/session/queries";
 import { LanguageSwitch } from "./language-switch";
-import { ThemeSwitch } from "./theme-switch";
 import { MAIN_CONTENT_ID, SkipLink } from "./skip-link";
+import { ThemeSwitch } from "./theme-switch";
 import { useSignOut } from "./use-sign-out";
 
 const NAV_LINK =
