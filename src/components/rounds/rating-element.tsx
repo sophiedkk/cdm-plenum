@@ -18,6 +18,7 @@ import { FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { m } from "@/i18n/messages";
 import type { ConsensusRule } from "@/lib/consensus";
+import { groupName } from "@/lib/i18n/labels";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import type { MyElement, OwnRating } from "@/server/rounds/ratings";
 import { type DetailFlagKind, RATING_REASON_MAX } from "@/server/rounds/schemas";
@@ -448,6 +449,12 @@ export function RatingElement({
       className="flex flex-col gap-4 rounded-lg border bg-card px-4 py-4 text-card-foreground shadow-xs sm:px-6"
     >
       <div className="flex flex-col gap-1">
+        {element.group && (
+          <p className="text-sm font-semibold text-muted-foreground">
+            <span className="sr-only">{m.rounds_card_group()} </span>
+            {groupName(element.group)}
+          </p>
+        )}
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h3
             id={`${base}-heading`}

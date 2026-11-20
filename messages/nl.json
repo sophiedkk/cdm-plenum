@@ -958,6 +958,7 @@
   "rounds_card_dot_rated": "Element {index}, {name}, beoordeeld met {score}",
   "rounds_card_dot_unable": "Element {index}, {name}, kan ik niet beoordelen",
   "rounds_card_dots_label": "Alle elementen van deze ronde",
+  "rounds_card_group": "Groep:",
   "rounds_card_nav_label": "Naar een ander element",
   "rounds_card_next": "Volgende",
   "rounds_card_no_values": "Geen waarden",

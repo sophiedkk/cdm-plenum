@@ -26,6 +26,7 @@ const ELEMENT: MyElement = {
   own: { rated: false, score: null, reason: null },
   flags: [],
   previous: null,
+  group: null,
 };
 
 const LATER: MyElement & { previous: NonNullable<MyElement["previous"]> } = {

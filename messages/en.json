@@ -958,6 +958,7 @@
   "rounds_card_dot_rated": "Element {index}, {name}, rated {score}",
   "rounds_card_dot_unable": "Element {index}, {name}, unable to rate",
   "rounds_card_dots_label": "Every element of this round",
+  "rounds_card_group": "Group:",
   "rounds_card_nav_label": "Move between the elements",
   "rounds_card_next": "Next",
   "rounds_card_no_values": "No values",

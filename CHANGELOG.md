@@ -36,6 +36,9 @@ the project uses [Semantic Versioning](https://semver.org/).
   element "Same as…" or "Belongs elsewhere" and says per group what is
   missing. The facilitator sees the remarks per element and group, without
   names; other participants do not see them.
+- Groups in the rounds: the rating card names each element's group, and the
+  overview of your ratings lists them under group headings. Each participant
+  sees the groups in an order of their own, the same during the whole round.
 
 ### Changed
 

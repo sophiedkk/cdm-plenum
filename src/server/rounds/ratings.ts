@@ -5,6 +5,8 @@
 // them (DE7, DE8), and the facilitator's view by participant when the round allows it (DE4).
 // Ratings carry the rating code only; rater-link.ts is the one place that resolves it (ADR 0005).
 import type { Kysely } from "kysely";
+import { type ElementPrompt, isElementPrompt } from "@/lib/brainstorm";
+import { groupOrder } from "@/lib/element-groups";
 import type { DB } from "../db/schema.gen.ts";
 import { log, ownGroupId } from "../projects/queries.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
@@ -143,10 +145,19 @@ export interface PreviousRound extends ElementOutcome {
   reasons: string[];
 }
 
+/** The group an element sits in (EL18), as the rating card names it (DE19). */
+export interface RatingGroup {
+  id: string;
+  name: string | null;
+  prompt: ElementPrompt | null;
+}
+
 export interface MyElement {
   id: string;
   name: string;
   description: string;
+  /** The element's group; null for an element without one, listed after the groups. */
+  group: RatingGroup | null;
   own: OwnRating;
   /** The participant's own flags on the element's details, in kind order (DE17). */
   flags: OwnFlag[];
@@ -160,6 +171,65 @@ export interface MyRatings {
 }
 
 const NOT_RATED: OwnRating = { rated: false, score: null, reason: null };
+
+/** The group of each element, by element id; an element without a group is absent. */
+async function groupsOf(db: Kysely<DB>, elementIds: readonly string[]) {
+  const groups = new Map<string, RatingGroup & { position: number }>();
+  if (elementIds.length === 0) return groups;
+  const rows = await db
+    .selectFrom("element")
+    .innerJoin("element_group", "element_group.id", "element.group_id")
+    .select([
+      "element.id as element_id",
+      "element_group.id",
+      "element_group.name",
+      "element_group.prompt",
+      "element_group.position",
+    ])
+    .where("element.id", "in", elementIds)
+    .execute();
+  for (const row of rows) {
+    groups.set(row.element_id, {
+      id: row.id,
+      name: row.name,
+      prompt: isElementPrompt(row.prompt) ? row.prompt : null,
+      position: row.position,
+    });
+  }
+  return groups;
+}
+
+/**
+ * The elements block by block, the groups shuffled by `seed` (DE19), each group's elements in
+ * the round's order; the elements without a group last.
+ */
+function inGroupOrder<E extends { group: (RatingGroup & { position: number }) | null }>(
+  elements: readonly E[],
+  seed: string,
+): (Omit<E, "group"> & { group: RatingGroup | null })[] {
+  const ids = [
+    ...new Map(
+      elements.flatMap((element) =>
+        element.group === null ? [] : [[element.group.id, element.group.position] as const],
+      ),
+    ),
+  ]
+    .sort((a, b) => a[1] - b[1])
+    .map(([id]) => id);
+  const order = groupOrder(ids, seed);
+  const rank = (element: E) =>
+    element.group === null ? order.length : order.indexOf(element.group.id);
+  return [...elements]
+    .map((element, index) => ({ element, index }))
+    .sort((a, b) => rank(a.element) - rank(b.element) || a.index - b.index)
+    .map(({ element }) => ({
+      ...element,
+      group:
+        element.group === null
+          ? null
+          : { id: element.group.id, name: element.group.name, prompt: element.group.prompt },
+    }));
+}
 
 async function ownRatings(
   db: Kysely<DB>,
@@ -238,15 +308,26 @@ export async function myRatings(
             }
           : null;
     }
-    const elements = (await roundElements(trx, round.id)).map((element) => ({
+    const rows = await roundElements(trx, round.id);
+    const groupOf = await groupsOf(
+      trx,
+      rows.map((element) => element.id),
+    );
+    const elements = rows.map((element) => ({
       id: element.id,
       name: element.name,
       description: element.description,
+      group: groupOf.get(element.id) ?? null,
       own: own.get(element.id) ?? NOT_RATED,
       flags: flags.get(element.id) ?? [],
       previous: previous?.(element.id) ?? null,
     }));
-    return done({ round: summaryOf(round, deps.now), elements });
+    // NOTE: DE19. The groups come in an order of the rater's own, the same all round long: the
+    // seed is the rating code, or the user for a member without one yet, and the round.
+    return done({
+      round: summaryOf(round, deps.now),
+      elements: inGroupOrder(elements, `${code ?? userId}:${round.id}`),
+    });
   });
 }
 
