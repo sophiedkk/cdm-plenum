@@ -395,6 +395,48 @@ describe("updateRound (DE1, DE2)", () => {
   });
 });
 
+describe("openRound and the private brainstorm (EL13, ADR 0012)", () => {
+  async function revealState() {
+    const project = await db
+      .selectFrom("project")
+      .select(["private_brainstorm", "board_revealed_at"])
+      .where("id", "=", p.projectId)
+      .executeTakeFirstOrThrow();
+    const logged = await db
+      .selectFrom("activity_log")
+      .select("id")
+      .where("project_id", "=", p.projectId)
+      .where("action", "=", "board_revealed")
+      .execute();
+    return { project, reveals: logged.length };
+  }
+
+  it("reveals the board of a project still in its private step, and logs it once", async () => {
+    const before = await revealState();
+    expect(before.project.private_brainstorm).toBe(true);
+    expect(before.project.board_revealed_at).toBeNull();
+    const { roundId } = await draft({});
+    ok(await openRound(db, p.facilitator, { projectId: p.projectId, roundId }, now()));
+    const after = await revealState();
+    expect(after.project.board_revealed_at).not.toBeNull();
+    expect(after.reveals).toBe(1);
+  });
+
+  it("leaves an already revealed board alone", async () => {
+    const revealedAt = new Date("2026-11-01T10:00:00Z");
+    await db
+      .updateTable("project")
+      .set({ board_revealed_at: revealedAt })
+      .where("id", "=", p.projectId)
+      .execute();
+    const { roundId } = await draft({});
+    ok(await openRound(db, p.facilitator, { projectId: p.projectId, roundId }, now()));
+    const after = await revealState();
+    expect(after.project.board_revealed_at).toEqual(revealedAt);
+    expect(after.reveals).toBe(0);
+  });
+});
+
 describe("openRound (DE11, DE12)", () => {
   it("opens with a complete panel and stores the panel and minimum without a reason", async () => {
     const { roundId } = await draft({});

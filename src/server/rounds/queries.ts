@@ -396,6 +396,17 @@ export async function openRound(
     if (check.status === "reason_required") {
       return { ok: false, error: "reason_required", shortfall: check.shortfall };
     }
+    // NOTE: ADR 0012. A round shows its elements to every rater, so the brainstorm's private
+    // step ends here: opening a round reveals the board, logged like a reveal by hand.
+    const revealed = await trx
+      .updateTable("project")
+      .set({ board_revealed_at: deps.now })
+      .where("id", "=", project.id)
+      .where("private_brainstorm", "=", true)
+      .where("board_revealed_at", "is", null)
+      .returning("id")
+      .executeTakeFirst();
+    if (revealed) await log(trx, userId, project.id, "board_revealed", "project", project.id);
     await trx
       .updateTable("round")
       .set({

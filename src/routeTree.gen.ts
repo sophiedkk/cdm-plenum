@@ -21,6 +21,7 @@ import { Route as AuthedProjectsNewRouteImport } from './routes/_authed/projects
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedProjectsProjectIdIndexRouteImport } from './routes/_authed/projects/$projectId/index'
 import { Route as AuthedProjectsProjectIdBoardRouteImport } from './routes/_authed/projects/$projectId/board'
+import { Route as AuthedProjectsProjectIdBrainstormRouteImport } from './routes/_authed/projects/$projectId/brainstorm'
 import { Route as AuthedProjectsProjectIdExportRouteImport } from './routes/_authed/projects/$projectId/export'
 import { Route as AuthedProjectsProjectIdMembersRouteImport } from './routes/_authed/projects/$projectId/members'
 import { Route as AuthedProjectsProjectIdRoundsRouteImport } from './routes/_authed/projects/$projectId/rounds'
@@ -92,6 +93,12 @@ const AuthedProjectsProjectIdBoardRoute =
     path: '/board',
     getParentRoute: () => AuthedProjectsProjectIdRoute,
   } as any)
+const AuthedProjectsProjectIdBrainstormRoute =
+  AuthedProjectsProjectIdBrainstormRouteImport.update({
+    id: '/brainstorm',
+    path: '/brainstorm',
+    getParentRoute: () => AuthedProjectsProjectIdRoute,
+  } as any)
 const AuthedProjectsProjectIdExportRoute =
   AuthedProjectsProjectIdExportRouteImport.update({
     id: '/export',
@@ -158,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/projects/': typeof AuthedProjectsIndexRoute
   '/projects/$projectId/board': typeof AuthedProjectsProjectIdBoardRoute
+  '/projects/$projectId/brainstorm': typeof AuthedProjectsProjectIdBrainstormRoute
   '/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
   '/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
   '/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsRouteWithChildren
@@ -179,6 +187,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/projects': typeof AuthedProjectsIndexRoute
   '/projects/$projectId/board': typeof AuthedProjectsProjectIdBoardRoute
+  '/projects/$projectId/brainstorm': typeof AuthedProjectsProjectIdBrainstormRoute
   '/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
   '/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
   '/projects/$projectId/scope': typeof AuthedProjectsProjectIdScopeRoute
@@ -202,6 +211,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_authed/projects/': typeof AuthedProjectsIndexRoute
   '/_authed/projects/$projectId/board': typeof AuthedProjectsProjectIdBoardRoute
+  '/_authed/projects/$projectId/brainstorm': typeof AuthedProjectsProjectIdBrainstormRoute
   '/_authed/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
   '/_authed/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
   '/_authed/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsRouteWithChildren
@@ -226,6 +236,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/projects/'
     | '/projects/$projectId/board'
+    | '/projects/$projectId/brainstorm'
     | '/projects/$projectId/export'
     | '/projects/$projectId/members'
     | '/projects/$projectId/rounds'
@@ -247,6 +258,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/projects'
     | '/projects/$projectId/board'
+    | '/projects/$projectId/brainstorm'
     | '/projects/$projectId/export'
     | '/projects/$projectId/members'
     | '/projects/$projectId/scope'
@@ -269,6 +281,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/_authed/projects/'
     | '/_authed/projects/$projectId/board'
+    | '/_authed/projects/$projectId/brainstorm'
     | '/_authed/projects/$projectId/export'
     | '/_authed/projects/$projectId/members'
     | '/_authed/projects/$projectId/rounds'
@@ -376,6 +389,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedProjectsProjectIdBoardRouteImport
       parentRoute: typeof AuthedProjectsProjectIdRoute
     }
+    '/_authed/projects/$projectId/brainstorm': {
+      id: '/_authed/projects/$projectId/brainstorm'
+      path: '/brainstorm'
+      fullPath: '/projects/$projectId/brainstorm'
+      preLoaderRoute: typeof AuthedProjectsProjectIdBrainstormRouteImport
+      parentRoute: typeof AuthedProjectsProjectIdRoute
+    }
     '/_authed/projects/$projectId/export': {
       id: '/_authed/projects/$projectId/export'
       path: '/export'
@@ -468,6 +488,7 @@ const AuthedProjectsProjectIdRoundsRouteWithChildren =
 
 interface AuthedProjectsProjectIdRouteChildren {
   AuthedProjectsProjectIdBoardRoute: typeof AuthedProjectsProjectIdBoardRoute
+  AuthedProjectsProjectIdBrainstormRoute: typeof AuthedProjectsProjectIdBrainstormRoute
   AuthedProjectsProjectIdExportRoute: typeof AuthedProjectsProjectIdExportRoute
   AuthedProjectsProjectIdMembersRoute: typeof AuthedProjectsProjectIdMembersRoute
   AuthedProjectsProjectIdRoundsRoute: typeof AuthedProjectsProjectIdRoundsRouteWithChildren
@@ -479,6 +500,8 @@ interface AuthedProjectsProjectIdRouteChildren {
 const AuthedProjectsProjectIdRouteChildren: AuthedProjectsProjectIdRouteChildren =
   {
     AuthedProjectsProjectIdBoardRoute: AuthedProjectsProjectIdBoardRoute,
+    AuthedProjectsProjectIdBrainstormRoute:
+      AuthedProjectsProjectIdBrainstormRoute,
     AuthedProjectsProjectIdExportRoute: AuthedProjectsProjectIdExportRoute,
     AuthedProjectsProjectIdMembersRoute: AuthedProjectsProjectIdMembersRoute,
     AuthedProjectsProjectIdRoundsRoute:

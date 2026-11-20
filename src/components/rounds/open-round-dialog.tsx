@@ -126,10 +126,13 @@ function ReasonForm({
 /** The "open round" button with its dialog. */
 export function OpenRoundDialog({
   number,
+  revealsBoard = false,
   open,
   onOpened,
 }: Readonly<{
   number: number;
+  /** The project is still in the brainstorm's private step; opening ends it (ADR 0012). */
+  revealsBoard?: boolean;
   open: (reason?: string) => Promise<OpenRoundOutcome>;
   onOpened: (status: "complete" | "below_minimum") => Promise<void> | void;
 }>) {
@@ -180,6 +183,11 @@ export function OpenRoundDialog({
         </DialogHeader>
         {shortfall === null ? (
           <>
+            {revealsBoard && (
+              <Alert>
+                <AlertDescription>{m.rounds_open_reveals_board()}</AlertDescription>
+              </Alert>
+            )}
             {error && (
               <Alert variant="destructive" role="alert">
                 <AlertDescription>{error}</AlertDescription>
