@@ -137,6 +137,10 @@ export interface ProjectDetail extends ProjectSummary {
   groupNamesVisible: boolean;
   /** The user's own stakeholder group; a facilitator has one only after joining it (DE14). */
   ownGroupId: string | null;
+  /** Whether the brainstorm starts private (EL13). */
+  privateBrainstorm: boolean;
+  /** Whether the facilitator has revealed the board (EL13). */
+  boardRevealed: boolean;
 }
 
 /** The stakeholder group of `userId` in the project, or null when they are in none. */
@@ -165,7 +169,7 @@ export async function getProject(
   return readProject(db, userId, projectId, null, async (reader, project) => {
     const row = await reader
       .selectFrom("project")
-      .select(["phase", "group_names_visible"])
+      .select(["phase", "group_names_visible", "private_brainstorm", "board_revealed_at"])
       .where("id", "=", project.id)
       .executeTakeFirstOrThrow();
     if (!isProjectPhase(row.phase)) return refused("not_found");
@@ -176,6 +180,8 @@ export async function getProject(
       role: project.role,
       groupNamesVisible: row.group_names_visible,
       ownGroupId: await ownGroupId(reader, project.id, userId),
+      privateBrainstorm: row.private_brainstorm,
+      boardRevealed: row.board_revealed_at !== null,
     });
   });
 }

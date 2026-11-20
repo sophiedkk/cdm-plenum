@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// Translated names of the values the screens show: project roles, phases and expert types. A
-// table per value set, so a new value is a type error until it has a label.
+// Translated names of the values the screens show: project roles, phases, expert types and the
+// brainstorm questions. A table per value set, so a new value is a type error until it has a label.
 import { m } from "@/i18n/messages";
+import type { ElementPrompt } from "@/lib/brainstorm";
 import type { ProjectPhase } from "@/lib/project-phases";
 import type { ExpertType, ProjectRole } from "@/lib/project-roles";
 
@@ -38,4 +39,16 @@ const EXPERT_TYPE_LABELS: Record<ExpertType, () => string> = {
 /** The name of a stakeholder group's expert type (PR6) in the active locale. */
 export function expertTypeLabel(expertType: ExpertType): string {
   return EXPERT_TYPE_LABELS[expertType]();
+}
+
+const PROMPT_QUESTIONS: Record<ElementPrompt, () => string> = {
+  recorded: () => m.board_prompt_recorded(),
+  patient_state: () => m.board_prompt_patient_state(),
+  method: () => m.board_prompt_method(),
+  context: () => m.board_prompt_context(),
+};
+
+/** The brainstorm question (EL14) in the active locale. */
+export function promptQuestion(prompt: ElementPrompt): string {
+  return PROMPT_QUESTIONS[prompt]();
 }

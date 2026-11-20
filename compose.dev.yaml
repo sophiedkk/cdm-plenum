@@ -52,6 +52,9 @@ services:
       TEST_DATABASE_URL: postgres://cdm_plenum:cdm_plenum@postgres:5432/cdm_plenum
       SMTP_URL: smtp://mailpit:1025
       MAILPIT_URL: http://mailpit:8025
+      # Parallel runs share one network namespace, so each needs its own ports.
+      E2E_PORT: ${E2E_PORT:-3100}
+      E2E_CKM_PORT: ${E2E_CKM_PORT:-3101}
     command: ["pnpm", "test:e2e"]
     depends_on:
       postgres:

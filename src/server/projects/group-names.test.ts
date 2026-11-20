@@ -8,6 +8,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
+import { revealBoard } from "../elements/brainstorm.ts";
 import {
   addElement,
   addElementComment,
@@ -136,6 +137,9 @@ describe("group names setting (PR7)", () => {
   it("when on, still names no author of an element or comment (Q-ANON-1)", async () => {
     await visible(true);
     const projectId = m.projectId;
+    // After the reveal the participant reads the other participant's element (EL13).
+    const revealed = await revealBoard(db, m.facilitator, projectId);
+    if (!revealed.ok) throw new Error(revealed.error);
     const added = await addElement(
       db,
       m.otherParticipant,
