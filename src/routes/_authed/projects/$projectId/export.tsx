@@ -131,14 +131,14 @@ function Export() {
           run={() => exportRatings({ data })}
         />
       </ul>
-      <section aria-labelledby="export-csv-heading" className="flex flex-col gap-2 text-sm">
-        <h3 id="export-csv-heading" className="font-semibold">
-          {m.export_csv_heading()}
-        </h3>
-        <p>{m.export_csv_commas()}</p>
-        <p>{m.export_csv_excel()}</p>
-        <p>{m.export_csv_libreoffice()}</p>
-      </section>
+      <details className="text-sm">
+        <summary className="cursor-pointer font-semibold">{m.export_csv_heading()}</summary>
+        <div className="mt-2 flex flex-col gap-2">
+          <p>{m.export_csv_commas()}</p>
+          <p>{m.export_csv_excel()}</p>
+          <p>{m.export_csv_libreoffice()}</p>
+        </div>
+      </details>
     </div>
   );
 }

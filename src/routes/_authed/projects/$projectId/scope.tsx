@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import { writeOpen } from "@/lib/phase-access";
+import { projectKeys } from "@/server/projects/query-options";
 import {
   addScopeCommentFn,
   addScopeSourceFn,
@@ -71,7 +72,11 @@ function Scope() {
   if (!scope.ok || !comments.ok) return null;
   const statement = scope.value;
   const refreshScope = () =>
-    queryClient.invalidateQueries({ queryKey: scopeKeys.statement(projectId) });
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: scopeKeys.statement(projectId) }),
+      // The header shows one line of the scope (PR11).
+      queryClient.invalidateQueries({ queryKey: projectKeys.overview(projectId) }),
+    ]);
 
   const stopEditing = () => {
     setEditing(false);

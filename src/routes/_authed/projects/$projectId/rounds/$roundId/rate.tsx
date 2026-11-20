@@ -20,7 +20,7 @@ import { m } from "@/i18n/messages";
 import { formatCardinality } from "@/lib/cardinality";
 import { mayRate } from "@/lib/project-roles";
 import type { BoardElement } from "@/server/elements/queries";
-import { projectQueryOptions } from "@/server/projects/query-options";
+import { projectKeys, projectQueryOptions } from "@/server/projects/query-options";
 import type { OwnFlag } from "@/server/rounds/flags";
 import {
   addProposalFn,
@@ -133,6 +133,8 @@ function RatePage() {
       };
       return { ...old, value };
     });
+    // The header counts the rated elements (PR11).
+    void queryClient.invalidateQueries({ queryKey: projectKeys.overview(projectId) });
   };
   const rememberOwn = (elementId: string, own: OwnRating) =>
     remember(elementId, (item) => ({ ...item, own }));
