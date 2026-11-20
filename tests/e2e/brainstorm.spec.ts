@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The private-first brainstorm in English and Dutch (EL13 to EL15, ADR 0012): in a new project
-// participant A adds elements under two questions and sees only their own; participant B sees
+// The private-first brainstorm in English and Dutch (EL13 to EL15, ADR 0012, ADR 0018): in a new
+// project participant A adds elements under two chosen questions in the one quick-add form and
+// sees only their own, grouped by question; participant B sees
 // none of them; the facilitator sees both and reveals the board; then both see every element
 // without authors (EL2), and typing a similar name shows a hint that opens the element on the
 // board. Every page and dialog is axe-clean (Q-ACC-1, Q-I18N-1).
@@ -13,6 +14,7 @@ import {
   BROWSER_LOCALE,
   expect,
   expectAxeClean,
+  expectAxeCleanInBothThemes,
   expectHydrated,
   type Locale,
   MESSAGES,
@@ -67,29 +69,39 @@ async function pageFor(
   return { page, bodies };
 }
 
-/** The quick-add form of one brainstorm question. */
-function questionForm(page: Page, question: string) {
-  return page.getByRole("form", { name: question });
+/** The brainstorm's one quick-add form. */
+function quickAddForm(page: Page, text: Text) {
+  return page.getByRole("form", { name: text.board_brainstorm_add_title });
 }
 
-/** Adds an element under `question` with Enter, as a participant does. */
+/** Chooses a question in the quick-add form by its short name. */
+async function chooseQuestion(page: Page, text: Text, label: string): Promise<void> {
+  const group = quickAddForm(page, text).getByRole("group", {
+    name: text.board_quick_question_label,
+  });
+  await expectHydrated(group.getByRole("radio").first());
+  await group.getByText(label, { exact: true }).click();
+  await expect(group.getByRole("radio", { name: label })).toBeChecked();
+}
+
+/** Adds an element under a chosen question with Enter, as a participant does. */
 async function quickAdd(
   page: Page,
   text: Text,
-  question: string,
+  question: { label: string; full: string },
   name: string,
   line = "",
 ): Promise<void> {
-  const form = questionForm(page, question);
+  await chooseQuestion(page, text, question.label);
+  const form = quickAddForm(page, text);
   const field = form.getByLabel(text.board_quick_name_label, { exact: true });
-  await expectHydrated(field);
   await field.fill(name);
   if (line !== "") await form.getByLabel(text.board_quick_description_label).fill(line);
   await field.press("Enter");
-  // The form empties and the element shows under the question.
+  // The form empties and the element shows in the list of that question.
   await expect(field).toHaveValue("");
   await expect(
-    page.getByRole("region", { name: question }).getByText(name, { exact: true }),
+    page.getByRole("list", { name: question.full }).getByText(name, { exact: true }),
   ).toBeVisible();
 }
 
@@ -102,6 +114,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
   test.describe(`brainstorm in ${locale}`, () => {
     test.use({ locale: BROWSER_LOCALE[locale], reducedMotion: "reduce" });
     const text = MESSAGES[locale];
+    const recorded = { label: text.board_prompt_short_recorded, full: text.board_prompt_recorded };
+    const method = { label: text.board_prompt_short_method, full: text.board_prompt_method };
 
     test("private first, then the facilitator reveals the board", async ({ db, browser }) => {
       test.setTimeout(180_000);
@@ -123,32 +137,36 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(
         a.page.getByRole("heading", { level: 2, name: text.board_brainstorm_title }),
       ).toBeVisible();
-      await expect(a.page.getByTestId("brainstorm-concept")).toHaveText(
-        fill(text.board_brainstorm_concept, {
-          concept: "The blood pressure of an adult at the outpatient clinic.",
-        }),
+      // The header carries the one line of the scope (PR11).
+      await expect(a.page.getByTestId("project-scope-line")).toHaveText(
+        "The blood pressure of an adult at the outpatient clinic.",
       );
       await expect(a.page.getByText(text.board_brainstorm_private_note)).toBeVisible();
-      await axeClean(a.page);
-      await quickAdd(a.page, text, text.board_prompt_recorded, "Systolic pressure");
-      await quickAdd(
-        a.page,
-        text,
-        text.board_prompt_method,
-        "Cuff size",
-        "The size of the cuff used.",
+      await expect(
+        a.page.getByRole("heading", { name: fill(text.board_brainstorm_yours, { count: 0 }) }),
+      ).toBeVisible();
+      await expectAxeCleanInBothThemes(a.page);
+      await quickAdd(a.page, text, recorded, "Systolic pressure");
+      await quickAdd(a.page, text, method, "Cuff size", "The size of the cuff used.");
+      await expect(
+        a.page.getByRole("heading", { name: fill(text.board_brainstorm_yours, { count: 2 }) }),
+      ).toBeVisible();
+      // The task line in the header counts the participant's own elements.
+      await expect(a.page.getByRole("region", { name: text.projects_task_heading })).toContainText(
+        fill(text.projects_task_discover_many, { count: 2 }),
       );
       await axeClean(a.page);
+      await expectAxeCleanInBothThemes(a.page);
 
       // Participant B adds one and sees none of A's, on any page or in any response.
       const b = await pageFor(browser, locale, second);
       await b.page.goto(brainstorm);
-      await quickAdd(b.page, text, text.board_prompt_recorded, "Diastolic pressure");
+      await quickAdd(b.page, text, recorded, "Diastolic pressure");
       // Before the reveal a similar name shows no hint.
-      const bName = questionForm(b.page, text.board_prompt_patient_state).getByLabel(
-        text.board_quick_name_label,
-        { exact: true },
-      );
+      await chooseQuestion(b.page, text, text.board_prompt_short_patient_state);
+      const bName = quickAddForm(b.page, text).getByLabel(text.board_quick_name_label, {
+        exact: true,
+      });
       await bName.fill("Systolic");
       await expect(b.page.getByRole("list", { name: text.board_hints_list_label })).toHaveCount(0);
       await bName.fill("");
@@ -210,7 +228,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       // Typing a similar name shows a hint that opens the element on the board.
       await b.page.goto(brainstorm);
       await expect(b.page.getByText(text.board_brainstorm_shared_note)).toBeVisible();
-      const form = questionForm(b.page, text.board_prompt_recorded);
+      const form = quickAddForm(b.page, text);
       const name = form.getByLabel(text.board_quick_name_label, { exact: true });
       await expectHydrated(name);
       await name.fill("systolic");

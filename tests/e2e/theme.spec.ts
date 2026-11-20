@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The theme switch: light, dark or the system setting. The choice holds across a reload, the
-// system choice follows the browser's colour scheme, and the dark theme keeps AA contrast
-// (Q-ACC-1) on the pages a participant and a facilitator use most.
+// The person menu (ADR 0018): language, theme and sign out under the person's name. The theme
+// is light, dark or the system setting; the choice holds across a reload, the system choice
+// follows the browser's colour scheme, and the dark theme keeps AA contrast (Q-ACC-1) on the
+// pages a participant and a facilitator use most. The language choice renders the next page in
+// that language.
 import type { Page } from "@playwright/test";
 import {
   BROWSER_LOCALE,
@@ -19,11 +21,20 @@ import {
 
 type Text = (typeof MESSAGES)[Locale];
 
-async function choose(page: Page, text: Text, option: string): Promise<void> {
-  const trigger = page.getByRole("button", { name: new RegExp(`^${text.shell_theme_label}:`) });
+/** Opens the person menu, the button that starts with "Signed in as". */
+async function openPersonMenu(page: Page, text: Text): Promise<void> {
+  const trigger = page.getByRole("button", { name: new RegExp(`^${text.shell_signed_in_as} `) });
   await expectHydrated(trigger);
   await trigger.click();
-  await page.getByRole("menuitemradio", { name: option }).click();
+  await expect(page.getByRole("menu")).toBeVisible();
+}
+
+async function choose(page: Page, text: Text, option: string): Promise<void> {
+  await openPersonMenu(page, text);
+  await page
+    .getByRole("group", { name: text.shell_theme_label })
+    .getByRole("menuitemradio", { name: option })
+    .click();
 }
 
 for (const locale of ["en", "nl"] as const satisfies Locale[]) {
@@ -63,3 +74,33 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
     });
   });
 }
+
+test("the person menu holds language, theme and sign out, and changes the language", async ({
+  page,
+  db,
+}) => {
+  const en = MESSAGES.en;
+  const nl = MESSAGES.nl;
+  const project = await seedProject(db);
+  await signIn(page, project.facilitator.email, "en");
+  await openPersonMenu(page, en);
+  const menu = page.getByRole("menu");
+  await expect(menu.getByRole("group", { name: en.shell_language_label })).toBeVisible();
+  await expect(menu.getByRole("group", { name: en.shell_theme_label })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: en.shell_sign_out })).toBeVisible();
+  // Administration stays in the main navigation, for administrators only.
+  await expect(page.getByRole("link", { name: en.shell_nav_admin })).toHaveCount(0);
+  await expectAxeClean(page);
+
+  await menu.getByRole("menuitemradio", { name: en.shell_language_nl }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "nl");
+  await expect(page.getByRole("heading", { level: 1, name: nl.projects_title })).toBeVisible();
+  await openPersonMenu(page, nl);
+  await expect(page.getByRole("menuitemradio", { name: nl.shell_language_nl })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await expectAxeClean(page);
+  await page.getByRole("menuitem", { name: nl.shell_sign_out }).click();
+  await expect(page).toHaveURL((url) => url.pathname === "/sign-in");
+});

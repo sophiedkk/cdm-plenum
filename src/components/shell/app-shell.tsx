@@ -30,7 +30,7 @@ const NAV_LINK =
 export function PersonMenu({ user }: Readonly<{ user: SessionUser }>) {
   const { signOut, pending } = useSignOut();
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm">
           <CircleUserIcon aria-hidden="true" />

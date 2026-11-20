@@ -67,7 +67,7 @@ function PromptChoice({
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-2 text-sm font-medium">{m.board_quick_question_label()}</legend>
-      <div className="flex flex-wrap gap-1 rounded-lg border p-1">
+      <div className="flex w-fit flex-wrap gap-1 rounded-lg border p-1">
         {ELEMENT_PROMPTS.map((prompt) => (
           <label
             key={prompt}

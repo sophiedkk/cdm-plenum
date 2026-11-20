@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { ChevronDownIcon, LanguagesIcon } from "lucide-react";
+import { useId } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -26,11 +26,13 @@ const LANGUAGE_NAMES: Record<Locale, () => string> = {
  * its locale cookie and reloads the page, so the server renders the next page in that language.
  */
 export function LanguageMenuGroup() {
+  const id = useId();
   const current = getLocale();
   return (
-    <DropdownMenuGroup>
-      <DropdownMenuLabel>{m.shell_language_label()}</DropdownMenuLabel>
+    <>
+      <DropdownMenuLabel id={id}>{m.shell_language_label()}</DropdownMenuLabel>
       <DropdownMenuRadioGroup
+        aria-labelledby={id}
         value={current}
         onValueChange={(value) => {
           const locale = toLocale(value);
@@ -43,7 +45,7 @@ export function LanguageMenuGroup() {
           </DropdownMenuRadioItem>
         ))}
       </DropdownMenuRadioGroup>
-    </DropdownMenuGroup>
+    </>
   );
 }
 

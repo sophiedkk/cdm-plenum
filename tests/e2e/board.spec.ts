@@ -1,8 +1,10 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The element board (EL1 to EL7): a participant adds an element with the keyboard and never sees
-// an author (EL2, Q-ANON-1); the facilitator merges duplicates, imports a CSV file and uses CKM
+// The element board (EL1 to EL7, EL21): in discover a participant reads the board without the
+// data type column or an Add button and never sees an author (EL2, Q-ANON-1); the facilitator adds
+// an element with the keyboard, asked only for a name and a description (EL1), merges
+// duplicates, imports a CSV file and uses CKM
 // through the stub (tests/e2e/ckm-stub.ts); every page and dialog is axe-clean in English and
 // Dutch (Q-ACC-1, Q-I18N-1); 10 elements fit on the first screen at 1280 by 800 (Q-USE-1).
 import type { Page } from "@playwright/test";
@@ -83,7 +85,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
     test.use({ locale: BROWSER_LOCALE[locale], reducedMotion: "reduce" });
     const text = MESSAGES[locale];
 
-    test("a participant adds an element with the keyboard and sees no author", async ({
+    test("a participant in discover reads the board without data type or Add, and sees no author", async ({
       page,
       db,
     }) => {
@@ -91,6 +93,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const participant = await seedParticipant(db, project);
       await seedElement(db, project.facilitator.userId, project.projectId, {
         name: "Diastolic",
+        description: "Lowest pressure in the cycle.",
       });
       // The shared board after the brainstorm; brainstorm.spec.ts covers the private step.
       await seedReveal(db, project.facilitator.userId, project.projectId);
@@ -103,33 +106,64 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(page.getByRole("rowheader", { name: "Diastolic" })).toBeVisible();
       await expect(page.getByRole("button", { name: text.board_more_actions })).toHaveCount(0);
       await expect(page.getByRole("button", { name: text.board_ckm_search })).toHaveCount(0);
+      // Participants add on the brainstorm only (ADR 0018).
+      await expect(page.getByRole("button", { name: text.board_add })).toHaveCount(0);
+      // Data type and cardinality wait for their phase (EL21).
+      const table = page.getByRole("table", { name: text.board_list_label });
+      await expect(
+        table.getByRole("columnheader", { name: text.board_field_data_type }),
+      ).toHaveCount(0);
+      await expect(
+        table.getByRole("columnheader", { name: text.board_field_cardinality }),
+      ).toHaveCount(0);
+      await expect(
+        table.getByRole("columnheader", { name: text.board_column_question }),
+      ).toBeVisible();
       await expectAxeClean(page);
 
+      const details = await openDetails(page, text, "Diastolic");
+      await expect(details).toContainText("Lowest pressure in the cycle.");
+      await expect(details).not.toContainText(text.board_field_data_type);
+      await expect(page.getByText(text.board_field_author)).toHaveCount(0);
+      await expectAxeClean(page);
+      for (const body of [...bodies, await page.content()]) {
+        expect(body).not.toContain(project.facilitator.email);
+      }
+    });
+
+    test("the facilitator adds an element with the keyboard, asked only for a name and a description", async ({
+      page,
+      db,
+    }) => {
+      const project = await seedProject(db, "discover");
+      await signInTo(
+        page,
+        project.facilitator.email,
+        locale,
+        `/projects/${project.projectId}/board`,
+      );
       const add = page.getByRole("button", { name: text.board_add });
       await expectHydrated(add);
       await tabTo(page, add, 40);
       await page.keyboard.press("Enter");
       const dialog = page.getByRole("dialog", { name: text.board_add_title });
       await expect(dialog.getByLabel(text.board_name_label, { exact: true })).toBeFocused();
+      // EL1: a name and a description, and nothing else.
+      await expect(dialog.getByRole("textbox")).toHaveCount(2);
+      await expect(dialog.getByRole("radio")).toHaveCount(0);
+      await expect(dialog.getByText(text.board_cardinality_legend, { exact: true })).toHaveCount(0);
       await expectAxeClean(page);
       await page.keyboard.type("Systolic");
       await page.keyboard.press("Tab");
       await page.keyboard.type("Highest pressure in the cycle.");
-      await page.keyboard.press("Tab");
-      // The radio group starts on "not decided"; the arrows move through the types.
-      await expect(dialog.getByRole("radio", { checked: true })).toBeFocused();
-      for (const _ of [1, 2, 3]) await page.keyboard.press("ArrowDown");
-      await expect(
-        dialog.getByRole("radio", { name: new RegExp(`^${text.board_type_quantity_name}`) }),
-      ).toBeChecked();
-      await tabTo(page, dialog.getByRole("button", { name: text.board_add }), 10);
+      await tabTo(page, dialog.getByRole("button", { name: text.board_add }), 5);
       await page.keyboard.press("Enter");
       await expect(dialog).toHaveCount(0);
 
       const row = page
         .getByRole("row")
         .filter({ has: page.getByRole("rowheader", { name: "Systolic" }) });
-      await expect(row).toContainText(text.board_type_quantity_name);
+      await expect(row).toContainText(text.board_prompt_short_none);
       // The disclosure opens with the keyboard as well.
       const toggle = page.getByRole("button", { name: "Systolic", exact: true });
       await toggle.focus();
@@ -138,13 +172,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const details = page.getByRole("region", {
         name: fill(text.board_details_label, { name: "Systolic" }),
       });
-      await expect(details).toContainText("DV_QUANTITY / Quantity");
       await expect(details).toContainText("Highest pressure in the cycle.");
-      await expect(page.getByText(text.board_field_author)).toHaveCount(0);
+      // The facilitator keeps the edit action for the later fields in every phase (EL21).
+      await expect(
+        details.getByRole("button", { name: new RegExp(`^${escapeRegExp(text.board_edit)}`) }),
+      ).toBeVisible();
       await expectAxeClean(page);
-      for (const body of [...bodies, await page.content()]) {
-        expect(body).not.toContain(project.facilitator.email);
-      }
     });
 
     test("the facilitator sees authors and merges two elements", async ({ page, db }) => {
@@ -182,7 +215,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       page,
       db,
     }) => {
-      const project = await seedProject(db, "discover");
+      // The CKM column of the board shows from the decide phase on (EL21).
+      const project = await seedProject(db, "decide");
       const author = project.facilitator.userId;
       await seedElement(db, author, project.projectId, { name: "Top pressure" });
       await seedElement(db, author, project.projectId, { name: "Bottom pressure" });
@@ -347,7 +381,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
 test("the facilitator links an element to a CKM archetype element", async ({ page, db }) => {
   const text = MESSAGES.en;
-  const project = await seedProject(db, "discover");
+  // The data type the link sets shows from the decide phase on (EL21).
+  const project = await seedProject(db, "decide");
   await seedElement(db, project.facilitator.userId, project.projectId, { name: "Top pressure" });
   await signInTo(page, project.facilitator.email, "en", `/projects/${project.projectId}/board`);
   const card = await openDetails(page, text, "Top pressure");

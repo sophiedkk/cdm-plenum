@@ -36,3 +36,20 @@ export async function expectAxeCleanAfterToasts(page: Page): Promise<void> {
     .toBe(true);
   await expectAxeClean(page);
 }
+
+/**
+ * Runs `expectAxeClean` with the light theme and with the dark one, through the browser's colour
+ * scheme. The page must follow the system setting, which it does without a stored choice.
+ */
+export async function expectAxeCleanInBothThemes(page: Page): Promise<void> {
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", scheme);
+    // Buttons fade their colours to the new theme; axe would measure them halfway.
+    await page.waitForFunction(() =>
+      document.getAnimations().every((animation) => animation.playState !== "running"),
+    );
+    await expectAxeClean(page);
+  }
+  await page.emulateMedia({ colorScheme: "light" });
+}

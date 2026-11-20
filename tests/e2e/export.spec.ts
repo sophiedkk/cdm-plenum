@@ -40,6 +40,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await signInAs(page, project.facilitator.email, locale);
       await page.goto(`/projects/${project.projectId}/export`);
       await expect(page.getByRole("heading", { level: 2, name: text.export_title })).toBeVisible();
+      // The CSV help is folded under its heading (ADR 0018).
+      await expect(page.getByText(text.export_csv_excel)).toBeHidden();
+      await page.getByText(text.export_csv_heading).click();
       await expect(page.getByText(text.export_csv_excel)).toBeVisible();
       await expectAxeClean(page);
 

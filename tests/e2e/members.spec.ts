@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The members page (PR3, PR5 to PR7): accessible in both languages and with the keyboard only
-// (Q-ACC-1, Q-I18N-1); the facilitator invites and copies the link, the invitee joins with it;
-// a participant sees the number of participants per group and no names (Q-ANON-1) until the
-// facilitator turns the names on, never an address, and leaves.
+// The members page (PR3, PR5 to PR7, PR12): accessible in both languages and with the keyboard
+// only (Q-ACC-1, Q-I18N-1); the facilitator sees the people per group, invites in a dialog and
+// copies the link, the invitee joins with it; a participant sees the number of participants per
+// group and no names (Q-ANON-1) until the facilitator turns the names on in Settings, never an
+// address, and leaves.
 import type { Page } from "@playwright/test";
 import type { Kysely } from "kysely";
 import type { DB } from "../../src/server/db/schema.gen.ts";
@@ -36,8 +37,31 @@ function groupRow(page: Page, name: string) {
   return page.getByRole("row").filter({ has: page.getByRole("rowheader", { name, exact: true }) });
 }
 
+/** The facilitator's people of one group: the row group headed by the group's name. */
+function groupPeople(page: Page, name: string) {
+  return page
+    .getByRole("rowgroup")
+    .filter({ has: page.getByRole("rowheader", { name: new RegExp(`^${name}`) }) });
+}
+
 function membersUrl(project: SeededProject): string {
   return `/projects/${project.projectId}/members`;
+}
+
+function settingsUrl(project: SeededProject): string {
+  return `/projects/${project.projectId}/settings`;
+}
+
+/** Opens the invite dialog with the keyboard and returns it. */
+async function openInviteDialog(page: Page, locale: Locale) {
+  const text = MESSAGES[locale];
+  const open = page.getByRole("button", { name: text.members_invite_title, exact: true });
+  await expectHydrated(open);
+  await tabTo(page, open, 60);
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog", { name: text.members_invite_title });
+  await expect(dialog).toBeVisible();
+  return dialog;
 }
 
 /** Waits until every toast has finished its entry animation, so axe measures it as it is read. */
@@ -51,17 +75,23 @@ async function toastsSettled(page: Page): Promise<void> {
     .toBe(true);
 }
 
+/** Fills a message's `{placeholders}`, as Paraglide does. */
+function fill(message: string, values: Record<string, string | number>): string {
+  return message.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key]));
+}
+
 /** Gives the account of `email` an invented name. */
 async function nameAccount(db: Kysely<DB>, email: string, name: string): Promise<void> {
   await db.updateTable("user").set({ name }).where("email", "=", email).execute();
 }
 
-/** Fills the invite form with the keyboard only and submits it. */
+/** Fills the invite form in its dialog with the keyboard only and submits it. */
 async function inviteWithKeyboard(page: Page, locale: Locale, email: string): Promise<void> {
   const text = MESSAGES[locale];
-  const field = page.getByLabel(text.members_invite_email_label, { exact: true });
-  await expectHydrated(field);
-  await tabTo(page, field, 60);
+  const dialog = await openInviteDialog(page, locale);
+  const field = dialog.getByLabel(text.members_invite_email_label, { exact: true });
+  await expect(field).toBeFocused();
+  await expectAxeClean(page);
   await page.keyboard.type(email);
   const group = page.getByLabel(text.members_invite_group_label, { exact: true });
   await tabTo(page, group);
@@ -79,29 +109,39 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
     test.use({ locale: BROWSER_LOCALE[locale] });
     const text = MESSAGES[locale];
 
-    test("the facilitator's page is axe-clean and invites with the keyboard only", async ({
+    test("the facilitator's page shows people per group and invites with the keyboard only", async ({
       page,
       db,
     }) => {
       const project = await seedProject(db);
+      const participant = await seedParticipant(db, project);
       await signIn(page, project.facilitator.email, locale);
       await page.goto(membersUrl(project));
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
       await expect(page.getByRole("heading", { level: 2, name: text.members_title })).toBeVisible();
       await expect(page.getByRole("heading", { name: text.members_groups_title })).toBeVisible();
+      // One table of people, a row group per stakeholder group (ADR 0018).
+      await expect(groupPeople(page, FIRST_GROUP)).toContainText(participant);
+      await expect(page.getByText(text.members_invitations_none_open)).toBeVisible();
+      // The settings moved to their own page (PR12).
+      await expect(page.getByRole("checkbox", { name: text.members_names_label })).toHaveCount(0);
       await expectAxeClean(page);
 
       const email = addressOf(uniqueName("invitee"));
       await inviteWithKeyboard(page, locale, email);
+      await expect(page.getByRole("dialog")).toHaveCount(0);
       const row = page.getByRole("row").filter({ hasText: email });
       await expect(row).toBeVisible();
       await expect(row.getByText(text.members_invitation_status_pending)).toBeVisible();
+      await toastsSettled(page);
       await expectAxeClean(page);
 
       // An empty group name is refused in the form, with the focus on the field.
-      await page.getByRole("button", { name: text.members_new_group_submit }).click();
-      await expect(page.getByText(text.members_group_name_required)).toBeVisible();
-      await expect(page.getByLabel(text.members_group_name_label, { exact: true })).toBeFocused();
+      await page.getByRole("button", { name: text.members_new_group_title, exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: text.members_new_group_title });
+      await dialog.getByRole("button", { name: text.members_new_group_submit }).click();
+      await expect(dialog.getByText(text.members_group_name_required)).toBeVisible();
+      await expect(dialog.getByLabel(text.members_group_name_label, { exact: true })).toBeFocused();
       await expectAxeClean(page);
     });
 
@@ -148,7 +188,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       async function setNames(on: boolean, saved: string) {
         await context.clearCookies();
         await signIn(page, project.facilitator.email, locale);
-        await page.goto(membersUrl(project));
+        await page.goto(settingsUrl(project));
         const box = page.getByRole("checkbox", { name: text.members_names_label });
         await expectHydrated(box);
         await expect(box).toBeChecked({ checked: !on });
@@ -202,10 +242,11 @@ test("the facilitator invites, copies the link, and the invitee joins with it", 
   await page.goto(membersUrl(project));
 
   const email = addressOf(uniqueName("invitee"));
-  await page.getByLabel(text.members_invite_email_label, { exact: true }).fill(email);
-  await page.getByLabel(text.members_invite_group_label, { exact: true }).click();
+  const dialog = await openInviteDialog(page, "en");
+  await dialog.getByLabel(text.members_invite_email_label, { exact: true }).fill(email);
+  await dialog.getByLabel(text.members_invite_group_label, { exact: true }).click();
   await page.getByRole("option", { name: /^Nursing/ }).click();
-  await page.getByRole("button", { name: text.members_invite_submit, exact: true }).click();
+  await dialog.getByRole("button", { name: text.members_invite_submit, exact: true }).click();
   const row = page.getByRole("row").filter({ hasText: email });
   await expect(row).toBeVisible();
 
@@ -226,7 +267,10 @@ test("the facilitator invites, copies the link, and the invitee joins with it", 
   await context.clearCookies();
   await signIn(page, project.facilitator.email);
   await page.goto(membersUrl(project));
-  await expect(groupRow(page, "Nursing")).toContainText(email);
+  await expect(groupPeople(page, "Nursing")).toContainText(email);
+  // Only open invitations are listed; the accepted one waits behind the disclosure.
+  await expect(page.getByText(text.members_invitations_none_open)).toBeVisible();
+  await page.getByText(fill(text.members_invitations_earlier, { count: 1 })).click();
   await expect(
     page
       .getByRole("row")

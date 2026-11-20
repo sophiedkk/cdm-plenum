@@ -76,18 +76,14 @@ function OwnElements({
       <h3 id="own-elements-title" className="text-lg font-semibold">
         {m.board_brainstorm_yours({ count: elements.length })}
       </h3>
-      {groups.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{m.board_brainstorm_none_yet()}</p>
-      ) : (
-        groups.map((group) => (
-          <OwnGroup
-            key={group.prompt ?? "other"}
-            projectId={projectId}
-            label={group.prompt === null ? promptLabel(null) : promptQuestion(group.prompt)}
-            elements={group.elements}
-          />
-        ))
-      )}
+      {groups.map((group) => (
+        <OwnGroup
+          key={group.prompt ?? "other"}
+          projectId={projectId}
+          label={group.prompt === null ? promptLabel(null) : promptQuestion(group.prompt)}
+          elements={group.elements}
+        />
+      ))}
     </section>
   );
 }

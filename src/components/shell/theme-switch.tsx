@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { ChevronDownIcon, type LucideIcon, MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { useId, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -36,11 +35,13 @@ export function useThemeChoice(): ThemeChoice {
 
 /** The theme choices as a labelled radio group, for a menu: the switch or the person menu. */
 export function ThemeMenuGroup() {
+  const id = useId();
   const current = useThemeChoice();
   return (
-    <DropdownMenuGroup>
-      <DropdownMenuLabel>{m.shell_theme_label()}</DropdownMenuLabel>
+    <>
+      <DropdownMenuLabel id={id}>{m.shell_theme_label()}</DropdownMenuLabel>
       <DropdownMenuRadioGroup
+        aria-labelledby={id}
         value={current}
         onValueChange={(value) => {
           if (isThemeChoice(value) && value !== current) setThemeChoice(value);
@@ -56,7 +57,7 @@ export function ThemeMenuGroup() {
           );
         })}
       </DropdownMenuRadioGroup>
-    </DropdownMenuGroup>
+    </>
   );
 }
 

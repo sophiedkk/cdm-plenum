@@ -1,11 +1,13 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// Phase-bound access (PR9, PR10): a participant sees only the steps of the current phase, reads
-// earlier steps without their forms, and lands on the overview from a hidden step's URL; the
-// facilitator sees every step and gets a refusal when opening a round outside the decide phase.
+// Phase-bound access (PR9, PR10, PR11): a participant sees only the steps of the current phase,
+// the work of the phase first, reads earlier steps without their forms, and lands on the current
+// step from a hidden step's URL; the facilitator sees every step and gets a refusal when opening
+// a round outside the decide phase.
 // The read-only scope is axe-clean in English and Dutch (Q-ACC-1, Q-I18N-1).
 import type { Page } from "@playwright/test";
+import { STEP_ORDER } from "../../src/lib/phase-access.ts";
 import { PROJECT_PHASES, type ProjectPhase } from "../../src/lib/project-phases.ts";
 import { createRound } from "../../src/server/rounds/queries.ts";
 import { addScopeComment } from "../../src/server/scope/queries.ts";
@@ -37,7 +39,7 @@ async function tabNames(page: Page, locale: Locale): Promise<string[]> {
   return nav.getByRole("link").allTextContents();
 }
 
-test("a participant in the scope phase sees the overview, scope and members, and comments", async ({
+test("a participant in the scope phase sees the scope and members, and comments", async ({
   page,
   db,
 }) => {
@@ -45,11 +47,7 @@ test("a participant in the scope phase sees the overview, scope and members, and
   const project = await seedProject(db, "scope");
   const participant = await seedParticipant(db, project);
   await signInTo(page, participant, "en", `/projects/${project.projectId}/scope`);
-  expect(await tabNames(page, "en")).toEqual([
-    text.projects_tab_overview,
-    text.projects_tab_scope,
-    text.projects_tab_members,
-  ]);
+  expect(await tabNames(page, "en")).toEqual([text.projects_tab_scope, text.projects_tab_members]);
   const field = page.getByLabel(text.common_comment_label);
   await expectHydrated(field);
   await field.fill("Do home readings count?");
@@ -78,11 +76,11 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       });
       expect(comment.ok).toBe(true);
       await signInTo(page, participant, locale, `/projects/${project.projectId}/scope`);
+      // The work of the discover phase comes first (PR11).
       expect(await tabNames(page, locale)).toEqual([
-        text.projects_tab_overview,
-        text.projects_tab_scope,
         text.projects_tab_brainstorm,
         text.projects_tab_board,
+        text.projects_tab_scope,
         text.projects_tab_members,
       ]);
       await expect(page.getByRole("list", { name: text.scope_comments_heading })).toContainText(
@@ -119,36 +117,44 @@ test("a participant in the decide phase reads the board without the add button o
   await expectAxeClean(page);
 });
 
-test("a participant opening the rounds URL in the discover phase lands on the overview", async ({
+test("a participant opening the rounds URL in the discover phase lands on their current step", async ({
   page,
   db,
 }) => {
   const project = await seedProject(db, "discover");
   const participant = await seedParticipant(db, project);
   await signInTo(page, participant, "en", `/projects/${project.projectId}/rounds`);
-  await expect(page).toHaveURL((url) => url.pathname === `/projects/${project.projectId}`);
-  await expect(
-    page.getByRole("heading", { name: MESSAGES.en.projects_task_heading }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(
+    (url) => url.pathname === `/projects/${project.projectId}/brainstorm`,
+  );
+  await expect(page.getByRole("region", { name: MESSAGES.en.projects_task_heading })).toBeVisible();
 });
 
-test("the facilitator sees every tab in every phase", async ({ page, db }) => {
+test("the facilitator sees every tab in every phase, the work of the phase first", async ({
+  page,
+  db,
+}) => {
   const text = MESSAGES.en;
   const project = await seedProject(db, "scope");
-  const overview = `/projects/${project.projectId}`;
-  await signInTo(page, project.facilitator.email, "en", overview);
+  const projectUrl = `/projects/${project.projectId}`;
+  const tabs: Record<string, string> = {
+    scope: text.projects_tab_scope,
+    brainstorm: text.projects_tab_brainstorm,
+    board: text.projects_tab_board,
+    rounds: text.projects_tab_rounds,
+    export: text.projects_tab_export,
+    members: text.projects_tab_members,
+    settings: text.projects_tab_settings,
+  };
+  await signInTo(page, project.facilitator.email, "en", projectUrl);
   for (const phase of PROJECT_PHASES) {
     await setPhase(db, project.projectId, phase);
-    await page.goto(overview);
+    await page.goto(projectUrl);
     await expect(page.locator('[aria-current="step"]')).toContainText(PHASE_NAMES[phase]);
-    expect(await tabNames(page, "en")).toEqual([
-      text.projects_tab_overview,
-      text.projects_tab_scope,
-      text.projects_tab_brainstorm,
-      text.projects_tab_board,
-      text.projects_tab_rounds,
+    expect(await tabNames(page, "en")).toEqual(STEP_ORDER[phase].map((step) => tabs[step]));
+    expect((await tabNames(page, "en")).slice(-2)).toEqual([
       text.projects_tab_members,
-      text.projects_tab_export,
+      text.projects_tab_settings,
     ]);
   }
 });

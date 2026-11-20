@@ -401,7 +401,7 @@ function ScopeLine({ concept }: Readonly<{ concept: string }>) {
     <p
       title={text === "" ? undefined : text}
       data-testid="project-scope-line"
-      className="min-w-0 flex-1 basis-60 truncate text-sm text-muted-foreground"
+      className="min-w-0 flex-1 truncate text-sm text-muted-foreground"
     >
       {text === "" ? m.projects_header_no_scope() : text}
     </p>
@@ -409,8 +409,9 @@ function ScopeLine({ concept }: Readonly<{ concept: string }>) {
 }
 
 /**
- * The project header (PR11): the name as the page's `h1`, one line of the scope, then one bar
- * with the steps and the task line. It takes no more height than the name, badges and tabs did.
+ * The project header (PR11): the name as the page's `h1` with one line of the scope and the
+ * steps beside it, then one bar with the task line, which gets the full width. It takes no more
+ * height than the name, badges and tabs did.
  */
 export function ProjectHeader({
   projectId,
@@ -426,13 +427,15 @@ export function ProjectHeader({
   onMoved: () => Promise<void> | void;
 }>) {
   return (
-    <div className="mb-2 flex flex-col gap-1.5">
-      <div className="flex flex-wrap items-baseline gap-x-3">
-        <h1 className="text-xl font-semibold tracking-tight">{name}</h1>
-        <ScopeLine concept={overview.concept} />
-      </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border bg-muted/50 px-2 py-1">
+    <div className="mb-1.5 flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <div className="flex min-w-0 flex-1 basis-80 items-baseline gap-x-3">
+          <h1 className="shrink-0 text-xl font-semibold tracking-tight">{name}</h1>
+          <ScopeLine concept={overview.concept} />
+        </div>
         <PhaseSteps phase={overview.phase} />
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border bg-muted/50 px-3 py-1">
         {overview.role === "facilitator" ? (
           <FacilitatorStatusLine
             projectId={projectId}
