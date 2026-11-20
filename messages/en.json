@@ -592,7 +592,7 @@
   "projects_task_handoff": "The list is agreed. There is nothing more for you to do.",
   "projects_task_handoff_action": "View the results",
   "projects_task_heading": "Your task now",
-  "projects_task_rate": "Rate how important each element of round {number} is.",
+  "projects_task_rate": "Rate whether each element of round {number} belongs in the data model.",
   "projects_task_rate_action": "Rate round {number}",
   "projects_task_rated_all": "You rated every element of round {number}.",
   "projects_task_rated_all_action": "Check your ratings",

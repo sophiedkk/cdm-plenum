@@ -179,9 +179,17 @@ describe("ParticipantTaskLine", () => {
     },
   );
 
+  it("asks whether an element belongs in the data model, not how important it is", () => {
+    render(<ParticipantTaskLine projectId="p1" overview={overview()} />);
+    const line = screen.getByRole("region", { name: "Your task now" }).textContent ?? "";
+    expect(line).toContain("Rate whether each element of round 2 belongs in the data model.");
+    expect(line).not.toMatch(/important/);
+  });
+
   it("speaks Dutch when the locale is Dutch", () => {
     overwriteGetLocale(() => "nl");
     render(<ParticipantTaskLine projectId="p1" overview={overview()} />);
+    expect(screen.getByText(/of het in het datamodel hoort/)).toBeTruthy();
     expect(screen.getByText("12 van 40 beoordeeld")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Ronde 2 beoordelen" })).toBeTruthy();
   });

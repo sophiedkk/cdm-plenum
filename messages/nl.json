@@ -592,7 +592,7 @@
   "projects_task_handoff": "De lijst is vastgesteld. Je hoeft niets meer te doen.",
   "projects_task_handoff_action": "De uitkomsten bekijken",
   "projects_task_heading": "Je taak nu",
-  "projects_task_rate": "Geef voor elk element van ronde {number} aan hoe belangrijk het is.",
+  "projects_task_rate": "Geef voor elk element van ronde {number} aan of het in het datamodel hoort.",
   "projects_task_rate_action": "Ronde {number} beoordelen",
   "projects_task_rated_all": "Je hebt alle elementen van ronde {number} beoordeeld.",
   "projects_task_rated_all_action": "Je beoordelingen bekijken",
