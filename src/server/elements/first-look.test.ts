@@ -93,6 +93,8 @@ describe("the first look (EL22)", () => {
         ok: false,
         error: "phase_closed",
       });
+      // The facilitator, who prepares ahead elsewhere, answers in discover only too.
+      expect(await answer(m.facilitator, systolic)).toEqual({ ok: false, error: "phase_closed" });
     }
     expect(await db.selectFrom("first_look_answer").selectAll().execute()).toEqual([]);
   });
@@ -103,6 +105,8 @@ describe("the first look summary (EL22)", () => {
     await answer(m.participant, systolic, "belongs");
     await answer(m.participant, diastolic, "not_sure");
     await answer(m.otherParticipant, systolic, "not_belongs");
+    // The facilitator's own answer stays out of the counts.
+    expect(await answer(m.facilitator, systolic, "belongs")).toEqual({ ok: true, value: null });
     const summary = await firstLookSummary(db, m.facilitator, m.projectId);
     if (!summary.ok) throw new Error(summary.error);
     expect(summary.value).toEqual({

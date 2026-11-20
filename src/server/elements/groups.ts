@@ -366,6 +366,8 @@ async function inCheck<T>(
   return db.transaction().execute(async (trx) => {
     const project = await lockProject(trx, projectId, userId);
     if (!project) return refused<T>("not_found");
+    // NOTE: EL24. Remarks on the groups belong to discover for everyone, the facilitator too.
+    if (project.phase !== SOURCE_PHASE) return refused<T>("phase_closed");
     if (!(await phaseOpenFor(trx, project, "group_remark"))) return refused<T>("phase_closed");
     if ((await checkAskedAt(trx, project.id)) === null) return refused<T>("group_check_not_asked");
     if (project.role !== "facilitator" && (await inPrivateStep(trx, project.id))) {

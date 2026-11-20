@@ -6,7 +6,7 @@
 // writes only their own answers; the facilitator reads counts, never who answered what (EL2).
 import type { Kysely } from "kysely";
 import { type FirstLookAnswer, type FirstLookCounts, isFirstLookAnswer } from "@/lib/first-look";
-import { stepVisible } from "@/lib/phase-access";
+import { SOURCE_PHASE, stepVisible } from "@/lib/phase-access";
 import type { DB } from "../db/schema.gen.ts";
 import {
   done,
@@ -142,6 +142,9 @@ export async function answerFirstLook(
   return db.transaction().execute(async (trx) => {
     const project = await lockProject(trx, input.projectId, userId);
     if (!project) return refused("not_found");
+    // NOTE: EL22. The first look belongs to discover for everyone: the facilitator too, who
+    // otherwise prepares ahead (PR10), answers nothing once the Delphi has started.
+    if (project.phase !== SOURCE_PHASE) return refused("phase_closed");
     if (!(await phaseOpenFor(trx, project, "first_look_answer"))) return refused("phase_closed");
     const element = await trx
       .selectFrom("element")
@@ -166,7 +169,7 @@ export async function answerFirstLook(
   });
 }
 
-/** The answers per element as counts, and how far the participants are (facilitator only). */
+/** The participants' answers per element as counts, and how far they are (facilitator only). */
 export interface FirstLookSummary {
   /** Counts per element id; an element nobody answered is absent. */
   counts: Record<string, FirstLookCounts>;
@@ -209,13 +212,13 @@ export async function summaryOf(db: Db, projectId: string): Promise<FirstLookSum
   const counts: Record<string, FirstLookCounts> = {};
   const perParticipant = new Map<string, number>();
   for (const row of answers) {
-    if (!isFirstLookAnswer(row.answer)) continue;
+    // NOTE: EL22. The counts show what the participants think; the facilitator's own answers
+    // stay out of them.
+    if (!isFirstLookAnswer(row.answer) || row.role !== "participant") continue;
     const entry = counts[row.element_id] ?? { belongs: 0, not_sure: 0, not_belongs: 0 };
     entry[row.answer] += 1;
     counts[row.element_id] = entry;
-    if (row.role === "participant") {
-      perParticipant.set(row.member_id, (perParticipant.get(row.member_id) ?? 0) + 1);
-    }
+    perParticipant.set(row.member_id, (perParticipant.get(row.member_id) ?? 0) + 1);
   }
   const participants = await db
     .selectFrom("member")

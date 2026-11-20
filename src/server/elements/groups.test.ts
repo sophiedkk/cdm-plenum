@@ -293,6 +293,26 @@ describe("the participants' check (EL24)", () => {
     });
   });
 
+  it("refuses the facilitator's remarks after discover", async () => {
+    await asked();
+    const recorded = await groupIdOf("recorded");
+    await setPhase(db, m.projectId, "decide");
+    expect(
+      await setElsewhere(db, m.facilitator, {
+        projectId: m.projectId,
+        elementId: systolic,
+        elsewhere: true,
+      }),
+    ).toEqual({ ok: false, error: "phase_closed" });
+    expect(
+      await addGroupMissing(db, m.facilitator, {
+        projectId: m.projectId,
+        groupId: recorded,
+        body: "Mean pressure",
+      }),
+    ).toEqual({ ok: false, error: "phase_closed" });
+  });
+
   it("keeps each participant's remarks their own; the facilitator reads them without names", async () => {
     await asked();
     const recorded = await groupIdOf("recorded");
