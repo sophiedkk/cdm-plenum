@@ -273,6 +273,7 @@
   "common_refusal_account_not_found": "This account no longer exists.",
   "common_refusal_already_invited": "This e-mail address already has an open invitation to this project.",
   "common_refusal_already_member": "This person is already a member of the project.",
+  "common_refusal_board_already_revealed": "The board has already been revealed. The private step cannot change any more.",
   "common_refusal_ckm_already_imported": "This archetype is already imported into the project.",
   "common_refusal_ckm_element_not_found": "This archetype element no longer exists in CKM.",
   "common_refusal_ckm_no_elements": "This archetype has no elements to import.",

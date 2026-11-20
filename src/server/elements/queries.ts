@@ -4,12 +4,16 @@
 // The element board (EL1, EL2, EL5, EL6, EL9). Every member adds and comments on elements; the
 // facilitator edits, merges, sets proposed values and sees who wrote what. The author columns are
 // selected only in the `...WithAuthors` queries, which require the facilitator (ADR 0005).
+// During the private step of the brainstorm (EL13) a participant reads only their own elements
+// and the comments on them; `visibleAuthor` decides that once per request.
 import { type Kysely, sql, type Transaction } from "kysely";
+import { type ElementPrompt, isElementPrompt } from "@/lib/brainstorm";
 import type { Cardinality } from "@/lib/cardinality";
 import { CODED_DATA_TYPE_KEYS, type DataTypeKey, isDataTypeKey } from "@/lib/data-types";
 import type { DB } from "../db/schema.gen.ts";
 import {
   done,
+  type LockedProject,
   type ProjectActionError,
   type ProjectResult,
   readProject,
@@ -69,6 +73,8 @@ export interface BoardElement {
    * once, in the order they were linked (EL5, O-5). Provenance only: `ckmLink` stays the link.
    */
   mergedCkmLinks: ElementCkmLink[];
+  /** The brainstorm question the element answers (EL14), null for an import or the board form. */
+  prompt: ElementPrompt | null;
   commentCount: number;
   createdAt: string;
 }
@@ -98,6 +104,7 @@ const PUBLIC_COLUMNS = [
   "element.data_type",
   "element.min_occurs",
   "element.max_occurs",
+  "element.prompt",
   "element.created_at",
 ] as const;
 
@@ -191,16 +198,51 @@ async function mergedCkmLinks(db: Db, projectId: string): Promise<Map<string, El
   return linksOf;
 }
 
-/** The active elements of a project in the order they were added, without authors. */
-async function boardElements(db: Db, projectId: string): Promise<BoardElement[]> {
-  const rows = await db
+/**
+ * Whether the project is in the private step of the brainstorm (EL13): the setting is on and the
+ * facilitator has not revealed the board yet.
+ */
+export async function inPrivateStep(db: Db, projectId: string): Promise<boolean> {
+  const row = await db
+    .selectFrom("project")
+    .select(["private_brainstorm", "board_revealed_at"])
+    .where("id", "=", projectId)
+    .executeTakeFirstOrThrow();
+  return row.private_brainstorm && row.board_revealed_at === null;
+}
+
+/**
+ * The member whose elements `userId` may read, or null for every element (EL13). Only a
+ * participant in the private step is limited, to their own member id.
+ */
+// NOTE: EL13, owner decision 2026-11-20. The filter runs on the server, so no response to a
+// participant carries another participant's element before the reveal.
+export async function visibleAuthor(
+  db: Db,
+  project: LockedProject,
+  userId: string,
+): Promise<string | null> {
+  if (project.role === "facilitator") return null;
+  if (!(await inPrivateStep(db, project.id))) return null;
+  return actorMemberId(db, project.id, userId);
+}
+
+/**
+ * The active elements of a project in the order they were added, without authors; with
+ * `onlyAuthor`, only the elements of that member.
+ */
+async function boardElements(
+  db: Db,
+  projectId: string,
+  onlyAuthor: string | null = null,
+): Promise<BoardElement[]> {
+  let query = db
     .selectFrom("element")
     .select(PUBLIC_COLUMNS)
     .where("element.project_id", "=", projectId)
-    .where("element.merged_into", "is", null)
-    .orderBy("element.created_at")
-    .orderBy("element.id")
-    .execute();
+    .where("element.merged_into", "is", null);
+  if (onlyAuthor !== null) query = query.where("element.author_member_id", "=", onlyAuthor);
+  const rows = await query.orderBy("element.created_at").orderBy("element.id").execute();
   const sources = await db
     .selectFrom("element_source")
     .innerJoin("element", "element.id", "element_source.element_id")
@@ -262,19 +304,34 @@ async function boardElements(db: Db, projectId: string): Promise<BoardElement[]>
     })),
     ckmLink: linkOf.get(row.id) ?? null,
     mergedCkmLinks: mergedLinks.get(row.id) ?? [],
+    prompt: isElementPrompt(row.prompt) ? row.prompt : null,
     commentCount: countOf.get(row.id) ?? 0,
     createdAt: row.created_at.toISOString(),
   }));
 }
 
-/** The board for any member, without authors (EL1, EL2). */
+/**
+ * The board for any member, without authors (EL1, EL2). In the private step a participant gets
+ * only their own elements (EL13).
+ */
 export async function listElements(
   db: Kysely<DB>,
   userId: string,
   projectId: string,
 ): Promise<ProjectResult<BoardElement[]>> {
   return readProject(db, userId, projectId, null, async (db, project) =>
-    done(await boardElements(db, project.id)),
+    done(await boardElements(db, project.id, await visibleAuthor(db, project, userId))),
+  );
+}
+
+/** The elements the user added themselves, for the brainstorm page (EL14), any member. */
+export async function listOwnElements(
+  db: Kysely<DB>,
+  userId: string,
+  projectId: string,
+): Promise<ProjectResult<BoardElement[]>> {
+  return readProject(db, userId, projectId, null, async (db, project) =>
+    done(await boardElements(db, project.id, await actorMemberId(db, project.id, userId))),
   );
 }
 
@@ -317,14 +374,23 @@ export async function listElementsWithAuthors(
   });
 }
 
-/** An element on the board of the project (not merged away), locked when `lock` is set. */
-async function activeElement(trx: Db, projectId: string, elementId: string, lock = false) {
+/**
+ * An element on the board of the project (not merged away), locked when `lock` is set; with
+ * `onlyAuthor`, only when that member added it (EL13).
+ */
+async function activeElement(
+  trx: Db,
+  projectId: string,
+  elementId: string,
+  { lock = false, onlyAuthor = null }: { lock?: boolean; onlyAuthor?: string | null } = {},
+) {
   let query = trx
     .selectFrom("element")
     .select(["id", "data_type", "description"])
     .where("id", "=", elementId)
     .where("project_id", "=", projectId)
     .where("merged_into", "is", null);
+  if (onlyAuthor !== null) query = query.where("author_member_id", "=", onlyAuthor);
   if (lock) query = query.forUpdate();
   return query.executeTakeFirst();
 }
@@ -347,6 +413,7 @@ export async function addElement(
           data_type: input.dataType,
           min_occurs: input.cardinality?.min ?? null,
           max_occurs: input.cardinality?.max ?? null,
+          prompt: input.prompt,
           author_member_id: authorMemberId,
         })
         .returning("id")
@@ -405,7 +472,7 @@ export async function updateElement(
   input: UpdateElementInput,
 ): Promise<ProjectResult<null>> {
   return withProject(db, userId, input.projectId, { element: ["update"] }, async (trx, project) => {
-    const element = await activeElement(trx, project.id, input.elementId, true);
+    const element = await activeElement(trx, project.id, input.elementId, { lock: true });
     if (!element) return refused("element_not_found");
     if (valuesProblem(input.dataType, await valuesOf(trx, element.id)) !== null) {
       return refused("element_has_values");
@@ -459,7 +526,7 @@ export async function setElementValues(
     input.projectId,
     { element: ["set_values"] },
     async (trx, project) => {
-      const element = await activeElement(trx, project.id, input.elementId, true);
+      const element = await activeElement(trx, project.id, input.elementId, { lock: true });
       if (!element) return refused("element_not_found");
       const problem = valuesProblem(element.data_type, input.values);
       if (problem !== null) return refused(problem);
@@ -558,7 +625,10 @@ export async function mergeElements(
   });
 }
 
-/** Adds a comment under an element (any member, EL6). */
+/**
+ * Adds a comment under an element (any member, EL6). In the private step a participant comments
+ * only on their own elements; another's is `element_not_found` (EL13).
+ */
 export async function addElementComment(
   db: Kysely<DB>,
   userId: string,
@@ -566,7 +636,9 @@ export async function addElementComment(
 ): Promise<ProjectResult<{ commentId: string }>> {
   return db.transaction().execute((trx) =>
     readProject(trx, userId, input.projectId, null, async (trx, project) => {
-      const element = await activeElement(trx, project.id, input.elementId);
+      const element = await activeElement(trx, project.id, input.elementId, {
+        onlyAuthor: await visibleAuthor(trx, project, userId),
+      });
       if (!element) return refused("element_not_found");
       const authorMemberId = await actorMemberId(trx, project.id, userId);
       const row = await trx
@@ -580,14 +652,19 @@ export async function addElementComment(
   );
 }
 
-/** The comments under an element, oldest first, without authors (any member, EL6). */
+/**
+ * The comments under an element, oldest first, without authors (any member, EL6). In the private
+ * step a participant reads only the comments on their own elements (EL13).
+ */
 export async function listElementComments(
   db: Kysely<DB>,
   userId: string,
   input: ElementInput,
 ): Promise<ProjectResult<ElementComment[]>> {
   return readProject(db, userId, input.projectId, null, async (db, project) => {
-    const element = await activeElement(db, project.id, input.elementId);
+    const element = await activeElement(db, project.id, input.elementId, {
+      onlyAuthor: await visibleAuthor(db, project, userId),
+    });
     if (!element) return refused("element_not_found");
     const rows = await db
       .selectFrom("element_comment")

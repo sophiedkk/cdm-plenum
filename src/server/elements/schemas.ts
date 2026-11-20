@@ -3,6 +3,7 @@
 
 // The input of the element server functions, checked before any handler runs.
 import { z } from "zod";
+import { ELEMENT_PROMPTS } from "@/lib/brainstorm";
 import { cardinalityError } from "@/lib/cardinality";
 import { DATA_TYPES, type DataTypeKey } from "@/lib/data-types";
 import { CSV_MAX_BYTES } from "@/lib/element-csv";
@@ -45,6 +46,8 @@ export const addElementInput = z.object({
   ...elementFields,
   /** Where the idea came from, in the participant's words; optional (EL1). */
   source: z.string().trim().max(ELEMENT_SOURCE_LABEL_MAX).default(""),
+  /** The brainstorm question the element answers (EL14); null from the board's own form. */
+  prompt: z.enum(ELEMENT_PROMPTS).nullable().default(null),
 });
 export type AddElementInput = z.infer<typeof addElementInput>;
 
@@ -101,3 +104,7 @@ export const csvImportInput = z.object({
   content: z.string().max(CSV_MAX_BYTES),
 });
 export type CsvImportInput = z.infer<typeof csvImportInput>;
+
+/** The private-first brainstorm on or off (EL13). */
+export const privateBrainstormInput = z.object({ projectId: idSchema, enabled: z.boolean() });
+export type PrivateBrainstormInput = z.infer<typeof privateBrainstormInput>;
