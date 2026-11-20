@@ -85,8 +85,9 @@ function ParticipantHome() {
     PROJECT_PHASES.indexOf(phase) >= PROJECT_PHASES.indexOf(ROUND_PHASE) &&
     stepVisible("participant", phase, "rounds");
 
+  // The home reads as text: a narrower measure, on the column's left edge.
   return (
-    <>
+    <div className="max-w-3xl">
       <TaskCard projectId={projectId} overview={overview.value} />
       {showDecided && <DecidedSoFarSection projectId={projectId} decided={decided.value} />}
       <AboutProject
@@ -99,7 +100,7 @@ function ParticipantHome() {
           await queryClient.invalidateQueries({ queryKey: projectKeys.list() });
         }}
       />
-    </>
+    </div>
   );
 }
 

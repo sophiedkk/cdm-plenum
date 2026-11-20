@@ -46,8 +46,9 @@ function ProjectLayout() {
   const facilitator = project.role === "facilitator";
   const home = Boolean(matchRoute({ to: "/projects/$projectId", params: { projectId } }));
 
+  // The app shell's column holds every project page, so nothing here sets a width.
   return (
-    <div className={home && !facilitator ? "mx-auto w-full max-w-3xl" : undefined}>
+    <>
       <ProjectHeader
         projectId={projectId}
         name={project.name}
@@ -56,6 +57,6 @@ function ProjectLayout() {
       />
       {facilitator && <ProjectTabs projectId={projectId} />}
       <Outlet />
-    </div>
+    </>
   );
 }
