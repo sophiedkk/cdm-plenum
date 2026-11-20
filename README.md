@@ -16,6 +16,65 @@ The project is in an early stage. The requirements draft is in
 [docs/architecture.md](docs/architecture.md), with the decision records in
 [docs/adr/](docs/adr/README.md).
 
+## How it works
+
+A project moves through four phases. The facilitator moves it on from the
+project's overview, and every participant sees there what is expected of them
+now.
+
+```mermaid
+flowchart TD
+    subgraph scope["Phase 1: Scope"]
+        S1["Facilitator writes the scope:<br/>concept, use cases, out of scope, sources"]
+        S2["Participants comment on the scope"]
+        S1 --> S2
+    end
+
+    subgraph discover["Phase 2: Discover"]
+        D1["Private brainstorm: each participant adds elements alone,<br/>guided by four questions"]
+        D2["Facilitator adds elements from CSV files and CKM archetypes"]
+        D3(["Facilitator reveals the board"])
+        D4["Everyone sees all elements, without authors;<br/>similar names are flagged while typing"]
+        D5["Facilitator links elements to CKM<br/>and merges duplicates"]
+        D1 --> D3
+        D2 --> D3
+        D3 --> D4 --> D5
+    end
+
+    subgraph decide["Phase 3: Decide"]
+        R1["Facilitator sets up an e-Delphi round:<br/>elements, scale, consensus rule, closing date"]
+        R2["Participants rate anonymously:<br/>does the element belong in the data model?"]
+        R3["Round 1 only: participants propose missing elements"]
+        R4["Round closes: per element<br/>in the model, not in the model or no consensus"]
+        R5{"Elements without consensus?"}
+        R6["Facilitator opens the next round on those elements;<br/>each participant sees their own score and the group's distribution"]
+        R1 --> R2 --> R4 --> R5
+        R2 -.-> R3
+        R5 -- yes --> R6 --> R2
+    end
+
+    subgraph handoff["Phase 4: Hand-off"]
+        H1["Export the agreed elements as CSV and as a mind map,<br/>and the ratings for the study report"]
+    end
+
+    S2 --> D1
+    S2 --> D2
+    D5 --> R1
+    R3 -. "facilitator adds a proposal to the board" .-> D5
+    R5 -- no --> H1
+```
+
+In words: the facilitator writes the scope and participants comment on it.
+In the discover phase each participant first adds elements alone, guided by
+four questions, while the facilitator adds elements from CSV files and CKM.
+When the facilitator reveals the board, everyone sees all elements without
+their authors, and the facilitator links them to CKM and merges duplicates.
+In the decide phase participants rate each element anonymously in e-Delphi
+rounds; in round 1 they can also propose missing elements. Elements without
+consensus go to a next round, where each participant sees their own earlier
+score and the group's distribution. The agreed elements are exported for the
+modellers and the ratings for the study report.
+
 ## Screenshots
 
 The screenshots show the demo project, which `pnpm db:seed-demo` loads. Its
