@@ -6,7 +6,7 @@
 // through the stub (tests/e2e/ckm-stub.ts); every page and dialog is axe-clean in English and
 // Dutch (Q-ACC-1, Q-I18N-1); 10 elements fit on the first screen at 1280 by 800 (Q-USE-1).
 import type { Page } from "@playwright/test";
-import { seedElement, signInTo, userIdOf } from "./board-seed.ts";
+import { seedElement, seedReveal, signInTo, userIdOf } from "./board-seed.ts";
 import {
   BROWSER_LOCALE,
   expect,
@@ -92,6 +92,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await seedElement(db, project.facilitator.userId, project.projectId, {
         name: "Diastolic",
       });
+      // The shared board after the brainstorm; brainstorm.spec.ts covers the private step.
+      await seedReveal(db, project.facilitator.userId, project.projectId);
       const bodies: string[] = [];
       page.on("response", async (response) => {
         if (response.url().includes("_serverFn"))
