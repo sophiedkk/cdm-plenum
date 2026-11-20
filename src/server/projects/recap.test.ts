@@ -107,6 +107,22 @@ describe("phaseRecap (PR13)", () => {
     expect(personLeaks(recap.value, m)).toEqual([]);
   });
 
+  it("names no other participant's element when the board was never revealed (EL13)", async () => {
+    await insertImportedElement(db, m.projectId, "Systolic");
+    await add(m.participant, "Heart rate");
+    await add(m.otherParticipant, "Secret pulse");
+    await setPhase(db, m.projectId, "decide");
+    const recap = await phaseRecap(db, m.participant, m.projectId, "discover");
+    if (!recap.ok || recap.value.phase !== "discover") throw new Error("no discover recap");
+    const names = recap.value.groups.flatMap((group) => group.elements.map((e) => e.name));
+    expect(names).toEqual(["Heart rate"]);
+    expect(JSON.stringify(recap.value)).not.toContain("Secret pulse");
+    expect(recap.value).toMatchObject({ elements: 3, added: 2 });
+    // The facilitator sees every element.
+    const facilitator = await phaseRecap(db, m.facilitator, m.projectId, "discover");
+    expect(JSON.stringify(facilitator)).toContain("Secret pulse");
+  });
+
   it("recaps decide in hand-off with its rounds", async () => {
     await setPhase(db, m.projectId, "handoff");
     const recap = await phaseRecap(db, m.facilitator, m.projectId, "decide");

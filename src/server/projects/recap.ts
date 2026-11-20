@@ -10,6 +10,7 @@ import type { Outcome } from "@/lib/consensus";
 import { adjacentPhase, type ProjectPhase, phaseDone } from "@/lib/project-phases";
 import type { DB } from "../db/schema.gen.ts";
 import { type ElementGroup, groupingOf } from "../elements/groups.ts";
+import { visibleAuthor } from "../elements/queries.ts";
 import type { SourceModelKind } from "../sources/queries.ts";
 import { done, type ProjectResult, readProject, refused } from "./access.ts";
 
@@ -97,7 +98,16 @@ async function scopeRecap(db: Db, projectId: string): Promise<ScopeRecap> {
   };
 }
 
-async function discoverRecap(db: Db, projectId: string): Promise<DiscoverRecap> {
+/**
+ * The discover recap. `onlyAuthor` is the reader's member id while they may see only their own
+ * elements (the private step, EL13); then the groups name only their own elements and those from
+ * existing models, as the board would. The counts stay: they name nobody.
+ */
+async function discoverRecap(
+  db: Db,
+  projectId: string,
+  onlyAuthor: string | null,
+): Promise<DiscoverRecap> {
   const firstRound = await db
     .selectFrom("round")
     .select(["id", "closed_at"])
@@ -165,7 +175,11 @@ async function discoverRecap(db: Db, projectId: string): Promise<DiscoverRecap> 
     .orderBy("created_at")
     .execute();
   const grouping = await groupingOf(db, projectId);
-  const inRound = new Set(rows.map((row) => row.id));
+  const inRound = new Set(
+    rows
+      .filter((row) => onlyAuthor === null || row.from_model || row.author_member_id === onlyAuthor)
+      .map((row) => row.id),
+  );
   return {
     phase: "discover",
     closedAt: await closedAt(db, projectId, "discover"),
@@ -241,7 +255,9 @@ export async function phaseRecap(
       case "scope":
         return done(await scopeRecap(reader, project.id));
       case "discover":
-        return done(await discoverRecap(reader, project.id));
+        return done(
+          await discoverRecap(reader, project.id, await visibleAuthor(reader, project, userId)),
+        );
       case "decide":
         return done(await decideRecap(reader, project.id));
       case "handoff":
