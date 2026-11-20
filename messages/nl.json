@@ -601,6 +601,7 @@
   "rounds_open_reason_label": "Reden om onder het minimum te openen",
   "rounds_open_reason_required": "Geef een reden om de ronde onder het minimum te openen.",
   "rounds_open_reason_too_long": "Gebruik hoogstens {max} tekens.",
+  "rounds_open_reveals_board": "Als je de ronde opent, geef je ook het bord vrij: iedere deelnemer ziet dan alle elementen, zonder auteurs.",
   "rounds_open_shortfall_hint": "Het panel is kleiner dan het minimum. Je kunt de ronde toch openen: je geeft dan een reden.",
   "rounds_open_title": "Ronde {number} openen?",
   "rounds_open_with_reason": "Openen met deze reden",

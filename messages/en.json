@@ -601,6 +601,7 @@
   "rounds_open_reason_label": "Reason for opening below the minimum",
   "rounds_open_reason_required": "Give a reason to open the round below the minimum.",
   "rounds_open_reason_too_long": "Use at most {max} characters.",
+  "rounds_open_reveals_board": "Opening the round also reveals the board: every participant then sees all elements, without authors.",
   "rounds_open_shortfall_hint": "The panel is below the minimum. You can still open the round: you give a reason when you open it.",
   "rounds_open_title": "Open round {number}?",
   "rounds_open_with_reason": "Open with this reason",
