@@ -98,6 +98,27 @@ export function TaskCard({
       );
     case "rate":
       return <RateCard projectId={projectId} task={task} />;
+    case "detail":
+      return (
+        <section aria-labelledby="task-heading" className={CARD}>
+          <h2 id="task-heading" className={HEADING}>
+            {m.projects_home_turn_detail()}
+          </h2>
+          <Facts
+            facts={[
+              { term: m.projects_home_fact_proposals(), value: task.open },
+              { term: m.projects_home_fact_answered(), value: task.answered },
+            ]}
+          />
+          <Button asChild size="lg" className="mt-6">
+            <Link to="/projects/$projectId/details" params={{ projectId }}>
+              {task.answered === 0
+                ? m.projects_task_detail_action()
+                : m.projects_task_detail_continue()}
+            </Link>
+          </Button>
+        </section>
+      );
     default:
       return <TaskLine projectId={projectId} task={task} />;
   }
@@ -137,7 +158,7 @@ function TaskLine({
   task,
 }: Readonly<{
   projectId: string;
-  task: Exclude<ParticipantTask, { kind: "scope" | "discover" | "rate" }>;
+  task: Exclude<ParticipantTask, { kind: "scope" | "discover" | "rate" | "detail" }>;
 }>) {
   switch (task.kind) {
     case "rated_all":
@@ -161,6 +182,19 @@ function TaskLine({
       );
     case "wait":
       return <p data-testid="task-line">{m.projects_task_wait()}</p>;
+    case "detail_answered":
+      return (
+        <p data-testid="task-line">
+          {m.projects_task_detail_answered()}{" "}
+          <Link
+            to="/projects/$projectId/details"
+            params={{ projectId }}
+            className="underline underline-offset-4"
+          >
+            {m.projects_task_detail_answered_action()}
+          </Link>
+        </p>
+      );
     case "handoff":
       return <p data-testid="task-line">{m.projects_task_handoff()}</p>;
   }

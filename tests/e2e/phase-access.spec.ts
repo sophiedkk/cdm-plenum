@@ -29,6 +29,7 @@ const PHASE_NAMES: Record<ProjectPhase, string> = {
   scope: MESSAGES.en.projects_phase_scope,
   discover: MESSAGES.en.projects_phase_discover,
   decide: MESSAGES.en.projects_phase_decide,
+  detail: MESSAGES.en.projects_phase_detail,
   handoff: MESSAGES.en.projects_phase_handoff,
 };
 
@@ -54,7 +55,7 @@ async function homeLinks(page: Page, locale: Locale): Promise<string[]> {
   for (const href of await steps
     .getByRole("link")
     .evaluateAll((links) => links.map((link) => link.getAttribute("href") ?? ""))) {
-    expect(href).toMatch(/\/recap\/(scope|discover|decide)$/);
+    expect(href).toMatch(/\/recap\/(scope|discover|decide|detail)$/);
   }
   const pages = page.getByRole("navigation", { name: text.projects_home_pages_title });
   if ((await pages.count()) === 0) return [];
@@ -177,6 +178,7 @@ test("the facilitator sees the same tabs in the same order in every phase (ADR 0
     text.projects_tab_scope,
     text.projects_tab_elements,
     text.projects_tab_rounds,
+    text.projects_tab_details,
     text.projects_tab_people,
     text.projects_tab_settings,
   ];

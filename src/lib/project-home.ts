@@ -98,6 +98,8 @@ export interface OverviewFacts {
   /** Elements without a decision: no consensus in their newest closed round, or not rated. */
   undecided: number;
   lastClosedRound: ClosedRound | null;
+  /** The structure step of the detail phase (DT1, DT2): counts of elements and objections. */
+  detail: { inModel: number; proposed: number; settled: number; openObjections: number };
   /** Whether the server can send e-mail, so a reminder can go out. */
   mailConfigured: boolean;
 }
@@ -129,7 +131,10 @@ export type ChecklistItem =
       duplicates: number;
     }
   | { key: "round"; done: false; round: ChecklistRound | null; closed: ClosedRound | null }
-  | { key: "undecided"; done: boolean; count: number };
+  | { key: "undecided"; done: boolean; count: number }
+  | { key: "detail_proposed"; done: boolean; proposed: number; inModel: number }
+  | { key: "detail_objections"; done: boolean; count: number }
+  | { key: "detail_settled"; done: boolean; settled: number; inModel: number };
 
 /** The checklist of the phase the project is in; hand-off has none, its Overview exports. */
 export function checklist(phase: ProjectPhase, facts: OverviewFacts): ChecklistItem[] {
@@ -205,6 +210,14 @@ export function checklist(phase: ProjectPhase, facts: OverviewFacts): ChecklistI
       });
       return items;
     }
+    case "detail": {
+      const { inModel, proposed, settled, openObjections } = facts.detail;
+      return [
+        { key: "detail_proposed", done: inModel > 0 && proposed >= inModel, proposed, inModel },
+        { key: "detail_objections", done: openObjections === 0, count: openObjections },
+        { key: "detail_settled", done: inModel > 0 && settled >= inModel, settled, inModel },
+      ];
+    }
     case "handoff":
       return [];
   }
@@ -240,7 +253,12 @@ export function waitingFor(overview: ProjectOverview, facts: OverviewFacts | nul
     };
   }
   const task = participantTask(overview);
-  if (task.kind === "scope" || task.kind === "discover" || task.kind === "rate") {
+  if (
+    task.kind === "scope" ||
+    task.kind === "discover" ||
+    task.kind === "rate" ||
+    task.kind === "detail"
+  ) {
     return { kind: "task", task };
   }
   return { kind: "nothing" };

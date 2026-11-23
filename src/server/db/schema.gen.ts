@@ -46,6 +46,18 @@ export interface AppRole {
   role: string;
 }
 
+export interface DetailAnswer {
+  addressed_at: Timestamp | null;
+  addressed_note: string | null;
+  answer: string;
+  answered_at: Generated<Timestamp>;
+  id: Generated<string>;
+  member_id: string;
+  proposal_id: string;
+  reason: string | null;
+  version: number;
+}
+
 export interface DetailFlag {
   element_id: string;
   id: Generated<string>;
@@ -54,6 +66,26 @@ export interface DetailFlag {
   reason: string;
   round_id: string;
   updated_at: Generated<Timestamp>;
+}
+
+export interface DetailProposal {
+  data_type: string | null;
+  element_id: string;
+  id: Generated<string>;
+  max_occurs: number | null;
+  min_occurs: number | null;
+  proposed_at: Generated<Timestamp>;
+  proposer_expert_type: string | null;
+  proposer_member_id: string | null;
+  settled_at: Timestamp | null;
+  version: Generated<number>;
+}
+
+export interface DetailProposalValue {
+  position: number;
+  proposal_id: string;
+  text: string;
+  value: Numeric | null;
 }
 
 export interface Element {
@@ -387,7 +419,10 @@ export interface DB {
   account: Account;
   activity_log: ActivityLog;
   app_role: AppRole;
+  detail_answer: DetailAnswer;
   detail_flag: DetailFlag;
+  detail_proposal: DetailProposal;
+  detail_proposal_value: DetailProposalValue;
   element: Element;
   element_ckm_link: ElementCkmLink;
   element_comment: ElementComment;

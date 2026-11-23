@@ -497,7 +497,8 @@ export function valuesProblem(
   return null;
 }
 
-async function valuesOf(trx: Db, elementId: string): Promise<ElementValue[]> {
+/** The value list of an element, in order. */
+export async function valuesOf(trx: Db, elementId: string): Promise<ElementValue[]> {
   const rows = await trx
     .selectFrom("element_value")
     .select(["text", "value"])
@@ -542,7 +543,8 @@ export async function updateElement(
   });
 }
 
-async function writeValues(
+/** Replaces the value list of an element with `values`, in their order. */
+export async function writeValues(
   trx: Transaction<DB>,
   elementId: string,
   values: readonly ElementValue[],

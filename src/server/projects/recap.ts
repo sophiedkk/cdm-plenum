@@ -9,6 +9,7 @@ import type { Kysely } from "kysely";
 import type { Outcome } from "@/lib/consensus";
 import { adjacentPhase, type ProjectPhase, phaseDone } from "@/lib/project-phases";
 import type { DB } from "../db/schema.gen.ts";
+import { type ModelStructure, modelStructures } from "../details/queries.ts";
 import { type ElementGroup, groupingOf } from "../elements/groups.ts";
 import { visibleAuthor } from "../elements/queries.ts";
 import type { SourceModelKind } from "../sources/queries.ts";
@@ -60,7 +61,14 @@ export interface DecideRecap {
   rounds: DecideRound[];
 }
 
-export type PhaseRecap = ScopeRecap | DiscoverRecap | DecideRecap;
+export interface DetailRecap {
+  phase: "detail";
+  closedAt: string | null;
+  /** The elements in the model with their structure (DT1, DT2). */
+  elements: ModelStructure[];
+}
+
+export type PhaseRecap = ScopeRecap | DiscoverRecap | DecideRecap | DetailRecap;
 
 /** When the project left `phase`: the newest move to the phase after it, or null. */
 async function closedAt(db: Db, projectId: string, phase: ProjectPhase): Promise<string | null> {
@@ -260,6 +268,12 @@ export async function phaseRecap(
         );
       case "decide":
         return done(await decideRecap(reader, project.id));
+      case "detail":
+        return done({
+          phase: "detail",
+          closedAt: await closedAt(reader, project.id, "detail"),
+          elements: await modelStructures(reader, project.id),
+        });
       case "handoff":
         return refused("recap_not_ready");
     }

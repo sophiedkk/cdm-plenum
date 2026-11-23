@@ -4,7 +4,7 @@
 // The phases a project moves through (PR4, docs/architecture.md, "The process the tool follows"),
 // in order. The `project.phase` column holds one of these keys.
 
-export const PROJECT_PHASES = ["scope", "discover", "decide", "handoff"] as const;
+export const PROJECT_PHASES = ["scope", "discover", "decide", "detail", "handoff"] as const;
 export type ProjectPhase = (typeof PROJECT_PHASES)[number];
 
 /** Returns whether `value` names a project phase. */

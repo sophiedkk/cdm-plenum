@@ -15,6 +15,7 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
     firstLook: { total: 0, answered: 0 },
     groupCheck: { asked: false, done: false },
     round: null,
+    detail: { open: 0, answered: 0 },
     lastClosedRoundId: null,
     ...changes,
   };
@@ -85,6 +86,21 @@ describe("participantTask (PR8)", () => {
 
   it("has nothing to rate for a member who does not rate (DE14)", () => {
     const task = participantTask(overview({ phase: "decide", round: round({ rated: null }) }));
+    expect(task).toEqual({ kind: "wait" });
+  });
+
+  it("asks a participant to answer the open structure proposals in the detail phase (DT2)", () => {
+    const detail = (open: number, answered: number) =>
+      participantTask(overview({ phase: "detail", detail: { open, answered } }));
+    expect(detail(3, 1)).toEqual({ kind: "detail", open: 3, answered: 1 });
+    expect(detail(3, 3)).toEqual({ kind: "detail_answered" });
+    expect(detail(0, 0)).toEqual({ kind: "wait" });
+  });
+
+  it("gives the facilitator no answer task in the detail phase: they settle (DT2)", () => {
+    const task = participantTask(
+      overview({ phase: "detail", role: "facilitator", detail: { open: 3, answered: 0 } }),
+    );
     expect(task).toEqual({ kind: "wait" });
   });
 

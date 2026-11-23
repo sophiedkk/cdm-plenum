@@ -23,6 +23,7 @@ export const PROJECT_STEPS = [
   "first_look",
   "grouping",
   "group_check",
+  "details",
 ] as const;
 export type ProjectStep = (typeof PROJECT_STEPS)[number];
 
@@ -49,6 +50,7 @@ export const PARTICIPANT_ACCESS = {
     first_look: "hidden",
     grouping: "hidden",
     group_check: "hidden",
+    details: "hidden",
   },
   discover: {
     scope: "read",
@@ -62,6 +64,7 @@ export const PARTICIPANT_ACCESS = {
     first_look: "answer",
     grouping: "hidden",
     group_check: "answer",
+    details: "hidden",
   },
   decide: {
     scope: "read",
@@ -75,6 +78,21 @@ export const PARTICIPANT_ACCESS = {
     first_look: "hidden",
     grouping: "hidden",
     group_check: "hidden",
+    details: "hidden",
+  },
+  detail: {
+    scope: "read",
+    brainstorm: "hidden",
+    board: "read",
+    rounds: "read",
+    export: "hidden",
+    members: "read",
+    settings: "hidden",
+    models: "hidden",
+    first_look: "hidden",
+    grouping: "hidden",
+    group_check: "hidden",
+    details: "answer",
   },
   handoff: {
     scope: "read",
@@ -88,6 +106,7 @@ export const PARTICIPANT_ACCESS = {
     first_look: "hidden",
     grouping: "hidden",
     group_check: "hidden",
+    details: "read",
   },
 } as const satisfies Record<ProjectPhase, Record<ProjectStep, StepAccess>>;
 
@@ -106,6 +125,10 @@ export const PARTICIPANT_WRITES = {
   first_look_answer: { step: "first_look", access: "answer" },
   // NOTE: EL24, ADR 0020. The check of the groups takes remarks in discover only.
   group_remark: { step: "group_check", access: "answer" },
+  // NOTE: DT1, DT2, ADR 0017. In the detail phase a member answers a structure proposal; a
+  // member of an architecture group also proposes one.
+  detail_answer: { step: "details", access: "answer" },
+  detail_propose: { step: "details", access: "answer" },
 } as const satisfies Record<string, { step: ProjectStep; access: StepAccess }>;
 export type ParticipantWrite = keyof typeof PARTICIPANT_WRITES;
 
@@ -138,9 +161,8 @@ export function writeOpen(
 }
 
 // NOTE: EL21, owner decision 2026-11-20. Data type, cardinality and values show from the detail
-// phase on. That phase is not built, so no project is in it and nothing shows them; the detail
-// phase sets this constant to its own phase.
-export const DETAIL_FIELDS_PHASE: ProjectPhase | null = null;
+// phase on, where the group settles them (DT1, DT2).
+export const DETAIL_FIELDS_PHASE: ProjectPhase | null = "detail";
 
 /**
  * Whether the UI shows data type, cardinality and values during `phase` (EL21): the board, an
@@ -165,6 +187,9 @@ export function ckmColumnShown(phase: ProjectPhase): boolean {
 
 /** The phase in which the facilitator opens a round and keeps it open (PR10). */
 export const ROUND_PHASE: ProjectPhase = "decide";
+
+/** The phase in which members answer structure proposals and the facilitator settles them (DT2). */
+export const DETAIL_PHASE: ProjectPhase = "detail";
 
 /** The phase in which every member, the facilitator too, marks elements after the reveal (EL16). */
 export const MARK_PHASE: ProjectPhase = "discover";

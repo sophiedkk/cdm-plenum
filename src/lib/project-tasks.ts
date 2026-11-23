@@ -37,6 +37,8 @@ export interface ProjectOverview {
   /** The check of the groups (EL24): whether the facilitator asked, and the member is done. */
   groupCheck: { asked: boolean; done: boolean };
   round: OverviewRound | null;
+  /** The open structure proposals and how many the member answered in their current version (DT2). */
+  detail: { open: number; answered: number };
   /** The newest closed round, whose results every member may read (DE5). */
   lastClosedRoundId: string | null;
 }
@@ -61,6 +63,8 @@ export type ParticipantTask =
   | { kind: "rated_all"; roundId: string; number: number; total: number; closesAt: string }
   | { kind: "round_closing"; number: number }
   | { kind: "wait" }
+  | { kind: "detail"; open: number; answered: number }
+  | { kind: "detail_answered" }
   | { kind: "handoff"; resultsRoundId: string | null };
 
 /** Chooses the one task a participant sees on the overview. */
@@ -88,6 +92,13 @@ export function participantTask(overview: ProjectOverview): ParticipantTask {
       return round.rated >= round.elements
         ? { kind: "rated_all", ...common }
         : { kind: "rate", ...common, rated: round.rated };
+    }
+    case "detail": {
+      // NOTE: DT2. Only a participant answers; the facilitator settles.
+      if (overview.role !== "participant" || overview.detail.open === 0) return { kind: "wait" };
+      return overview.detail.answered >= overview.detail.open
+        ? { kind: "detail_answered" }
+        : { kind: "detail", ...overview.detail };
     }
     case "handoff":
       return { kind: "handoff", resultsRoundId: overview.lastClosedRoundId };

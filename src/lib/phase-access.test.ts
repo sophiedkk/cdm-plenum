@@ -30,13 +30,14 @@ describe("the phase table (PR9)", () => {
       PROJECT_STEPS.map((step) => participantAccess(phase, step)),
     ]);
     // Steps in order: scope, brainstorm, board, rounds, export, members, settings, models,
-    // first_look, grouping, group_check.
+    // first_look, grouping, group_check, details.
     const H = "hidden";
     expect(table).toEqual([
-      ["scope", ["comment", H, H, H, H, "read", H, H, H, H, H]],
-      ["discover", ["read", "add", "comment", H, H, "read", H, H, "answer", H, "answer"]],
-      ["decide", ["read", H, "read", "rate", H, "read", H, H, H, H, H]],
-      ["handoff", ["read", H, "read", "read", H, "read", H, H, H, H, H]],
+      ["scope", ["comment", H, H, H, H, "read", H, H, H, H, H, H]],
+      ["discover", ["read", "add", "comment", H, H, "read", H, H, "answer", H, "answer", H]],
+      ["decide", ["read", H, "read", "rate", H, "read", H, H, H, H, H, H]],
+      ["detail", ["read", H, "read", "read", H, "read", H, H, H, H, H, "answer"]],
+      ["handoff", ["read", H, "read", "read", H, "read", H, H, H, H, H, "read"]],
     ]);
   });
 
@@ -80,12 +81,13 @@ describe("the phase table (PR9)", () => {
 });
 
 describe("detailFieldsShown (EL21)", () => {
-  it("hides data type, cardinality and values in every phase until the detail phase exists", () => {
+  it("shows data type, cardinality and values from the detail phase on", () => {
     expect(PROJECT_PHASES.map((phase) => [phase, detailFieldsShown(phase)])).toEqual([
       ["scope", false],
       ["discover", false],
       ["decide", false],
-      ["handoff", false],
+      ["detail", true],
+      ["handoff", true],
     ]);
   });
 });
@@ -96,6 +98,7 @@ describe("ckmColumnShown (EX2)", () => {
       ["scope", false],
       ["discover", true],
       ["decide", true],
+      ["detail", true],
       ["handoff", true],
     ]);
   });
@@ -118,6 +121,8 @@ describe("writeOpen", () => {
       ["source_suggest", ["discover"]],
       ["first_look_answer", ["discover"]],
       ["group_remark", ["discover"]],
+      ["detail_answer", ["detail"]],
+      ["detail_propose", ["detail"]],
     ]);
   });
 

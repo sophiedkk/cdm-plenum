@@ -19,6 +19,7 @@ import {
 import type { ProjectPhase } from "@/lib/project-phases";
 import { type ProjectRole, RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
+import { detailProgress } from "../details/queries.ts";
 import { summaryOf } from "../elements/first-look.ts";
 import { checkProgress } from "../elements/groups.ts";
 import { markSummary } from "../elements/marks.ts";
@@ -254,6 +255,10 @@ async function factsOf(
       (element) => element.status === "no_consensus" || element.status === "not_rated",
     ).length,
     lastClosedRound,
+    detail:
+      project.phase === "detail"
+        ? await detailProgress(db, project.id)
+        : { inModel: 0, proposed: 0, settled: 0, openObjections: 0 },
     mailConfigured: deps.mailConfigured,
   };
 }

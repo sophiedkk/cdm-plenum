@@ -58,6 +58,7 @@ const TABS = [
   { key: "scope", to: "/projects/$projectId/scope", label: m.projects_tab_scope },
   { key: "elements", to: "/projects/$projectId/board", label: m.projects_tab_elements },
   { key: "rounds", to: "/projects/$projectId/rounds", label: m.projects_tab_rounds },
+  { key: "details", to: "/projects/$projectId/details", label: m.projects_tab_details },
   { key: "people", to: "/projects/$projectId/members", label: m.projects_tab_people },
   { key: "settings", to: "/projects/$projectId/settings", label: m.projects_tab_settings },
 ] as const;

@@ -396,7 +396,7 @@ describe("rounds and the phase (PR9, PR10)", () => {
           from: "decide",
           direction: "next",
         }),
-      ).toEqual({ ok: true, value: { phase: "handoff" } });
+      ).toEqual({ ok: true, value: { phase: "detail" } });
     });
   });
 });

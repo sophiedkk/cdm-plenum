@@ -174,16 +174,22 @@ Sign in at <http://localhost:3000/sign-in> and open the link from Mailpit at
    Nursing, Primary care, General medicine, Terminology and Architecture.
    Invite a new address and open the invitation from Mailpit in a private
    window.
-5. **Hand-off:** open "Respiratory rate (demo)". Two rounds are closed;
+5. **Detail:** open "Oxygen saturation (demo)". The Details tab lists the
+   three elements in the model. SpO2 is settled; the architect's proposal
+   for "Inspired oxygen" has one open objection: mark it addressed with a
+   note, then settle it. Sign in as `architect.a@example.test` to propose
+   the structure of "Probe site", and as `nurse.b@example.test` to answer
+   it from "Your turn".
+6. **Hand-off:** open "Respiratory rate (demo)". Two rounds are closed;
    round 2 settled one of the two elements without consensus. Export the
    elements as CSV and as a mind map from the Overview.
-6. **As participant,** sign in as `nurse.a@example.test` in a private window.
+7. **As participant,** sign in as `nurse.a@example.test` in a private window.
    The project list shows what waits per project. Open Blood pressure: its
    home shows "Your turn: rate round 2" and what is decided so far. Rate the
    two elements. You should see no other participant's ratings, and no
    names unless the facilitator turns that setting on. "About this project"
    at the bottom shows the groups and "Leave project".
-7. Switch the language to Dutch and repeat a few steps.
+8. Switch the language to Dutch and repeat a few steps.
 
 To start over, drop the development database and run the commands again:
 

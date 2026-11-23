@@ -111,3 +111,22 @@ export function DataTypeField() {
     </FieldSet>
   );
 }
+
+/** The choices of the minimum (EL1): not decided, 0 or 1. */
+export function minOccursOptions() {
+  return [
+    { value: "", label: m.board_not_decided() },
+    { value: "0", label: m.board_min_0() },
+    { value: "1", label: m.board_min_1() },
+  ];
+}
+
+/** The choices of the maximum (EL1): not decided, 1, many, or a number typed below. */
+export function maxKindOptions() {
+  return [
+    { value: "", label: m.board_not_decided() },
+    { value: "1", label: m.board_max_1() },
+    { value: "many", label: m.board_max_many() },
+    { value: "number", label: m.board_max_number() },
+  ];
+}

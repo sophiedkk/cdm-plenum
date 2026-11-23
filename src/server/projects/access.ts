@@ -55,6 +55,13 @@ export const PROJECT_ACTION_ERRORS = [
   "group_check_not_asked",
   "recap_not_ready",
   "private_after_group_check",
+  "detail_not_in_model",
+  "detail_not_architect",
+  "detail_version_changed",
+  "detail_proposal_not_found",
+  "detail_settled",
+  "detail_answer_not_found",
+  "detail_objections_open",
 ] as const;
 export type ProjectActionError = (typeof PROJECT_ACTION_ERRORS)[number];
 
