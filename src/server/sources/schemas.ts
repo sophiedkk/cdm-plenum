@@ -52,3 +52,7 @@ export const putOnListInput = z.object({
   rowIds: z.array(sourceModelId).min(1).max(PUT_ON_LIST_MAX),
 });
 export type PutOnListInput = z.infer<typeof putOnListInput>;
+
+/** "Not the same" on one row of the coverage table, named by its id (EL20). */
+export const unmatchRowInput = z.object({ projectId: idSchema, rowId: z.uuid() });
+export type UnmatchRowInput = z.infer<typeof unmatchRowInput>;

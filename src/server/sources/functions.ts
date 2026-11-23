@@ -20,6 +20,7 @@ import {
   putOnList,
   sourceCoverage,
   suggestSource,
+  unmatchRow,
 } from "./queries.ts";
 import {
   addCkmSourceInput,
@@ -28,6 +29,7 @@ import {
   projectInput,
   putOnListInput,
   sourceModelInput,
+  unmatchRowInput,
 } from "./schemas.ts";
 
 export const listSourceModelsFn = createServerFn({ method: "GET" })
@@ -84,3 +86,8 @@ export const putOnListFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(putOnListInput)
   .handler(({ data, context }) => putOnList(getDb(), context.userId, data));
+
+export const unmatchRowFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(unmatchRowInput)
+  .handler(({ data, context }) => unmatchRow(getDb(), context.userId, data));

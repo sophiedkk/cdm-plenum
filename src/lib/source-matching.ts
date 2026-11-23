@@ -13,6 +13,8 @@ export interface MatchableElement {
   codeSystem: string | null;
   code: string | null;
   nlCmId: string | null;
+  /** The facilitator said "Not the same" to its suggested match: never suggested again. */
+  unmatched?: boolean;
 }
 
 /** One source model and its elements, in the order its source lists them. */
@@ -88,6 +90,7 @@ function row<E extends MatchableElement>(
  * 2. the same NL-CM id in two or more models: a suggested row;
  * 3. names at least `NAME_MATCH_THRESHOLD` alike, at most one element per model, the most
  *    alike pair first: a suggested row.
+ * An `unmatched` element takes part in pass 1 only.
  * Every element ends up in exactly one row; one that matched nothing gets a row of its own.
  * Rows follow the first element they hold, in model order and then element order.
  */
@@ -107,6 +110,7 @@ export function matchSourceElements<E extends MatchableElement>(
     const groups = new Map<string, Entry<E>[]>();
     for (const entry of entries) {
       if (taken.has(entry.order)) continue;
+      if (basis !== "code" && entry.element.unmatched) continue;
       const key = keyOf(entry.element);
       if (key === null) continue;
       const group = groups.get(key);
@@ -129,7 +133,7 @@ export function matchSourceElements<E extends MatchableElement>(
 
   // Pass 3: join the most alike free pairs from different models into clusters, so a cluster
   // never holds two elements of one model.
-  const free = entries.filter((entry) => !taken.has(entry.order));
+  const free = entries.filter((entry) => !taken.has(entry.order) && !entry.element.unmatched);
   const pairs: { a: Entry<E>; b: Entry<E>; score: number }[] = [];
   for (let i = 0; i < free.length; i++) {
     for (let j = i + 1; j < free.length; j++) {

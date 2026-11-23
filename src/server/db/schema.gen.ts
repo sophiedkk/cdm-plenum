@@ -320,6 +320,7 @@ export interface SourceElement {
   position: number;
   source_model_id: string;
   type: string | null;
+  unmatched: Generated<boolean>;
 }
 
 export interface SourceModel {

@@ -36,6 +36,7 @@ import {
   putOnList,
   sourceCoverage,
   suggestSource,
+  unmatchRow,
 } from "./queries.ts";
 import { addFhirSourceInput, otherSourceInput } from "./schemas.ts";
 
@@ -916,5 +917,123 @@ describe("putOnList (EL7, EL20, ADR 0020)", () => {
       error: "source_after_discover",
     });
     expect(await db.selectFrom("element").selectAll().execute()).toEqual([]);
+  });
+});
+
+describe("unmatchRow (EL20)", () => {
+  async function table(projectId: string, userId: string) {
+    const coverage = await sourceCoverage(db, userId, { projectId });
+    if (!coverage.ok) throw new Error(coverage.error);
+    return coverage.value;
+  }
+
+  async function twoProfiles() {
+    const members = await projectWithMembers(db, "discover");
+    const profile = await addProfile(members.projectId, members.facilitator);
+    const model = await addProfile(members.projectId, members.facilitator, MODEL);
+    return { ...members, profile, model };
+  }
+
+  it("splits a mapping match into a row per model and keeps it split", async () => {
+    const { projectId, facilitator, profile, model } = await twoProfiles();
+    const before = await table(projectId, facilitator);
+    const diastolic = before.rows.find((row) => row.key === "NL-CM:12.4.3");
+    if (!diastolic) throw new Error("no diastolic row");
+    const ids = Object.values(diastolic.cells)
+      .flat()
+      .map((element) => element.id);
+
+    expect(await unmatchRow(db, facilitator, { projectId, rowId: diastolic.id })).toEqual({
+      ok: true,
+      value: null,
+    });
+    const after = await table(projectId, facilitator);
+    expect(after.rows).toHaveLength(before.rows.length + 1);
+    const split = after.rows.filter((row) =>
+      Object.values(row.cells)
+        .flat()
+        .some((element) => ids.includes(element.id)),
+    );
+    expect(split.map((row) => [row.basis, Object.keys(row.cells)])).toEqual([
+      ["none", [profile]],
+      ["none", [model]],
+    ]);
+    const logged = await db
+      .selectFrom("activity_log")
+      .select(["action", "target_id"])
+      .where("project_id", "=", projectId)
+      .where("action", "=", "source_match_rejected")
+      .execute();
+    expect(logged).toEqual([{ action: "source_match_rejected", target_id: diastolic.id }]);
+  });
+
+  it("splits a name match", async () => {
+    const { projectId, facilitator } = await twoProfiles();
+    const before = await table(projectId, facilitator);
+    const named = before.rows.filter((row) => row.basis === "name");
+    const first = named[0];
+    if (!first) throw new Error("no name row");
+    const result = await unmatchRow(db, facilitator, { projectId, rowId: first.id });
+    expect(result.ok).toBe(true);
+    const after = await table(projectId, facilitator);
+    expect(after.rows.filter((row) => row.basis === "name")).toHaveLength(named.length - 1);
+  });
+
+  it("refuses a code match, a lone element and a row not in the table", async () => {
+    const { projectId, facilitator } = await twoProfiles();
+    const rows = (await table(projectId, facilitator)).rows;
+    const code = rows.find((row) => row.basis === "code");
+    const lone = rows.find((row) => row.basis === "none");
+    if (!code || !lone) throw new Error("fixture rows missing");
+    expect(await unmatchRow(db, facilitator, { projectId, rowId: code.id })).toEqual({
+      ok: false,
+      error: "source_row_not_suggested",
+    });
+    expect(await unmatchRow(db, facilitator, { projectId, rowId: lone.id })).toEqual({
+      ok: false,
+      error: "source_row_not_suggested",
+    });
+    expect(
+      await unmatchRow(db, facilitator, {
+        projectId,
+        rowId: "0190a6b1-0000-7000-8000-000000000000",
+      }),
+    ).toEqual({ ok: false, error: "source_row_not_found" });
+  });
+
+  it("refuses a row already on the list", async () => {
+    const { projectId, facilitator } = await twoProfiles();
+    const diastolic = (await table(projectId, facilitator)).rows.find(
+      (row) => row.key === "NL-CM:12.4.3",
+    );
+    if (!diastolic) throw new Error("no diastolic row");
+    const listed = await putOnList(db, facilitator, { projectId, rowIds: [diastolic.id] });
+    if (!listed.ok) throw new Error(listed.error);
+    expect(await unmatchRow(db, facilitator, { projectId, rowId: diastolic.id })).toEqual({
+      ok: false,
+      error: "source_row_on_list",
+    });
+  });
+
+  it("refuses a participant, an outsider and the facilitator after discover", async () => {
+    const { projectId, facilitator, participant, outsider } = await twoProfiles();
+    const diastolic = (await table(projectId, facilitator)).rows.find(
+      (row) => row.key === "NL-CM:12.4.3",
+    );
+    if (!diastolic) throw new Error("no diastolic row");
+    const input = { projectId, rowId: diastolic.id };
+    expect(await unmatchRow(db, participant, input)).toEqual({ ok: false, error: "forbidden" });
+    expect(await unmatchRow(db, outsider, input)).toEqual({ ok: false, error: "not_found" });
+    await setPhase(db, projectId, "decide");
+    expect(await unmatchRow(db, facilitator, input)).toEqual({
+      ok: false,
+      error: "source_after_discover",
+    });
+    const unmatched = await db
+      .selectFrom("source_element")
+      .select("id")
+      .where("unmatched", "=", true)
+      .execute();
+    expect(unmatched).toEqual([]);
   });
 });

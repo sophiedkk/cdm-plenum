@@ -17,6 +17,7 @@ import * as m0011 from "./0011_element_marks.ts";
 import * as m0012 from "./0012_source_models.ts";
 import * as m0013 from "./0013_first_look.ts";
 import * as m0014 from "./0014_element_groups.ts";
+import * as m0015 from "./0015_unmatched_source_elements.ts";
 
 export const migrations: Record<string, Migration> = {
   "0001_auth": m0001,
@@ -32,6 +33,7 @@ export const migrations: Record<string, Migration> = {
   "0012_source_models": m0012,
   "0013_first_look": m0013,
   "0014_element_groups": m0014,
+  "0015_unmatched_source_elements": m0015,
 };
 
 export const migrationProvider: MigrationProvider = {

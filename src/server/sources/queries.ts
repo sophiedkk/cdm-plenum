@@ -35,6 +35,7 @@ import {
   type PutOnListInput,
   SOURCE_TITLE_MAX,
   type SourceModelInput,
+  type UnmatchRowInput,
 } from "./schemas.ts";
 
 /** Why a source model action was refused, beyond the project, CKM and FHIR codes. */
@@ -47,6 +48,8 @@ export const SOURCE_ACTION_ERRORS = [
   "source_no_elements",
   "source_after_discover",
   "source_row_not_found",
+  "source_row_not_suggested",
+  "source_row_on_list",
 ] as const;
 export type SourceActionError =
   | CkmActionError
@@ -594,6 +597,8 @@ export async function listSourceModelsWithAuthors(
 export interface StoredSourceElement extends SourceElementRow {
   id: string;
   sourceModelId: string;
+  /** The facilitator said "Not the same" to its suggested match (EL20). */
+  unmatched: boolean;
 }
 
 async function storedElements(
@@ -624,6 +629,7 @@ async function storedElements(
     bindingStrength: row.binding_strength,
     bindingValueSet: row.binding_value_set,
     nlCmId: row.nl_cm_id,
+    unmatched: row.unmatched,
   }));
 }
 
@@ -1030,5 +1036,38 @@ export async function putOnList(
       await log(trx, userId, project.id, "source_model_imported", "source_model", model.id);
     }
     return { ok: true, value: { createdElementIds } };
+  });
+}
+
+/**
+ * "Not the same" (EL20): splits a row matched by mapping or by name into one row per source
+ * element, and keeps those elements out of every later suggested match. Only a suggestion can be
+ * rejected: a code match or a lone element is refused (`source_row_not_suggested`), and so is a
+ * row already on the list (`source_row_on_list`).
+ */
+export async function unmatchRow(
+  db: Kysely<DB>,
+  userId: string,
+  input: UnmatchRowInput,
+): Promise<SourceActionResult<null>> {
+  return inProject(db, userId, input.projectId, { source: ["import"] }, async (trx, project) => {
+    const { rows } = await coverageOf(trx, project.id);
+    const row = rows.find((candidate) => candidate.id === input.rowId);
+    if (!row) return refused("source_row_not_found");
+    if (row.applied || row.basis === "none") return refused("source_row_not_suggested");
+    if (row.onList) return refused("source_row_on_list");
+    await trx
+      .updateTable("source_element")
+      .set({ unmatched: true })
+      .where(
+        "id",
+        "in",
+        Object.values(row.cells)
+          .flat()
+          .map((element) => element.id),
+      )
+      .execute();
+    await log(trx, userId, project.id, "source_match_rejected", "source_element", row.id);
+    return { ok: true, value: null };
   });
 }

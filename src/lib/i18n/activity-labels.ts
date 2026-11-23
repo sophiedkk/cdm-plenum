@@ -64,6 +64,7 @@ const ACTION_LABELS: Record<(typeof ACTIVITY_ACTIONS)[number], () => string> = {
   scope_comment_added: () => m.admin_action_scope_comment_added(),
   source_model_added: () => m.admin_action_source_model_added(),
   source_model_imported: () => m.admin_action_source_model_imported(),
+  source_match_rejected: () => m.admin_action_source_match_rejected(),
   source_suggestion_accepted: () => m.admin_action_source_suggestion_accepted(),
   source_suggestion_dismissed: () => m.admin_action_source_suggestion_dismissed(),
   scope_source_added: () => m.admin_action_scope_source_added(),

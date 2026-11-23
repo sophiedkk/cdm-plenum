@@ -62,6 +62,7 @@ export const ACTIVITY_ACTIONS = [
   "scope_comment_added",
   "source_model_added",
   "source_model_imported",
+  "source_match_rejected",
   "source_suggestion_accepted",
   "source_suggestion_dismissed",
   "scope_source_added",

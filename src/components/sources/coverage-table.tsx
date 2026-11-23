@@ -3,7 +3,8 @@
 
 // The coverage table of the existing models (EL20, ADR 0020): one row per candidate element, one
 // column per model, a check per row and one button that puts the checked rows on the list. A row
-// already on the list keeps its checked box, disabled, so no control moves after a save.
+// already on the list keeps its checked box, disabled, so no control moves after a save. A row
+// matched by mapping or name is a suggestion: "Not the same" splits it into a row per element.
 import { useId, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -32,13 +33,21 @@ function cellDetail(element: StoredSourceElement): string {
   return [element.type, occurs].filter((part) => part !== null && part !== "").join(" ");
 }
 
+/** A match the facilitator decides: by mapping or name, not yet on the list (EL20). */
+function suggested(row: CoverageRowView): boolean {
+  return !row.applied && row.basis !== "none" && !row.onList;
+}
+
 export function CoverageTable({
   coverage,
   putOnList,
+  unmatch,
   onListed,
 }: Readonly<{
   coverage: Coverage;
   putOnList: (rowIds: string[]) => Promise<Outcome<{ createdElementIds: string[] }>>;
+  unmatch: (rowId: string) => Promise<Outcome<null>>;
+  /** After rows were put on the list or split: reload the table. */
   onListed: () => Promise<void> | void;
 }>) {
   const open = coverage.rows.filter((row) => !row.onList);
@@ -69,6 +78,23 @@ export function CoverageTable({
           count === 1 ? m.board_models_listed_one() : m.board_models_listed_many({ count }),
         );
         setUnchecked(new Set());
+        await onListed();
+      } else {
+        toast.error(refusalMessage(outcome.error));
+      }
+    } catch {
+      toast.error(m.common_error_unexpected());
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function split(row: CoverageRowView) {
+    setPending(true);
+    try {
+      const outcome = await unmatch(row.id);
+      if (outcome.ok) {
+        toast.success(m.board_models_not_same_done());
         await onListed();
       } else {
         toast.error(refusalMessage(outcome.error));
@@ -144,6 +170,9 @@ export function CoverageTable({
                               ✓
                             </span>
                             <span className="sr-only">{m.board_models_has_it()}</span>
+                            {element.name !== name && (
+                              <span className="text-xs">{element.name}</span>
+                            )}
                             <span className="text-xs text-muted-foreground">
                               {cellDetail(element)}
                             </span>
@@ -161,7 +190,22 @@ export function CoverageTable({
                   })}
                   {showBasis && (
                     <td className="px-3 py-2.5 text-xs whitespace-nowrap text-muted-foreground">
-                      {models > 1 ? BASIS_LABELS[row.basis]() : BASIS_LABELS.none()}
+                      <span className="flex flex-col items-start">
+                        <span>{models > 1 ? BASIS_LABELS[row.basis]() : BASIS_LABELS.none()}</span>
+                        {suggested(row) && (
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="h-auto px-0"
+                            aria-label={m.board_models_not_same_label({ name })}
+                            disabled={pending}
+                            onClick={() => void split(row)}
+                          >
+                            {m.board_models_not_same()}
+                          </Button>
+                        )}
+                      </span>
                     </td>
                   )}
                 </tr>

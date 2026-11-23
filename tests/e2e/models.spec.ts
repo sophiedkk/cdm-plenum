@@ -1,11 +1,15 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-import { suggestSource } from "../../src/server/sources/queries.ts";
+import type { FhirClient, FhirResult } from "../../src/server/fhir/client.ts";
+import { type FhirStructure, parseStructureDefinition } from "../../src/server/fhir/parse.ts";
+import { fhirFixtureJson } from "../../src/server/fhir/test-package.ts";
+import { addFhirSource, suggestSource } from "../../src/server/sources/queries.ts";
 // Existing models in English and Dutch (EL7, EL12, EL20, ADR 0020): the facilitator opens the page
 // from the Overview's first item, adds an archetype from the CKM stub, unchecks one row of the
-// coverage table and puts the rest on the list, and accepts a participant's suggestion. A
-// participant never reaches the page. Every state is axe-clean (Q-ACC-1, Q-I18N-1).
+// coverage table and puts the rest on the list, and accepts a participant's suggestion. With two
+// FHIR profiles of the synthetic package, "Not the same" splits a suggested match. A participant
+// never reaches the page. Every state is axe-clean (Q-ACC-1, Q-I18N-1).
 import { signInTo, userIdOf } from "./board-seed.ts";
 import {
   BROWSER_LOCALE,
@@ -24,6 +28,25 @@ import {
 function fill(template: string, values: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key]));
 }
+
+const FHIR_PACKAGE = "example.fhir.bp";
+const FHIR_VERSION = "1.0.0";
+const FHIR_PROFILES = {
+  "http://example.org/fhir/StructureDefinition/example-BloodPressure":
+    "StructureDefinition-example-BloodPressure.json",
+  "http://example.org/fhir/StructureDefinition/BloodPressureModel":
+    "StructureDefinition-BloodPressureModel.json",
+} as const;
+
+/** Serves the two profiles of the synthetic package, so no spec calls the registry. */
+const fixtureFhir: Pick<FhirClient, "structureDefinition"> = {
+  async structureDefinition(_name, _version, url): Promise<FhirResult<FhirStructure>> {
+    const file = FHIR_PROFILES[url as keyof typeof FHIR_PROFILES];
+    const parsed = parseStructureDefinition(fhirFixtureJson(`package/${file}`));
+    if (!parsed.ok) throw new Error("fixture did not parse");
+    return { kind: "ok", value: parsed.value };
+  },
+};
 
 for (const locale of ["en", "nl"] as const satisfies Locale[]) {
   test.describe(`existing models in ${locale}`, () => {
@@ -119,6 +142,42 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(
         page.getByRole("link", { name: text.projects_check_models_review }),
       ).toBeVisible();
+    });
+
+    test("the facilitator splits a suggested match with Not the same", async ({ page, db }) => {
+      const project = await seedProject(db, "discover");
+      const facilitator = project.facilitator.userId;
+      for (const url of Object.keys(FHIR_PROFILES)) {
+        const added = await addFhirSource(db, fixtureFhir as FhirClient, facilitator, {
+          projectId: project.projectId,
+          packageName: FHIR_PACKAGE,
+          version: FHIR_VERSION,
+          url,
+        });
+        if (!added.ok) throw new Error(added.error);
+      }
+
+      await signInTo(
+        page,
+        project.facilitator.email,
+        locale,
+        `/projects/${project.projectId}/models`,
+      );
+      const table = page.getByRole("table", { name: text.board_models_coverage_title });
+      const notSame = table.getByRole("button", {
+        name: new RegExp(`^${text.board_models_not_same}: `),
+      });
+      await expectHydrated(notSame.first());
+      const rows = await table.getByRole("checkbox").count();
+      const suggestions = await notSame.count();
+      expect(suggestions).toBeGreaterThan(0);
+      await expectAxeClean(page);
+
+      await notSame.first().click();
+      await expect(page.getByText(text.board_models_not_same_done)).toBeVisible();
+      await expect(table.getByRole("checkbox")).toHaveCount(rows + 1);
+      await expect(notSame).toHaveCount(suggestions - 1);
+      await expectAxeCleanAfterToasts(page);
     });
   });
 }

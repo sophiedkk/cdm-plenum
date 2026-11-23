@@ -15,7 +15,10 @@ the project uses [Semantic Versioning](https://semver.org/).
   profiles from a package, and other sources such as a form, then compares
   them in one table with a column per model. Check the elements you want and
   choose "Put on the list"; each becomes one element linked to every model
-  that has it. Participants' suggested sources wait on the same page to be
+  that has it. Elements with the same code share a row. Elements matched by
+  a known mapping or a similar name share a row as a suggestion, with each
+  model's own name shown; choose "Not the same" to split it into a row per
+  model. Participants' suggested sources wait on the same page to be
   accepted or dismissed. The Overview's first discover item opens the page.
 - First look: once elements from existing models are on the list, each
   participant goes through them one at a time and answers whether the element

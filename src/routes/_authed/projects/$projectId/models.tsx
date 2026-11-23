@@ -27,6 +27,7 @@ import {
   addOtherSourceFn,
   dismissSuggestionFn,
   putOnListFn,
+  unmatchRowFn,
 } from "@/server/sources/functions";
 import {
   sourceCoverageQueryOptions,
@@ -70,6 +71,7 @@ function ExistingModels() {
   const accept = useServerFn(acceptSuggestionFn);
   const dismiss = useServerFn(dismissSuggestionFn);
   const putOnList = useServerFn(putOnListFn);
+  const unmatch = useServerFn(unmatchRowFn);
   if (!models.ok || !coverage.ok) return <NotFoundState />;
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: sourceKeys.all(projectId) });
@@ -157,6 +159,7 @@ function ExistingModels() {
           <CoverageTable
             coverage={coverage.value}
             putOnList={(rowIds) => putOnList({ data: { projectId, rowIds } })}
+            unmatch={(rowId) => unmatch({ data: { projectId, rowId } })}
             onListed={async () => {
               await Promise.all([
                 refresh(),
