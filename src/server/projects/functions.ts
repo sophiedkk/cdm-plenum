@@ -22,12 +22,14 @@ import {
   setGroupNamesVisible,
   setRaterGroup,
 } from "./queries.ts";
+import { phaseRecap } from "./recap.ts";
 import {
   createGroupInput,
   createProjectInput,
   groupInput,
   groupNamesVisibleInput,
   movePhaseInput,
+  phaseRecapInput,
   projectInput,
   raterGroupInput,
   renameGroupInput,
@@ -118,3 +120,8 @@ export const movePhaseFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(movePhaseInput)
   .handler(({ data, context }) => movePhase(getDb(), context.userId, data));
+
+export const phaseRecapFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(phaseRecapInput)
+  .handler(({ data, context }) => phaseRecap(getDb(), context.userId, data.projectId, data.phase));

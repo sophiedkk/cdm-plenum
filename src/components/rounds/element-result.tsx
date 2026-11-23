@@ -19,9 +19,11 @@ import {
 } from "@/components/ui/table";
 import { m } from "@/i18n/messages";
 import type { ElementResult, Outcome } from "@/lib/consensus";
+import type { RoundGroup } from "@/server/rounds/groups";
 import type { GroupResult } from "@/server/rounds/round";
 import { MiniDistribution, shownGroups } from "./distribution";
 import { formatNumber, formatPercent } from "./format";
+import { GroupRows, headingBefore } from "./group-rows";
 import { OutcomeBadge } from "./round-badges";
 
 /** The distribution of the scores as a table; each count has a bar of the same length. */
@@ -176,6 +178,8 @@ export interface ResultRowElement {
   outcome: Outcome;
   result: ElementResult;
   groups: GroupResult[];
+  /** The element's group of elements (EL18), for the headings (DE19). */
+  group: RoundGroup | null;
 }
 
 const COLUMNS = 6;
@@ -236,7 +240,10 @@ function ResultRow({ element }: Readonly<{ element: ResultRowElement }>) {
   );
 }
 
-/** The results of a closed round, one row per element, for every member (DE5, Q-USE-1). */
+/**
+ * The results of a closed round, one row per element, for every member (DE5, Q-USE-1), under
+ * the group headings in the order the server gives (DE19).
+ */
 export function ResultsTable({ elements }: Readonly<{ elements: readonly ResultRowElement[] }>) {
   return (
     <Table>
@@ -254,8 +261,10 @@ export function ResultsTable({ elements }: Readonly<{ elements: readonly ResultR
         </TableRow>
       </TableHeader>
       <TableBody>
-        {elements.map((element) => (
-          <ResultRow key={element.id} element={element} />
+        {elements.map((element, index) => (
+          <GroupRows key={element.id} columns={COLUMNS} heading={headingBefore(elements, index)}>
+            <ResultRow element={element} />
+          </GroupRows>
         ))}
       </TableBody>
     </Table>

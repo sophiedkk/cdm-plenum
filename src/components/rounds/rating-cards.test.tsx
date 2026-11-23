@@ -21,7 +21,7 @@ afterEach(() => {
 });
 
 function element(id: string, name: string, own: MyElement["own"]): MyElement {
-  return { id, name, description: "", own, flags: [], previous: null };
+  return { id, name, description: "", group: null, own, flags: [], previous: null };
 }
 
 const ELEMENTS: MyElement[] = [

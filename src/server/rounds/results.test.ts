@@ -153,7 +153,7 @@ describe("closing a realistic round (DE5)", () => {
 
   it("counts a participant who has not started, and leaves out one who joined after closing", async () => {
     const { facilitator, projectId, roundId } = await realisticRound();
-    await joinedParticipant(db, facilitator, projectId, "Nursing", "n5");
+    const n5 = await joinedParticipant(db, facilitator, projectId, "Nursing", "n5");
     let rate = ok(await responseRate(db, facilitator, { projectId, roundId }, { now: new Date() }));
     expect(rate.total).toEqual({ invited: 11, started: 10, completed: 9 });
     const closedAt = new Date(Date.now() + 2 * 86_400_000);
@@ -161,7 +161,7 @@ describe("closing a realistic round (DE5)", () => {
     await db
       .updateTable("member")
       .set({ createdAt: new Date(closedAt.getTime() + 1000) })
-      .where("userId", "=", "user-n5")
+      .where("userId", "=", n5)
       .execute();
     rate = ok(await responseRate(db, facilitator, { projectId, roundId }, { now: new Date() }));
     expect(rate.total.invited).toBe(10);
@@ -226,5 +226,49 @@ describe("refusals of results and response rate", () => {
       ok: false,
       error: "not_found",
     });
+  });
+});
+
+describe("results in groups (DE19)", () => {
+  it("lists the elements under their groups in the facilitator's order, the same for everyone", async () => {
+    const { facilitator, projectId, roundId, raters, elements } = await realisticRound();
+    const groups = await db
+      .selectFrom("element_group")
+      .select(["id", "prompt", "position"])
+      .where("project_id", "=", projectId)
+      .where("prompt", "in", ["recorded", "method"])
+      .orderBy("position")
+      .execute();
+    const groupOf = (prompt: string) => groups.find((group) => group.prompt === prompt)?.id ?? null;
+    const place = async (name: string, prompt: string) =>
+      db
+        .updateTable("element")
+        .set({ group_id: groupOf(prompt) })
+        .where("id", "=", elements.get(name) ?? "")
+        .execute();
+    await place("Cuff size", "method");
+    await place("Measurement location", "recorded");
+    await place("Systolic pressure", "recorded");
+    ok(await closeRound(db, facilitator, { projectId, roundId }, { now: inDays(2) }));
+
+    // Each group's elements in the round's order, the groups by position, the ungrouped last.
+    const recorded = ["Systolic pressure", "Measurement location"];
+    const byGroup: Record<string, string[]> = { recorded, method: ["Cuff size"] };
+    const expected = [
+      ...groups.flatMap((group) => byGroup[group.prompt ?? ""] ?? []),
+      "Body position",
+      "Device serial number",
+    ];
+    for (const reader of [facilitator, raters[0] ?? "", raters[5] ?? ""]) {
+      const results = ok(
+        await roundResults(db, reader, { projectId, roundId }, { now: new Date() }),
+      );
+      expect(results.elements.map((element) => element.name)).toEqual(expected);
+      expect(results.elements.map((element) => element.group?.prompt ?? null)).toEqual(
+        expected.map((name) =>
+          name === "Cuff size" ? "method" : recorded.includes(name) ? "recorded" : null,
+        ),
+      );
+    }
   });
 });

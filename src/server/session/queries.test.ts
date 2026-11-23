@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { grantAppRole } from "../admin/app-roles.ts";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
-import { insertUser } from "../test-fixtures.ts";
+import { emailOf, insertUser } from "../test-fixtures.ts";
 import { sessionUser } from "./queries.ts";
 
 let db: Kysely<DB>;
@@ -26,22 +26,22 @@ describe("sessionUser", () => {
     expect(await sessionUser(db, id)).toEqual({
       id,
       name: "",
-      email: "plain@example.test",
+      email: emailOf(id),
       appRoles: [],
     });
   });
 
   it("returns the application roles granted to the user's address, in a fixed order", async () => {
     const id = await insertUser(db, "both");
-    await grantAppRole(db, "both@example.test", "facilitator");
-    await grantAppRole(db, "both@example.test", "administrator");
+    await grantAppRole(db, emailOf(id), "facilitator");
+    await grantAppRole(db, emailOf(id), "administrator");
     expect((await sessionUser(db, id))?.appRoles).toEqual(["administrator", "facilitator"]);
   });
 
   it("does not pick up the roles of another address", async () => {
     const id = await insertUser(db, "one");
-    await insertUser(db, "two");
-    await grantAppRole(db, "two@example.test", "administrator");
+    const two = await insertUser(db, "two");
+    await grantAppRole(db, emailOf(two), "administrator");
     expect((await sessionUser(db, id))?.appRoles).toEqual([]);
   });
 

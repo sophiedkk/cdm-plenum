@@ -9,6 +9,8 @@ import { adjacentPhase, isProjectPhase, type ProjectPhase } from "@/lib/project-
 import { mayRate, RATER_ROLES } from "@/lib/project-roles";
 import type { OverviewRound, ProjectOverview } from "@/lib/project-tasks";
 import type { DB } from "../db/schema.gen.ts";
+import { lookElements } from "../elements/first-look.ts";
+import { checkProgress } from "../elements/groups.ts";
 import { ownRatingCode } from "../rounds/rater-link.ts";
 import { statusOf } from "../rounds/round.ts";
 import { done, type ProjectResult, readProject, refused, withProject } from "./access.ts";
@@ -109,11 +111,37 @@ export async function projectOverview(
       .where("closed_at", "is not", null)
       .orderBy("number", "desc")
       .executeTakeFirst();
+    const looked = (await lookElements(reader, project.id)).map((element) => element.id);
+    const answered =
+      looked.length === 0
+        ? 0
+        : await count(
+            reader
+              .selectFrom("first_look_answer")
+              .innerJoin("member", "member.id", "first_look_answer.member_id")
+              .select((eb) => eb.fn.countAll<string>().as("count"))
+              .where("first_look_answer.element_id", "in", looked)
+              .where("member.organizationId", "=", project.id)
+              .where("member.userId", "=", userId)
+              .executeTakeFirst(),
+          );
     return done({
       phase,
       role: project.role,
       elements,
       ownElements,
+      firstLook: { total: looked.length, answered },
+      groupCheck: {
+        asked: (await checkProgress(reader, project.id)).asked,
+        done:
+          (await reader
+            .selectFrom("group_check_done")
+            .innerJoin("member", "member.id", "group_check_done.member_id")
+            .select("group_check_done.member_id")
+            .where("member.organizationId", "=", project.id)
+            .where("member.userId", "=", userId)
+            .executeTakeFirst()) !== undefined,
+      },
       round: await runningRound(reader, project.id, project.role, userId, deps.now),
       lastClosedRoundId: lastClosed?.id ?? null,
     });

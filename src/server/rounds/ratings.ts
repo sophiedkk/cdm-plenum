@@ -5,10 +5,12 @@
 // them (DE7, DE8), and the facilitator's view by participant when the round allows it (DE4).
 // Ratings carry the rating code only; rater-link.ts is the one place that resolves it (ADR 0005).
 import type { Kysely } from "kysely";
+import { groupOrder } from "@/lib/element-groups";
 import type { DB } from "../db/schema.gen.ts";
 import { log, ownGroupId } from "../projects/queries.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
 import { type OwnFlag, ownFlags } from "./flags.ts";
+import { groupsOf, inGroupOrder, type RoundGroup } from "./groups.ts";
 import { ownRatingCode, type ParticipantRatings, ratingsByParticipantQuery } from "./rater-link.ts";
 import {
   type ElementOutcome,
@@ -147,6 +149,8 @@ export interface MyElement {
   id: string;
   name: string;
   description: string;
+  /** The element's group; null for an element without one, listed after the groups. */
+  group: RoundGroup | null;
   own: OwnRating;
   /** The participant's own flags on the element's details, in kind order (DE17). */
   flags: OwnFlag[];
@@ -238,15 +242,26 @@ export async function myRatings(
             }
           : null;
     }
-    const elements = (await roundElements(trx, round.id)).map((element) => ({
+    const rows = await roundElements(trx, round.id);
+    const groupOf = await groupsOf(
+      trx,
+      rows.map((element) => element.id),
+    );
+    const elements = rows.map((element) => ({
       id: element.id,
       name: element.name,
       description: element.description,
+      group: groupOf.get(element.id) ?? null,
       own: own.get(element.id) ?? NOT_RATED,
       flags: flags.get(element.id) ?? [],
       previous: previous?.(element.id) ?? null,
     }));
-    return done({ round: summaryOf(round, deps.now), elements });
+    // NOTE: DE19. The groups come in an order of the rater's own, the same all round long: the
+    // seed is the rating code, or the user for a member without one yet, and the round.
+    return done({
+      round: summaryOf(round, deps.now),
+      elements: inGroupOrder(elements, (ids) => groupOrder(ids, `${code ?? userId}:${round.id}`)),
+    });
   });
 }
 

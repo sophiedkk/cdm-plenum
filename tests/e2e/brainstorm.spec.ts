@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The private-first brainstorm in English and Dutch (EL13 to EL15, ADR 0012, ADR 0018): in a new
-// project participant A adds elements under two chosen questions in the one quick-add form and
-// sees only their own, grouped by question; participant B sees
-// none of them; the facilitator sees both and reveals the board; then both see every element
-// without authors (EL2), and typing a similar name shows a hint that opens the element on the
-// board. Every page and dialog is axe-clean (Q-ACC-1, Q-I18N-1).
+// The private-first brainstorm board in English and Dutch (EL13 to EL15, EL23, ADR 0012, ADR
+// 0020): in a new project participant A adds elements in two question columns and sees only
+// their own; participant B sees none of them, only a count per column; the facilitator sees both
+// and reveals the board; then both see every element without authors (EL2), and typing a similar
+// name in a column shows a hint that opens the element on the board. Every page and dialog is
+// axe-clean (Q-ACC-1, Q-I18N-1).
 import { randomBytes } from "node:crypto";
 import type { Browser, Page } from "@playwright/test";
 import { seedScope } from "./board-seed.ts";
@@ -69,39 +69,25 @@ async function pageFor(
   return { page, bodies };
 }
 
-/** The brainstorm's one quick-add form. */
-function quickAddForm(page: Page, text: Text) {
-  return page.getByRole("form", { name: text.board_brainstorm_add_title });
+/** The add form at the foot of a question's column. */
+function columnForm(page: Page, text: Text, question: string) {
+  return page.getByRole("form", { name: fill(text.board_column_add_label, { question }) });
 }
 
-/** Chooses a question in the quick-add form by its short name. */
-async function chooseQuestion(page: Page, text: Text, label: string): Promise<void> {
-  const group = quickAddForm(page, text).getByRole("group", {
-    name: text.board_quick_question_label,
-  });
-  await expectHydrated(group.getByRole("radio").first());
-  await group.getByText(label, { exact: true }).click();
-  await expect(group.getByRole("radio", { name: label })).toBeChecked();
-}
-
-/** Adds an element under a chosen question with Enter, as a participant does. */
-async function quickAdd(
-  page: Page,
-  text: Text,
-  question: { label: string; full: string },
-  name: string,
-  line = "",
-): Promise<void> {
-  await chooseQuestion(page, text, question.label);
-  const form = quickAddForm(page, text);
-  const field = form.getByLabel(text.board_quick_name_label, { exact: true });
+/** Adds an element in a question's column with Enter, as a participant does. */
+async function quickAdd(page: Page, text: Text, question: string, name: string): Promise<void> {
+  const field = columnForm(page, text, question).getByRole("textbox");
+  await expectHydrated(field);
   await field.fill(name);
-  if (line !== "") await form.getByLabel(text.board_quick_description_label).fill(line);
   await field.press("Enter");
-  // The form empties and the element shows in the list of that question.
+  // The field empties, keeps the focus, and the element shows under "Yours" in that column.
   await expect(field).toHaveValue("");
+  await expect(field).toBeFocused();
   await expect(
-    page.getByRole("list", { name: question.full }).getByText(name, { exact: true }),
+    page
+      .getByRole("region", { name: question })
+      .getByRole("list", { name: text.board_column_yours })
+      .getByText(name, { exact: true }),
   ).toBeVisible();
 }
 
@@ -114,8 +100,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
   test.describe(`brainstorm in ${locale}`, () => {
     test.use({ locale: BROWSER_LOCALE[locale], reducedMotion: "reduce" });
     const text = MESSAGES[locale];
-    const recorded = { label: text.board_prompt_short_recorded, full: text.board_prompt_recorded };
-    const method = { label: text.board_prompt_short_method, full: text.board_prompt_method };
+    const recorded = text.board_prompt_recorded;
+    const method = text.board_prompt_method;
 
     test("private first, then the facilitator reveals the board", async ({ db, browser }) => {
       test.setTimeout(180_000);
@@ -139,24 +125,20 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(
         a.page.getByRole("heading", { level: 2, name: text.board_brainstorm_title }),
       ).toBeVisible();
-      // The steps show the phase only; the way on is back to the project home.
+      // Only the done scope step links, to its recap; the way on is back to the project home.
       await expect(
         a.page.getByRole("list", { name: text.projects_steps_label }).getByRole("link"),
-      ).toHaveCount(0);
+      ).toHaveCount(1);
       await expect(a.page.getByRole("link", { name: text.projects_back_home })).toHaveAttribute(
         "href",
         `/projects/${project.projectId}`,
       );
-      await expect(a.page.getByText(text.board_brainstorm_private_note)).toBeVisible();
-      await expect(
-        a.page.getByRole("heading", { name: fill(text.board_brainstorm_yours, { count: 0 }) }),
-      ).toBeVisible();
+      await expect(a.page.getByText(text.board_brainstorm_purpose_private)).toBeVisible();
+      await expect(a.page.getByText(fill(text.board_strip_own, { count: 0 }))).toBeVisible();
       await expectAxeCleanInBothThemes(a.page);
       await quickAdd(a.page, text, recorded, "Systolic pressure");
-      await quickAdd(a.page, text, method, "Cuff size", "The size of the cuff used.");
-      await expect(
-        a.page.getByRole("heading", { name: fill(text.board_brainstorm_yours, { count: 2 }) }),
-      ).toBeVisible();
+      await quickAdd(a.page, text, method, "Cuff size");
+      await expect(a.page.getByText(fill(text.board_strip_own, { count: 2 }))).toBeVisible();
       // The task card on the home counts the participant's own elements.
       await a.page.getByRole("link", { name: text.projects_back_home }).click();
       await expect(
@@ -170,11 +152,22 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const b = await pageFor(browser, locale, second);
       await b.page.goto(brainstorm);
       await quickAdd(b.page, text, recorded, "Diastolic pressure");
+      // B sees A's elements only as a count per column.
+      await expect(
+        b.page
+          .getByRole("region", { name: recorded })
+          .getByText(fill(text.board_column_hidden, { count: 1 })),
+      ).toBeVisible();
+      await expect(
+        b.page.getByText(fill(text.board_strip_people, { contributors: 2, total: 2 })),
+      ).toBeVisible();
+      // The strip counts only the others' hidden elements, as the columns do, and B's own.
+      await expect(
+        b.page.getByText(fill(text.board_column_hidden, { count: 2 }), { exact: true }),
+      ).toBeVisible();
+      await expect(b.page.getByText(fill(text.board_strip_own, { count: 1 }))).toBeVisible();
       // Before the reveal a similar name shows no hint.
-      await chooseQuestion(b.page, text, text.board_prompt_short_patient_state);
-      const bName = quickAddForm(b.page, text).getByLabel(text.board_quick_name_label, {
-        exact: true,
-      });
+      const bName = columnForm(b.page, text, text.board_prompt_patient_state).getByRole("textbox");
       await bName.fill("Systolic");
       await expect(b.page.getByRole("list", { name: text.board_hints_list_label })).toHaveCount(0);
       await bName.fill("");
@@ -235,9 +228,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
       // Typing a similar name shows a hint that opens the element on the board.
       await b.page.goto(brainstorm);
-      await expect(b.page.getByText(text.board_brainstorm_shared_note)).toBeVisible();
-      const form = quickAddForm(b.page, text);
-      const name = form.getByLabel(text.board_quick_name_label, { exact: true });
+      await expect(b.page.getByText(text.board_brainstorm_purpose_shared)).toBeVisible();
+      await expect(
+        b.page
+          .getByRole("region", { name: recorded })
+          .getByRole("list", { name: text.board_column_from_others })
+          .getByText("Systolic pressure"),
+      ).toBeVisible();
+      const form = columnForm(b.page, text, text.board_prompt_patient_state);
+      const name = form.getByRole("textbox");
       await expectHydrated(name);
       await name.fill("systolic");
       const hints = form.getByRole("list", { name: text.board_hints_list_label });

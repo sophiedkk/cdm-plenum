@@ -36,3 +36,8 @@ export function phaseSteps(
     return { phase, state: index === at + 1 ? "next" : "later" };
   });
 }
+
+/** Whether `phase` is done while the project is in `current`: the project moved past it (PR13). */
+export function phaseDone(current: ProjectPhase, phase: ProjectPhase): boolean {
+  return PROJECT_PHASES.indexOf(phase) < PROJECT_PHASES.indexOf(current);
+}

@@ -129,7 +129,9 @@ export function RevealButton({
             <TableBody>
               {participants.map((participant) => (
                 <TableRow key={participant.memberId}>
-                  <TableCell>{participant.name || participant.email}</TableCell>
+                  <TableCell className="whitespace-normal break-all">
+                    {participant.name || participant.email}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{participant.elements}</TableCell>
                 </TableRow>
               ))}

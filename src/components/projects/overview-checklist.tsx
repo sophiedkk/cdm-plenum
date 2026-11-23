@@ -30,6 +30,9 @@ function ItemLink({
     | "/projects/$projectId/scope"
     | "/projects/$projectId/members"
     | "/projects/$projectId/board"
+    | "/projects/$projectId/brainstorm"
+    | "/projects/$projectId/models"
+    | "/projects/$projectId/grouping"
     | "/projects/$projectId/rounds/new"
     | "/projects/$projectId/rounds/$roundId";
   projectId: string;
@@ -98,6 +101,15 @@ function count(one: () => string, many: (input: { count: number }) => string, va
   return value === 1 ? one() : many({ count: value });
 }
 
+/** A discover part: its name in bold, then where it stands (ADR 0020 prototype). */
+function part(title: string, detail: ReactNode): ReactNode {
+  return (
+    <>
+      <strong className="font-semibold">{title}</strong> {detail}
+    </>
+  );
+}
+
 function itemView(
   item: ChecklistItem,
   projectId: string,
@@ -141,28 +153,71 @@ function itemView(
               </ItemLink>
             ),
           };
-    case "contributions":
-      if (item.participants === 0)
-        return { text: m.projects_check_no_participants(), action: invite };
+    case "models":
       return {
-        text: m.projects_check_contributions({
-          contributors: item.contributors,
-          participants: item.participants,
-        }),
+        text: part(
+          m.projects_check_models_title(),
+          item.done
+            ? item.models === 1
+              ? m.projects_check_models_one({ elements: item.elements })
+              : m.projects_check_models_many({ models: item.models, elements: item.elements })
+            : m.projects_check_models_none(),
+        ),
+        action: (
+          <ItemLink to="/projects/$projectId/models" projectId={projectId}>
+            {item.done ? m.projects_check_models_review() : m.projects_check_models_start()}
+          </ItemLink>
+        ),
+      };
+    case "first_look":
+      if (item.participants === 0)
+        return {
+          text: part(m.projects_check_first_look_title(), m.projects_check_no_participants()),
+          action: invite,
+        };
+      return {
+        text: part(
+          m.projects_check_first_look_title(),
+          item.total === 0
+            ? m.projects_check_first_look_empty()
+            : m.projects_check_first_look({
+                finished: item.finished,
+                participants: item.participants,
+              }),
+        ),
         action: item.remind && slots.remind ? <RemindButton remind={slots.remind} /> : undefined,
       };
-    case "reveal":
-      return item.done
-        ? { text: m.projects_check_revealed() }
-        : { text: m.projects_check_reveal(), action: slots.reveal };
-    case "duplicates":
-      return item.done
-        ? { text: m.projects_check_duplicates_none() }
+    case "contributions":
+      return {
+        text: part(
+          m.projects_check_add_title(),
+          m.projects_check_contributions({
+            contributors: item.contributors,
+            participants: item.participants,
+          }),
+        ),
+        action: (
+          <ItemLink to="/projects/$projectId/brainstorm" projectId={projectId}>
+            {m.projects_check_add_action()}
+          </ItemLink>
+        ),
+      };
+    case "cleanup":
+      if (item.revealed === false)
+        return {
+          text: part(m.projects_check_cleanup_title(), m.projects_check_reveal()),
+          action: slots.reveal,
+        };
+      return item.duplicates === 0
+        ? { text: part(m.projects_check_cleanup_title(), m.projects_check_duplicates_none()) }
         : {
-            text: count(
-              m.projects_check_duplicates_one,
-              m.projects_check_duplicates_many,
-              item.count,
+            text: part(
+              m.projects_check_cleanup_title(),
+              count(
+                m.projects_check_duplicates_one,
+                m.projects_check_duplicates_many,
+                item.duplicates,
+              ),
             ),
             action: (
               <ItemLink
@@ -174,23 +229,23 @@ function itemView(
               </ItemLink>
             ),
           };
-    case "compare":
-      return item.done
-        ? {
-            text: count(m.projects_check_compared_one, m.projects_check_compared_many, item.linked),
-          }
-        : {
-            text: m.projects_check_compare(),
-            action: (
-              <ItemLink
-                to="/projects/$projectId/board"
-                projectId={projectId}
-                search={{ ckm: true }}
-              >
-                {m.board_ckm_search()}
-              </ItemLink>
-            ),
-          };
+    case "grouping":
+      return {
+        text: part(
+          m.projects_check_group_title(),
+          item.asked
+            ? m.projects_check_group_asked({
+                checked: item.checked,
+                participants: item.participants,
+              })
+            : m.projects_check_group_todo(),
+        ),
+        action: (
+          <ItemLink to="/projects/$projectId/grouping" projectId={projectId}>
+            {m.projects_check_group_action()}
+          </ItemLink>
+        ),
+      };
     case "round":
       return roundView(item, projectId);
     case "undecided":

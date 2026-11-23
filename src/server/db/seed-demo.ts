@@ -6,13 +6,17 @@
 // services, so the data obeys the same rules as real use. Invented people and `example.test`
 // addresses only. Refuses to run with NODE_ENV=production.
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import pg from "pg";
 import type { ElementPrompt } from "@/lib/brainstorm";
 import type { ProjectPhase } from "@/lib/project-phases";
 import { grantAppRole, normalizeEmail } from "../admin/app-roles.ts";
+import type { CkmClient } from "../ckm/client.ts";
+import { parseArchetypeXml } from "../ckm/parse.ts";
 import { revealBoard } from "../elements/brainstorm.ts";
+import { answerFirstLook } from "../elements/first-look.ts";
 import { addElement, addElementComment, setElementValues } from "../elements/queries.ts";
 import { acceptInvitationsOnSignIn } from "../invitations/acceptance.ts";
 import { invite } from "../invitations/queries.ts";
@@ -21,6 +25,7 @@ import { createProject } from "../projects/queries.ts";
 import { closeRound, createRound, openRound } from "../rounds/queries.ts";
 import { saveRating } from "../rounds/ratings.ts";
 import { addScopeComment, addScopeSource, updateScope } from "../scope/queries.ts";
+import { addCkmSource, putOnList, sourceCoverage } from "../sources/queries.ts";
 import type { DB } from "./schema.gen.ts";
 
 const DEFAULT_FACILITATOR = "facilitator@example.test";
@@ -156,6 +161,56 @@ export const DEMO_BRAINSTORM: { by: number; element: DemoElement }[] = [
   { by: 5, element: brainstormed("Exertion", "patient_state", "At rest or after exercise.") },
   { by: 5, element: brainstormed("Clinical setting", "context", "Ward, outpatient or home.") },
 ];
+
+/** The archetype the discover demo starts from, stored in tests/fixtures/ckm (no network). */
+export const DEMO_ARCHETYPE = {
+  cid: "1013.1.4295",
+  archetypeId: "openEHR-EHR-OBSERVATION.pulse.v2",
+  name: "Pulse/Heart beat",
+  revision: "2.0.9",
+  file: "pulse.v2.xml",
+} as const;
+
+/** A CKM client that answers from the stored archetype only, so the seed never calls CKM. */
+function storedCkm(): CkmClient {
+  return {
+    async searchArchetypes() {
+      return { kind: "ok", value: [] };
+    },
+    async archetypeElements(cid) {
+      if (cid !== DEMO_ARCHETYPE.cid) return { kind: "refused", status: 404 };
+      const xml = readFileSync(
+        new URL(`../../../tests/fixtures/ckm/${DEMO_ARCHETYPE.file}`, import.meta.url),
+        "utf8",
+      );
+      const parsed = parseArchetypeXml(xml);
+      if (!parsed.ok) return { kind: "unusable" };
+      return {
+        kind: "ok",
+        value: {
+          cid: DEMO_ARCHETYPE.cid,
+          archetypeId: DEMO_ARCHETYPE.archetypeId,
+          name: DEMO_ARCHETYPE.name,
+          status: "PUBLISHED",
+          revision: DEMO_ARCHETYPE.revision,
+          originalLanguage: parsed.value.originalLanguage,
+          elements: parsed.value.elements,
+        },
+      };
+    },
+  };
+}
+
+/**
+ * The first look of the discover demo: how many of the elements from the archetype each of the
+ * first participants answered, in order; the answers cycle so the counts differ per element.
+ */
+export const DEMO_FIRST_LOOK = [
+  { by: 0, count: Infinity },
+  { by: 1, count: Infinity },
+  { by: 2, count: 4 },
+];
+const FIRST_LOOK_CYCLE = ["belongs", "belongs", "not_sure", "belongs", "not_belongs"] as const;
 
 function brainstormed(name: string, prompt: ElementPrompt, description: string): DemoElement {
   return { name, prompt, description, dataType: null, cardinality: null };
@@ -447,7 +502,10 @@ async function seedScope(db: Kysely<DB>, facilitatorId: string, now: Date): Prom
   return project.projectId;
 }
 
-/** Discover phase, private step: five participants have brainstormed; the board is not revealed. */
+/**
+ * Discover phase, private step: the facilitator started from the pulse archetype, three
+ * participants took the first look, five have brainstormed; the board is not revealed.
+ */
 async function seedDiscover(db: Kysely<DB>, facilitatorId: string, now: Date): Promise<string> {
   const project = await startProject(
     db,
@@ -462,6 +520,30 @@ async function seedDiscover(db: Kysely<DB>, facilitatorId: string, now: Date): P
     now,
   );
   await nextPhase(db, facilitatorId, project.projectId, "scope");
+  const { projectId } = project;
+  must(
+    "add archetype",
+    await addCkmSource(db, storedCkm(), facilitatorId, { projectId, cid: DEMO_ARCHETYPE.cid }),
+  );
+  const coverage = must("coverage", await sourceCoverage(db, facilitatorId, { projectId }));
+  const { createdElementIds } = must(
+    "put on the list",
+    await putOnList(db, facilitatorId, { projectId, rowIds: coverage.rows.map((row) => row.id) }),
+  );
+  for (const { by, count } of DEMO_FIRST_LOOK) {
+    const raterId = project.raterIds[by];
+    if (!raterId) continue;
+    for (const [index, elementId] of createdElementIds.slice(0, count).entries()) {
+      must(
+        "first look",
+        await answerFirstLook(db, raterId, {
+          projectId,
+          elementId,
+          answer: FIRST_LOOK_CYCLE[(index + by) % FIRST_LOOK_CYCLE.length] ?? "belongs",
+        }),
+      );
+    }
+  }
   for (const { by, element } of DEMO_BRAINSTORM) {
     const author = project.raterIds[by] ?? facilitatorId;
     must(

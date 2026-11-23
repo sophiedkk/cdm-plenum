@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
 import { getProject } from "../projects/queries.ts";
+import { emailOf } from "../test-fixtures.ts";
 import { type ProjectMembers, personLeaks, projectWithMembers } from "../test-project-members.ts";
 import { brainstormStatus, revealBoard, setPrivateBrainstorm } from "./brainstorm.ts";
 import { importCsv } from "./import.ts";
@@ -135,8 +136,8 @@ describe("before the reveal (EL13)", () => {
     expect(await names(m.facilitator)).toEqual(["Systolic of A", "Diastolic of B"]);
     const authored = await listElementsWithAuthors(db, m.facilitator, m.projectId);
     expect(authored.ok && authored.value.map((element) => element.author?.email)).toEqual([
-      "par@example.test",
-      "par2@example.test",
+      emailOf(m.participant),
+      emailOf(m.otherParticipant),
     ]);
   });
 
@@ -205,10 +206,12 @@ describe("brainstormStatus (EL13)", () => {
     const counts = status.ok
       ? status.value.participants.map((participant) => [participant.email, participant.elements])
       : [];
-    expect(counts.sort()).toEqual([
-      ["par2@example.test", 0],
-      ["par@example.test", 2],
-    ]);
+    expect(counts.sort()).toEqual(
+      [
+        [emailOf(m.otherParticipant), 0],
+        [emailOf(m.participant), 2],
+      ].sort(),
+    );
   });
 
   it("refuses a participant with forbidden and an outsider with not_found", async () => {

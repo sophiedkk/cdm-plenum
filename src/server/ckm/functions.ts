@@ -7,13 +7,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { getDb } from "../db/index.ts";
 import { requireSession } from "../middleware.ts";
 import { getCkmClient } from "./client.ts";
-import { importArchetype, linkElement, listArchetypeElements, searchCkm } from "./queries.ts";
-import {
-  archetypeInput,
-  importArchetypeInput,
-  linkElementInput,
-  searchCkmInput,
-} from "./schemas.ts";
+import { linkElement, listArchetypeElements, searchCkm } from "./queries.ts";
+import { archetypeInput, linkElementInput, searchCkmInput } from "./schemas.ts";
 
 export const searchCkmFn = createServerFn({ method: "GET" })
   .middleware([requireSession])
@@ -31,8 +26,3 @@ export const linkElementFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(linkElementInput)
   .handler(({ data, context }) => linkElement(getDb(), getCkmClient(), context.userId, data));
-
-export const importArchetypeFn = createServerFn({ method: "POST" })
-  .middleware([requireSession])
-  .validator(importArchetypeInput)
-  .handler(({ data, context }) => importArchetype(getDb(), getCkmClient(), context.userId, data));

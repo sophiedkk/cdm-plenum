@@ -105,7 +105,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await signInTo(page, participant, locale, `/projects/${project.projectId}/board`);
       await expect(page.getByRole("rowheader", { name: "Diastolic" })).toBeVisible();
       await expect(page.getByRole("button", { name: text.board_more_actions })).toHaveCount(0);
-      await expect(page.getByRole("button", { name: text.board_ckm_search })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: text.board_models_title })).toHaveCount(0);
       // Participants add on the brainstorm only (ADR 0018).
       await expect(page.getByRole("button", { name: text.board_add })).toHaveCount(0);
       // Data type and cardinality wait for their phase (EL21).
@@ -299,7 +299,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(await openDetails(page, text, "Rhythm")).toContainText("CSV: elements.csv");
     });
 
-    test("the facilitator imports a CKM archetype, and a CKM failure leaves the board usable", async ({
+    test("the facilitator imports a CKM archetype through Existing models, and a CKM failure leaves the page usable", async ({
       page,
       db,
     }) => {
@@ -310,31 +310,37 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         locale,
         `/projects/${project.projectId}/board`,
       );
-      const open = page.getByRole("button", { name: text.board_ckm_search });
-      // The button names the one model it searches.
-      await expect(open).toHaveText(/openEHR CKM/);
+      // NOTE: ADR 0020. The board imports no models; its button leads to Existing models.
+      const open = page.getByRole("link", { name: text.board_models_title });
       await expectHydrated(open);
       await tabTo(page, open, 40);
       await page.keyboard.press("Enter");
-      const dialog = page.getByRole("dialog", { name: text.board_ckm_title });
-      const search = dialog.getByLabel(text.board_ckm_search_label);
-      await tabTo(page, search, 5);
-      await page.keyboard.type("unavailable");
+      await expect(page).toHaveURL((url) => url.pathname.endsWith("/models"));
+      const add = page.getByRole("button", { name: text.board_models_add_title });
+      await expectHydrated(add);
+      await add.click();
+      const dialog = page.getByRole("dialog", { name: text.board_models_add_title });
+      const search = dialog.getByLabel(text.board_models_search_ckm);
+      await search.fill("unavailable");
       await page.keyboard.press("Enter");
       await expect(dialog.getByRole("alert")).toContainText(text.common_refusal_ckm_refused);
       await expectAxeClean(page);
 
       await search.fill("blood pressure");
       await page.keyboard.press("Enter");
-      await expect(dialog.getByRole("table")).toContainText(BP_ID);
-      await expectAxeClean(page);
+      await expect(dialog.getByText(BP_ID)).toBeVisible();
       await dialog
-        .getByRole("button", { name: fill(text.board_ckm_open, { name: "Blood pressure" }) })
+        .getByRole("button", {
+          name: fill(text.board_models_add_named, { name: "Blood pressure" }),
+        })
         .click();
-      await expect(dialog.getByRole("table")).toContainText("at0004");
-      await expectAxeClean(page);
-      await dialog.getByRole("button", { name: text.board_ckm_import }).click();
       await expect(dialog).toHaveCount(0);
+      await page.getByRole("button", { name: text.board_models_put_on_list }).click();
+      await expect(page.getByText(text.board_models_all_listed)).toBeVisible();
+      await page
+        .getByRole("navigation", { name: text.projects_tabs_label })
+        .getByRole("link", { name: text.projects_tab_elements })
+        .click();
       const systolic = await openDetails(page, text, "Systolic");
       await expect(systolic).toContainText(text.board_ckm_linked_badge);
       await expect(systolic).toContainText(`${BP_ID}`);

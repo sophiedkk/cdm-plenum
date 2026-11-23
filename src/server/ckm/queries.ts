@@ -5,7 +5,6 @@
 // elements as candidates (EL7), for the project's facilitator only. The role is checked before
 // CKM is called, and again in the transaction that writes; no transaction waits on CKM (R-06).
 import type { Kysely, Transaction } from "kysely";
-import { cardinalityError } from "@/lib/cardinality";
 import { DATA_TYPES, type DataTypeKey } from "@/lib/data-types";
 import { isProjectRole, type ProjectPermission, projectCan } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
@@ -13,12 +12,7 @@ import { type LockedProject, lockProject, type ProjectActionError } from "../pro
 import { log } from "../projects/queries.ts";
 import type { CkmArchetype, CkmArchetypeElements, CkmClient, CkmFailure } from "./client.ts";
 import type { ArchetypeElement } from "./parse.ts";
-import type {
-  ArchetypeInput,
-  ImportArchetypeInput,
-  LinkElementInput,
-  SearchCkmInput,
-} from "./schemas.ts";
+import type { ArchetypeInput, LinkElementInput, SearchCkmInput } from "./schemas.ts";
 
 /** Why a CKM action was refused, beyond the project codes; the screens translate each code. */
 export const CKM_ACTION_ERRORS = [
@@ -29,8 +23,6 @@ export const CKM_ACTION_ERRORS = [
   "ckm_unusable",
   "ckm_revision_changed",
   "ckm_element_not_found",
-  "ckm_no_elements",
-  "ckm_already_imported",
 ] as const;
 export type CkmActionError = ProjectActionError | (typeof CKM_ACTION_ERRORS)[number];
 
@@ -63,13 +55,6 @@ export function linkRmType(rmTypes: readonly string[]): string {
 export function dataTypeForRmTypes(rmTypes: readonly string[]): DataTypeKey | null {
   if (rmTypes.length !== 1) return null;
   return DATA_TYPES.find((type) => type.rmType === rmTypes[0])?.key ?? null;
-}
-
-/** Occurrences as an element cardinality, or null when they do not fit one (EL1). */
-function cardinality(element: ArchetypeElement): { min: number; max: number | null } | null {
-  const occurrences = element.occurrences;
-  if (!occurrences || cardinalityError(occurrences.min, occurrences.max) !== null) return null;
-  return occurrences;
 }
 
 /** Refuses a user who is no member (`not_found`) or lacks `permission` (`forbidden`). */
@@ -242,82 +227,6 @@ export async function linkElement(
         rmType: link.rm_type,
         dataType,
       },
-    };
-  });
-}
-
-export interface ArchetypeImport {
-  archetypeId: string;
-  revision: string;
-  elementIds: string[];
-}
-
-/**
- * Imports every element of an archetype as a candidate (EL7), in one transaction: the term text
- * and description in the archetype's original language, the data type and cardinality where
- * they fit the lists, a `ckm` source labelled with the archetype ID, and a link as in EL4. An
- * archetype already imported into the project is refused.
- */
-export async function importArchetype(
-  db: Kysely<DB>,
-  ckm: CkmClient,
-  userId: string,
-  input: ImportArchetypeInput,
-): Promise<CkmActionResult<ArchetypeImport>> {
-  const permission = { ckm: ["import"] } as const;
-  const denied = await checkRole(db, userId, input.projectId, permission);
-  if (denied) return refused(denied);
-  const fetched = await currentArchetype(ckm, input.cid, input.revision);
-  if (!fetched.ok) return fetched;
-  const archetype = fetched.value;
-  if (archetype.elements.length === 0) return refused("ckm_no_elements");
-
-  return withProject(db, userId, input.projectId, permission, async (trx, project) => {
-    const earlier = await trx
-      .selectFrom("element_source")
-      .innerJoin("element", "element.id", "element_source.element_id")
-      .select("element_source.id")
-      .where("element.project_id", "=", project.id)
-      .where("element_source.kind", "=", "ckm")
-      .where("element_source.label", "=", archetype.archetypeId)
-      .executeTakeFirst();
-    if (earlier) return refused("ckm_already_imported");
-    const member = await trx
-      .selectFrom("member")
-      .select("id")
-      .where("organizationId", "=", project.id)
-      .where("userId", "=", userId)
-      .executeTakeFirstOrThrow();
-    const elementIds: string[] = [];
-    for (const element of archetype.elements) {
-      const occurs = cardinality(element);
-      const row = await trx
-        .insertInto("element")
-        .values({
-          project_id: project.id,
-          name: element.name,
-          description: element.description,
-          data_type: dataTypeForRmTypes(element.rmTypes),
-          min_occurs: occurs?.min ?? null,
-          max_occurs: occurs?.max ?? null,
-          author_member_id: member.id,
-        })
-        .returning("id")
-        .executeTakeFirstOrThrow();
-      await trx
-        .insertInto("element_source")
-        .values({ element_id: row.id, kind: "ckm", label: archetype.archetypeId })
-        .execute();
-      await trx
-        .insertInto("element_ckm_link")
-        .values(linkRow(row.id, archetype, element))
-        .execute();
-      elementIds.push(row.id);
-    }
-    await log(trx, userId, project.id, "ckm_archetype_imported", "ckm_archetype", archetype.cid);
-    return {
-      ok: true,
-      value: { archetypeId: archetype.archetypeId, revision: archetype.revision, elementIds },
     };
   });
 }

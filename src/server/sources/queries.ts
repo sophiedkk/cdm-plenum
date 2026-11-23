@@ -12,6 +12,7 @@ import { DATA_TYPES, type DataTypeKey } from "@/lib/data-types";
 import { preparesAhead, SOURCE_PHASE } from "@/lib/phase-access";
 import { type ProjectPermission, projectCan } from "@/lib/project-roles";
 import { type CoverageRow, matchSourceElements } from "@/lib/source-matching";
+import { startingPrompt } from "@/lib/source-placement";
 import type { CkmClient } from "../ckm/client.ts";
 import { type CkmActionError, linkRmType } from "../ckm/queries.ts";
 import type { DB } from "../db/schema.gen.ts";
@@ -31,8 +32,10 @@ import {
   type AddFhirSourceInput,
   type OtherSourceInput,
   type ProjectInput,
+  type PutOnListInput,
   SOURCE_TITLE_MAX,
   type SourceModelInput,
+  type UnmatchRowInput,
 } from "./schemas.ts";
 
 /** Why a source model action was refused, beyond the project, CKM and FHIR codes. */
@@ -44,6 +47,9 @@ export const SOURCE_ACTION_ERRORS = [
   "source_not_suggested",
   "source_no_elements",
   "source_after_discover",
+  "source_row_not_found",
+  "source_row_not_suggested",
+  "source_row_on_list",
 ] as const;
 export type SourceActionError =
   | CkmActionError
@@ -591,6 +597,8 @@ export async function listSourceModelsWithAuthors(
 export interface StoredSourceElement extends SourceElementRow {
   id: string;
   sourceModelId: string;
+  /** The facilitator said "Not the same" to its suggested match (EL20). */
+  unmatched: boolean;
 }
 
 async function storedElements(
@@ -621,6 +629,7 @@ async function storedElements(
     bindingStrength: row.binding_strength,
     bindingValueSet: row.binding_value_set,
     nlCmId: row.nl_cm_id,
+    unmatched: row.unmatched,
   }));
 }
 
@@ -752,6 +761,7 @@ export async function importSourceModel(
             data_type: dataTypeForSource(kind, element.type),
             min_occurs: occurs?.min ?? null,
             max_occurs: occurs?.max ?? null,
+            prompt: startingPrompt(kind, element.path),
             author_member_id: authorMemberId,
           })
           .returning("id")
@@ -811,10 +821,65 @@ export interface CoverageModel {
   title: string;
 }
 
+/** A row of the coverage table with its id and whether its element is on the list already. */
+export interface CoverageRowView extends CoverageRow<StoredSourceElement> {
+  /** The id of the row's first source element; "Put on the list" names a row by it. */
+  id: string;
+  /** Whether a candidate element is linked to any source element of the row (EL7, EL20). */
+  onList: boolean;
+}
+
 export interface Coverage {
   models: CoverageModel[];
   /** One row per candidate element; each cell holds that model's elements (EL20). */
-  rows: CoverageRow<StoredSourceElement>[];
+  rows: CoverageRowView[];
+}
+
+interface CoverageModelRow {
+  id: string;
+  kind: string;
+  status: string;
+  title: string;
+}
+
+/** The added and imported models with elements, in the order added, matched into rows. */
+async function coverageOf(
+  db: Kysely<DB>,
+  projectId: string,
+): Promise<{ models: CoverageModelRow[]; rows: CoverageRowView[] }> {
+  const models = await db
+    .selectFrom("source_model")
+    .select(["id", "kind", "status", "title"])
+    .where("project_id", "=", projectId)
+    .where("status", "in", ["added", "imported"])
+    .where("kind", "<>", "other")
+    .orderBy("created_at")
+    .orderBy("id")
+    .execute();
+  const modelIds = models.map((model) => model.id);
+  const elements = await storedElements(db, modelIds);
+  const links =
+    elements.length === 0
+      ? []
+      : await db
+          .selectFrom("element_source_link")
+          .select("source_element_id")
+          .where(
+            "source_element_id",
+            "in",
+            elements.map((element) => element.id),
+          )
+          .execute();
+  const linked = new Set(links.map((row) => row.source_element_id));
+  const rows = matchSourceElements(byModel(modelIds, elements)).map((row) => {
+    const all = Object.values(row.cells).flat();
+    return {
+      ...row,
+      id: all[0]?.id ?? "",
+      onList: all.some((element) => linked.has(element.id)),
+    };
+  });
+  return { models, rows };
 }
 
 /**
@@ -827,17 +892,7 @@ export async function sourceCoverage(
   input: ProjectInput,
 ): Promise<SourceActionResult<Coverage>> {
   return readProject(db, userId, input.projectId, { source: ["review"] }, async (db, project) => {
-    const models = await db
-      .selectFrom("source_model")
-      .select(["id", "kind", "status", "title"])
-      .where("project_id", "=", project.id)
-      .where("status", "in", ["added", "imported"])
-      .where("kind", "<>", "other")
-      .orderBy("created_at")
-      .orderBy("id")
-      .execute();
-    const modelIds = models.map((model) => model.id);
-    const elements = await storedElements(db, modelIds);
+    const { models, rows } = await coverageOf(db, project.id);
     return done({
       models: models.map((model) => ({
         id: model.id,
@@ -845,7 +900,174 @@ export async function sourceCoverage(
         status: model.status as SourceModelStatus,
         title: model.title,
       })),
-      rows: matchSourceElements(byModel(modelIds, elements)),
+      rows,
     });
+  });
+}
+
+/** The label of an element source from a model: the archetype id for CKM, else the title. */
+function sourceLabel(model: { kind: string; title: string; ckm_archetype_id: string | null }) {
+  return model.kind === "ckm" ? (model.ckm_archetype_id ?? model.title) : model.title;
+}
+
+/**
+ * Puts the chosen rows of the coverage table on the list (EL7, EL20, ADR 0020), in one
+ * transaction: each row becomes one candidate element named after its first source element,
+ * linked to every source element of the row, with a source per model and, for an openEHR
+ * element, its CKM link. It starts under the question of its place in the first model (EL18).
+ * A row already on the list is left as it is; every model that gets an element is imported.
+ * Refused with `source_row_not_found` when an id names no row of the table.
+ */
+export async function putOnList(
+  db: Kysely<DB>,
+  userId: string,
+  input: PutOnListInput,
+): Promise<SourceActionResult<{ createdElementIds: string[] }>> {
+  return inProject(db, userId, input.projectId, { source: ["import"] }, async (trx, project) => {
+    const { rows } = await coverageOf(trx, project.id);
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    const chosen: CoverageRowView[] = [];
+    for (const id of input.rowIds) {
+      const row = byId.get(id);
+      if (!row) return refused("source_row_not_found");
+      if (!row.onList && !chosen.includes(row)) chosen.push(row);
+    }
+    const modelIds = [...new Set(chosen.flatMap((row) => Object.keys(row.cells)))];
+    const models =
+      modelIds.length === 0
+        ? []
+        : await trx
+            .selectFrom("source_model")
+            .select([
+              "id",
+              "kind",
+              "status",
+              "title",
+              "ckm_archetype_id",
+              "ckm_cid",
+              "ckm_revision",
+            ])
+            .where("id", "in", modelIds)
+            .orderBy("created_at")
+            .orderBy("id")
+            .forUpdate()
+            .execute();
+    const modelOf = new Map(models.map((model) => [model.id, model]));
+    const authorMemberId = await actorMemberId(trx, project.id, userId);
+    const createdElementIds: string[] = [];
+    for (const row of chosen) {
+      const cells = Object.entries(row.cells);
+      const [firstModelId, firstCell] = cells[0] ?? [];
+      const first = firstCell?.[0];
+      const firstModel = firstModelId === undefined ? undefined : modelOf.get(firstModelId);
+      if (!first || !firstModel) continue;
+      const kind = firstModel.kind as SourceModelKind;
+      const occurs =
+        first.min !== null && cardinalityError(first.min, first.max) === null
+          ? { min: first.min, max: first.max }
+          : null;
+      const created = await trx
+        .insertInto("element")
+        .values({
+          project_id: project.id,
+          name: first.name,
+          description: first.definition,
+          data_type: dataTypeForSource(kind, first.type),
+          min_occurs: occurs?.min ?? null,
+          max_occurs: occurs?.max ?? null,
+          prompt: startingPrompt(kind, first.path),
+          author_member_id: authorMemberId,
+        })
+        .returning("id")
+        .executeTakeFirstOrThrow();
+      createdElementIds.push(created.id);
+      let ckmLinked = false;
+      for (const [modelId, cell] of cells) {
+        const model = modelOf.get(modelId);
+        if (!model) continue;
+        await trx
+          .insertInto("element_source")
+          .values({
+            element_id: created.id,
+            kind: model.kind as SourceModelKind,
+            label: sourceLabel(model),
+          })
+          .execute();
+        for (const element of cell) {
+          await trx
+            .insertInto("element_source_link")
+            .values({ element_id: created.id, source_element_id: element.id })
+            .execute();
+          if (
+            ckmLinked ||
+            model.kind !== "ckm" ||
+            element.atCode === null ||
+            !model.ckm_archetype_id ||
+            !model.ckm_cid ||
+            !model.ckm_revision
+          ) {
+            continue;
+          }
+          ckmLinked = true;
+          await trx
+            .insertInto("element_ckm_link")
+            .values({
+              element_id: created.id,
+              archetype_id: model.ckm_archetype_id,
+              cid: model.ckm_cid,
+              revision: model.ckm_revision,
+              at_code: element.atCode,
+              ckm_element_name: element.name,
+              rm_type: element.type ?? "DATA_VALUE",
+            })
+            .execute();
+        }
+      }
+      await log(trx, userId, project.id, "element_imported", "element", created.id);
+    }
+    const now = new Date();
+    for (const model of models) {
+      if (model.status !== "added") continue;
+      await trx
+        .updateTable("source_model")
+        .set({ status: "imported", imported_at: now })
+        .where("id", "=", model.id)
+        .execute();
+      await log(trx, userId, project.id, "source_model_imported", "source_model", model.id);
+    }
+    return { ok: true, value: { createdElementIds } };
+  });
+}
+
+/**
+ * "Not the same" (EL20): splits a row matched by mapping or by name into one row per source
+ * element, and keeps those elements out of every later suggested match. Only a suggestion can be
+ * rejected: a code match or a lone element is refused (`source_row_not_suggested`), and so is a
+ * row already on the list (`source_row_on_list`).
+ */
+export async function unmatchRow(
+  db: Kysely<DB>,
+  userId: string,
+  input: UnmatchRowInput,
+): Promise<SourceActionResult<null>> {
+  return inProject(db, userId, input.projectId, { source: ["import"] }, async (trx, project) => {
+    const { rows } = await coverageOf(trx, project.id);
+    const row = rows.find((candidate) => candidate.id === input.rowId);
+    if (!row) return refused("source_row_not_found");
+    if (row.applied || row.basis === "none") return refused("source_row_not_suggested");
+    if (row.onList) return refused("source_row_on_list");
+    await trx
+      .updateTable("source_element")
+      .set({ unmatched: true })
+      .where(
+        "id",
+        "in",
+        Object.values(row.cells)
+          .flat()
+          .map((element) => element.id),
+      )
+      .execute();
+    await log(trx, userId, project.id, "source_match_rejected", "source_element", row.id);
+    return { ok: true, value: null };
   });
 }

@@ -70,6 +70,8 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
     role: "participant",
     elements: 8,
     ownElements: 3,
+    firstLook: { total: 0, answered: 0 },
+    groupCheck: { asked: false, done: false },
     round: ROUND,
     lastClosedRoundId: "round-1",
     ...changes,
@@ -78,23 +80,34 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
 
 describe("the phase steps", () => {
   it("say the state of each phase in words and mark the current one", () => {
-    render(<PhaseSteps phase="decide" />);
+    render(<PhaseSteps projectId="p1" phase="decide" />);
     const steps = screen.getByRole("list", { name: "Phases of the project" });
     expect(
       within(steps)
         .getAllByRole("listitem")
         .map((item) => item.textContent),
-    ).toEqual(["Scope, done", "Discover, done", "Decide, now", "Hand-off, later"]);
+    ).toEqual([
+      "Scope, done, open the recap",
+      "Discover, done, open the recap",
+      "Decide, now",
+      "Hand-off, later",
+    ]);
     expect(steps.querySelector('[aria-current="step"]')?.textContent).toBe("Decide, now");
   });
 
-  it("are no links for a participant: they show the status, the home leads on", () => {
+  it("link a done phase to its recap; the current and later phases are no links (PR13)", () => {
     render(
       <ProjectHeader projectId="p1" name="Blood pressure" overview={overview()} back="projects" />,
     );
     const steps = screen.getByRole("list", { name: "Phases of the project" });
-    expect(within(steps).queryAllByRole("link")).toHaveLength(0);
-    expect(steps.querySelector('[aria-current="step"]')?.textContent).toBe("Decide, now");
+    expect(
+      within(steps)
+        .getAllByRole("link")
+        .map((link) => link.getAttribute("href")),
+    ).toEqual(["/projects/p1/recap/scope", "/projects/p1/recap/discover"]);
+    const current = steps.querySelector('[aria-current="step"]') as HTMLElement;
+    expect(current.textContent).toBe("Decide, now");
+    expect(within(current).queryAllByRole("link")).toHaveLength(0);
   });
 
   it("sit below the way back to the project on a page of the project", () => {
@@ -104,10 +117,16 @@ describe("the phase steps", () => {
     expect(screen.getByRole("link", { name: "Back to the project" }).getAttribute("href")).toBe(
       "/projects/p1",
     );
-    expect(screen.getAllByRole("link")).toHaveLength(1);
+    // Besides the way back, only the recaps of the done phases link.
+    expect(
+      screen
+        .getAllByRole("link")
+        .map((link) => link.getAttribute("href"))
+        .filter((href) => !href?.includes("/recap/")),
+    ).toEqual(["/projects/p1"]);
   });
 
-  it("are no links for the facilitator, whose tabs navigate", () => {
+  it("link only the done phases for the facilitator too, whose tabs navigate", () => {
     render(
       <ProjectHeader
         projectId="p1"
@@ -117,7 +136,11 @@ describe("the phase steps", () => {
       />,
     );
     const steps = screen.getByRole("list", { name: "Phases of the project" });
-    expect(within(steps).queryAllByRole("link")).toHaveLength(0);
+    expect(
+      within(steps)
+        .queryAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Scope, done, open the recap", "Discover, done, open the recap"]);
     expect(screen.getByRole("heading", { level: 1, name: "Blood pressure" })).toBeTruthy();
   });
 });
@@ -379,7 +402,42 @@ describe("ProjectRow (PR2, PR8)", () => {
 
   it.each<[Waiting, string | null]>([
     [{ kind: "task", task: { kind: "scope" } }, "Read the scope and comment"],
-    [{ kind: "task", task: { kind: "discover", added: 2 } }, "Add your elements"],
+    [
+      {
+        kind: "task",
+        task: {
+          kind: "discover",
+          added: 2,
+          firstLook: { total: 0, answered: 0 },
+          groupCheck: { asked: false, done: false },
+        },
+      },
+      "Add your elements",
+    ],
+    [
+      {
+        kind: "task",
+        task: {
+          kind: "discover",
+          added: 0,
+          firstLook: { total: 4, answered: 1 },
+          groupCheck: { asked: false, done: false },
+        },
+      },
+      "Look at what already exists",
+    ],
+    [
+      {
+        kind: "task",
+        task: {
+          kind: "discover",
+          added: 0,
+          firstLook: { total: 4, answered: 1 },
+          groupCheck: { asked: true, done: false },
+        },
+      },
+      "Check the groups",
+    ],
     [{ kind: "checklist", open: 1, next: "decide", round: null }, "1 step before Decide"],
     [{ kind: "checklist", open: 3, next: "decide", round: null }, "3 steps before Decide"],
     [{ kind: "ready", next: "handoff" }, "Ready to go on to Hand-off"],

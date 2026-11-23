@@ -9,17 +9,76 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Existing models: the facilitator adds openEHR archetypes from CKM, FHIR
+  profiles from a package, and other sources such as a form, then compares
+  them in one table with a column per model. Check the elements you want and
+  choose "Put on the list"; each becomes one element linked to every model
+  that has it. Elements with the same code share a row. Elements matched by
+  a known mapping or a similar name share a row as a suggestion, with each
+  model's own name shown; choose "Not the same" to split it into a row per
+  model. Participants' suggested sources wait on the same page to be
+  accepted or dismissed. The Overview's first discover item opens the page.
+- First look: once elements from existing models are on the list, each
+  participant goes through them one at a time and answers whether the element
+  belongs to the concept: Belongs, Not sure or Does not belong. Your answers
+  are your own; the facilitator sees only the count per answer, in a column
+  per answer on the element board. "Your turn" on the project home starts
+  here, and the Overview shows how many participants are done, with the
+  reminder e-mail now pointing to the first look.
+- Participants can suggest an existing model, with a title and a link, from
+  the brainstorm board.
+- Grouping: every element starts in a group. One you added starts under its
+  brainstorm question; one from an openEHR archetype by its place in the
+  archetype (data, state, protocol); one from a FHIR profile under the
+  measurement; others, such as CSV rows, start in "Not grouped yet". The
+  facilitator moves elements by dragging them, with a mouse or a finger, or
+  by clicking one and choosing "Move here", and can rename and add groups.
+- Check the groups: once the facilitator asks, each participant marks an
+  element "Same as…" or "Belongs elsewhere" and says per group what is
+  missing. The facilitator sees the remarks per element and group, without
+  names; other participants do not see them.
+- Groups in the rounds: the rating card names each element's group, and the
+  overview of your ratings lists them under group headings. Each participant
+  sees the groups in an order of their own, the same during the whole round.
+  The results of a closed round list the elements under the same headings,
+  in the facilitator's order of the groups.
+- Phase recaps: a finished phase in the project header opens a read-only
+  recap. Scope shows the statement and its sources; Discover shows how many
+  elements went into round 1 and where they came from, the merged
+  duplicates and the groups; Decide shows the rounds and their outcomes. The
+  current phase and later phases stay plain steps.
+
+### Removed
+
+- The element board's own "Search openEHR CKM" import of a whole archetype.
+  Its button now opens Existing models, where an imported archetype's
+  elements get a first look and a group. Linking one element to a CKM
+  archetype element stays on the board.
+
 ### Changed
 
+- The brainstorm is a board with one column per question. Elements from
+  existing models show dashed in their column, your own elements are
+  marked, and before the reveal other people's elements show only as a
+  count per column. Type in a column and press Enter to add an element
+  under that question. A strip above the board shows how many people have
+  added elements. Elements from existing models are visible to everyone
+  from the start, also on the element board.
+- The facilitator's discover checklist follows the parts of the phase:
+  start from existing models, let participants take a first look, add what
+  is missing, then reveal and clean up. The item that linked to the CKM
+  search is gone; the existing models page replaces it.
 - Every page, from the projects list to each page of a project and the
   administration, uses one column of the same width with the same left edge.
   The project name, the back link and the page title no longer move when you
   go from one page to the next.
 - The phases in the project header show where the project stands (done, now,
-  later) and are no longer links. A participant starts the current work from
-  the project home, which now also links to the scope and the element board
-  under "In this project"; the newest round results stay linked from
-  "Decided so far".
+  later). The current phase is no longer a link: a participant starts the
+  current work from the project home, which now also links to the scope and
+  the element board under "In this project"; the newest round results stay
+  linked from "Decided so far". A finished phase opens its recap.
 - Data type, cardinality and values no longer show anywhere until the detail
   phase, where you will set them: not on the element board or in an
   element's details, not in the facilitator's edit form, and not on the

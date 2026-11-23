@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The header of every project page (PR4, PR11, ADR 0019): a back link, the project name and the
-// phases as steps that show the status only. A participant goes on from the project home, the
-// facilitator from the fixed tabs below the header.
+// The header of every project page (PR4, PR11, PR13, ADR 0019, ADR 0020): a back link, the
+// project name and the phases as steps; a done phase links to its recap. A participant goes on
+// from the project home, the facilitator from the fixed tabs below the header.
 import { Link, useMatchRoute } from "@tanstack/react-router";
 import { ChevronLeftIcon } from "lucide-react";
 import { m } from "@/i18n/messages";
+import type { ProjectPhase } from "@/lib/project-phases";
 import type { ProjectOverview } from "@/lib/project-tasks";
 import { PhaseSteps } from "./phase-steps";
 
@@ -32,18 +33,21 @@ export function ProjectHeader({
   name,
   overview,
   back,
+  here,
 }: Readonly<{
   projectId: string;
   name: string;
   overview: ProjectOverview;
   back: "projects" | "home";
+  /** The phase whose recap the page shows (PR13). */
+  here?: ProjectPhase | undefined;
 }>) {
   return (
     <div className="mb-6 flex flex-col gap-1">
       <BackLink projectId={projectId} to={back} />
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
         <h1 className="text-2xl font-semibold tracking-tight break-words">{name}</h1>
-        <PhaseSteps phase={overview.phase} />
+        <PhaseSteps projectId={projectId} phase={overview.phase} here={here} />
       </div>
     </div>
   );
@@ -63,6 +67,8 @@ type TabKey = (typeof TABS)[number]["key"];
 /** The pages that sit under a tab without a tab of their own. */
 const UNDER = [
   { to: "/projects/$projectId/export", tab: "overview" },
+  { to: "/projects/$projectId/models", tab: "overview" },
+  { to: "/projects/$projectId/grouping", tab: "overview" },
   { to: "/projects/$projectId/brainstorm", tab: "elements" },
   { to: "/projects/$projectId/board/import", tab: "elements" },
 ] as const satisfies readonly { to: string; tab: TabKey }[];

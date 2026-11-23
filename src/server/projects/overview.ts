@@ -19,6 +19,8 @@ import {
 import type { ProjectPhase } from "@/lib/project-phases";
 import { type ProjectRole, RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
+import { summaryOf } from "../elements/first-look.ts";
+import { checkProgress } from "../elements/groups.ts";
 import { markSummary } from "../elements/marks.ts";
 import { joinedPanel, projectPanel } from "../rounds/queries.ts";
 import { statusOf } from "../rounds/round.ts";
@@ -210,16 +212,26 @@ async function factsOf(
       .where("element.project_id", "=", project.id)
       .executeTakeFirst(),
   );
-  const ckmLinked = await count(
+  const importedModels = await count(
     db
-      .selectFrom("element_ckm_link")
-      .innerJoin("element", "element.id", "element_ckm_link.element_id")
+      .selectFrom("source_model")
+      .select((eb) => eb.fn.countAll<string>().as("count"))
+      .where("project_id", "=", project.id)
+      .where("status", "=", "imported")
+      .executeTakeFirst(),
+  );
+  const listedFromModels = await count(
+    db
+      .selectFrom("element_source_link")
+      .innerJoin("element", "element.id", "element_source_link.element_id")
       .select((eb) => eb.fn.count<string>("element.id").distinct().as("count"))
       .where("element.project_id", "=", project.id)
       .where("element.merged_into", "is", null)
       .executeTakeFirst(),
   );
   const marks = await markSummary(db, userId, project.id);
+  const look = await summaryOf(db, project.id);
+  const check = await checkProgress(db, project.id);
   const { elements, lastClosedRound } = await decided(db, project.id);
   return {
     scopeWritten: (scope?.concept ?? "").trim() !== "",
@@ -231,7 +243,12 @@ async function factsOf(
     privateBrainstorm: row.private_brainstorm,
     boardRevealed: row.board_revealed_at !== null,
     duplicates: marks.ok ? marks.value.duplicates.length : 0,
-    ckmLinked,
+    importedModels,
+    listedFromModels,
+    firstLookTotal: look.total,
+    firstLookFinished: look.finished,
+    groupCheckAsked: check.asked,
+    groupChecked: check.checked,
     round: await followedRound(db, project.id, deps.now),
     undecided: elements.filter(
       (element) => element.status === "no_consensus" || element.status === "not_rated",

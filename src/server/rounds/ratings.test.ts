@@ -7,6 +7,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
+import { emailOf } from "../test-fixtures.ts";
 import { createRound } from "./queries.ts";
 import { clearRating, myRatings, ratingsByParticipant, saveRating } from "./ratings.ts";
 import {
@@ -298,10 +299,21 @@ describe("ratingsByParticipant (DE4)", () => {
     const byRater = ok(
       await ratingsByParticipant(db, p.facilitator, { projectId: p.projectId, roundId }),
     );
-    expect(byRater.map((r) => [r.email, r.groupName, r.ratings])).toEqual([
-      ["n1@example.test", "Nursing", [{ elementId: p.elements[0], score: 7, reason: "Core item" }]],
-      ["t1@example.test", "Terminology", [{ elementId: p.elements[0], score: null, reason: null }]],
-    ]);
+    const byEmail = (a: unknown[], b: unknown[]) => String(a[0]).localeCompare(String(b[0]));
+    expect(byRater.map((r) => [r.email, r.groupName, r.ratings]).sort(byEmail)).toEqual(
+      [
+        [
+          emailOf(p.raters.n1),
+          "Nursing",
+          [{ elementId: p.elements[0], score: 7, reason: "Core item" }],
+        ],
+        [
+          emailOf(p.raters.t1),
+          "Terminology",
+          [{ elementId: p.elements[0], score: null, reason: null }],
+        ],
+      ].sort(byEmail),
+    );
   });
 
   it("refuses a participant (forbidden), a non-member (not_found) and an unknown round", async () => {
@@ -323,5 +335,82 @@ describe("ratingsByParticipant (DE4)", () => {
         roundId: "00000000-0000-4000-8000-000000000000",
       }),
     ).toEqual({ ok: false, error: "round_not_found" });
+  });
+});
+
+describe("myRatings in groups (DE19)", () => {
+  async function placeInGroups(): Promise<void> {
+    const groups = await db
+      .selectFrom("element_group")
+      .select(["id", "prompt"])
+      .where("project_id", "=", p.projectId)
+      .execute();
+    const id = (prompt: string) => groups.find((group) => group.prompt === prompt)?.id ?? null;
+    const [systolic, diastolic, cuff] = p.elements;
+    await db
+      .updateTable("element")
+      .set({ group_id: id("recorded") })
+      .where("id", "=", systolic)
+      .execute();
+    await db
+      .updateTable("element")
+      .set({ group_id: id("recorded") })
+      .where("id", "=", diastolic)
+      .execute();
+    await db
+      .updateTable("element")
+      .set({ group_id: id("method") })
+      .where("id", "=", cuff)
+      .execute();
+  }
+
+  it("gives each element its group and keeps a group's elements together", async () => {
+    await placeInGroups();
+    const roundId = await openedRound(db, p.facilitator, p.projectId);
+    const mine = ok(await myRatings(db, p.raters.n1, { projectId: p.projectId, roundId }, now()));
+    const prompts = mine.elements.map((element) => element.group?.prompt);
+    expect(prompts.filter((prompt) => prompt === "recorded")).toHaveLength(2);
+    // The two elements of one group sit next to each other, in the round's order.
+    const recorded = mine.elements.filter((element) => element.group?.prompt === "recorded");
+    expect(recorded.map((element) => element.name)).toEqual([
+      "Systolic pressure",
+      "Diastolic pressure",
+    ]);
+    const first = prompts.indexOf("recorded");
+    expect(prompts[first + 1]).toBe("recorded");
+    expect(JSON.stringify(mine)).not.toContain("@example.test");
+  });
+
+  it("keeps a rater's group order the same during the round", async () => {
+    await placeInGroups();
+    const roundId = await openedRound(db, p.facilitator, p.projectId);
+    const input = { projectId: p.projectId, roundId };
+    const once = ok(await myRatings(db, p.raters.a1, input, now()));
+    await rate(p.raters.a1, roundId, p.elements[2], 7);
+    const again = ok(await myRatings(db, p.raters.a1, input, now()));
+    expect(again.elements.map((element) => element.id)).toEqual(
+      once.elements.map((element) => element.id),
+    );
+  });
+
+  it("lists an element without a group after the groups", async () => {
+    const groups = await db
+      .selectFrom("element_group")
+      .select(["id", "prompt"])
+      .where("project_id", "=", p.projectId)
+      .execute();
+    const method = groups.find((group) => group.prompt === "method")?.id ?? null;
+    await db
+      .updateTable("element")
+      .set({ group_id: method })
+      .where("id", "=", p.elements[2])
+      .execute();
+    const roundId = await openedRound(db, p.facilitator, p.projectId);
+    const mine = ok(await myRatings(db, p.raters.t1, { projectId: p.projectId, roundId }, now()));
+    expect(mine.elements.map((element) => element.group?.prompt ?? null)).toEqual([
+      "method",
+      null,
+      null,
+    ]);
   });
 });

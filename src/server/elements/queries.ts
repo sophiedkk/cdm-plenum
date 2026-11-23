@@ -7,7 +7,7 @@
 // During the private step of the brainstorm (EL13) a participant reads only their own elements
 // and the comments on them; `visibleAuthor` decides that once per request. Before the board's
 // step starts a participant reads no element at all (PR9, `boardVisible`).
-import { type Kysely, sql, type Transaction } from "kysely";
+import { type ExpressionBuilder, type Kysely, sql, type Transaction } from "kysely";
 import { type ElementPrompt, isElementPrompt } from "@/lib/brainstorm";
 import type { Cardinality } from "@/lib/cardinality";
 import { CODED_DATA_TYPE_KEYS, type DataTypeKey, isDataTypeKey } from "@/lib/data-types";
@@ -235,6 +235,16 @@ export async function visibleAuthor(
   return actorMemberId(db, project.id, userId);
 }
 
+/** Whether the element came from an existing model: linked to a source element (EL7). */
+function fromExistingModel(eb: ExpressionBuilder<DB, "element">) {
+  return eb.exists(
+    eb
+      .selectFrom("element_source_link as imported")
+      .select("imported.element_id")
+      .whereRef("imported.element_id", "=", "element.id"),
+  );
+}
+
 /** Whether the member may read the board in the current phase (PR9). */
 function boardVisible(project: LockedProject): boolean {
   return stepVisible(project.role, project.phase, "board");
@@ -242,19 +252,27 @@ function boardVisible(project: LockedProject): boolean {
 
 /**
  * The active elements of a project in the order they were added, without authors; with
- * `onlyAuthor`, only the elements of that member.
+ * `onlyAuthor`, only the elements of that member and, with `withImported`, the elements from
+ * existing models, which every member sees from the start (EL23, ADR 0020).
  */
 async function boardElements(
   db: Db,
   projectId: string,
   onlyAuthor: string | null = null,
+  withImported = false,
 ): Promise<BoardElement[]> {
   let query = db
     .selectFrom("element")
     .select(PUBLIC_COLUMNS)
     .where("element.project_id", "=", projectId)
     .where("element.merged_into", "is", null);
-  if (onlyAuthor !== null) query = query.where("element.author_member_id", "=", onlyAuthor);
+  if (onlyAuthor !== null) {
+    query = query.where((eb) =>
+      withImported
+        ? eb.or([eb("element.author_member_id", "=", onlyAuthor), fromExistingModel(eb)])
+        : eb("element.author_member_id", "=", onlyAuthor),
+    );
+  }
   const rows = await query.orderBy("element.created_at").orderBy("element.id").execute();
   const sources = await db
     .selectFrom("element_source")
@@ -289,14 +307,16 @@ async function boardElements(
     .where("element.merged_into", "is", null)
     .execute();
   const mergedLinks = await mergedCkmLinks(db, projectId);
-  const counts = await db
+  let countQuery = db
     .selectFrom("element_comment")
     .innerJoin("element", "element.id", "element_comment.element_id")
     .select(["element_comment.element_id", sql<number>`count(*)::int`.as("count")])
     .where("element.project_id", "=", projectId)
-    .where("element.merged_into", "is", null)
-    .groupBy("element_comment.element_id")
-    .execute();
+    .where("element.merged_into", "is", null);
+  if (onlyAuthor !== null && withImported) {
+    countQuery = countQuery.where("element_comment.author_member_id", "=", onlyAuthor);
+  }
+  const counts = await countQuery.groupBy("element_comment.element_id").execute();
   const sourcesOf = groupBy(sources);
   const valuesOf = groupBy(values);
   const countOf = new Map(counts.map((row) => [row.element_id, row.count]));
@@ -334,7 +354,9 @@ export async function listElements(
 ): Promise<ProjectResult<BoardElement[]>> {
   return readProject(db, userId, projectId, null, async (db, project) => {
     if (!boardVisible(project)) return done([]);
-    return done(await boardElements(db, project.id, await visibleAuthor(db, project, userId)));
+    return done(
+      await boardElements(db, project.id, await visibleAuthor(db, project, userId), true),
+    );
   });
 }
 
@@ -394,7 +416,7 @@ export async function listElementsWithAuthors(
 
 /**
  * An element on the board of the project (not merged away), locked when `lock` is set; with
- * `onlyAuthor`, only when that member added it (EL13).
+ * `onlyAuthor`, only when that member added it or it came from an existing model (EL13, EL23).
  */
 async function activeElement(
   trx: Db,
@@ -408,7 +430,11 @@ async function activeElement(
     .where("id", "=", elementId)
     .where("project_id", "=", projectId)
     .where("merged_into", "is", null);
-  if (onlyAuthor !== null) query = query.where("author_member_id", "=", onlyAuthor);
+  if (onlyAuthor !== null) {
+    query = query.where((eb) =>
+      eb.or([eb("element.author_member_id", "=", onlyAuthor), fromExistingModel(eb)]),
+    );
+  }
   if (lock) query = query.forUpdate();
   return query.executeTakeFirst();
 }
@@ -710,18 +736,18 @@ export async function listElementComments(
 ): Promise<ProjectResult<ElementComment[]>> {
   return readProject(db, userId, input.projectId, null, async (db, project) => {
     if (!boardVisible(project)) return refused("element_not_found");
-    const element = await activeElement(db, project.id, input.elementId, {
-      onlyAuthor: await visibleAuthor(db, project, userId),
-    });
+    const onlyAuthor = await visibleAuthor(db, project, userId);
+    const element = await activeElement(db, project.id, input.elementId, { onlyAuthor });
     if (!element) return refused("element_not_found");
     const self = await actorMemberId(db, project.id, userId);
-    const rows = await db
+    let query = db
       .selectFrom("element_comment")
       .select(["id", "body", "created_at", "author_member_id"])
-      .where("element_id", "=", element.id)
-      .orderBy("created_at")
-      .orderBy("id")
-      .execute();
+      .where("element_id", "=", element.id);
+    // NOTE: EL13, EL23. In the private step a participant also sees the elements from existing
+    // models, but not what others wrote under them: only their own comments.
+    if (onlyAuthor !== null) query = query.where("author_member_id", "=", onlyAuthor);
+    const rows = await query.orderBy("created_at").orderBy("id").execute();
     return done(
       rows.map((row) => ({
         id: row.id,

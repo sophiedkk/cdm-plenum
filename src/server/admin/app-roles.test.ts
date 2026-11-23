@@ -6,7 +6,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
-import { insertUser } from "../test-fixtures.ts";
+import { emailOf, insertUser } from "../test-fixtures.ts";
 import {
   grantAppRole,
   hasAnyAppRole,
@@ -36,10 +36,10 @@ describe("grantAppRole and revokeAppRole", () => {
 
   it("keeps administrator and facilitator apart", async () => {
     const id = await insertUser(db, "a");
-    await grantAppRole(db, "a@example.test", "administrator");
+    await grantAppRole(db, emailOf(id), "administrator");
     expect(await userHasAppRole(db, id, "administrator")).toBe(true);
     expect(await userHasAppRole(db, id, "facilitator")).toBe(false);
-    expect(await hasAnyAppRole(db, "A@example.test")).toBe(true);
+    expect(await hasAnyAppRole(db, emailOf(id).toUpperCase())).toBe(true);
     expect(await hasAnyAppRole(db, "b@example.test")).toBe(false);
   });
 
@@ -52,8 +52,8 @@ describe("grantAppRole and revokeAppRole", () => {
 
   it("logs the account id, never the address (Q-PRIV-2)", async () => {
     const id = await insertUser(db, "a");
-    await grantAppRole(db, "a@example.test", "facilitator");
-    await revokeAppRole(db, "a@example.test", "facilitator");
+    await grantAppRole(db, emailOf(id), "facilitator");
+    await revokeAppRole(db, emailOf(id), "facilitator");
     await grantAppRole(db, "nobody@example.test", "administrator");
     const rows = await db
       .selectFrom("activity_log")

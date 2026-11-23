@@ -7,6 +7,7 @@ import { ProjectHeader, ProjectTabs } from "@/components/projects/project-header
 import { projectTitle } from "@/components/projects/project-title";
 import { NotFoundState } from "@/components/shell/route-states";
 import { m } from "@/i18n/messages";
+import { isProjectPhase } from "@/lib/project-phases";
 import { projectOverviewQueryOptions, projectQueryOptions } from "@/server/projects/query-options";
 import { idSchema } from "@/server/projects/schemas";
 
@@ -44,6 +45,8 @@ function ProjectLayout() {
   const project = data.value;
   const facilitator = project.role === "facilitator";
   const home = Boolean(matchRoute({ to: "/projects/$projectId", params: { projectId } }));
+  const recap = matchRoute({ to: "/projects/$projectId/recap/$phase", params: { projectId } });
+  const here = recap && isProjectPhase(recap.phase) ? recap.phase : undefined;
 
   // The app shell's column holds every project page, so nothing here sets a width.
   return (
@@ -53,6 +56,7 @@ function ProjectLayout() {
         name={project.name}
         overview={overview.value}
         back={facilitator || home ? "projects" : "home"}
+        here={here}
       />
       {facilitator && <ProjectTabs projectId={projectId} />}
       <Outlet />

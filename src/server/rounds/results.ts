@@ -10,6 +10,7 @@ import type { ExpertType } from "@/lib/panel";
 import { RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
+import { groupsOf, inGroupOrder, type RoundGroup } from "./groups.ts";
 import {
   type ElementOutcome,
   emptyOutcome,
@@ -26,6 +27,8 @@ export interface ElementRoundResult extends ElementOutcome {
   name: string;
   /** The outcome written when the round closed. */
   outcome: Outcome;
+  /** The element's group (EL18); null for one without, listed after the groups (DE19). */
+  group: RoundGroup | null;
 }
 
 export interface RoundResults {
@@ -35,7 +38,8 @@ export interface RoundResults {
 
 /**
  * Per element of a closed round: the distribution, the median and the outcome, and the result
- * of every stakeholder group with at least 3 scores (DE5, Q-PRIV-3). For every member.
+ * of every stakeholder group with at least 3 scores (DE5, Q-PRIV-3). For every member, under the
+ * group headings in the facilitator's order: rating is over, so the order steers nobody (DE19).
  */
 export async function roundResults(
   db: Kysely<DB>,
@@ -50,16 +54,22 @@ export async function roundResults(
     }
     if (round.closed_at === null) return refused("round_not_closed");
     const outcomes = await outcomesOf(trx, round);
-    const elements = (await roundElements(trx, round.id)).map((element) => {
+    const rows = await roundElements(trx, round.id);
+    const groupOf = await groupsOf(
+      trx,
+      rows.map((element) => element.id),
+    );
+    const elements = rows.map((element) => {
       const outcome = outcomes.get(element.id) ?? emptyOutcome(round);
       return {
         id: element.id,
         name: element.name,
         outcome: element.outcome ?? outcome.result.outcome,
         ...outcome,
+        group: groupOf.get(element.id) ?? null,
       };
     });
-    return done({ round: summaryOf(round, deps.now), elements });
+    return done({ round: summaryOf(round, deps.now), elements: inGroupOrder(elements) });
   });
 }
 

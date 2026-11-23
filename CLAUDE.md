@@ -153,7 +153,20 @@ page from these patterns; each has a real use and a test you can copy.
   until the detail phase exists (owner decision 2026-11-20). The board, the
   element form, the rating card, its overview and the round page all read
   it; the database, the server and the export keep the fields. A new step
-  is a new column in the table.
+  is a new column in the table. The discover pages of ADR 0020 are steps
+  too: `models` and `grouping` (the facilitator's), `first_look` and
+  `group_check` (a participant `answer`s there).
+- **Phase recaps:** a done phase step in the header links to
+  `/projects/$projectId/recap/$phase` (PR13, `phaseDone` in
+  `src/lib/project-phases.ts`); the current and later steps are no links.
+  A new phase adds its view to `src/components/projects/phase-recap.tsx`.
+- **Drag and drop:** move cards with pointer events, so a mouse, a pen and a
+  finger work alike, and always offer the keyboard path next to it: pick a
+  card with a click or Enter, then a "Move <name> here" button per target
+  (`src/components/board/grouping-board.tsx`, WCAG 2.1.1, 2.5.1).
+- **Element groups:** the database places a new element in the group of its
+  brainstorm question and gives each new project its four starting groups
+  (triggers in migration 0014); code never sets `group_id` on insert.
 - **Data:** each area keeps a key factory and query options in
   `src/server/<area>/query-options.ts` (example:
   `src/server/projects/query-options.ts`, staleness in

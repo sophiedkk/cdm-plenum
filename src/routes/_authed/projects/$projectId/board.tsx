@@ -9,8 +9,8 @@ import {
   CombineIcon,
   FileUpIcon,
   LayoutGridIcon,
+  LibraryIcon,
   PlusIcon,
-  SearchIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -49,7 +49,7 @@ import {
   REVEAL_PHASE,
   writeOpen,
 } from "@/lib/phase-access";
-import { importArchetypeFn, linkElementFn, searchCkmFn } from "@/server/ckm/functions";
+import { linkElementFn, searchCkmFn } from "@/server/ckm/functions";
 import {
   addElementCommentFn,
   addElementFn,
@@ -65,6 +65,7 @@ import {
   boardQueryOptions,
   brainstormStatusQueryOptions,
   elementKeys,
+  firstLookSummaryQueryOptions,
   markSummaryQueryOptions,
   ownMarksQueryOptions,
 } from "@/server/elements/query-options";
@@ -80,9 +81,8 @@ import { projectKeys, projectQueryOptions } from "@/server/projects/query-option
 export const Route = createFileRoute("/_authed/projects/$projectId/board")({
   validateSearch: z.object({
     element: z.string().max(64).optional(),
-    // The Overview's checklist opens the duplicates or the CKM search from here (ADR 0019).
+    // The Overview's checklist opens the duplicates from here (ADR 0019).
     duplicates: z.boolean().optional().catch(undefined),
-    ckm: z.boolean().optional().catch(undefined),
   }),
   beforeLoad: requireStep("board"),
   loader: async ({ context, params }) => {
@@ -106,7 +106,7 @@ type DialogState =
   | { kind: "edit"; element: CardElement }
   | { kind: "values"; element: CardElement }
   | { kind: "merge"; initial?: { intoId: string; fromIds: string[] } }
-  | { kind: "ckm"; target: CardElement | null }
+  | { kind: "ckm"; target: CardElement }
   | null;
 
 function Board() {
@@ -119,7 +119,7 @@ function Board() {
   const detailFields = detailFieldsShown(project.phase);
   const ckmColumn = ckmColumnShown(project.phase);
   const queryClient = useQueryClient();
-  const { element: openElementId, duplicates: showDuplicates, ckm } = Route.useSearch();
+  const { element: openElementId, duplicates: showDuplicates } = Route.useSearch();
   const { data: board } = useSuspenseQuery(boardQueryOptions(projectId, isFacilitator));
   const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
   const privateStep = detail.ok && isPrivateStep(detail.value);
@@ -137,10 +137,13 @@ function Board() {
     ...brainstormStatusQueryOptions(projectId),
     enabled: isFacilitator && privateStep,
   });
+  // NOTE: EL22. The facilitator sees the first look's counts per element during discover.
+  const { data: firstLook } = useQuery({
+    ...firstLookSummaryQueryOptions(projectId),
+    enabled: isFacilitator && project.phase === "discover",
+  });
   const router = useRouter();
-  const [dialog, setDialog] = useState<DialogState>(
-    ckm && isFacilitator ? { kind: "ckm", target: null } : null,
-  );
+  const [dialog, setDialog] = useState<DialogState>(null);
 
   const addElement = useServerFn(addElementFn);
   const updateElement = useServerFn(updateElementFn);
@@ -149,7 +152,6 @@ function Board() {
   const addComment = useServerFn(addElementCommentFn);
   const searchCkm = useServerFn(searchCkmFn);
   const linkElement = useServerFn(linkElementFn);
-  const importArchetype = useServerFn(importArchetypeFn);
   const revealBoard = useServerFn(revealBoardFn);
   const setSupport = useServerFn(setSupportFn);
   const addSameAs = useServerFn(addSameAsFn);
@@ -212,13 +214,13 @@ function Board() {
             {isFacilitator && addButton}
             {isFacilitator && (
               <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialog({ kind: "ckm", target: null })}
-                >
-                  <SearchIcon aria-hidden="true" data-icon="inline-start" />
-                  {m.board_ckm_search()}
+                {/* NOTE: ADR 0020. Models are imported on Existing models, where their elements
+                    get a first look and a group; the board links single elements only. */}
+                <Button asChild variant="outline">
+                  <Link to="/projects/$projectId/models" params={{ projectId }}>
+                    <LibraryIcon aria-hidden="true" data-icon="inline-start" />
+                    {m.board_models_title()}
+                  </Link>
                 </Button>
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
@@ -303,6 +305,11 @@ function Board() {
             ckmColumn={ckmColumn}
             openElementId={openElementId}
             supportCounts={isFacilitator && summary?.ok ? summary.value.support : undefined}
+            firstLookCounts={
+              isFacilitator && firstLook?.ok && firstLook.value.total > 0
+                ? firstLook.value.counts
+                : undefined
+            }
             actions={{
               addComment: canComment
                 ? (element, body) =>
@@ -427,16 +434,8 @@ function Board() {
         open={dialog?.kind === "ckm"}
         onOpenChange={(open) => !open && close()}
         wide
-        title={
-          dialog?.kind === "ckm" && dialog.target
-            ? m.board_ckm_link_title({ name: dialog.target.name })
-            : m.board_ckm_title()
-        }
-        description={
-          dialog?.kind === "ckm" && dialog.target
-            ? m.board_ckm_link_description()
-            : m.board_ckm_description()
-        }
+        title={dialog?.kind === "ckm" ? m.board_ckm_link_title({ name: dialog.target.name }) : ""}
+        description={dialog?.kind === "ckm" ? m.board_ckm_link_description() : ""}
       >
         {dialog?.kind === "ckm" && (
           <>
@@ -449,18 +448,12 @@ function Board() {
                   linkElement({
                     data: {
                       projectId,
-                      elementId: dialog.target?.id ?? "",
+                      elementId: dialog.target.id,
                       cid: archetype.cid,
                       revision: archetype.revision,
                       path: element.path,
                     },
                   }),
-                importAll: async (archetype) => {
-                  const result = await importArchetype({
-                    data: { projectId, cid: archetype.cid, revision: archetype.revision },
-                  });
-                  return result;
-                },
               }}
               onDone={async (message) => {
                 await refreshBoard();

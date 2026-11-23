@@ -41,6 +41,15 @@ const ARCHETYPES: StubArchetype[] = [
     file: "dosage.v2.xml",
   },
   {
+    cid: "1013.1.4295",
+    resourceMainId: "openEHR-EHR-OBSERVATION.pulse.v2",
+    resourceMainDisplayName: "Pulse/Heart beat",
+    status: "PUBLISHED",
+    revision: "2.0.9",
+    buildUid: "6133c0b3-a7bf-41f1-a422-453bf385cea9",
+    file: "pulse.v2.xml",
+  },
+  {
     cid: "1013.1.2881",
     resourceMainId: "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1",
     resourceMainDisplayName: "Laboratory analyte result",

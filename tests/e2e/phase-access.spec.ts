@@ -41,7 +41,7 @@ async function tabNames(page: Page, locale: Locale): Promise<string[]> {
 
 /**
  * The pages a participant's home links to besides the task, by their text. A participant has no
- * tabs, and the phase steps show the status without a link (owner decision 2026-11-20).
+ * tabs; the current phase step is no link, and a done step links only to its recap (PR13).
  */
 async function homeLinks(page: Page, locale: Locale): Promise<string[]> {
   const text = MESSAGES[locale];
@@ -50,7 +50,12 @@ async function homeLinks(page: Page, locale: Locale): Promise<string[]> {
   ).toHaveCount(0);
   const steps = page.getByRole("list", { name: text.projects_steps_label });
   await expect(steps).toBeVisible();
-  await expect(steps.getByRole("link")).toHaveCount(0);
+  await expect(steps.locator('[aria-current="step"]').getByRole("link")).toHaveCount(0);
+  for (const href of await steps
+    .getByRole("link")
+    .evaluateAll((links) => links.map((link) => link.getAttribute("href") ?? ""))) {
+    expect(href).toMatch(/\/recap\/(scope|discover|decide)$/);
+  }
   const pages = page.getByRole("navigation", { name: text.projects_home_pages_title });
   if ((await pages.count()) === 0) return [];
   return pages.getByRole("link").allTextContents();

@@ -19,17 +19,23 @@ export const PROJECT_STEPS = [
   "export",
   "members",
   "settings",
+  "models",
+  "first_look",
+  "grouping",
+  "group_check",
 ] as const;
 export type ProjectStep = (typeof PROJECT_STEPS)[number];
 
 /**
  * What a participant may do in a step: nothing (`hidden`), `read` it, or read it and write in
- * one way: `comment`, `add` elements or `rate` in an open round.
+ * one way: `comment`, `add` elements, `answer` a question about elements (EL22) or `rate` in an
+ * open round.
  */
-export type StepAccess = "hidden" | "read" | "comment" | "add" | "rate";
+export type StepAccess = "hidden" | "read" | "comment" | "add" | "answer" | "rate";
 
 // NOTE: PR9, owner decision 2026-11-20. The board in discover takes comments; adding elements
-// there follows the brainstorm's `add`, so both forms open and close together.
+// there follows the brainstorm's `add`, so both forms open and close together. Existing models
+// (EL12, ADR 0020) are the facilitator's page; a participant suggests a model from the board.
 export const PARTICIPANT_ACCESS = {
   scope: {
     scope: "comment",
@@ -39,6 +45,10 @@ export const PARTICIPANT_ACCESS = {
     export: "hidden",
     members: "read",
     settings: "hidden",
+    models: "hidden",
+    first_look: "hidden",
+    grouping: "hidden",
+    group_check: "hidden",
   },
   discover: {
     scope: "read",
@@ -48,6 +58,10 @@ export const PARTICIPANT_ACCESS = {
     export: "hidden",
     members: "read",
     settings: "hidden",
+    models: "hidden",
+    first_look: "answer",
+    grouping: "hidden",
+    group_check: "answer",
   },
   decide: {
     scope: "read",
@@ -57,6 +71,10 @@ export const PARTICIPANT_ACCESS = {
     export: "hidden",
     members: "read",
     settings: "hidden",
+    models: "hidden",
+    first_look: "hidden",
+    grouping: "hidden",
+    group_check: "hidden",
   },
   handoff: {
     scope: "read",
@@ -66,6 +84,10 @@ export const PARTICIPANT_ACCESS = {
     export: "hidden",
     members: "read",
     settings: "hidden",
+    models: "hidden",
+    first_look: "hidden",
+    grouping: "hidden",
+    group_check: "hidden",
   },
 } as const satisfies Record<ProjectPhase, Record<ProjectStep, StepAccess>>;
 
@@ -80,6 +102,10 @@ export const PARTICIPANT_WRITES = {
   // NOTE: EL12, owner decision 2026-11-20. A participant suggests a source model while the
   // brainstorm takes elements; only the facilitator adds and imports one.
   source_suggest: { step: "brainstorm", access: "add" },
+  // NOTE: EL22, ADR 0020. The first look takes answers in discover only.
+  first_look_answer: { step: "first_look", access: "answer" },
+  // NOTE: EL24, ADR 0020. The check of the groups takes remarks in discover only.
+  group_remark: { step: "group_check", access: "answer" },
 } as const satisfies Record<string, { step: ProjectStep; access: StepAccess }>;
 export type ParticipantWrite = keyof typeof PARTICIPANT_WRITES;
 

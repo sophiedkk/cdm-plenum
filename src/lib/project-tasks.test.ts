@@ -12,6 +12,8 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
     role: "participant",
     elements: 8,
     ownElements: 3,
+    firstLook: { total: 0, answered: 0 },
+    groupCheck: { asked: false, done: false },
     round: null,
     lastClosedRoundId: null,
     ...changes,
@@ -41,6 +43,16 @@ describe("participantTask (PR8)", () => {
     expect(participantTask(overview({ phase: "discover" }))).toEqual({
       kind: "discover",
       added: 3,
+      firstLook: { total: 0, answered: 0 },
+      groupCheck: { asked: false, done: false },
+    });
+  });
+
+  it("carries the participant's first look in the discover phase (EL22)", () => {
+    const firstLook = { total: 14, answered: 5 };
+    expect(participantTask(overview({ phase: "discover", firstLook }))).toMatchObject({
+      kind: "discover",
+      firstLook,
     });
   });
 

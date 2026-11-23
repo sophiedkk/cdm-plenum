@@ -38,6 +38,3 @@ export const linkElementInput = z.object({
   path: archetypePath,
 });
 export type LinkElementInput = z.infer<typeof linkElementInput>;
-
-export const importArchetypeInput = z.object({ projectId: idSchema, cid, revision });
-export type ImportArchetypeInput = z.infer<typeof importArchetypeInput>;

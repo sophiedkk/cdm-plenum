@@ -62,7 +62,12 @@ function facts(changes: Partial<OverviewFacts> = {}): OverviewFacts {
     privateBrainstorm: true,
     boardRevealed: false,
     duplicates: 2,
-    ckmLinked: 0,
+    importedModels: 0,
+    listedFromModels: 0,
+    firstLookTotal: 14,
+    firstLookFinished: 6,
+    groupCheckAsked: false,
+    groupChecked: 0,
     round: null,
     undecided: 0,
     lastClosedRound: null,
@@ -149,24 +154,56 @@ describe("the checklist per phase", () => {
     expect(panel?.state).toBe("Done");
   });
 
-  it("lists the discover phase with the reveal, duplicates and the comparison", () => {
+  it("lists the discover phase in its parts: models, what is missing, reveal and clean up", () => {
     const reveal = <button type="button">Reveal the board</button>;
     renderOverview("discover", {}, { reveal, remind: vi.fn() });
-    expect(items().map((item) => [item.state, item.actions])).toEqual([
-      ["To do", ["Send a reminder"]],
-      ["To do", ["Reveal the board"]],
-      ["To do", ["Review"]],
-      ["To do", ["Search openEHR CKM"]],
+    expect(items().map((item) => [item.state, item.text, item.actions])).toEqual([
+      [
+        "To do",
+        "To doStart from existing models. Import the models that already describe the concept.Add models",
+        ["Add models"],
+      ],
+      [
+        "To do",
+        "To doParticipants go through the list. 6 of 8 done.Send a reminder",
+        ["Send a reminder"],
+      ],
+      [
+        "To do",
+        "To doAdd what is missing. 5 of 8 participants added elementsOpen the board",
+        ["Open the board"],
+      ],
+      [
+        "To do",
+        "To doReveal and clean up. Reveal the board, then merge the duplicates people marked.Reveal the board",
+        ["Reveal the board"],
+      ],
+      [
+        "To do",
+        "To doGroup the elements. You or a modeller put each element in a group; participants check it.Group",
+        ["Group"],
+      ],
     ]);
-    expect(screen.getByText("5 of 8 participants added elements")).toBeTruthy();
-    expect(screen.getByText("2 likely duplicate pairs to review")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Review" }).getAttribute("href")).toBe(
-      "/projects/p1/board?duplicates=true",
+    expect(screen.getByRole("link", { name: "Add models" }).getAttribute("href")).toBe(
+      "/projects/p1/models",
     );
-    expect(screen.getByText("Compare with openEHR CKM. FHIR and zib follow.")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Search openEHR CKM" }).getAttribute("href")).toBe(
-      "/projects/p1/board?ckm=true",
+    expect(screen.getByRole("link", { name: "Open the board" }).getAttribute("href")).toBe(
+      "/projects/p1/brainstorm",
     );
+  });
+
+  it("shows the imported models and, after the reveal, the duplicates to merge", () => {
+    renderOverview("discover", { importedModels: 3, listedFromModels: 14, boardRevealed: true });
+    const [models, , , cleanup] = items();
+    expect(models).toEqual({
+      state: "Done",
+      text: "DoneStart from existing models. 3 models imported: 14 elements on the list.Review",
+      actions: ["Review"],
+    });
+    expect(cleanup?.text).toContain("2 likely duplicate pairs to review");
+    expect(
+      screen.getAllByRole("link", { name: "Review" }).map((link) => link.getAttribute("href")),
+    ).toEqual(["/projects/p1/models", "/projects/p1/board?duplicates=true"]);
   });
 
   it("offers no reminder without e-mail", () => {

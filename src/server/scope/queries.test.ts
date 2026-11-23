@@ -7,6 +7,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
+import { emailOf } from "../test-fixtures.ts";
 import { type ProjectMembers, personLeaks, projectWithMembers } from "../test-project-members.ts";
 import {
   addScopeComment,
@@ -204,7 +205,7 @@ describe("scope comments (SC2)", () => {
 
     const forFacilitator = await listScopeCommentsWithAuthors(db, m.facilitator, m.projectId);
     if (!forFacilitator.ok) throw new Error(forFacilitator.error);
-    expect(forFacilitator.value[0]?.author?.email).toBe("par@example.test");
+    expect(forFacilitator.value[0]?.author?.email).toBe(emailOf(m.participant));
     expect(await logActions()).toContain("scope_comment_added");
   });
 

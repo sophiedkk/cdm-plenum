@@ -13,7 +13,7 @@ import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
 import { acceptInvitationsOnSignIn } from "../invitations/acceptance.ts";
 import { invite } from "../invitations/queries.ts";
-import { facilitatorWithProject, groupId, insertUser, NOW } from "../test-fixtures.ts";
+import { emailOf, facilitatorWithProject, groupId, insertUser, NOW } from "../test-fixtures.ts";
 import {
   createGroup,
   createProject,
@@ -42,7 +42,7 @@ async function setup() {
   const invited = await invite(
     db,
     facilitator,
-    { projectId, groupId: nursing, email: "par@example.test" },
+    { projectId, groupId: nursing, email: emailOf(participant) },
     { baseUrl: "http://localhost:3000", mailer: null, now: new Date() },
   );
   expect(invited.ok).toBe(true);
@@ -80,7 +80,7 @@ describe("createProject (PR2)", () => {
 
   it("creates the default stakeholder groups with their expert types, named in the locale (PR6)", async () => {
     const userId = await insertUser(db, "nl");
-    await grantAppRole(db, "nl@example.test", "facilitator");
+    await grantAppRole(db, emailOf(userId), "facilitator");
     const created = await createProject(db, userId, { name: "Bloeddruk" }, "nl");
     if (!created.ok) throw new Error(created.error);
     const groups = await listGroups(db, userId, created.value.projectId);
@@ -100,7 +100,7 @@ describe("createProject (PR2)", () => {
 
   it("refuses a user without the application role facilitator", async () => {
     const userId = await insertUser(db, "plain");
-    await grantAppRole(db, "plain@example.test", "administrator");
+    await grantAppRole(db, emailOf(userId), "administrator");
     expect(await createProject(db, userId, { name: "X" }, "en")).toEqual({
       ok: false,
       error: "forbidden",
@@ -109,8 +109,8 @@ describe("createProject (PR2)", () => {
   });
 
   it("after a revoked right refuses new projects but keeps existing ones and their memberships", async () => {
-    const { userId, projectId } = await facilitatorWithProject(db);
-    await revokeAppRole(db, "fac@example.test", "facilitator");
+    const { userId, projectId, email } = await facilitatorWithProject(db);
+    await revokeAppRole(db, email, "facilitator");
     expect(await createProject(db, userId, { name: "Second" }, "en")).toEqual({
       ok: false,
       error: "forbidden",

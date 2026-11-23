@@ -12,7 +12,7 @@ import { invite } from "../invitations/queries.ts";
 import { saveRating } from "../rounds/ratings.ts";
 import { roundResults } from "../rounds/results.ts";
 import { closedNow, inDays, ok, openedRound, panelProject } from "../rounds/test-round.ts";
-import { groupId } from "../test-fixtures.ts";
+import { emailOf, groupId } from "../test-fixtures.ts";
 import { personLeaks, projectWithMembers } from "../test-project-members.ts";
 import {
   getProject,
@@ -66,10 +66,10 @@ describe("listGroupMembers (PR3)", () => {
     expect(listed.value).toHaveLength(9);
     const nursing = listed.value.find((group) => group.name === "Nursing");
     expect(nursing?.participants).toBe(2);
-    expect(nursing?.members.map((member) => member.email)).toEqual([
-      "par2@example.test",
-      "par@example.test",
-    ]);
+    // The fixture addresses carry a random suffix, so this checks the members, not their order.
+    expect(nursing?.members.map((member) => member.email).sort()).toEqual(
+      [emailOf(members.participant), emailOf(members.otherParticipant)].sort(),
+    );
     expect(listed.value.find((group) => group.name === "Patient")?.members).toEqual([]);
   });
 
@@ -109,7 +109,9 @@ describe("leaveProject (PR5)", () => {
     const listed = await listGroupMembers(db, members.facilitator, projectId);
     if (!listed.ok) throw new Error(listed.error);
     const nursing = listed.value.find((group) => group.name === "Nursing");
-    expect(nursing?.members.map((member) => member.email)).toEqual(["par2@example.test"]);
+    expect(nursing?.members.map((member) => member.email)).toEqual([
+      emailOf(members.otherParticipant),
+    ]);
     const team = await db
       .selectFrom("team")
       .select("memberCount")
@@ -210,7 +212,7 @@ describe("leaveProject (PR5)", () => {
     const invited = await invite(
       db,
       facilitator,
-      { projectId, groupId: terminology, email: "par@example.test" },
+      { projectId, groupId: terminology, email: emailOf(participant) },
       { ...DEPS, now: new Date() },
     );
     expect(invited.ok).toBe(true);

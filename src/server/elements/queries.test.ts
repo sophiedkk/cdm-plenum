@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CSV_MAX_BYTES } from "@/lib/element-csv";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
-import { facilitatorWithProject } from "../test-fixtures.ts";
+import { emailOf, facilitatorWithProject } from "../test-fixtures.ts";
 import { type ProjectMembers, personLeaks, projectWithMembers } from "../test-project-members.ts";
 import { revealBoard } from "./brainstorm.ts";
 import { importCsv, previewCsvImport } from "./import.ts";
@@ -154,12 +154,12 @@ describe("authors (EL2, EL6)", () => {
       body: "Also diastolic?",
     });
     const list = await listElementsWithAuthors(db, m.facilitator, m.projectId);
-    expect(list.ok && list.value[0]?.author?.email).toBe("par@example.test");
+    expect(list.ok && list.value[0]?.author?.email).toBe(emailOf(m.participant));
     const comments = await listElementCommentsWithAuthors(db, m.facilitator, {
       projectId: m.projectId,
       elementId: id,
     });
-    expect(comments.ok && comments.value[0]?.author?.email).toBe("par2@example.test");
+    expect(comments.ok && comments.value[0]?.author?.email).toBe(emailOf(m.otherParticipant));
   });
 
   it("refuses the authored lists to a participant with forbidden", async () => {

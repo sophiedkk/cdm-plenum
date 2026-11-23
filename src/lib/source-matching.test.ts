@@ -68,6 +68,27 @@ describe("matchSourceElements", () => {
     expect(rows[0]).toMatchObject({ basis: "mapping", applied: false, key: "NL-CM:12.4.3" });
   });
 
+  it("never suggests an element the facilitator called not the same", () => {
+    expect(
+      summary([
+        model("a", [
+          el("a1", "Cuff size", { nlCmId: "NL-CM:2.2", unmatched: true }),
+          el("a2", "Body position", { unmatched: true }),
+        ]),
+        model("b", [el("b1", "Cuff width", { nlCmId: "NL-CM:2.2" }), el("b2", "Body position")]),
+      ]),
+    ).toEqual(["none: a=a1", "none: a=a2", "none: b=b1", "none: b=b2"]);
+  });
+
+  it("still applies a code match to an element called not the same", () => {
+    expect(
+      summary([
+        model("a", [el("a1", "Systolic", { codeSystem: LOINC, code: "8480-6", unmatched: true })]),
+        model("b", [el("b1", "Upper", { codeSystem: LOINC, code: "8480-6" })]),
+      ]),
+    ).toEqual(["code!: a=a1 b=b1"]);
+  });
+
   it("takes a code match before a mapping match", () => {
     expect(
       summary([

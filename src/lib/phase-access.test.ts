@@ -29,12 +29,14 @@ describe("the phase table (PR9)", () => {
       phase,
       PROJECT_STEPS.map((step) => participantAccess(phase, step)),
     ]);
-    // Steps in order: scope, brainstorm, board, rounds, export, members, settings.
+    // Steps in order: scope, brainstorm, board, rounds, export, members, settings, models,
+    // first_look, grouping, group_check.
+    const H = "hidden";
     expect(table).toEqual([
-      ["scope", ["comment", "hidden", "hidden", "hidden", "hidden", "read", "hidden"]],
-      ["discover", ["read", "add", "comment", "hidden", "hidden", "read", "hidden"]],
-      ["decide", ["read", "hidden", "read", "rate", "hidden", "read", "hidden"]],
-      ["handoff", ["read", "hidden", "read", "read", "hidden", "read", "hidden"]],
+      ["scope", ["comment", H, H, H, H, "read", H, H, H, H, H]],
+      ["discover", ["read", "add", "comment", H, H, "read", H, H, "answer", H, "answer"]],
+      ["decide", ["read", H, "read", "rate", H, "read", H, H, H, H, H]],
+      ["handoff", ["read", H, "read", "read", H, "read", H, H, H, H, H]],
     ]);
   });
 
@@ -50,6 +52,12 @@ describe("the phase table (PR9)", () => {
     for (const phase of PROJECT_PHASES) {
       expect(stepVisible("participant", phase, "export")).toBe(false);
       expect(stepVisible("participant", phase, "settings")).toBe(false);
+    }
+  });
+
+  it("keeps the existing models page from a participant in every phase (EL12)", () => {
+    for (const phase of PROJECT_PHASES) {
+      expect(stepVisible("participant", phase, "models")).toBe(false);
     }
   });
 
@@ -108,6 +116,8 @@ describe("writeOpen", () => {
       ["element_mark", ["discover"]],
       ["rate", ["decide"]],
       ["source_suggest", ["discover"]],
+      ["first_look_answer", ["discover"]],
+      ["group_remark", ["discover"]],
     ]);
   });
 

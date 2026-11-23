@@ -12,6 +12,7 @@ import type { Mailer } from "../mail.ts";
 import { done, type ProjectResult, readProject, refused, withProject } from "../projects/access.ts";
 import type { Author } from "../projects/member.ts";
 import { log } from "../projects/queries.ts";
+import { lookElements } from "./first-look.ts";
 import type { PrivateBrainstormInput } from "./schemas.ts";
 
 export interface ParticipantCount extends Author {
@@ -101,6 +102,8 @@ export async function revealBoard(
 /**
  * Turns the private step on or off (facilitator only, EL13). Refused after the reveal
  * (`board_already_revealed`): participants have seen the board, so hiding it again means nothing.
+ * Turning it on is refused once the group was asked to check the groups
+ * (`private_after_group_check`): the check has shown every element to every participant (EL24).
  */
 export async function setPrivateBrainstorm(
   db: Kysely<DB>,
@@ -110,10 +113,11 @@ export async function setPrivateBrainstorm(
   return withProject(db, userId, input.projectId, { project: ["update"] }, async (trx, project) => {
     const row = await trx
       .selectFrom("project")
-      .select("board_revealed_at")
+      .select(["board_revealed_at", "group_check_at"])
       .where("id", "=", project.id)
       .executeTakeFirstOrThrow();
     if (row.board_revealed_at !== null) return refused("board_already_revealed");
+    if (input.enabled && row.group_check_at !== null) return refused("private_after_group_check");
     await trx
       .updateTable("project")
       .set({ private_brainstorm: input.enabled })
@@ -126,8 +130,10 @@ export async function setPrivateBrainstorm(
 }
 
 /**
- * E-mails every participant who has not added an element yet a reminder to add theirs, during
- * the discover phase (facilitator only, EL13). Refused without a mailer (`mail_not_configured`)
+ * E-mails a reminder during the discover phase (facilitator only, EL13, EL22): while elements
+ * from existing models wait for a first look, to every participant who has not answered them
+ * all, with a link to the first look; otherwise to every participant who has not added an
+ * element yet, with a link to the brainstorm. Refused without a mailer (`mail_not_configured`)
  * and outside discover (`reminder_outside_discover`). Returns how many e-mails went out; the
  * addresses never leave the server.
  */
@@ -137,7 +143,7 @@ export async function sendBrainstormReminder(
   projectId: string,
   deps: { mailer: Mailer | null; baseUrl: string },
 ): Promise<ProjectResult<{ sent: number }>> {
-  const found = await withProject<{ name: string; emails: string[] }>(
+  const found = await withProject<{ name: string; emails: string[]; firstLook: boolean }>(
     db,
     userId,
     projectId,
@@ -145,6 +151,28 @@ export async function sendBrainstormReminder(
     async (trx, project) => {
       if (deps.mailer === null) return refused("mail_not_configured");
       if (project.phase !== REVEAL_PHASE) return refused("reminder_outside_discover");
+      const looked = (await lookElements(trx, project.id)).map((element) => element.id);
+      if (looked.length > 0) {
+        const unfinished = await trx
+          .selectFrom("member")
+          .innerJoin("user", "user.id", "member.userId")
+          .leftJoin("first_look_answer as answer", (join) =>
+            join.onRef("answer.member_id", "=", "member.id").on("answer.element_id", "in", looked),
+          )
+          .select("user.email")
+          .where("member.organizationId", "=", project.id)
+          .where("member.role", "=", "participant")
+          .groupBy("user.email")
+          .having((eb) => eb.fn.count("answer.element_id"), "<", looked.length)
+          .orderBy("user.email")
+          .execute();
+        await log(trx, userId, project.id, "brainstorm_reminder_sent", "project", project.id);
+        return done({
+          name: project.name,
+          emails: unfinished.map((row) => row.email),
+          firstLook: true,
+        });
+      }
       const rows = await trx
         .selectFrom("member")
         .innerJoin("user", "user.id", "member.userId")
@@ -161,19 +189,24 @@ export async function sendBrainstormReminder(
         .orderBy("user.email")
         .execute();
       await log(trx, userId, project.id, "brainstorm_reminder_sent", "project", project.id);
-      return done({ name: project.name, emails: rows.map((row) => row.email) });
+      return done({ name: project.name, emails: rows.map((row) => row.email), firstLook: false });
     },
   );
   if (!found.ok || deps.mailer === null) return found.ok ? refused("mail_not_configured") : found;
-  const { name, emails } = found.value;
-  const url = new URL(`/projects/${encodeURIComponent(projectId)}/brainstorm`, deps.baseUrl);
+  const { name, emails, firstLook } = found.value;
+  const page = firstLook ? "first-look" : "brainstorm";
+  const url = new URL(`/projects/${encodeURIComponent(projectId)}/${page}`, deps.baseUrl);
   let sent = 0;
   for (const to of emails) {
     try {
       await deps.mailer.send({
         to,
-        subject: m.mail_reminder_subject({ project: name }),
-        text: m.mail_reminder_body({ project: name, url: url.toString() }),
+        subject: firstLook
+          ? m.mail_first_look_reminder_subject({ project: name })
+          : m.mail_reminder_subject({ project: name }),
+        text: firstLook
+          ? m.mail_first_look_reminder_body({ project: name, url: url.toString() })
+          : m.mail_reminder_body({ project: name, url: url.toString() }),
       });
       sent += 1;
     } catch (error) {

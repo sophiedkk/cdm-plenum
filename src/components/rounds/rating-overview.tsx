@@ -8,6 +8,7 @@ import type { ReactNode, Ref } from "react";
 import { m } from "@/i18n/messages";
 import type { MyElement, OwnRating } from "@/server/rounds/ratings";
 import { detailLabel } from "./detail-flags";
+import { GroupRows, headingBefore } from "./group-rows";
 
 function ratingText(own: OwnRating): string {
   if (!own.rated) return m.rounds_overview_not_rated();
@@ -64,31 +65,37 @@ export function RatingOverview({
           </thead>
           <tbody className="divide-y">
             {elements.map((element, index) => (
-              <tr key={element.id}>
-                <th scope="row" className="px-3 py-1.5 text-left font-normal break-words">
-                  {cardLink(index + 1, element.name)}
-                </th>
-                <td
-                  className={
-                    element.own.rated ? "px-3 py-1.5" : "px-3 py-1.5 text-muted-foreground"
-                  }
-                >
-                  {ratingText(element.own)}
-                </td>
-                {flags && (
+              <GroupRows
+                key={element.id}
+                heading={headingBefore(elements, index)}
+                columns={flags ? 3 : 2}
+              >
+                <tr>
+                  <th scope="row" className="px-3 py-1.5 text-left font-normal break-words">
+                    {cardLink(index + 1, element.name)}
+                  </th>
                   <td
                     className={
-                      element.flags.length === 0
-                        ? "px-3 py-1.5 text-muted-foreground"
-                        : "px-3 py-1.5"
+                      element.own.rated ? "px-3 py-1.5" : "px-3 py-1.5 text-muted-foreground"
                     }
                   >
-                    {element.flags.length === 0
-                      ? m.rounds_overview_no_flags()
-                      : element.flags.map((flag) => detailLabel(flag.kind)).join(", ")}
+                    {ratingText(element.own)}
                   </td>
-                )}
-              </tr>
+                  {flags && (
+                    <td
+                      className={
+                        element.flags.length === 0
+                          ? "px-3 py-1.5 text-muted-foreground"
+                          : "px-3 py-1.5"
+                      }
+                    >
+                      {element.flags.length === 0
+                        ? m.rounds_overview_no_flags()
+                        : element.flags.map((flag) => detailLabel(flag.kind)).join(", ")}
+                    </td>
+                  )}
+                </tr>
+              </GroupRows>
             ))}
           </tbody>
         </table>

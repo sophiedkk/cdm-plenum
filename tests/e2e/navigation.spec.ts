@@ -13,13 +13,13 @@ import type { DB } from "../../src/server/db/schema.gen.ts";
 import { closeRound } from "../../src/server/rounds/queries.ts";
 import { saveRating } from "../../src/server/rounds/ratings.ts";
 import { openedRound } from "../../src/server/rounds/test-round.ts";
-import { insertElement, joinedParticipant } from "../../src/server/test-fixtures.ts";
+import { emailOf, insertElement, joinedParticipant } from "../../src/server/test-fixtures.ts";
 import { seedElement, seedScope, signInTo, userIdOf } from "./board-seed.ts";
 import {
-  addressOf,
   BROWSER_LOCALE,
   expect,
   expectAxeClean,
+  expectAxeCleanAfterToasts,
   expectAxeCleanInBothThemes,
   expectHydrated,
   type Locale,
@@ -118,7 +118,7 @@ async function seedDeciding(db: Kysely<DB>): Promise<Deciding> {
     projectId,
     round2,
     facilitator: project.facilitator.email,
-    nurse: addressOf(names[0] ?? ""),
+    nurse: emailOf(raters[0] ?? ""),
   };
 }
 
@@ -179,14 +179,18 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(page).toHaveURL((url) => url.pathname === `/projects/${seeded.projectId}`);
       await expect(page.getByRole("heading", { level: 1, name: "Blood pressure" })).toBeVisible();
       await expect(page).toHaveTitle(/^Blood pressure \|/);
-      // A participant has no tabs: the home is the navigation, and the steps show the phase only.
+      // A participant has no tabs: the home is the navigation. The current step is no link; the
+      // done steps open their recaps (PR13).
       await expect(
         page.getByRole("navigation", { name: text.projects_tabs_label, exact: true }),
       ).toHaveCount(0);
       await expect(steps(page, text).locator('[aria-current="step"]')).toContainText(
         text.projects_phase_decide,
       );
-      await expect(steps(page, text).getByRole("link")).toHaveCount(0);
+      await expect(
+        steps(page, text).locator('[aria-current="step"]').getByRole("link"),
+      ).toHaveCount(0);
+      await expect(steps(page, text).getByRole("link")).toHaveCount(2);
       const edge = await leftEdges(page);
 
       const card = page.getByRole("region", {
@@ -250,7 +254,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(steps(page, text).locator('[aria-current="step"]')).toContainText(
         text.projects_phase_decide,
       );
-      await expect(steps(page, text).getByRole("link")).toHaveCount(0);
+      await expect(
+        steps(page, text).locator('[aria-current="step"]').getByRole("link"),
+      ).toHaveCount(0);
       expect(await leftEdges(page)).toEqual(edge);
       await expectAxeClean(page);
       await snap(page, { path: test.info().outputPath(`scope-in-decide-${locale}.png`) });
@@ -304,8 +310,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         "aria-current",
         "page",
       );
-      // The facilitator's steps show the status only; the tabs navigate.
-      await expect(steps(page, text).getByRole("link")).toHaveCount(0);
+      // The facilitator's tabs navigate; of the steps only the done scope links, to its recap.
+      await expect(steps(page, text).getByRole("link")).toHaveCount(1);
+      await expect(steps(page, text).getByRole("link")).toHaveAttribute(
+        "href",
+        `/projects/${project.projectId}/recap/scope`,
+      );
       const edge = await leftEdges(page);
       await expect(
         page.getByRole("heading", {
@@ -344,7 +354,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await reveal.click();
       await page.getByRole("button", { name: text.board_reveal_confirm }).click();
       await expect(page.getByText(text.board_revealed)).toBeVisible();
-      await expect(page.getByText(text.projects_check_revealed, { exact: true })).toBeVisible();
+      await expect(page.getByText(text.projects_check_duplicates_none)).toBeVisible();
       await expect(page.getByRole("button", { name: text.board_reveal })).toHaveCount(0);
 
       // On to decide, through the confirmation below the buttons.
@@ -359,7 +369,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         ),
       ).toBeFocused();
       expect(await goOn.boundingBox()).toEqual(before);
-      await expectAxeClean(page);
+      await expectAxeCleanAfterToasts(page);
       await page
         .getByRole("button", {
           name: fill(text.projects_phase_confirm, { phase: text.projects_phase_decide }),
