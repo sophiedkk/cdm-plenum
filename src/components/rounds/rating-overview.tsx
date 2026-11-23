@@ -6,48 +6,14 @@
 // each with a link back to its card.
 import type { ReactNode, Ref } from "react";
 import { m } from "@/i18n/messages";
-import { groupName } from "@/lib/i18n/labels";
 import type { MyElement, OwnRating } from "@/server/rounds/ratings";
 import { detailLabel } from "./detail-flags";
+import { GroupRows, headingBefore } from "./group-rows";
 
 function ratingText(own: OwnRating): string {
   if (!own.rated) return m.rounds_overview_not_rated();
   if (own.score === null) return m.rounds_rate_unable();
   return String(own.score);
-}
-
-/**
- * The heading of the group that starts at `index` (DE19), or null when the element before is
- * in the same group. Elements without a group come last, under "Not grouped".
- */
-function headingBefore(elements: readonly MyElement[], index: number): string | null {
-  const element = elements[index];
-  if (!element) return null;
-  const before = elements[index - 1];
-  const id = element.group?.id ?? null;
-  if (before !== undefined && (before.group?.id ?? null) === id) return null;
-  if (element.group === null)
-    return elements.some((other) => other.group !== null) ? m.board_check_ungrouped() : null;
-  return groupName(element.group);
-}
-
-function GroupRows({
-  heading,
-  columns,
-  children,
-}: Readonly<{ heading: string | null; columns: number; children: ReactNode }>) {
-  return (
-    <>
-      {heading !== null && (
-        <tr className="bg-muted/30">
-          <th scope="colgroup" colSpan={columns} className="px-3 py-1.5 text-left font-semibold">
-            {heading}
-          </th>
-        </tr>
-      )}
-      {children}
-    </>
-  );
 }
 
 /** The table of the participant's ratings; `cardLink` renders the link to one card. */

@@ -228,3 +228,47 @@ describe("refusals of results and response rate", () => {
     });
   });
 });
+
+describe("results in groups (DE19)", () => {
+  it("lists the elements under their groups in the facilitator's order, the same for everyone", async () => {
+    const { facilitator, projectId, roundId, raters, elements } = await realisticRound();
+    const groups = await db
+      .selectFrom("element_group")
+      .select(["id", "prompt", "position"])
+      .where("project_id", "=", projectId)
+      .where("prompt", "in", ["recorded", "method"])
+      .orderBy("position")
+      .execute();
+    const groupOf = (prompt: string) => groups.find((group) => group.prompt === prompt)?.id ?? null;
+    const place = async (name: string, prompt: string) =>
+      db
+        .updateTable("element")
+        .set({ group_id: groupOf(prompt) })
+        .where("id", "=", elements.get(name) ?? "")
+        .execute();
+    await place("Cuff size", "method");
+    await place("Measurement location", "recorded");
+    await place("Systolic pressure", "recorded");
+    ok(await closeRound(db, facilitator, { projectId, roundId }, { now: inDays(2) }));
+
+    // Each group's elements in the round's order, the groups by position, the ungrouped last.
+    const recorded = ["Systolic pressure", "Measurement location"];
+    const byGroup: Record<string, string[]> = { recorded, method: ["Cuff size"] };
+    const expected = [
+      ...groups.flatMap((group) => byGroup[group.prompt ?? ""] ?? []),
+      "Body position",
+      "Device serial number",
+    ];
+    for (const reader of [facilitator, raters[0] ?? "", raters[5] ?? ""]) {
+      const results = ok(
+        await roundResults(db, reader, { projectId, roundId }, { now: new Date() }),
+      );
+      expect(results.elements.map((element) => element.name)).toEqual(expected);
+      expect(results.elements.map((element) => element.group?.prompt ?? null)).toEqual(
+        expected.map((name) =>
+          name === "Cuff size" ? "method" : recorded.includes(name) ? "recorded" : null,
+        ),
+      );
+    }
+  });
+});

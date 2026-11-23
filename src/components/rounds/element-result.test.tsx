@@ -27,6 +27,7 @@ const SYSTOLIC: ResultRowElement = {
     // Two scores: a group below the minimum must never show, even when it is passed in.
     { groupId: "g-2", groupName: "Architecture", result: elementResult([7, 8], DEFAULT_RULE) },
   ],
+  group: null,
 };
 
 const CUFF: ResultRowElement = {
@@ -35,6 +36,7 @@ const CUFF: ResultRowElement = {
   outcome: "no_consensus",
   result: elementResult([2, 9], DEFAULT_RULE),
   groups: [],
+  group: null,
 };
 
 function row(name: string): HTMLElement {
@@ -45,6 +47,38 @@ function row(name: string): HTMLElement {
 }
 
 describe("ResultsTable", () => {
+  it("lists the elements under their group headings, the ungrouped last (DE19)", () => {
+    const measured = { id: "grp-1", name: "Measured values", prompt: null };
+    render(
+      <ResultsTable
+        elements={[
+          { ...SYSTOLIC, group: measured },
+          { ...CUFF, id: "e-4", name: "Diastolic pressure", group: measured },
+          CUFF,
+        ]}
+      />,
+    );
+    const headings = screen
+      .getAllByRole("columnheader")
+      .filter((cell) => cell.getAttribute("scope") === "colgroup")
+      .map((cell) => cell.textContent);
+    expect(headings).toEqual(["Measured values", "Not grouped yet"]);
+    const rows = screen.getAllByRole("row").map((r) => r.textContent ?? "");
+    const at = (text: string) => rows.findIndex((r) => r.startsWith(text));
+    expect(at("Measured values")).toBeLessThan(at("Systolic pressure"));
+    expect(at("Diastolic pressure")).toBeLessThan(at("Not grouped"));
+    expect(at("Not grouped")).toBeLessThan(at("Cuff size"));
+  });
+
+  it("shows no headings when no element has a group", () => {
+    render(<ResultsTable elements={[SYSTOLIC, CUFF]} />);
+    expect(
+      screen
+        .getAllByRole("columnheader")
+        .filter((cell) => cell.getAttribute("scope") === "colgroup"),
+    ).toEqual([]);
+  });
+
   it("shows one row per element with the outcome in words, median, distribution and answers", () => {
     render(<ResultsTable elements={[SYSTOLIC, CUFF]} />);
     const systolic = row("Systolic pressure");

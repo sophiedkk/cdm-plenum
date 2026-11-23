@@ -42,6 +42,8 @@ the project uses [Semantic Versioning](https://semver.org/).
 - Groups in the rounds: the rating card names each element's group, and the
   overview of your ratings lists them under group headings. Each participant
   sees the groups in an order of their own, the same during the whole round.
+  The results of a closed round list the elements under the same headings,
+  in the facilitator's order of the groups.
 - Phase recaps: a finished phase in the project header opens a read-only
   recap. Scope shows the statement and its sources; Discover shows how many
   elements went into round 1 and where they came from, the merged
