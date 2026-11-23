@@ -34,7 +34,8 @@ clickable prototype of four screens.
   a page left the page you were on unmarked, and the current step opened a
   different page than the project did).
 - **Facilitator (U2, U4):** fixed tabs that never reorder: Overview, Scope,
-  Elements, Rounds, People, Settings. The project opens on Overview, with a
+  Elements, Rounds, Details, People, Settings. Details holds the detail
+  phase (DT1 to DT5) and shows in every phase (owner decision 2026-11-23). The project opens on Overview, with a
   checklist per phase, one main "Go on to" button and a quiet "Move back to"
   link, each confirmed in the page. The phase steps in the header show the
   status only. Adding an element on Elements replaces the facilitator's

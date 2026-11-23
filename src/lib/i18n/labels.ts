@@ -18,6 +18,7 @@ const PHASE_LABELS: Record<ProjectPhase, () => string> = {
   scope: () => m.projects_phase_scope(),
   discover: () => m.projects_phase_discover(),
   decide: () => m.projects_phase_decide(),
+  detail: () => m.projects_phase_detail(),
   handoff: () => m.projects_phase_handoff(),
 };
 

@@ -7,9 +7,10 @@ import { adjacentPhase, isProjectPhase, phaseSteps } from "./project-phases.ts";
 describe("adjacentPhase (PR4)", () => {
   it("moves one phase on or back", () => {
     expect(adjacentPhase("scope", "next")).toBe("discover");
-    expect(adjacentPhase("decide", "next")).toBe("handoff");
+    expect(adjacentPhase("decide", "next")).toBe("detail");
+    expect(adjacentPhase("detail", "next")).toBe("handoff");
     expect(adjacentPhase("discover", "previous")).toBe("scope");
-    expect(adjacentPhase("handoff", "previous")).toBe("decide");
+    expect(adjacentPhase("handoff", "previous")).toBe("detail");
   });
 
   it("returns null past either end", () => {
@@ -24,12 +25,14 @@ describe("phaseSteps", () => {
       { phase: "scope", state: "done" },
       { phase: "discover", state: "current" },
       { phase: "decide", state: "next" },
+      { phase: "detail", state: "later" },
       { phase: "handoff", state: "later" },
     ]);
   });
 
   it("has no next step in the last phase", () => {
     expect(phaseSteps("handoff").map((step) => step.state)).toEqual([
+      "done",
       "done",
       "done",
       "done",

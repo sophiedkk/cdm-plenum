@@ -71,6 +71,7 @@ function facts(changes: Partial<OverviewFacts> = {}): OverviewFacts {
     round: null,
     undecided: 0,
     lastClosedRound: null,
+    detail: { inModel: 0, proposed: 0, settled: 0, openObjections: 0 },
     mailConfigured: true,
     ...changes,
   };
@@ -264,7 +265,7 @@ describe("the checklist per phase", () => {
       "/projects/p1/export",
     );
     expect(screen.queryByRole("button", { name: /Go on to/ })).toBeNull();
-    expect(screen.getByRole("button", { name: "Move back to Decide" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Move back to Detail" })).toBeTruthy();
   });
 });
 
@@ -311,8 +312,8 @@ describe("the phase move (PR4)", () => {
   it("shows a refusal, such as a round still open (PR10), and stays", async () => {
     const move = vi.fn(async () => ({ ok: false, error: "round_still_open" }));
     const { onMoved } = renderOverview("decide", {}, { move });
-    fireEvent.click(screen.getByRole("button", { name: "Go on to Hand-off" }));
-    fireEvent.click(screen.getByRole("button", { name: "Yes, move to Hand-off" }));
+    fireEvent.click(screen.getByRole("button", { name: "Go on to Detail" }));
+    fireEvent.click(screen.getByRole("button", { name: "Yes, move to Detail" }));
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
     expect(onMoved).not.toHaveBeenCalled();
     expect(screen.getByRole("group")).toBeTruthy();

@@ -21,6 +21,7 @@ const PREFIXES = [
   "members_",
   "admin_",
   "export_",
+  "details_",
   "common_",
   "app_",
   "group_",

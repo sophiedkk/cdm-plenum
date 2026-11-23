@@ -11,7 +11,7 @@ import { type DataTypeKey, isDataTypeKey } from "@/lib/data-types";
 import { ELEMENT_DESCRIPTION_MAX, ELEMENT_NAME_MAX } from "@/lib/elements";
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
 import { type RefusalCode, refusalMessage } from "@/lib/i18n/refusals";
-import { DataTypeField, SelectField } from "./element-fields";
+import { DataTypeField, maxKindOptions, minOccursOptions, SelectField } from "./element-fields";
 
 /** What the form sends: the fields of `addElementInput` and `updateElementInput`. */
 export interface ElementFields {
@@ -23,13 +23,17 @@ export interface ElementFields {
 
 export type ElementOutcome = { ok: true } | { ok: false; error: RefusalCode };
 
-interface FormValues {
-  name: string;
-  description: string;
-  dataType: string;
+/** The cardinality as the form holds it: a minimum, the kind of maximum and its number. */
+export interface CardinalityValues {
   minOccurs: string;
   maxKind: string;
   maxNumber: string;
+}
+
+interface FormValues extends CardinalityValues {
+  name: string;
+  description: string;
+  dataType: string;
 }
 
 const textLimit = (max: number) =>
@@ -54,25 +58,25 @@ export function elementFormSchema() {
       maxKind: z.string(),
       maxNumber: z.string(),
     })
-    .superRefine((value, ctx) => {
-      if ((value.minOccurs === "") !== (value.maxKind === "")) {
-        ctx.addIssue({
-          code: "custom",
-          path: [value.minOccurs === "" ? "minOccurs" : "maxKind"],
-          message: m.board_cardinality_incomplete(),
-        });
-      }
-      if (value.maxKind === "number" && !/^[1-9][0-9]{0,8}$/.test(value.maxNumber.trim())) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["maxNumber"],
-          message: m.board_max_number_invalid(),
-        });
-      }
-    });
+    .superRefine(checkCardinality);
 }
 
-function toCardinality(values: FormValues): Cardinality | null {
+/** The cardinality of EL1 with translated messages: both parts or neither, and a valid maximum. */
+export function checkCardinality(value: CardinalityValues, ctx: z.RefinementCtx): void {
+  if ((value.minOccurs === "") !== (value.maxKind === "")) {
+    ctx.addIssue({
+      code: "custom",
+      path: [value.minOccurs === "" ? "minOccurs" : "maxKind"],
+      message: m.board_cardinality_incomplete(),
+    });
+  }
+  if (value.maxKind === "number" && !/^[1-9][0-9]{0,8}$/.test(value.maxNumber.trim())) {
+    ctx.addIssue({ code: "custom", path: ["maxNumber"], message: m.board_max_number_invalid() });
+  }
+}
+
+/** The cardinality of the form's three cardinality fields, or null while not decided. */
+export function toCardinality(values: CardinalityValues): Cardinality | null {
   if (values.minOccurs === "" || values.maxKind === "") return null;
   const min = values.minOccurs === "1" ? 1 : 0;
   if (values.maxKind === "many") return { min, max: null };
@@ -80,7 +84,8 @@ function toCardinality(values: FormValues): Cardinality | null {
   return { min, max: Number(values.maxNumber.trim()) };
 }
 
-function fromCardinality(cardinality: Cardinality | null) {
+/** The three cardinality fields of a cardinality. */
+export function fromCardinality(cardinality: Cardinality | null): CardinalityValues {
   if (cardinality === null) return { minOccurs: "", maxKind: "", maxNumber: "" };
   const { min, max } = cardinality;
   if (max === null) return { minOccurs: String(min), maxKind: "many", maxNumber: "" };
@@ -182,29 +187,10 @@ export function ElementForm({
             <p className="text-sm text-muted-foreground">{m.board_cardinality_hint()}</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <form.AppField name="minOccurs">
-                {() => (
-                  <SelectField
-                    label={m.board_min_label()}
-                    options={[
-                      { value: "", label: m.board_not_decided() },
-                      { value: "0", label: m.board_min_0() },
-                      { value: "1", label: m.board_min_1() },
-                    ]}
-                  />
-                )}
+                {() => <SelectField label={m.board_min_label()} options={minOccursOptions()} />}
               </form.AppField>
               <form.AppField name="maxKind">
-                {() => (
-                  <SelectField
-                    label={m.board_max_label()}
-                    options={[
-                      { value: "", label: m.board_not_decided() },
-                      { value: "1", label: m.board_max_1() },
-                      { value: "many", label: m.board_max_many() },
-                      { value: "number", label: m.board_max_number() },
-                    ]}
-                  />
-                )}
+                {() => <SelectField label={m.board_max_label()} options={maxKindOptions()} />}
               </form.AppField>
             </div>
             <form.Subscribe selector={(state) => state.values.maxKind}>

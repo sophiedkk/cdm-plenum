@@ -11,6 +11,18 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Detail phase: after the rounds, a project moves on to Detail, before
+  hand-off. On the new Details tab, the facilitator or a member of an
+  architecture group proposes the data type, cardinality and value list of
+  each element in the model, starting from the existing models it is linked
+  to and the flags raters set. Participants answer each proposal with "I
+  agree" or an objection with a reason, from "Your turn" on the project home.
+  The facilitator marks each objection addressed with a note and settles the
+  proposal, which puts its structure on the element. A revised proposal asks
+  everyone again. The Overview follows proposals, open objections and settled
+  elements, and the board, the element form and the rating card show data
+  type, cardinality and values from this phase on.
+
 - Existing models: the facilitator adds openEHR archetypes from CKM, FHIR
   profiles from a package, and other sources such as a form, then compares
   them in one table with a column per model. Check the elements you want and

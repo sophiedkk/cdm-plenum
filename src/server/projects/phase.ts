@@ -9,6 +9,7 @@ import { adjacentPhase, isProjectPhase, type ProjectPhase } from "@/lib/project-
 import { mayRate, RATER_ROLES } from "@/lib/project-roles";
 import type { OverviewRound, ProjectOverview } from "@/lib/project-tasks";
 import type { DB } from "../db/schema.gen.ts";
+import { ownDetailProgress } from "../details/queries.ts";
 import { lookElements } from "../elements/first-look.ts";
 import { checkProgress } from "../elements/groups.ts";
 import { ownRatingCode } from "../rounds/rater-link.ts";
@@ -143,6 +144,10 @@ export async function projectOverview(
             .executeTakeFirst()) !== undefined,
       },
       round: await runningRound(reader, project.id, project.role, userId, deps.now),
+      detail:
+        phase === "detail"
+          ? await ownDetailProgress(reader, project.id, userId)
+          : { open: 0, answered: 0 },
       lastClosedRoundId: lastClosed?.id ?? null,
     });
   });

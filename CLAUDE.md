@@ -133,8 +133,8 @@ page from these patterns; each has a real use and a test you can copy.
   `AboutProject`); `homePages` in `src/lib/project-home.ts` decides which
   earlier pages the home links, and every other page links back to the
   home. The facilitator gets
-  `ProjectTabs`, fixed as Overview, Scope, Elements, Rounds, People,
-  Settings; a page without its own tab (export, brainstorm, import) marks
+  `ProjectTabs`, fixed as Overview, Scope, Elements, Rounds, Details,
+  People, Settings; a page without its own tab (export, brainstorm, import) marks
   the tab it belongs to in `UNDER`. Overview is the index route for the
   facilitator: `checklist(phase, facts)` decides the items, with
   `done: null` for an item that only informs, and `PhaseMove` holds the
@@ -149,13 +149,15 @@ page from these patterns; each has a real use and a test you can copy.
   `writeOpen` and `StepClosedNote`, its server function `phaseOpenFor`; a
   hidden step's URL sends a participant to the project home. The same file
   holds the one switch for data type, cardinality and values in the UI
-  (`DETAIL_FIELDS_PHASE`, `detailFieldsShown`, EL21): off in every phase
-  until the detail phase exists (owner decision 2026-11-20). The board, the
+  (`DETAIL_FIELDS_PHASE`, `detailFieldsShown`, EL21): shown from the detail
+  phase on (owner decision 2026-11-20). The board, the
   element form, the rating card, its overview and the round page all read
   it; the database, the server and the export keep the fields. A new step
   is a new column in the table. The discover pages of ADR 0020 are steps
   too: `models` and `grouping` (the facilitator's), `first_look` and
-  `group_check` (a participant `answer`s there).
+  `group_check` (a participant `answer`s there). The detail phase has the
+  step `details` (`src/server/details/`, ADR 0017): a participant `answer`s
+  structure proposals there, and an architect also proposes.
 - **Phase recaps:** a done phase step in the header links to
   `/projects/$projectId/recap/$phase` (PR13, `phaseDone` in
   `src/lib/project-phases.ts`); the current and later steps are no links.
@@ -225,7 +227,7 @@ page from these patterns; each has a real use and a test you can copy.
   check or the RM data types (owner decision 2026-11-20).
 - **Message keys:** every new key starts with its area: `shell_`,
   `projects_`, `scope_`, `board_`, `rounds_`, `members_`, `admin_`,
-  `export_` or `common_` (shared text and the `common_refusal_*` messages).
+  `export_`, `details_` or `common_` (shared text and the `common_refusal_*` messages).
   Keep both catalogues sorted (`biome check --write` sorts them).
   `src/lib/i18n/messages.test.ts` checks the prefixes, that Dutch has every
   English key with the same placeholders, and that no text has an em dash.

@@ -15,6 +15,7 @@ import type { ProjectPhase } from "@/lib/project-phases";
 import { grantAppRole, normalizeEmail } from "../admin/app-roles.ts";
 import type { CkmClient } from "../ckm/client.ts";
 import { parseArchetypeXml } from "../ckm/parse.ts";
+import { answerDetail, proposeDetail, settleDetail } from "../details/queries.ts";
 import { revealBoard } from "../elements/brainstorm.ts";
 import { answerFirstLook } from "../elements/first-look.ts";
 import { addElement, addElementComment, setElementValues } from "../elements/queries.ts";
@@ -36,6 +37,7 @@ export const DEMO_PROJECTS = {
   scope: "Body temperature (demo)",
   discover: "Heart rate (demo)",
   decide: "Blood pressure (demo)",
+  detail: "Oxygen saturation (demo)",
   handoff: "Respiratory rate (demo)",
 } as const satisfies Record<ProjectPhase, string>;
 
@@ -312,6 +314,42 @@ interface ScopeText {
 }
 
 /** Creates a project with its scope and the whole demo panel invited and joined. */
+/** The detail project's elements: round 1 includes the first three and excludes the last. */
+export const DEMO_DETAIL_ELEMENTS: DemoElement[] = [
+  {
+    name: "SpO2",
+    prompt: "recorded",
+    description: "The oxygen saturation of arterial blood, measured by pulse oximetry.",
+    dataType: null,
+    cardinality: null,
+    round1: [9, 9, 9, 8, 9, 8, 9, 9],
+  },
+  {
+    name: "Inspired oxygen",
+    prompt: "patient_state",
+    description: "Whether the person breathes room air or receives extra oxygen.",
+    dataType: null,
+    cardinality: null,
+    round1: [8, 8, 7, 9, 8, 7, 8, 8],
+  },
+  {
+    name: "Probe site",
+    prompt: "method",
+    description: "Where the probe sits on the body.",
+    dataType: null,
+    cardinality: null,
+    round1: [7, 8, 7, 7, 8, 7, 7, 8],
+  },
+  {
+    name: "Device brand",
+    prompt: "method",
+    description: "The brand of the pulse oximeter.",
+    dataType: null,
+    cardinality: null,
+    round1: [2, 1, 3, 2, 2, 3, 1, 2],
+  },
+];
+
 async function startProject(
   db: Kysely<DB>,
   facilitatorId: string,
@@ -673,6 +711,101 @@ async function seedHandoff(db: Kysely<DB>, facilitatorId: string, now: Date): Pr
     now,
   );
   await nextPhase(db, facilitatorId, projectId, "decide");
+  await nextPhase(db, facilitatorId, projectId, "detail");
+  return projectId;
+}
+
+/**
+ * Detail phase: three elements in the model. The facilitator's proposal for SpO2 is settled; an
+ * architect's proposal for the inspired oxygen has one open objection; the probe site has none.
+ */
+async function seedDetail(db: Kysely<DB>, facilitatorId: string, now: Date): Promise<string> {
+  const project = await startProject(
+    db,
+    facilitatorId,
+    DEMO_PROJECTS.detail,
+    {
+      concept: "The oxygen saturation of arterial blood, measured by pulse oximetry.",
+      useCases: "Vital signs on the ward; early warning scores; home monitoring of lung disease.",
+      outOfScope: "Arterial blood gas analysis.",
+      sources: ["Vital signs form of the demo hospital (invented)"],
+    },
+    now,
+  );
+  const { projectId, raterIds } = project;
+  await nextPhase(db, facilitatorId, projectId, "scope");
+  const elementIds = await addElements(db, facilitatorId, project, DEMO_DETAIL_ELEMENTS, () => "");
+  const [spo2, oxygen] = elementIds;
+  must("reveal board", await revealBoard(db, facilitatorId, projectId));
+  await nextPhase(db, facilitatorId, projectId, "discover");
+  await runClosedRound(
+    db,
+    facilitatorId,
+    project,
+    scoresOf(elementIds, DEMO_DETAIL_ELEMENTS, "round1"),
+    () => undefined,
+    now,
+  );
+  await nextPhase(db, facilitatorId, projectId, "decide");
+  if (!spo2 || !oxygen) throw new Error("seed-demo: detail elements missing");
+
+  const spo2Proposal = must(
+    "propose SpO2",
+    await proposeDetail(db, facilitatorId, {
+      projectId,
+      elementId: spo2,
+      version: 0,
+      dataType: "proportion",
+      cardinality: { min: 1, max: 1 },
+      values: [],
+    }),
+  );
+  const oxygenProposal = must(
+    "propose inspired oxygen",
+    await proposeDetail(db, raterIds[6] ?? facilitatorId, {
+      projectId,
+      elementId: oxygen,
+      version: 0,
+      dataType: "coded_text",
+      cardinality: { min: 0, max: 1 },
+      values: [
+        { text: "Room air", value: null },
+        { text: "Supplemental oxygen", value: null },
+      ],
+    }),
+  );
+  for (const raterId of raterIds.slice(0, 5)) {
+    must(
+      "agree SpO2",
+      await answerDetail(db, raterId, {
+        projectId,
+        proposalId: spo2Proposal.proposalId,
+        version: spo2Proposal.version,
+        answer: "agree",
+        reason: null,
+      }),
+    );
+  }
+  must(
+    "settle SpO2",
+    await settleDetail(db, facilitatorId, {
+      projectId,
+      proposalId: spo2Proposal.proposalId,
+      version: spo2Proposal.version,
+    }),
+  );
+  for (const [index, raterId] of raterIds.slice(0, 4).entries()) {
+    must(
+      "answer inspired oxygen",
+      await answerDetail(db, raterId, {
+        projectId,
+        proposalId: oxygenProposal.proposalId,
+        version: oxygenProposal.version,
+        answer: index === 0 ? "objection" : "agree",
+        reason: index === 0 ? "We also record the flow rate in litres per minute." : null,
+      }),
+    );
+  }
   return projectId;
 }
 
@@ -680,6 +813,7 @@ const SEEDERS: Record<ProjectPhase, typeof seedScope> = {
   scope: seedScope,
   discover: seedDiscover,
   decide: seedDecide,
+  detail: seedDetail,
   handoff: seedHandoff,
 };
 

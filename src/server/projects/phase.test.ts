@@ -166,6 +166,7 @@ describe("projectOverview (PR8)", () => {
       firstLook: { total: 0, answered: 0 },
       groupCheck: { asked: false, done: false },
       round: null,
+      detail: { open: 0, answered: 0 },
       lastClosedRoundId: null,
     });
     expect(personLeaks(result, p)).toEqual([]);

@@ -33,6 +33,7 @@ function ItemLink({
     | "/projects/$projectId/brainstorm"
     | "/projects/$projectId/models"
     | "/projects/$projectId/grouping"
+    | "/projects/$projectId/details"
     | "/projects/$projectId/rounds/new"
     | "/projects/$projectId/rounds/$roundId";
   projectId: string;
@@ -248,6 +249,34 @@ function itemView(
       };
     case "round":
       return roundView(item, projectId);
+    case "detail_proposed":
+      return {
+        text:
+          item.inModel === 0
+            ? m.projects_check_detail_none_in_model()
+            : m.projects_check_detail_proposed({ proposed: item.proposed, total: item.inModel }),
+        action:
+          item.inModel === 0 ? undefined : (
+            <ItemLink to="/projects/$projectId/details" projectId={projectId}>
+              {m.projects_check_detail_action()}
+            </ItemLink>
+          ),
+      };
+    case "detail_objections":
+      return {
+        text:
+          item.count === 0
+            ? m.projects_check_detail_objections_none()
+            : count(
+                m.projects_check_detail_objections_one,
+                m.projects_check_detail_objections_many,
+                item.count,
+              ),
+      };
+    case "detail_settled":
+      return {
+        text: m.projects_check_detail_settled({ settled: item.settled, total: item.inModel }),
+      };
     case "undecided":
       if (item.done) return { text: m.projects_check_undecided_none() };
       return item.count === 0

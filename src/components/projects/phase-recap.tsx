@@ -4,10 +4,18 @@
 // The recap of a done phase (PR13, ADR 0020): read only, one view per phase, each fact once.
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { StructureFacts } from "@/components/details/structure-facts";
 import { DateTime } from "@/components/status/date-time";
+import { StatusBadge } from "@/components/status/status-badge";
 import { m } from "@/i18n/messages";
 import { groupName } from "@/lib/i18n/labels";
-import type { DecideRecap, DiscoverRecap, PhaseRecap, ScopeRecap } from "@/server/projects/recap";
+import type {
+  DecideRecap,
+  DetailRecap,
+  DiscoverRecap,
+  PhaseRecap,
+  ScopeRecap,
+} from "@/server/projects/recap";
 
 function Closed({ at }: Readonly<{ at: string | null }>) {
   return (
@@ -213,6 +221,29 @@ function DecideView({ projectId, recap }: Readonly<{ projectId: string; recap: D
   );
 }
 
+function DetailView({ recap }: Readonly<{ recap: DetailRecap }>) {
+  return (
+    <>
+      <Heading title={m.projects_recap_detail_title()} closedAt={recap.closedAt} />
+      {recap.elements.length === 0 ? (
+        <p className="text-muted-foreground">{m.projects_recap_empty()}</p>
+      ) : (
+        <ul className="flex max-w-3xl flex-col divide-y border-y">
+          {recap.elements.map((element) => (
+            <li key={element.id} className="flex flex-col gap-2 py-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-semibold">{element.name}</h3>
+                {!element.settled && <StatusBadge label={m.projects_recap_detail_not_settled()} />}
+              </div>
+              <StructureFacts structure={element.structure} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
 export function PhaseRecapView({
   projectId,
   recap,
@@ -224,5 +255,7 @@ export function PhaseRecapView({
       return <DiscoverView projectId={projectId} recap={recap} />;
     case "decide":
       return <DecideView projectId={projectId} recap={recap} />;
+    case "detail":
+      return <DetailView recap={recap} />;
   }
 }

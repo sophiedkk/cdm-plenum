@@ -3,7 +3,7 @@
 
 # 0017. The detail phase settles structure first, then terminology
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-20
 - Deciders: owner (D2, D3 and D4 of the design evaluation), maintainer (design)
 

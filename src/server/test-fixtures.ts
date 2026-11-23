@@ -163,3 +163,36 @@ export async function insertImportedElement(
     .execute();
   return elementId;
 }
+
+/**
+ * A closed round 1 with the given outcome per element, straight in the database, so the elements
+ * marked `included` are in the model (DE1, DT1). The rounds themselves are tested in rounds/.
+ */
+export async function closedRoundWithOutcomes(
+  db: Kysely<DB>,
+  projectId: string,
+  outcomes: [elementId: string, outcome: "included" | "excluded" | "no_consensus"][],
+): Promise<string> {
+  const round = await db
+    .insertInto("round")
+    .values({
+      project_id: projectId,
+      number: 1,
+      closes_at: new Date(Date.now() - 60_000),
+      opened_at: new Date(Date.now() - 86_400_000),
+      closed_at: new Date(),
+      panel_clinical: 2,
+      minimum_clinical: 2,
+      panel_terminology: 0,
+      minimum_terminology: 0,
+      panel_architecture: 1,
+      minimum_architecture: 1,
+    })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  await db
+    .insertInto("round_element")
+    .values(outcomes.map(([element_id, outcome]) => ({ round_id: round.id, element_id, outcome })))
+    .execute();
+  return round.id;
+}

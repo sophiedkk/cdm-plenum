@@ -175,6 +175,34 @@ describe("seedDemo", () => {
     expect(round2).toHaveLength(2);
   });
 
+  it("gives the detail project one settled proposal and one with an open objection", async () => {
+    db = await createTestDb();
+    const projectId = await projectOf(await seedDemo(db, "facilitator@example.test"), "detail");
+    const rounds = await roundsOf(projectId);
+    expect(await outcomes(rounds[0])).toEqual({ included: 3, excluded: 1, no_consensus: 0 });
+    const proposals = await db
+      .selectFrom("detail_proposal")
+      .innerJoin("element", "element.id", "detail_proposal.element_id")
+      .select(["element.name", "element.data_type", "detail_proposal.settled_at"])
+      .where("element.project_id", "=", projectId)
+      .orderBy("element.name")
+      .execute();
+    expect(proposals.map((p) => [p.name, p.settled_at !== null, p.data_type])).toEqual([
+      ["Inspired oxygen", false, null],
+      ["SpO2", true, "proportion"],
+    ]);
+    const objections = await db
+      .selectFrom("detail_answer")
+      .innerJoin("detail_proposal", "detail_proposal.id", "detail_answer.proposal_id")
+      .innerJoin("element", "element.id", "detail_proposal.element_id")
+      .select("detail_answer.id")
+      .where("element.project_id", "=", projectId)
+      .where("detail_answer.answer", "=", "objection")
+      .where("detail_answer.addressed_at", "is", null)
+      .execute();
+    expect(objections).toHaveLength(1);
+  });
+
   it("gives the hand-off project two closed rounds, the second settling one element", async () => {
     db = await createTestDb();
     const projectId = await projectOf(await seedDemo(db, "facilitator@example.test"), "handoff");
@@ -214,6 +242,7 @@ describe("seedDemo", () => {
       ["scope", "seeded"],
       ["discover", "seeded"],
       ["decide", "already_seeded"],
+      ["detail", "seeded"],
       ["handoff", "seeded"],
     ]);
     expect(await projectOf(summary, "decide")).toBe(earlier.value.projectId);

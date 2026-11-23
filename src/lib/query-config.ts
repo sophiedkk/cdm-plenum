@@ -22,6 +22,8 @@ export const STALE_TIME = {
   admin: 0,
   /** Rounds, ratings and results: participants rate while the facilitator watches the response. */
   rounds: 10_000,
+  /** Detail proposals and their answers: members answer while the facilitator settles. */
+  details: 10_000,
   /**
    * The counts of the project header (PR11): always revalidated, since they change on the
    * brainstorm, board and rating pages. The project layout reads them again on every navigation.

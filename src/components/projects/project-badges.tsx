@@ -5,6 +5,7 @@ import {
   FileTextIcon,
   type LucideIcon,
   PackageCheckIcon,
+  RulerIcon,
   StarIcon,
   UserIcon,
   UserStarIcon,
@@ -19,6 +20,7 @@ const PHASE_ICONS: Record<ProjectPhase, LucideIcon> = {
   scope: FileTextIcon,
   discover: StarIcon,
   decide: VoteIcon,
+  detail: RulerIcon,
   handoff: PackageCheckIcon,
 };
 

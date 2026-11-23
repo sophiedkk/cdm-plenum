@@ -73,6 +73,7 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
     firstLook: { total: 0, answered: 0 },
     groupCheck: { asked: false, done: false },
     round: ROUND,
+    detail: { open: 0, answered: 0 },
     lastClosedRoundId: "round-1",
     ...changes,
   };
@@ -90,6 +91,7 @@ describe("the phase steps", () => {
       "Scope, done, open the recap",
       "Discover, done, open the recap",
       "Decide, now",
+      "Detail, later",
       "Hand-off, later",
     ]);
     expect(steps.querySelector('[aria-current="step"]')?.textContent).toBe("Decide, now");
