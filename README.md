@@ -6,11 +6,13 @@
 cdm-plenum guides a group of clinicians, information modellers and
 terminologists from the scope of a clinical concept to an agreed list of data
 elements: a common data model of the concept, before anyone writes it down
-in a standard such as an openEHR archetype or a FHIR profile. The group collects
-candidate elements on a shared board, checks them against existing archetypes
-in the openEHR Clinical Knowledge Manager (CKM), and rates them in e-Delphi
-rounds against a consensus rule fixed in advance. The agreed list goes to the
-existing authoring tools and to CKM review as CSV and as a FreeMind mind map.
+in a standard such as an openEHR archetype or a FHIR profile. The group starts
+from existing models (openEHR archetypes from the Clinical Knowledge Manager,
+FHIR profiles from a package), adds what is missing on a shared board, and
+rates the elements in e-Delphi rounds against a consensus rule fixed in
+advance. The elements in the model then get their structure by consent. The
+agreed list goes to the existing authoring tools and to CKM review as CSV and
+as a FreeMind mind map.
 
 The project is in an early stage. The requirements draft is in
 [docs/requirements.md](docs/requirements.md) and the design in
@@ -19,102 +21,40 @@ The project is in an early stage. The requirements draft is in
 
 ## How it works
 
-A project moves through four phases. The facilitator moves it on from the
-project's overview, and every participant sees there what is expected of them
-now.
+A project moves through five phases. The facilitator moves it on from the
+project's Overview; participants see their task on the project home.
 
 ```mermaid
-flowchart TD
-    subgraph scope["Phase 1: Scope"]
-        S1["Facilitator writes the scope:<br/>concept, use cases, out of scope, sources"]
-        S2["Participants comment on the scope"]
-        S1 --> S2
-    end
-
-    subgraph discover["Phase 2: Discover"]
-        D1["Private brainstorm: each participant adds elements alone,<br/>guided by four questions"]
-        D2["Facilitator adds elements from CSV files and CKM archetypes"]
-        D3(["Facilitator reveals the board"])
-        D4["Everyone sees all elements, without authors;<br/>similar names are flagged while typing"]
-        D5["Facilitator links elements to CKM<br/>and merges duplicates"]
-        D1 --> D3
-        D2 --> D3
-        D3 --> D4 --> D5
-    end
-
-    subgraph decide["Phase 3: Decide"]
-        R1["Facilitator sets up an e-Delphi round:<br/>elements, scale, consensus rule, closing date"]
-        R2["Participants rate anonymously:<br/>does the element belong in the data model?"]
-        R3["Round 1 only: participants propose missing elements"]
-        R4["Round closes: per element<br/>in the model, not in the model or no consensus"]
-        R5{"Elements without consensus?"}
-        R6["Facilitator opens the next round on those elements;<br/>each participant sees their own score and the group's distribution"]
-        R1 --> R2 --> R4 --> R5
-        R2 -.-> R3
-        R5 -- yes --> R6 --> R2
-    end
-
-    subgraph handoff["Phase 4: Hand-off"]
-        H1["Export the agreed elements as CSV and as a mind map,<br/>and the ratings for the study report"]
-    end
-
-    S2 --> D1
-    S2 --> D2
-    D5 --> R1
-    R3 -. "facilitator adds a proposal to the board" .-> D5
-    R5 -- no --> H1
+flowchart LR
+    scope[Scope] --> discover[Discover] --> decide[Decide] --> detail[Detail] --> handoff[Hand-off]
+    decide -- "no consensus: next round" --> decide
 ```
 
-In words: the facilitator writes the scope and participants comment on it.
-In the discover phase each participant first adds elements alone, guided by
-four questions, while the facilitator adds elements from CSV files and CKM.
-When the facilitator reveals the board, everyone sees all elements without
-their authors, and the facilitator links them to CKM and merges duplicates.
-In the decide phase participants rate each element anonymously in e-Delphi
-rounds; in round 1 they can also propose missing elements. Elements without
-consensus go to a next round, where each participant sees their own earlier
-score and the group's distribution. The agreed elements are exported for the
-modellers and the ratings for the study report.
+| Phase | What happens |
+| --- | --- |
+| Scope | The facilitator writes the concept, use cases and sources; participants comment. |
+| Discover | The facilitator puts elements from existing models (CKM archetypes, FHIR profiles, forms) on the list and participants take a first look at them. Each participant then adds what is missing, alone, until the facilitator reveals the board, merges duplicates and groups the elements for the participants to check. |
+| Decide | Participants rate each element anonymously in e-Delphi rounds against a consensus rule fixed in advance. Elements without consensus go to a next round with the group's scores. |
+| Detail | The facilitator or an architect proposes the data type, cardinality and values of each element in the model; participants agree or object, and the facilitator settles. |
+| Hand-off | The agreed elements are exported as CSV and as a mind map, the ratings for the study report. |
 
 ## Screenshots
 
-The screenshots show the demo projects, which `pnpm db:seed-demo` loads. Their
-people and addresses are invented.
+The screenshots show the demo projects; their people are invented.
 
-A participant's project list says per project which phase it is in and what
-is waiting for them.
-
-![The project list of a participant: four demo projects, one per phase, each with its task](docs/screenshots/projects.png)
-
-Each project opens on its home page, with one "Your turn" card and, from the
-decide phase on, what the group has decided so far.
+A participant's project home shows one "Your turn" card and what the group
+has decided so far.
 
 ![The home page of Blood pressure in the decide phase, with the card to rate round 2](docs/screenshots/home.png)
 
-A participant rates each element on a scale of 1 to 9. The question comes
-first; their own score from round 1 and the group's scores are one click
-away.
+The rating card asks one question per element on a scale of 1 to 9.
 
 ![The rating card of round 2 for the element Mean arterial pressure](docs/screenshots/rating.png)
 
 The facilitator opens a project on its Overview: a checklist for the current
 phase that ends in the move to the next phase.
 
-![The Overview of Heart rate in the discover phase, with four checklist items](docs/screenshots/overview.png)
-
-On the element board the group collects candidate elements with their data
-type, cardinality and sources, and links them to CKM.
-
-![The element board of Blood pressure with eight elements](docs/screenshots/board.png)
-
-When a round closes, the facilitator sees per element the outcome under the
-consensus rule, the median and the distribution of the scores.
-
-![The results of round 1 of Blood pressure: five elements in the model, one not, two without consensus](docs/screenshots/round-results.png)
-
-The scope page holds the concept, use cases, sources and comments.
-
-![The scope page of Blood pressure, with the scope statement, two sources and a comment](docs/screenshots/scope.png)
+![The Overview of Heart rate in the discover phase, with its checklist](docs/screenshots/overview.png)
 
 ## Run it locally
 
@@ -147,6 +87,7 @@ phase:
 | Body temperature (demo) | Scope | A scope statement with three comments |
 | Heart rate (demo) | Discover | A private brainstorm by five participants, board not revealed yet |
 | Blood pressure (demo) | Decide | A closed first round with results and an open second round |
+| Oxygen saturation (demo) | Detail | One settled structure and one with an open objection |
 | Respiratory rate (demo) | Hand-off | Two closed rounds, ready for export |
 
 Your address becomes facilitator of every project and administrator of the
@@ -158,8 +99,9 @@ scripts/dev/compose.sh exec dev pnpm db:seed-demo --facilitator you@example.test
 
 The participants have `example.test` addresses (for example
 `nurse.a@example.test`); sign in as one in a private window to see the
-participant's view: their task on each project's overview, their own
-brainstorm in Heart rate, and round 2 to rate in Blood pressure.
+participant's view: their task on each project's home, the first look in
+Heart rate, round 2 to rate in Blood pressure, and the structure proposals to
+answer in Oxygen saturation.
 
 Run the checks (typecheck, lint, unit tests) with `scripts/dev/pnpm.sh check`,
 and the browser tests with `scripts/dev/e2e.sh`.
