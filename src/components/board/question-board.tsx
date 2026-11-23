@@ -23,7 +23,7 @@ import { promptQuestion } from "@/lib/i18n/labels";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import { cn } from "@/lib/utils";
 import type { BoardCard, BoardColumn, BrainstormBoard } from "@/server/elements/brainstorm-board";
-import { type HintElement, quickAddSchema } from "./quick-add-form";
+import { addElementSchema, type HintElement } from "./add-element-schema";
 
 /** The strip above the board: who has added, how many, and the reader's own count. */
 export function BoardStrip({ board }: Readonly<{ board: BrainstormBoard }>) {
@@ -150,7 +150,7 @@ function ColumnAddForm({
   const form = useAppForm({
     defaultValues: { name: "", description: "" },
     validationLogic: revalidateLogic(),
-    validators: { onDynamic: quickAddSchema() },
+    validators: { onDynamic: addElementSchema() },
     onSubmit: async ({ value, formApi }) => {
       const name = value.name.trim();
       try {
