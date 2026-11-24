@@ -3,10 +3,10 @@
 
 # Aligning the model structure with zib 2.0
 
-2026-11-24. Proposed to the owner; not decided yet. The owner asked on
-2026-11-24 to align cdm-plenum with the Nictiz zib 2.0 proposal. This file
-compares the two and proposes four changes. The requirements and the ADR
-that follow will cite it.
+2026-11-24. Accepted by the owner on 2026-11-24, with the answers in
+section 4. The owner asked to align cdm-plenum with the Nictiz zib 2.0
+proposal; this file compares the two and proposes four changes. SC4, EL25,
+EL26, DT6 and [ADR 0021](../adr/0021-model-structure-after-zib-2.md) cite it.
 
 ## Summary
 
@@ -124,13 +124,12 @@ handling of an element without a data type.
 2. The base model (2.2).
 3. Groups as structure (2.3), which changes the data model most.
 
-## 4. Questions for the owner
+## 4. Questions and the owner's answers
 
-1. Which of the four changes, and in which milestone? The 0.3.0 milestone
-   already holds the detail phase and the pre-study fixes.
-2. Who proposes the tree (2.3): the architects in the detail phase, as
-   proposed, or the facilitator in discover while grouping?
-3. Should the cluster type (2.1) let a project build a sub-block on its own,
-   which other projects then refer to?
-4. Does the reference element (2.4) need its own place in the rating card, for
-   example the question "Should this be a model of its own?"
+1. Which of the four changes, and in which milestone? All four, in 0.3.0.
+2. Who proposes the tree (2.3)? The architects or the facilitator, in the
+   structure step of the detail phase, answered by consent.
+3. Should the cluster type (2.1) let other projects refer to a project's
+   sub-block? Not yet: the type only; references between projects come later.
+4. Does the reference element (2.4) get its own rating question? No: it is
+   rated with the same question as any element.
