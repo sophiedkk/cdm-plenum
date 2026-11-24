@@ -189,7 +189,10 @@ Then work through these steps:
    has one open objection: mark it addressed with a note, then settle it.
    Switch person to `terminologist.a@example.test` to propose its codes,
    to `architect.a@example.test` to propose the structure of "Probe site",
-   and to `nurse.b@example.test` to answer it from "Your turn".
+   and to `nurse.b@example.test` to answer it from "Your turn". Propose the
+   tree of the model as the architect under "Tree of the model": add a group,
+   put it inside another with "Part of", mark a sub-block and a registration
+   element, then answer it as a nurse and settle it as the facilitator.
 6. **Hand-off:** open "Respiratory rate (demo)". Two rounds are closed;
    round 2 settled one of the two elements without consensus. Export the
    elements as CSV and as a mind map from the Overview.

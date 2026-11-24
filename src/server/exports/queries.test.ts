@@ -331,6 +331,10 @@ describe("exportElementsCsv (EX1)", () => {
       "codes_status",
       "refers_to",
       "refers_to_url",
+      "group_path",
+      "group_cardinality",
+      "group_sub_block",
+      "registration",
       "round_1_outcome",
       "round_2_outcome",
       "round_3_outcome",
@@ -357,6 +361,10 @@ describe("exportElementsCsv (EX1)", () => {
         codes_status: "",
         refers_to: "",
         refers_to_url: "",
+        group_path: "",
+        group_cardinality: "",
+        group_sub_block: "",
+        registration: "",
         round_1_outcome: "excluded",
         round_2_outcome: "",
         round_3_outcome: "",
@@ -380,6 +388,10 @@ describe("exportElementsCsv (EX1)", () => {
         codes_status: "",
         refers_to: "",
         refers_to_url: "",
+        group_path: "",
+        group_cardinality: "",
+        group_sub_block: "",
+        registration: "",
         round_1_outcome: "no_consensus",
         round_2_outcome: "included",
         round_3_outcome: "",
@@ -404,6 +416,10 @@ describe("exportElementsCsv (EX1)", () => {
         codes_status: "",
         refers_to: "",
         refers_to_url: "",
+        group_path: "",
+        group_cardinality: "",
+        group_sub_block: "",
+        registration: "",
         round_1_outcome: "included",
         round_2_outcome: "",
         round_3_outcome: "",
@@ -476,6 +492,63 @@ describe("exportElementsCsv (EX1)", () => {
     ]);
   });
 
+  it("writes the group path, its cardinality, the sub-block and the registration flag (DT6)", async () => {
+    const { userId, projectId } = await facilitatorWithProject(db);
+    const recorded = await db
+      .selectFrom("element_group")
+      .select("id")
+      .where("project_id", "=", projectId)
+      .where("prompt", "=", "recorded")
+      .executeTakeFirstOrThrow();
+    const cuff = await db
+      .insertInto("element_group")
+      .values({
+        project_id: projectId,
+        name: "Cuff",
+        position: 9,
+        parent_id: recorded.id,
+        min_occurs: 0,
+        max_occurs: 1,
+        sub_block: true,
+        sub_block_title: "Cuff cluster",
+        sub_block_url: "https://models.example.test/cuff",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    await db
+      .insertInto("element")
+      .values([
+        { project_id: projectId, name: "Cuff size", group_id: cuff.id },
+        { project_id: projectId, name: "Measured by", group_id: recorded.id, registration: true },
+        { project_id: projectId, name: "Loose" },
+      ])
+      .execute();
+    const rows = records(value(await exportElementsCsv(db, userId, projectId)));
+    expect(rows).toEqual([
+      expect.objectContaining({
+        name: "Cuff size",
+        group_path: "The measurement > Cuff",
+        group_cardinality: "0..1",
+        group_sub_block: "Cuff cluster <https://models.example.test/cuff>",
+        registration: "",
+      }),
+      expect.objectContaining({
+        name: "Loose",
+        group_path: "",
+        group_cardinality: "",
+        group_sub_block: "",
+        registration: "",
+      }),
+      expect.objectContaining({
+        name: "Measured by",
+        group_path: "The measurement",
+        group_cardinality: "",
+        group_sub_block: "",
+        registration: "yes",
+      }),
+    ]);
+  });
+
   it("marks an element in a round without an outcome as pending", async () => {
     const { facilitator, projectId, elements } = await setup();
     const round3 = await db
@@ -496,7 +569,7 @@ describe("exportElementsCsv (EX1)", () => {
     const { userId, projectId } = await facilitatorWithProject(db);
     const file = value(await exportElementsCsv(db, userId, projectId));
     expect(parseCsv(file.content)).toHaveLength(1);
-    expect(parseCsv(file.content)[0]).toHaveLength(18);
+    expect(parseCsv(file.content)[0]).toHaveLength(22);
   });
 
   describe("merged_ckm_links (EL5, O-5)", () => {

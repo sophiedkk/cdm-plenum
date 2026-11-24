@@ -81,6 +81,7 @@ export const ACTIVITY_ACTIONS = [
   "scope_sources_reordered",
   "scope_updated",
   "signed_in",
+  "tree_proposed",
 ] as const;
 
 /** The project moved to a phase; one code per phase. */

@@ -11,6 +11,18 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The tree of the model: in the structure step of the detail phase, an
+  architect or the facilitator proposes the tree. Groups nest, each has a
+  cardinality, a group can be a sub-block (reusable, optionally linked to an
+  existing sub-block by title and link) and an element can be a registration
+  element, such as an identifier, a start date or an author. Discover's groups
+  are the starting point. The group answers by consent as for the structure of
+  an element: agree or object with a reason, a revision is a new version, and
+  earlier objections stay readable. Settling copies the tree onto the groups
+  and elements. A round shows a heading per group at the top of the model. The
+  elements CSV has the columns `group_path`, `group_cardinality`, `group_sub_block`
+  and `registration` before the round columns.
+
 - Elements that refer to another model: when you add an element on the
   brainstorm board or the Elements tab, tick "Refers to another model" and
   give the model's title, such as a zib, an archetype or a profile, with an

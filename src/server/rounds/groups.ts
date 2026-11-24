@@ -16,31 +16,48 @@ export interface RoundGroup {
 
 export type PlacedGroup = RoundGroup & { position: number };
 
-/** The group of each element, by element id; an element without a group is absent. */
+/**
+ * The group of each element, by element id; an element without a group is absent. In a tree
+ * (DT6) that is the group at the top of the model that holds the element's group.
+ */
+// NOTE: no spec governs this, our own design: a round heading per top-level group keeps the
+// per-participant order of DE19 on whole parts of the model, and a nested group stays together.
 export async function groupsOf(
   db: Kysely<DB>,
   elementIds: readonly string[],
 ): Promise<Map<string, PlacedGroup>> {
   const groups = new Map<string, PlacedGroup>();
   if (elementIds.length === 0) return groups;
-  const rows = await db
+  const placed = await db
     .selectFrom("element")
-    .innerJoin("element_group", "element_group.id", "element.group_id")
-    .select([
-      "element.id as element_id",
-      "element_group.id",
-      "element_group.name",
-      "element_group.prompt",
-      "element_group.position",
-    ])
-    .where("element.id", "in", elementIds)
+    .select(["id", "project_id", "group_id"])
+    .where("id", "in", elementIds)
+    .where("group_id", "is not", null)
     .execute();
-  for (const row of rows) {
-    groups.set(row.element_id, {
-      id: row.id,
-      name: row.name,
-      prompt: isElementPrompt(row.prompt) ? row.prompt : null,
-      position: row.position,
+  if (placed.length === 0) return groups;
+  const rows = await db
+    .selectFrom("element_group")
+    .select(["id", "parent_id", "name", "prompt", "position"])
+    .where("project_id", "in", [...new Set(placed.map((row) => row.project_id))])
+    .execute();
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const top = (id: string) => {
+    let group = byId.get(id);
+    const seen = new Set<string>();
+    while (group?.parent_id && byId.has(group.parent_id) && !seen.has(group.id)) {
+      seen.add(group.id);
+      group = byId.get(group.parent_id);
+    }
+    return group;
+  };
+  for (const row of placed) {
+    const group = row.group_id === null ? undefined : top(row.group_id);
+    if (!group) continue;
+    groups.set(row.id, {
+      id: group.id,
+      name: group.name,
+      prompt: isElementPrompt(group.prompt) ? group.prompt : null,
+      position: group.position,
     });
   }
   return groups;
