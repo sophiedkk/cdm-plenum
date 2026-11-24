@@ -25,6 +25,7 @@ import {
   type DetailSource,
   type DetailStructure,
   type DetailValue,
+  type DetailValueRound,
   isBindingStrength,
   isDetailAnswer,
   type ReviewState,
@@ -45,6 +46,7 @@ import {
 } from "../projects/access.ts";
 import { actorMemberId } from "../projects/member.ts";
 import { log } from "../projects/queries.ts";
+import { statusOf } from "../rounds/round.ts";
 import type {
   AddressObjectionInput,
   AnswerDetailInput,
@@ -312,6 +314,53 @@ export async function detailBoard(
 
     const proposalOf = (elementId: string, kind: DetailKind) =>
       proposals.find((row) => row.element_id === elementId && row.kind === kind);
+    // NOTE: DT3. The newest value round per proposal comes first; a participant sees no draft.
+    const valueRoundRows =
+      proposalIds.length === 0
+        ? []
+        : await reader
+            .selectFrom("round_value_list")
+            .innerJoin("round", "round.id", "round_value_list.round_id")
+            .selectAll("round")
+            .select([
+              "round_value_list.proposal_id",
+              "round_value_list.version as rated_version",
+              "round_value_list.applied_version",
+            ])
+            .where("round_value_list.proposal_id", "in", proposalIds)
+            .$if(!facilitator, (query) => query.where("round.opened_at", "is not", null))
+            .orderBy("round.number", "desc")
+            .execute();
+    const now = new Date();
+    const valueRoundOf = (proposalId: string | undefined): DetailValueRound | null => {
+      const row = valueRoundRows.find((candidate) => candidate.proposal_id === proposalId);
+      if (!row) return null;
+      return {
+        id: row.id,
+        number: row.number,
+        status: statusOf(row, now),
+        version: row.rated_version,
+        appliedVersion: row.applied_version,
+      };
+    };
+    const valueRounds = facilitator
+      ? await (async () => {
+          const newest = await reader
+            .selectFrom("round")
+            .selectAll()
+            .where("project_id", "=", project.id)
+            .where("kind", "=", "values")
+            .orderBy("number", "desc")
+            .executeTakeFirst();
+          const status = newest ? statusOf(newest, now) : "closed";
+          return {
+            mayStart:
+              preparesAhead(project.phase, DETAIL_PHASE) &&
+              (status === "draft" || status === "closed"),
+            draft: newest && status === "draft" ? { id: newest.id, number: newest.number } : null,
+          };
+        })()
+      : null;
     // NOTE: DT4. The facilitator may skip the review only when no terminologist but the proposer
     // could do it.
     const reviewers = facilitator ? await terminologists(reader, project.id) : [];
@@ -405,6 +454,7 @@ export async function detailBoard(
         codesInReview: codes === null && proposalOf(element.id, "terminology") !== undefined,
         sources: sources.get(element.id) ?? [],
         flags: facilitator ? (flags.get(element.id) ?? []) : null,
+        valueRound: valueRoundOf(proposalOf(element.id, "structure")?.id),
       };
     });
 
@@ -415,6 +465,7 @@ export async function detailBoard(
       mayAnswer:
         project.role === "participant" && writeOpen(project.role, project.phase, "detail_answer"),
       open: project.phase === DETAIL_PHASE,
+      valueRounds,
       elements: elementViews,
     });
   });
@@ -442,7 +493,8 @@ async function lockedProposal(trx: Transaction<DB>, projectId: string, proposalI
  * up to and in the detail phase (PR10); a participant only in the detail phase (`phase_closed`)
  * and only from an architecture group (`detail_not_architect`). A revision raises the version,
  * so every member answers again and the proposal is open until settled again (owner decision
- * 2026-11-23). Refused with `detail_version_changed` when someone else proposed in the meantime.
+ * 2026-11-23). Refused with `detail_version_changed` when someone else proposed in the meantime,
+ * and with `detail_in_value_round` while its values are in a value round that is not closed (DT3).
  * A reference to another model gets a cardinality only (`detail_reference_structure`, EL26).
  */
 export async function proposeDetail(
@@ -477,16 +529,6 @@ export async function proposeDetail(
     const problem = valuesProblem(input.dataType, input.values);
     if (problem !== null) return refused(problem);
 
-    const me = await actorMemberId(trx, project.id, userId);
-    const fields = {
-      data_type: input.dataType,
-      min_occurs: input.cardinality?.min ?? null,
-      max_occurs: input.cardinality?.max ?? null,
-      proposer_member_id: me,
-      proposer_expert_type: project.role === "facilitator" ? null : "architecture",
-      proposed_at: new Date(),
-      settled_at: null,
-    };
     const existing = await trx
       .selectFrom("detail_proposal")
       .select(["id", "version"])
@@ -495,45 +537,94 @@ export async function proposeDetail(
       .forUpdate()
       .executeTakeFirst();
     if ((existing?.version ?? 0) !== input.version) return refused("detail_version_changed");
-    const saved = existing
-      ? await trx
-          .updateTable("detail_proposal")
-          .set({ ...fields, version: existing.version + 1 })
-          .where("id", "=", existing.id)
-          .returning(["id", "version"])
-          .executeTakeFirstOrThrow()
-      : await trx
-          .insertInto("detail_proposal")
-          .values({ ...fields, element_id: element.id })
-          .returning(["id", "version"])
-          .executeTakeFirstOrThrow();
-    await trx.deleteFrom("detail_proposal_value").where("proposal_id", "=", saved.id).execute();
-    if (input.values.length > 0) {
-      await trx
-        .insertInto("detail_proposal_value")
-        .values(
-          input.values.map((value, position) => ({
-            proposal_id: saved.id,
-            position,
-            text: value.text,
-            value: value.value,
-          })),
-        )
-        .execute();
-    }
-    if (existing) {
-      // NOTE: owner decision 2026-11-23. A new structure may change the value list, so the codes
-      // of the element go back to their terminologist, settled or not.
-      await trx
-        .updateTable("detail_proposal")
-        .set({ settled_at: null, review_state: "returned", review_note: null, reviewed_at: null })
-        .where("element_id", "=", element.id)
-        .where("kind", "=", "terminology")
-        .execute();
-    }
+    if (existing && (await inValueRound(trx, existing.id))) return refused("detail_in_value_round");
+    const saved = await writeStructure(trx, element.id, existing, {
+      data_type: input.dataType,
+      min_occurs: input.cardinality?.min ?? null,
+      max_occurs: input.cardinality?.max ?? null,
+      proposer_member_id: await actorMemberId(trx, project.id, userId),
+      proposer_expert_type: project.role === "facilitator" ? null : "architecture",
+      values: input.values,
+    });
     await log(trx, userId, project.id, "detail_proposed", "detail_proposal", saved.id);
     return done({ proposalId: saved.id, version: saved.version });
   });
+}
+
+/**
+ * Whether a structure proposal's values are in a value round that is not closed (DT3): a
+ * draft, or one that takes ratings or waits to be closed.
+ */
+// NOTE: DT3, our own design. The round rates one version's values, so that version neither
+// changes nor settles until the round closes; the facilitator closes it or takes the list out.
+export async function inValueRound(db: Kysely<DB>, proposalId: string): Promise<boolean> {
+  const row = await db
+    .selectFrom("round_value_list")
+    .innerJoin("round", "round.id", "round_value_list.round_id")
+    .select("round.id")
+    .where("round_value_list.proposal_id", "=", proposalId)
+    .where("round.closed_at", "is", null)
+    .executeTakeFirst();
+  return row !== undefined;
+}
+
+/**
+ * Writes the first version of an element's structure proposal or a new one, with its values
+ * (DT1, DT2). A new version is open again and every member answers it again; it sends the
+ * element's codes back to their terminologist (owner decision 2026-11-23).
+ */
+export async function writeStructure(
+  trx: Transaction<DB>,
+  elementId: string,
+  existing: { id: string; version: number } | undefined,
+  structure: {
+    data_type: string | null;
+    min_occurs: number | null;
+    max_occurs: number | null;
+    proposer_member_id: string;
+    proposer_expert_type: "architecture" | null;
+    values: readonly DetailValue[];
+  },
+): Promise<{ id: string; version: number }> {
+  const { values, ...columns } = structure;
+  const fields = { ...columns, proposed_at: new Date(), settled_at: null };
+  const saved = existing
+    ? await trx
+        .updateTable("detail_proposal")
+        .set({ ...fields, version: existing.version + 1 })
+        .where("id", "=", existing.id)
+        .returning(["id", "version"])
+        .executeTakeFirstOrThrow()
+    : await trx
+        .insertInto("detail_proposal")
+        .values({ ...fields, element_id: elementId })
+        .returning(["id", "version"])
+        .executeTakeFirstOrThrow();
+  await trx.deleteFrom("detail_proposal_value").where("proposal_id", "=", saved.id).execute();
+  if (values.length > 0) {
+    await trx
+      .insertInto("detail_proposal_value")
+      .values(
+        values.map((value, position) => ({
+          proposal_id: saved.id,
+          position,
+          text: value.text,
+          value: value.value,
+        })),
+      )
+      .execute();
+  }
+  if (existing) {
+    // NOTE: owner decision 2026-11-23. A new structure may change the value list, so the codes
+    // of the element go back to their terminologist, settled or not.
+    await trx
+      .updateTable("detail_proposal")
+      .set({ settled_at: null, review_state: "returned", review_note: null, reviewed_at: null })
+      .where("element_id", "=", elementId)
+      .where("kind", "=", "terminology")
+      .execute();
+  }
+  return saved;
 }
 
 /**
@@ -630,7 +721,8 @@ export async function addressObjection(
 /**
  * Settles the current version of a proposal (DT2, facilitator only) and copies its structure
  * onto the element, so the board and the exports read one place (owner decision 2026-11-23).
- * Refused with `detail_objections_open` while an objection to this version is not addressed.
+ * Refused with `detail_objections_open` while an objection to this version is not addressed,
+ * and with `detail_in_value_round` while its values are in a value round that is not closed (DT3).
  */
 // NOTE: no spec governs when consent is reached, our own design after Sociocracy 3.0: the
 // facilitator checks for objections and closes the round of answers, as S3's facilitator does.
@@ -648,6 +740,7 @@ export async function settleDetail(
     if (!proposal) return refused("detail_proposal_not_found");
     if (proposal.settled_at !== null) return refused("detail_settled");
     if (proposal.version !== input.version) return refused("detail_version_changed");
+    if (await inValueRound(trx, proposal.id)) return refused("detail_in_value_round");
     const open = await trx
       .selectFrom("detail_answer")
       .select("id")

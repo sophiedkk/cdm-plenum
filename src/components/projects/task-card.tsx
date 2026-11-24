@@ -134,11 +134,19 @@ function RateCard({
   return (
     <section aria-labelledby="task-heading" className={CARD}>
       <h2 id="task-heading" className={HEADING}>
-        {m.projects_home_turn_rate({ number: task.number })}
+        {task.roundKind === "values"
+          ? m.projects_home_turn_rate_values({ number: task.number })
+          : m.projects_home_turn_rate({ number: task.number })}
       </h2>
       <Facts
         facts={[
-          { term: m.projects_home_fact_elements(), value: task.total },
+          {
+            term:
+              task.roundKind === "values"
+                ? m.projects_home_fact_values()
+                : m.projects_home_fact_elements(),
+            value: task.total,
+          },
           { term: m.projects_home_fact_closes(), value: <DateTime value={task.closesAt} /> },
           { term: m.projects_home_fact_rated(), value: task.rated },
         ]}

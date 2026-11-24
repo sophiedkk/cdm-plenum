@@ -33,6 +33,7 @@ function facts(changes: Partial<OverviewFacts> = {}): OverviewFacts {
     groupCheckAsked: true,
     groupChecked: 6,
     round: null,
+    valueRound: null,
     undecided: 0,
     lastClosedRound: { id: "round-1", number: 1 },
     detail: { inModel: 0, proposed: 0, settled: 0, codable: 0, codesSettled: 0, openObjections: 0 },
@@ -193,6 +194,7 @@ describe("waitingFor (PR8)", () => {
       overview({
         round: {
           id: "round-2",
+          kind: "elements",
           number: 2,
           status: "open",
           closesAt: OPEN_ROUND.closesAt,
@@ -219,6 +221,7 @@ describe("waitingFor (PR8)", () => {
       open: 2,
       next: "decide",
       round: null,
+      roundKind: "elements",
     });
     expect(waitingFor(facilitator, facts())).toEqual({ kind: "ready", next: "decide" });
     expect(waitingFor(overview({ role: "facilitator", phase: "handoff" }), facts())).toEqual({
@@ -231,7 +234,18 @@ describe("waitingFor (PR8)", () => {
     expect(waitingFor(deciding, facts({ round: OPEN_ROUND, undecided: 2 }))).toMatchObject({
       kind: "checklist",
       round: OPEN_ROUND,
+      roundKind: "elements",
     });
+  });
+
+  it("follows the value round in the detail phase (DT3)", () => {
+    const detailing = overview({ role: "facilitator", phase: "detail" });
+    expect(waitingFor(detailing, facts({ valueRound: OPEN_ROUND }))).toMatchObject({
+      kind: "checklist",
+      round: OPEN_ROUND,
+      roundKind: "values",
+    });
+    expect(waitingFor(detailing, facts({ round: OPEN_ROUND }))).toMatchObject({ round: null });
   });
 });
 

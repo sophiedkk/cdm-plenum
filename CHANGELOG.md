@@ -11,6 +11,18 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Value rounds: in the Detail phase the facilitator can put the value list of
+  a structure proposal to a rating round. "Rate the values in a round" on an
+  element's card adds its values to a draft value round; the values of
+  several elements can go in one round, each under its element's name. It
+  runs on the Rounds page with the same rating card, scale, results and
+  adjustable consensus rule as an element round, and participants rate it
+  from "Your turn" during the Detail phase. When the round is closed, "Apply
+  to the proposal" turns the values it kept into a new version of the
+  proposal, which the group answers again. The round settles nothing itself.
+  While a value list is in a round, its proposal cannot be revised or
+  settled. The Overview checklist shows a running value round.
+
 - Elements that refer to another model: when you add an element on the
   brainstorm board or the Elements tab, tick "Refers to another model" and
   give the model's title, such as a zib, an archetype or a profile, with an

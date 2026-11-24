@@ -361,7 +361,10 @@ export function RatingElement({
   clear,
   saveFlag,
   removeFlag,
+  kind = "elements",
 }: Readonly<{
+  /** What the round rates: elements, or the values of a value list under their element (DT3). */
+  kind?: "elements" | "values";
   element: MyElement;
   /**
    * The element's data type, cardinality and values, shown folded and not rated; null while the
@@ -452,7 +455,9 @@ export function RatingElement({
       <div className="flex flex-col gap-1">
         {element.group && (
           <p className="text-sm font-semibold text-muted-foreground">
-            <span className="sr-only">{m.rounds_card_group()} </span>
+            <span className="sr-only">
+              {kind === "values" ? m.rounds_value_card_element() : m.rounds_card_group()}{" "}
+            </span>
             {groupName(element.group)}
           </p>
         )}
@@ -466,7 +471,9 @@ export function RatingElement({
             {element.name}
           </h3>
           <p className="text-sm text-muted-foreground">
-            {m.rounds_card_position({ index: position.index, total: position.total })}
+            {kind === "values"
+              ? m.rounds_value_card_position({ index: position.index, total: position.total })
+              : m.rounds_card_position({ index: position.index, total: position.total })}
           </p>
         </div>
         {element.reference && <ReferenceText reference={element.reference} />}
@@ -474,7 +481,7 @@ export function RatingElement({
           <p className="break-words text-muted-foreground">{element.description}</p>
         )}
         <p id={`${base}-scale`} className="mt-3 text-2xl font-semibold tracking-tight">
-          {m.rounds_rate_question()}
+          {kind === "values" ? m.rounds_value_rate_question() : m.rounds_rate_question()}
         </p>
       </div>
       {element.previous && (

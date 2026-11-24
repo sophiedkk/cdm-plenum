@@ -7,6 +7,7 @@ import { PlusIcon, VoteIcon } from "lucide-react";
 import { projectTitle } from "@/components/projects/project-title";
 import { valueOrNotFound } from "@/components/rounds/result-value";
 import { RoundStatusBadge } from "@/components/rounds/round-badges";
+import { roundName } from "@/components/rounds/round-kind";
 import { EmptyState, PageHeader } from "@/components/shell/route-states";
 import { DateTime } from "@/components/status/date-time";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,9 @@ function RoundAction({
   if (round.status === "open" && canRate) {
     return (
       <Link to="/projects/$projectId/rounds/$roundId/rate" params={params} className={LINK}>
-        {m.rounds_rate_now({ number: round.number })}
+        {round.kind === "values"
+          ? m.rounds_value_rate_now({ number: round.number })
+          : m.rounds_rate_now({ number: round.number })}
       </Link>
     );
   }
@@ -71,8 +74,11 @@ function Rounds() {
   const canRate = detail.ok && mayRate(detail.value.role, detail.value.ownGroupId);
   const { data } = useSuspenseQuery(roundsQueryOptions(projectId));
   const rounds = valueOrNotFound(data);
-  const mayStart = isFacilitator && rounds.every((round) => round.status === "closed");
-  const unfinished = rounds.find((round) => round.status !== "closed");
+  // NOTE: DT3. A value round starts from the Details page; this button starts element rounds.
+  const elementRounds = rounds.filter((round) => round.kind === "elements");
+  const mayStart = isFacilitator && elementRounds.every((round) => round.status === "closed");
+  const unfinished = elementRounds.find((round) => round.status !== "closed");
+  const running = rounds.find((round) => round.status === "open");
 
   const newRound = mayStart && (
     <Button asChild>
@@ -97,7 +103,7 @@ function Rounds() {
             {m.rounds_one_at_a_time({ number: unfinished.number })}
           </p>
         )}
-        {!canRate && unfinished?.status === "open" && (
+        {!canRate && running !== undefined && (
           <p className="text-sm text-muted-foreground">
             {m.rounds_rate_join_group()}{" "}
             <Link
@@ -141,7 +147,7 @@ function Rounds() {
                       params={{ projectId, roundId: round.id }}
                       className={LINK}
                     >
-                      {m.rounds_round_name({ number: round.number })}
+                      {roundName(round)}
                     </Link>
                   </TableCell>
                   <TableCell>

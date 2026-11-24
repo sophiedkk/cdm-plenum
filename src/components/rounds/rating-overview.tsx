@@ -23,7 +23,10 @@ export function RatingOverview({
   flags,
   headingRef,
   cardLink,
+  kind = "elements",
 }: Readonly<{
+  /** The round rates elements, or the values of a value round (DT3). */
+  kind?: "elements" | "values";
   number: number;
   elements: readonly MyElement[];
   /** Whether to list the flagged details (DE17). */
@@ -43,7 +46,9 @@ export function RatingOverview({
         >
           {m.rounds_overview_heading()}
         </h3>
-        <p className="text-sm text-muted-foreground">{m.rounds_overview_intro()}</p>
+        <p className="text-sm text-muted-foreground">
+          {kind === "values" ? m.rounds_value_overview_intro() : m.rounds_overview_intro()}
+        </p>
       </div>
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full text-sm">
@@ -51,7 +56,7 @@ export function RatingOverview({
           <thead className="bg-muted/50 text-left">
             <tr>
               <th scope="col" className="px-3 py-2 font-medium">
-                {m.rounds_overview_element()}
+                {kind === "values" ? m.rounds_value_overview_item() : m.rounds_overview_element()}
               </th>
               <th scope="col" className="px-3 py-2 font-medium">
                 {m.rounds_overview_rating()}

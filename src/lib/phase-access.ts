@@ -118,6 +118,9 @@ export const PARTICIPANT_WRITES = {
   // NOTE: EL16. "I support this" and "same as" are light marks on the board, open with comments.
   element_mark: { step: "board", access: "comment" },
   rate: { step: "rounds", access: "rate" },
+  // NOTE: DT3, owner decision 2026-11-24. A value round is advice to a structure proposal, so
+  // it takes ratings while the details step takes answers; element rounds stay in decide.
+  value_rate: { step: "details", access: "answer" },
   // NOTE: EL12, owner decision 2026-11-20. A participant suggests a source model while the
   // brainstorm takes elements; only the facilitator adds and imports one.
   source_suggest: { step: "brainstorm", access: "add" },
@@ -187,6 +190,19 @@ export function ckmColumnShown(phase: ProjectPhase): boolean {
 
 /** The phase in which the facilitator opens a round and keeps it open (PR10). */
 export const ROUND_PHASE: ProjectPhase = "decide";
+
+/** The phase in which the facilitator opens a value round and keeps it open (DT3). */
+export const VALUE_ROUND_PHASE: ProjectPhase = "detail";
+
+/** The phase a round of `kind` opens and runs in: element rounds decide, value rounds detail. */
+export function roundPhaseOf(kind: "elements" | "values"): ProjectPhase {
+  return kind === "values" ? VALUE_ROUND_PHASE : ROUND_PHASE;
+}
+
+/** The participant write that rating in a round of `kind` is. */
+export function ratingWriteOf(kind: "elements" | "values"): ParticipantWrite {
+  return kind === "values" ? "value_rate" : "rate";
+}
 
 /** The phase in which members answer structure proposals and the facilitator settles them (DT2). */
 export const DETAIL_PHASE: ProjectPhase = "detail";

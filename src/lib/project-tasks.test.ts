@@ -24,6 +24,7 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
 function round(changes: Partial<OverviewRound> = {}): OverviewRound {
   return {
     id: "round-2",
+    kind: "elements",
     number: 2,
     status: "open",
     closesAt: CLOSES,
@@ -60,6 +61,7 @@ describe("participantTask (PR8)", () => {
   it("asks to rate an open round, with the count and the closing date", () => {
     expect(participantTask(overview({ phase: "decide", round: round() }))).toEqual({
       kind: "rate",
+      roundKind: "elements",
       roundId: "round-2",
       number: 2,
       rated: 12,
@@ -95,6 +97,45 @@ describe("participantTask (PR8)", () => {
     expect(detail(3, 1)).toEqual({ kind: "detail", open: 3, answered: 1, toReview: 0 });
     expect(detail(3, 3)).toEqual({ kind: "detail_answered" });
     expect(detail(0, 0)).toEqual({ kind: "wait" });
+  });
+
+  it("asks to rate an open value round before the answers in the detail phase (DT3)", () => {
+    const valueRound = round({ kind: "values", number: 3, elements: 6, rated: 2 });
+    const task = participantTask(
+      overview({
+        phase: "detail",
+        round: valueRound,
+        detail: { open: 3, answered: 0, toReview: 0 },
+      }),
+    );
+    expect(task).toEqual({
+      kind: "rate",
+      roundKind: "values",
+      roundId: "round-2",
+      number: 3,
+      rated: 2,
+      total: 6,
+      closesAt: CLOSES,
+    });
+  });
+
+  it("goes back to the answers once every value is rated, or the round waits to close (DT3)", () => {
+    const detail = { open: 3, answered: 0, toReview: 0 };
+    const rated = round({ kind: "values", elements: 6, rated: 6 });
+    expect(participantTask(overview({ phase: "detail", round: rated, detail }))).toMatchObject({
+      kind: "detail",
+    });
+    const closing = round({ kind: "values", status: "awaiting_close", rated: 1 });
+    expect(participantTask(overview({ phase: "detail", round: closing, detail }))).toMatchObject({
+      kind: "detail",
+    });
+  });
+
+  it("ignores a value round in the decide phase (DT3)", () => {
+    const valueRound = round({ kind: "values" });
+    expect(participantTask(overview({ phase: "decide", round: valueRound }))).toEqual({
+      kind: "wait",
+    });
   });
 
   it("keeps a terminologist's task open while codes wait for their review (DT4)", () => {

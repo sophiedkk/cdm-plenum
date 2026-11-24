@@ -11,17 +11,20 @@ import type { ExpertType } from "@/lib/panel";
 import { RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
-import { groupsOf, inGroupOrder, type RoundGroup } from "./groups.ts";
+import { inGroupOrder, itemGroupsOf, type RoundGroup } from "./groups.ts";
 import {
   type ElementOutcome,
   emptyOutcome,
   findRound,
+  kindOf,
   outcomesOf,
   type RoundSummary,
-  roundElements,
+  type RoundValueOf,
+  roundItems,
   summaryOf,
 } from "./round.ts";
 import type { RoundInput } from "./schemas.ts";
+import { type ValueListState, valueListStates } from "./value-rounds.ts";
 
 export interface ElementRoundResult extends ElementOutcome {
   id: string;
@@ -32,11 +35,16 @@ export interface ElementRoundResult extends ElementOutcome {
   outcome: Outcome;
   /** The element's group (EL18); null for one without, listed after the groups (DE19). */
   group: RoundGroup | null;
+  /** In a value round (DT3) the item is a value of the element its group names. */
+  value?: RoundValueOf;
 }
 
 export interface RoundResults {
   round: RoundSummary;
+  /** The elements, or in a value round the values under their element (DT3). */
   elements: ElementRoundResult[];
+  /** The value lists of a value round and whether each was applied (DT3); empty otherwise. */
+  lists: ValueListState[];
 }
 
 /**
@@ -57,11 +65,8 @@ export async function roundResults(
     }
     if (round.closed_at === null) return refused("round_not_closed");
     const outcomes = await outcomesOf(trx, round);
-    const rows = await roundElements(trx, round.id);
-    const groupOf = await groupsOf(
-      trx,
-      rows.map((element) => element.id),
-    );
+    const rows = await roundItems(trx, round);
+    const groupOf = await itemGroupsOf(trx, rows);
     const elements = rows.map((element) => {
       const outcome = outcomes.get(element.id) ?? emptyOutcome(round);
       return {
@@ -71,9 +76,14 @@ export async function roundResults(
         outcome: element.outcome ?? outcome.result.outcome,
         ...outcome,
         group: groupOf.get(element.id) ?? null,
+        ...(element.value ? { value: element.value } : {}),
       };
     });
-    return done({ round: summaryOf(round, deps.now), elements: inGroupOrder(elements) });
+    return done({
+      round: summaryOf(round, deps.now),
+      elements: inGroupOrder(elements),
+      lists: kindOf(round) === "values" ? await valueListStates(trx, round.id) : [],
+    });
   });
 }
 
@@ -113,7 +123,7 @@ export async function responseRate(
     if (!round) return refused("round_not_found");
     if (round.opened_at === null) return refused("round_not_open");
     const cutoff = round.closed_at ?? deps.now;
-    const elementCount = (await roundElements(trx, round.id)).length;
+    const elementCount = (await roundItems(trx, round)).length;
     const groups = await trx
       .selectFrom("team")
       .select(["id", "name", "expert_type"])
@@ -141,16 +151,27 @@ export async function responseRate(
     const invited = new Map(invitedRows.map((row) => [row.id, Number(row.count)]));
     // One row per rater code: its group and how many elements it answered. The code itself
     // is only a grouping key here and never leaves this function.
-    const raters = await trx
-      .selectFrom("rating")
-      // A participant who changed group during the round still counts once.
-      .select((eb) => [
-        eb.fn.max("team_id").as("team_id"),
-        eb.fn.count<string>("element_id").as("answered"),
-      ])
-      .where("round_id", "=", round.id)
-      .groupBy("rating_code_id")
-      .execute();
+    // A participant who changed group during the round still counts once.
+    const raters =
+      kindOf(round) === "values"
+        ? await trx
+            .selectFrom("value_rating")
+            .select((eb) => [
+              eb.fn.max("team_id").as("team_id"),
+              eb.fn.count<string>("value_id").as("answered"),
+            ])
+            .where("round_id", "=", round.id)
+            .groupBy("rating_code_id")
+            .execute()
+        : await trx
+            .selectFrom("rating")
+            .select((eb) => [
+              eb.fn.max("team_id").as("team_id"),
+              eb.fn.count<string>("element_id").as("answered"),
+            ])
+            .where("round_id", "=", round.id)
+            .groupBy("rating_code_id")
+            .execute();
     const started = new Map<string | null, number>();
     const completed = new Map<string | null, number>();
     const total = { invited: 0, started: 0, completed: 0 };

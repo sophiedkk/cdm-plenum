@@ -190,6 +190,12 @@ Then work through these steps:
    Switch person to `terminologist.a@example.test` to propose its codes,
    to `architect.a@example.test` to propose the structure of "Probe site",
    and to `nurse.b@example.test` to answer it from "Your turn".
+   To try a value round, give a structure proposal a coded list, then press
+   "Rate the values in a round" on its card. Add a second element's list,
+   open the round from the Rounds page (the round dates default to two
+   weeks), rate as a participant from "Your turn", and close the round once
+   its date has passed. "Apply to the proposal" makes the kept values a new
+   version that the group answers again.
 6. **Hand-off:** open "Respiratory rate (demo)". Two rounds are closed;
    round 2 settled one of the two elements without consensus. Export the
    elements as CSV and as a mind map from the Overview.

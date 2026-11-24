@@ -69,6 +69,39 @@ function renderElement(element: MyElement = ELEMENT, editable = true) {
 }
 
 describe("RatingElement", () => {
+  it("is a value of a value round with the element as its group and its own question (DT3)", () => {
+    const value: MyElement = {
+      ...ELEMENT,
+      id: "v-1",
+      name: "1: Mild",
+      description: "",
+      group: { id: "e-9", name: "Severity", prompt: null },
+    };
+    render(
+      <RatingElement
+        kind="values"
+        element={value}
+        details={null}
+        position={{ index: 1, total: 3 }}
+        rule={DEFAULT_RULE}
+        editable
+        save={vi.fn(DONE)}
+        clear={vi.fn(DONE)}
+        saveFlag={vi.fn(DONE)}
+        removeFlag={vi.fn(DONE)}
+      />,
+    );
+    const card = screen.getByRole("region", { name: "1: Mild" });
+    expect(card.textContent).toContain("Value 1 of 3");
+    expect(card.textContent).toContain("Severity");
+    expect(
+      within(card).getByRole("radiogroup", {
+        name: "Does this value belong in the element's value list, for any use case in scope?",
+      }),
+    ).toBeTruthy();
+    expect(within(card).queryByText(/not rated\)/)).toBeNull();
+  });
+
   it("is one card named by the element, with its place, the question and the scale", () => {
     const { group } = renderElement();
     expect(

@@ -5,10 +5,9 @@
 
 import type { ColumnType } from "kysely";
 
-export type Generated<T> =
-  T extends ColumnType<infer S, infer I, infer U>
-    ? ColumnType<S, I | undefined, U>
-    : ColumnType<T, T | undefined, T>;
+export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
+  ? ColumnType<S, I | undefined, U>
+  : ColumnType<T, T | undefined, T>;
 
 export type Numeric = ColumnType<string, number | string, number | string>;
 
@@ -291,6 +290,7 @@ export interface Round {
   created_at: Generated<Timestamp>;
   facilitator_sees_raters: Generated<boolean>;
   id: Generated<string>;
+  kind: Generated<string>;
   minimum_architecture: number | null;
   minimum_clinical: number | null;
   minimum_terminology: number | null;
@@ -321,6 +321,24 @@ export interface RoundProposal {
   name: string;
   rating_code_id: string;
   round_id: string;
+}
+
+export interface RoundValue {
+  id: Generated<string>;
+  outcome: string | null;
+  position: number;
+  proposal_id: string;
+  round_id: string;
+  text: string;
+  value: Numeric | null;
+}
+
+export interface RoundValueList {
+  applied_at: Timestamp | null;
+  applied_version: number | null;
+  proposal_id: string;
+  round_id: string;
+  version: number;
 }
 
 export interface ScopeComment {
@@ -432,6 +450,16 @@ export interface User {
   updatedAt: Generated<Timestamp>;
 }
 
+export interface ValueRating {
+  rating_code_id: string;
+  reason: string | null;
+  round_id: string;
+  score: number | null;
+  team_id: string | null;
+  updated_at: Generated<Timestamp>;
+  value_id: string;
+}
+
 export interface Verification {
   createdAt: Generated<Timestamp>;
   expiresAt: Timestamp;
@@ -472,6 +500,8 @@ export interface DB {
   round: Round;
   round_element: RoundElement;
   round_proposal: RoundProposal;
+  round_value: RoundValue;
+  round_value_list: RoundValueList;
   scope_comment: ScopeComment;
   scope_source: ScopeSource;
   scope_statement: ScopeStatement;
@@ -481,5 +511,6 @@ export interface DB {
   team: Team;
   teamMember: TeamMember;
   user: User;
+  value_rating: ValueRating;
   verification: Verification;
 }

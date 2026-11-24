@@ -17,18 +17,19 @@ import {
   panelShortfall,
   type Shortfall,
 } from "@/lib/panel";
-import { ROUND_PHASE } from "@/lib/phase-access";
+import { roundPhaseOf } from "@/lib/phase-access";
 import { RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
 import { log } from "../projects/queries.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
 import {
   findRound,
+  kindOf,
   type PanelSnapshot,
   type RoundElementRow,
   type RoundRow,
   type RoundSummary,
-  roundElements,
+  roundItems,
   ruleOf,
   scoresOf,
   snapshotOf,
@@ -44,6 +45,19 @@ import type {
   RuleInput,
   UpdateRoundInput,
 } from "./schemas.ts";
+
+/**
+ * The next round number of the project. Element and value rounds share the numbers (DT3), so a
+ * number names one round.
+ */
+export async function nextRoundNumber(trx: Kysely<DB>, projectId: string): Promise<number> {
+  const row = await trx
+    .selectFrom("round")
+    .select((eb) => eb.fn.max("number").as("last"))
+    .where("project_id", "=", projectId)
+    .executeTakeFirst();
+  return (row?.last ?? 0) + 1;
+}
 
 /** Whether a round of the project has opened; the class and the minimum are fixed from then. */
 async function anyRoundOpened(trx: Kysely<DB>, projectId: string): Promise<boolean> {
@@ -277,8 +291,9 @@ function cleanProposalRule(rule: string | null | undefined): string | null {
 }
 
 /**
- * Creates a round in draft (DE1): the next number, the DE1 rule with the facilitator's changes,
- * and the elements to rate. Only one round runs at a time, so the previous round must be closed.
+ * Creates an element round in draft (DE1): the next number, the DE1 rule with the facilitator's
+ * changes, and the elements to rate. Only one element round runs at a time, so the previous one
+ * must be closed. A value round starts from the Details page (value-rounds.ts, DT3).
  */
 export async function createRound(
   db: Kysely<DB>,
@@ -291,6 +306,7 @@ export async function createRound(
       .selectFrom("round")
       .selectAll()
       .where("project_id", "=", project.id)
+      .where("kind", "=", "elements")
       .orderBy("number", "desc")
       .limit(1)
       .executeTakeFirst();
@@ -303,9 +319,9 @@ export async function createRound(
         ? await defaultElementIds(trx, project.id, previous)
         : await validElementIds(trx, project.id, input.elementIds);
     if (elementIds === null) return refused("element_not_found");
-    const number = (previous?.number ?? 0) + 1;
+    const number = await nextRoundNumber(trx, project.id);
     const proposalRule = cleanProposalRule(input.proposalRule);
-    if (proposalRule !== null && !takesProposals({ number })) {
+    if (proposalRule !== null && !takesProposals({ number, kind: "elements" })) {
       return refused("proposals_first_round_only");
     }
     const round = await trx
@@ -358,6 +374,8 @@ export async function updateRound(
       return refused("proposals_first_round_only");
     }
     if (input.elementIds !== undefined) {
+      // NOTE: DT3. A value round takes its lists from the Details page, one element at a time.
+      if (kindOf(round) === "values") return refused("value_round_items");
       const elementIds = await validElementIds(trx, project.id, input.elementIds);
       if (elementIds === null) return refused("element_not_found");
       await setRoundElements(trx, round.id, elementIds);
@@ -391,8 +409,9 @@ export interface OpenedRound {
 /**
  * Opens a draft round (DE12). In one transaction it counts the joined panel per expert type and
  * compares it with the minimum; below it, the round opens only with a reason, and otherwise
- * returns `reason_required` so the screen asks for one. Never refused for the panel alone. A
- * round opens in the decide phase only (`round_outside_decide`, PR10).
+ * returns `reason_required` so the screen asks for one. Never refused for the panel alone. An
+ * element round opens in the decide phase only (`round_outside_decide`, PR10), a value round in
+ * the detail phase only (`round_outside_detail`, DT3).
  */
 export async function openRound(
   db: Kysely<DB>,
@@ -404,15 +423,12 @@ export async function openRound(
     const round = await findRound(trx, project.id, input.roundId, "update");
     if (!round) return refused("round_not_found");
     if (round.opened_at !== null) return refused("round_not_draft");
-    if (project.phase !== ROUND_PHASE) return refused("round_outside_decide");
+    const kind = kindOf(round);
+    if (project.phase !== roundPhaseOf(kind)) {
+      return refused(kind === "values" ? "round_outside_detail" : "round_outside_decide");
+    }
     if (round.closes_at <= deps.now) return refused("closes_at_past");
-    const elements = await trx
-      .selectFrom("round_element")
-      .select("element_id")
-      .where("round_id", "=", round.id)
-      .limit(1)
-      .execute();
-    if (elements.length === 0) return refused("round_has_no_elements");
+    if ((await roundItems(trx, round)).length === 0) return refused("round_has_no_elements");
     const { minimum } = await projectPanel(trx, project.id);
     const joined = await joinedPanel(trx, project.id);
     const check = checkOpenRound(joined, minimum, input.belowMinimumReason);
@@ -421,14 +437,16 @@ export async function openRound(
     }
     // NOTE: ADR 0012. A round shows its elements to every rater, so the brainstorm's private
     // step ends here: opening a round reveals the board, logged like a reveal by hand.
-    const revealed = await trx
-      .updateTable("project")
-      .set({ board_revealed_at: deps.now })
-      .where("id", "=", project.id)
-      .where("private_brainstorm", "=", true)
-      .where("board_revealed_at", "is", null)
-      .returning("id")
-      .executeTakeFirst();
+    const revealed =
+      kind === "elements" &&
+      (await trx
+        .updateTable("project")
+        .set({ board_revealed_at: deps.now })
+        .where("id", "=", project.id)
+        .where("private_brainstorm", "=", true)
+        .where("board_revealed_at", "is", null)
+        .returning("id")
+        .executeTakeFirst());
     if (revealed) await log(trx, userId, project.id, "board_revealed", "project", project.id);
     await trx
       .updateTable("round")
@@ -455,8 +473,9 @@ export async function openRound(
 export type OutcomeCounts = Record<Outcome, number>;
 
 /**
- * Closes a round once its closing date has passed and writes each element's outcome under the
- * round's rule, in one transaction (DE5). The facilitator closes; a read never writes.
+ * Closes a round once its closing date has passed and writes each item's outcome under the
+ * round's rule, in one transaction (DE5): an element's, or a value's in a value round (DT3).
+ * The facilitator closes; a read never writes.
  * NOTE: our own design, no requirement sets it. Closing before the closing date would shorten
  * a date DE2 fixes, so it is refused; after the date the database already takes no ratings.
  */
@@ -472,17 +491,26 @@ export async function closeRound(
     if (round.opened_at === null || round.closed_at !== null) return refused("round_not_open");
     if (deps.now < round.closes_at) return refused("round_not_due");
     const rule = ruleOf(round);
-    const scores = await scoresOf(trx, round.id);
+    const scores = await scoresOf(trx, round);
     const counts: OutcomeCounts = { included: 0, excluded: 0, no_consensus: 0 };
-    for (const element of await roundElements(trx, round.id)) {
-      const { outcome } = elementResult(scores.get(element.id)?.all ?? [], rule);
+    for (const item of await roundItems(trx, round)) {
+      const { outcome } = elementResult(scores.get(item.id)?.all ?? [], rule);
       counts[outcome] += 1;
-      await trx
-        .updateTable("round_element")
-        .set({ outcome })
-        .where("round_id", "=", round.id)
-        .where("element_id", "=", element.id)
-        .execute();
+      if (item.value) {
+        await trx
+          .updateTable("round_value")
+          .set({ outcome })
+          .where("round_id", "=", round.id)
+          .where("id", "=", item.id)
+          .execute();
+      } else {
+        await trx
+          .updateTable("round_element")
+          .set({ outcome })
+          .where("round_id", "=", round.id)
+          .where("element_id", "=", item.id)
+          .execute();
+      }
     }
     await trx
       .updateTable("round")
@@ -514,6 +542,7 @@ export async function listRounds(
 }
 
 export interface RoundDetail extends RoundSummary {
+  /** The elements, or in a value round the values (DT3). */
   elements: RoundElementRow[];
   /** The panel when the round opened (DE12); null for a draft. */
   snapshot: PanelSnapshot | null;
@@ -536,7 +565,7 @@ export async function getRound(
     }
     return done({
       ...summaryOf(round, deps.now),
-      elements: await roundElements(trx, round.id),
+      elements: await roundItems(trx, round),
       snapshot: snapshotOf(round),
     });
   });

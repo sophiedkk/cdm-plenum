@@ -177,6 +177,22 @@ export interface DetailElement {
   sources: DetailSource[];
   /** The detail flags of the rounds, for the facilitator only; null for anyone else (DE17). */
   flags: DetailFlagNote[] | null;
+  /**
+   * The newest value round that rates the structure proposal's values (DT3); a participant
+   * does not see a draft. Null when there is none.
+   */
+  valueRound: DetailValueRound | null;
+}
+
+/** A value round as an element's card names it (DT3). */
+export interface DetailValueRound {
+  id: string;
+  number: number;
+  status: "draft" | "open" | "awaiting_close" | "closed";
+  /** The version of the structure proposal the round rates. */
+  version: number;
+  /** The version applying its kept values made; null until the facilitator applies them. */
+  appliedVersion: number | null;
 }
 
 /** The structure step of the detail phase for the signed-in member. */
@@ -191,6 +207,11 @@ export interface DetailBoard {
   mayAnswer: boolean;
   /** Whether the phase takes answers, objection notes and settling now. */
   open: boolean;
+  /**
+   * For the facilitator: whether a value list can go to a value round now (DT3), and the draft
+   * value round it would join; null when a new one would start.
+   */
+  valueRounds: { mayStart: boolean; draft: { id: string; number: number } | null } | null;
   elements: DetailElement[];
 }
 

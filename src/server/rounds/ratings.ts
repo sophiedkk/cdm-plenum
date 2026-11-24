@@ -4,25 +4,38 @@
 // Rating in an open round (DE3), a participant's own ratings with the previous round next to
 // them (DE7, DE8), and the facilitator's view by participant when the round allows it (DE4).
 // Ratings carry the rating code only; rater-link.ts is the one place that resolves it (ADR 0005).
-import type { Kysely } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import { groupOrder } from "@/lib/element-groups";
 import type { ElementReference } from "@/lib/elements";
+import { ratingWriteOf, writeOpen } from "@/lib/phase-access";
+import type { ProjectPhase } from "@/lib/project-phases";
+import type { ProjectRole } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
 import { log, ownGroupId } from "../projects/queries.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
 import { type OwnFlag, ownFlags } from "./flags.ts";
-import { groupsOf, inGroupOrder, type RoundGroup } from "./groups.ts";
+import { inGroupOrder, itemGroupsOf, type RoundGroup } from "./groups.ts";
 import { ownRatingCode, type ParticipantRatings, ratingsByParticipantQuery } from "./rater-link.ts";
 import {
   type ElementOutcome,
   emptyOutcome,
   findRound,
+  kindOf,
   outcomesOf,
+  type RoundRow,
   type RoundSummary,
+  type RoundValueOf,
   roundElements,
+  roundItems,
   summaryOf,
 } from "./round.ts";
-import type { RatingInput, RoundInput, SaveRatingInput } from "./schemas.ts";
+import type {
+  RatingInput,
+  RoundInput,
+  SaveRatingInput,
+  SaveValueRatingInput,
+  ValueRatingInput,
+} from "./schemas.ts";
 
 /** The refusals of the rating_in_open_round trigger (migration 0002), by their message. */
 const TRIGGER_REFUSALS = {
@@ -40,30 +53,59 @@ function cleanReason(reason: string | undefined): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
+/** The item a rating is of: an element of an element round, or a value of a value round (DT3). */
+type RatedItem = { kind: "elements"; elementId: string } | { kind: "values"; valueId: string };
+
+const NOT_IN_ROUND = { elements: "element_not_in_round", values: "value_not_in_round" } as const;
+
 /**
- * Saves or changes the rater's rating of one element (DE3); a null score is "unable to rate".
- * A facilitator rates only from their own stakeholder group (DE14, `rater_group_required`).
- * The database accepts it only while the round is open and the score is on its scale; its
- * refusals come back as `round_not_open` and `score_out_of_scale`.
+ * The checks every rating action shares: the round is opened and of the item's kind, the phase
+ * takes ratings in it (PR10, DT3: `phase_closed`), the item is in the round, and a facilitator
+ * rates only from their own stakeholder group (DE14, `rater_group_required`).
  */
-export async function saveRating(
+async function raterContext(
+  trx: Transaction<DB>,
+  userId: string,
+  input: RoundInput,
+  item: RatedItem,
+  role: ProjectRole,
+  phase: ProjectPhase,
+): Promise<RoundResult<{ roundId: string; teamId: string | null }>> {
+  const teamId = await ownGroupId(trx, input.projectId, userId);
+  if (role === "facilitator" && teamId === null) return refused("rater_group_required");
+  const round = await findRound(trx, input.projectId, input.roundId, "share");
+  if (!round || round.opened_at === null) return refused("round_not_found");
+  if (kindOf(round) !== item.kind) return refused(NOT_IN_ROUND[item.kind]);
+  if (!writeOpen(role, phase, ratingWriteOf(item.kind))) return refused("phase_closed");
+  const inRound =
+    item.kind === "values"
+      ? await trx
+          .selectFrom("round_value")
+          .select("id")
+          .where("round_id", "=", round.id)
+          .where("id", "=", item.valueId)
+          .executeTakeFirst()
+      : await trx
+          .selectFrom("round_element")
+          .select("element_id as id")
+          .where("round_id", "=", round.id)
+          .where("element_id", "=", item.elementId)
+          .executeTakeFirst();
+  if (!inRound) return refused(NOT_IN_ROUND[item.kind]);
+  return done({ roundId: round.id, teamId });
+}
+
+async function saveScore(
   db: Kysely<DB>,
   userId: string,
-  input: SaveRatingInput,
+  input: RoundInput & { score: number | null; reason?: string | undefined },
+  item: RatedItem,
 ): Promise<RoundResult<null>> {
   try {
-    return await asMember(db, userId, input.projectId, async (trx, role) => {
-      const teamId = await ownGroupId(trx, input.projectId, userId);
-      if (role === "facilitator" && teamId === null) return refused("rater_group_required");
-      const round = await findRound(trx, input.projectId, input.roundId, "share");
-      if (!round || round.opened_at === null) return refused("round_not_found");
-      const inRound = await trx
-        .selectFrom("round_element")
-        .select("element_id")
-        .where("round_id", "=", round.id)
-        .where("element_id", "=", input.elementId)
-        .executeTakeFirst();
-      if (!inRound) return refused("element_not_in_round");
+    return await asMember(db, userId, input.projectId, async (trx, role, _visible, phase) => {
+      const context = await raterContext(trx, userId, input, item, role, phase);
+      if (!context.ok) return context;
+      const { roundId, teamId } = context.value;
       const code = await ownRatingCode(trx, input.projectId, userId);
       if (!code) return refused("forbidden");
       const values = {
@@ -72,21 +114,27 @@ export async function saveRating(
         team_id: teamId,
         updated_at: new Date(),
       };
-      await trx
-        .insertInto("rating")
-        .values({
-          round_id: round.id,
-          element_id: input.elementId,
-          rating_code_id: code,
-          ...values,
-        })
-        .onConflict((oc) =>
-          oc.columns(["round_id", "element_id", "rating_code_id"]).doUpdateSet(values),
-        )
-        .execute();
+      const key = { round_id: roundId, rating_code_id: code };
+      if (item.kind === "values") {
+        await trx
+          .insertInto("value_rating")
+          .values({ ...key, value_id: item.valueId, ...values })
+          .onConflict((oc) =>
+            oc.columns(["round_id", "value_id", "rating_code_id"]).doUpdateSet(values),
+          )
+          .execute();
+      } else {
+        await trx
+          .insertInto("rating")
+          .values({ ...key, element_id: item.elementId, ...values })
+          .onConflict((oc) =>
+            oc.columns(["round_id", "element_id", "rating_code_id"]).doUpdateSet(values),
+          )
+          .execute();
+      }
       // NOTE: Q-PRIV-2. The round is the target, not the element: the log says that someone
       // rated, never what or how.
-      await log(trx, userId, input.projectId, "rating_saved", "round", round.id);
+      await log(trx, userId, input.projectId, "rating_saved", "round", roundId);
       return done(null);
     });
   } catch (error) {
@@ -96,39 +144,86 @@ export async function saveRating(
   }
 }
 
-/** Removes the rater's rating of one element, while the round is open (DE3, DE14). */
-export async function clearRating(
+async function clearScore(
   db: Kysely<DB>,
   userId: string,
-  input: RatingInput,
+  input: RoundInput,
+  item: RatedItem,
 ): Promise<RoundResult<null>> {
-  return asMember(db, userId, input.projectId, async (trx, role) => {
-    if (role === "facilitator" && (await ownGroupId(trx, input.projectId, userId)) === null) {
-      return refused("rater_group_required");
-    }
-    const round = await findRound(trx, input.projectId, input.roundId, "share");
-    if (!round || round.opened_at === null) return refused("round_not_found");
+  return asMember(db, userId, input.projectId, async (trx, role, _visible, phase) => {
+    const context = await raterContext(trx, userId, input, item, role, phase);
+    if (!context.ok) return context;
+    const { roundId } = context.value;
     // The trigger guards inserts and updates only, so the open check for a delete is here,
     // against the database clock the trigger uses.
     const open = await trx
       .selectFrom("round")
       .select("id")
-      .where("id", "=", round.id)
+      .where("id", "=", roundId)
       .where("closed_at", "is", null)
       .where("closes_at", ">", (eb) => eb.fn<Date>("now"))
       .executeTakeFirst();
     if (!open) return refused("round_not_open");
     const code = await ownRatingCode(trx, input.projectId, userId);
     if (!code) return refused("forbidden");
-    await trx
-      .deleteFrom("rating")
-      .where("round_id", "=", round.id)
-      .where("element_id", "=", input.elementId)
-      .where("rating_code_id", "=", code)
-      .execute();
-    await log(trx, userId, input.projectId, "rating_cleared", "round", round.id);
+    if (item.kind === "values") {
+      await trx
+        .deleteFrom("value_rating")
+        .where("round_id", "=", roundId)
+        .where("value_id", "=", item.valueId)
+        .where("rating_code_id", "=", code)
+        .execute();
+    } else {
+      await trx
+        .deleteFrom("rating")
+        .where("round_id", "=", roundId)
+        .where("element_id", "=", item.elementId)
+        .where("rating_code_id", "=", code)
+        .execute();
+    }
+    await log(trx, userId, input.projectId, "rating_cleared", "round", roundId);
     return done(null);
   });
+}
+
+/**
+ * Saves or changes the rater's rating of one element (DE3); a null score is "unable to rate".
+ * The database accepts it only while the round is open and the score is on its scale; its
+ * refusals come back as `round_not_open` and `score_out_of_scale`.
+ */
+export async function saveRating(
+  db: Kysely<DB>,
+  userId: string,
+  input: SaveRatingInput,
+): Promise<RoundResult<null>> {
+  return saveScore(db, userId, input, { kind: "elements", elementId: input.elementId });
+}
+
+/** Removes the rater's rating of one element, while the round is open (DE3, DE14). */
+export async function clearRating(
+  db: Kysely<DB>,
+  userId: string,
+  input: RatingInput,
+): Promise<RoundResult<null>> {
+  return clearScore(db, userId, input, { kind: "elements", elementId: input.elementId });
+}
+
+/** Saves or changes the rater's rating of one value of a value round (DT3), as `saveRating`. */
+export async function saveValueRating(
+  db: Kysely<DB>,
+  userId: string,
+  input: SaveValueRatingInput,
+): Promise<RoundResult<null>> {
+  return saveScore(db, userId, input, { kind: "values", valueId: input.valueId });
+}
+
+/** Removes the rater's rating of one value of a value round (DT3), as `clearRating`. */
+export async function clearValueRating(
+  db: Kysely<DB>,
+  userId: string,
+  input: ValueRatingInput,
+): Promise<RoundResult<null>> {
+  return clearScore(db, userId, input, { kind: "values", valueId: input.valueId });
 }
 
 export interface OwnRating {
@@ -159,6 +254,8 @@ export interface MyElement {
   flags: OwnFlag[];
   /** The same element in the previous round, when it was rated there (DE7). */
   previous: PreviousRound | null;
+  /** In a value round (DT3) the item is a value: its number and the element it belongs to. */
+  value?: RoundValueOf;
 }
 
 export interface MyRatings {
@@ -170,18 +267,26 @@ const NOT_RATED: OwnRating = { rated: false, score: null, reason: null };
 
 async function ownRatings(
   db: Kysely<DB>,
-  roundId: string,
+  round: Pick<RoundRow, "id" | "kind">,
   code: string | null,
 ): Promise<Map<string, OwnRating>> {
   if (code === null) return new Map();
-  const rows = await db
-    .selectFrom("rating")
-    .select(["element_id", "score", "reason"])
-    .where("round_id", "=", roundId)
-    .where("rating_code_id", "=", code)
-    .execute();
+  const rows =
+    kindOf(round) === "values"
+      ? await db
+          .selectFrom("value_rating")
+          .select(["value_id as item_id", "score", "reason"])
+          .where("round_id", "=", round.id)
+          .where("rating_code_id", "=", code)
+          .execute()
+      : await db
+          .selectFrom("rating")
+          .select(["element_id as item_id", "score", "reason"])
+          .where("round_id", "=", round.id)
+          .where("rating_code_id", "=", code)
+          .execute();
   return new Map(
-    rows.map((row) => [row.element_id, { rated: true, score: row.score, reason: row.reason }]),
+    rows.map((row) => [row.item_id, { rated: true, score: row.score, reason: row.reason }]),
   );
 }
 
@@ -204,6 +309,8 @@ async function reasonsOf(db: Kysely<DB>, roundId: string): Promise<Map<string, s
 /**
  * The signed-in member's own ratings in an opened round, and for each element their own rating,
  * their own detail flags (DE17), the group result and the anonymous reasons of the previous round (DE7, DE8).
+ * In a value round (DT3) the items are values under their element's name; it has no previous
+ * round and no flags.
  */
 export async function myRatings(
   db: Kysely<DB>,
@@ -218,22 +325,28 @@ export async function myRatings(
       return refused(role === "facilitator" ? "round_not_open" : "round_not_found");
     }
     const code = await ownRatingCode(trx, input.projectId, userId);
-    const own = await ownRatings(trx, round.id, code);
+    const own = await ownRatings(trx, round, code);
     const flags = await ownFlags(trx, round.id, code);
-    const previousRound = await trx
-      .selectFrom("round")
-      .selectAll()
-      .where("project_id", "=", input.projectId)
-      .where("number", "=", round.number - 1)
-      .where("closed_at", "is not", null)
-      .executeTakeFirst();
+    const previousRound =
+      kindOf(round) === "values"
+        ? undefined
+        : await trx
+            .selectFrom("round")
+            .selectAll()
+            .where("project_id", "=", input.projectId)
+            .where("kind", "=", "elements")
+            .where("number", "<", round.number)
+            .orderBy("number", "desc")
+            .limit(1)
+            .where("closed_at", "is not", null)
+            .executeTakeFirst();
     let previous: ((elementId: string) => PreviousRound | null) | undefined;
     if (previousRound) {
       const rated = new Set(
         (await roundElements(trx, previousRound.id)).map((element) => element.id),
       );
       const outcomes = await outcomesOf(trx, previousRound);
-      const ownBefore = await ownRatings(trx, previousRound.id, code);
+      const ownBefore = await ownRatings(trx, previousRound, code);
       const reasons = await reasonsOf(trx, previousRound.id);
       previous = (elementId) =>
         rated.has(elementId)
@@ -245,11 +358,8 @@ export async function myRatings(
             }
           : null;
     }
-    const rows = await roundElements(trx, round.id);
-    const groupOf = await groupsOf(
-      trx,
-      rows.map((element) => element.id),
-    );
+    const rows = await roundItems(trx, round);
+    const groupOf = await itemGroupsOf(trx, rows);
     const elements = rows.map((element) => ({
       id: element.id,
       name: element.name,
@@ -259,6 +369,7 @@ export async function myRatings(
       own: own.get(element.id) ?? NOT_RATED,
       flags: flags.get(element.id) ?? [],
       previous: previous?.(element.id) ?? null,
+      ...(element.value ? { value: element.value } : {}),
     }));
     // NOTE: DE19. The groups come in an order of the rater's own, the same all round long: the
     // seed is the rating code, or the user for a member without one yet, and the round.

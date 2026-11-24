@@ -249,6 +249,9 @@ function itemView(
       };
     case "round":
       return roundView(item, projectId);
+    case "value_round":
+      // NOTE: DT3. Value rounds share the round numbers, so the round texts name them as well.
+      return roundView({ key: "round", done: false, round: item.round, closed: null }, projectId);
     case "detail_proposed":
       return {
         text:

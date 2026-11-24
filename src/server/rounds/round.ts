@@ -17,6 +17,14 @@ import type { DB, Round } from "../db/schema.gen.ts";
 
 export type RoundRow = Selectable<Round>;
 
+/** What a round rates: elements (DE1), or the values of structure proposals (DT3). */
+export const ROUND_KINDS = ["elements", "values"] as const;
+export type RoundKind = (typeof ROUND_KINDS)[number];
+
+export function kindOf(round: Pick<RoundRow, "kind">): RoundKind {
+  return round.kind === "values" ? "values" : "elements";
+}
+
 /**
  * A round's state. `awaiting_close`: the closing date has passed, so the database takes no more
  * ratings, and the facilitator has not closed it yet.
@@ -43,6 +51,8 @@ export function ruleOf(round: RoundRow): ConsensusRule {
 /** What every member may know about a round, and what participants see before they rate (DE4). */
 export interface RoundSummary {
   id: string;
+  /** What the round rates; both kinds share the project's round numbers (DT3). */
+  kind: RoundKind;
   number: number;
   status: RoundStatus;
   rule: ConsensusRule;
@@ -54,14 +64,15 @@ export interface RoundSummary {
   closedAt: string | null;
 }
 
-/** Only round 1 asks for missing elements (DE16). */
-export function takesProposals(round: Pick<RoundRow, "number">): boolean {
-  return round.number === 1;
+/** Only element round 1 asks for missing elements (DE16). */
+export function takesProposals(round: Pick<RoundRow, "number" | "kind">): boolean {
+  return round.number === 1 && kindOf(round) === "elements";
 }
 
 export function summaryOf(round: RoundRow, now: Date): RoundSummary {
   return {
     id: round.id,
+    kind: kindOf(round),
     number: round.number,
     status: statusOf(round, now),
     rule: ruleOf(round),
@@ -115,6 +126,17 @@ export interface RoundElementRow {
   /** The model a reference element refers to (EL26); null for a data element. */
   reference: ElementReference | null;
   outcome: Outcome | null;
+  /** In a value round (DT3): the value's number and the element whose value list holds it. */
+  value?: RoundValueOf;
+}
+
+/** Where an item of a value round comes from (DT3). */
+export interface RoundValueOf {
+  /** The value's ordinal number; null for a coded text. */
+  number: number | null;
+  elementId: string;
+  elementName: string;
+  proposalId: string;
 }
 
 /** The elements of a round in the order of the board: oldest first. */
@@ -144,27 +166,80 @@ export async function roundElements(db: Kysely<DB>, roundId: string): Promise<Ro
   }));
 }
 
+/**
+ * The values of a value round (DT3), element by element in the order of the board and each list
+ * in its own order. A value is named by its text; its element is its heading.
+ */
+export async function roundValues(db: Kysely<DB>, roundId: string): Promise<RoundElementRow[]> {
+  const rows = await db
+    .selectFrom("round_value")
+    .innerJoin("detail_proposal", "detail_proposal.id", "round_value.proposal_id")
+    .innerJoin("element", "element.id", "detail_proposal.element_id")
+    .select([
+      "round_value.id",
+      "round_value.text",
+      "round_value.value",
+      "round_value.outcome",
+      "round_value.proposal_id",
+      "element.id as element_id",
+      "element.name as element_name",
+    ])
+    .where("round_value.round_id", "=", roundId)
+    .orderBy("element.created_at")
+    .orderBy("element.id")
+    .orderBy("round_value.position")
+    .execute();
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.text,
+    description: "",
+    reference: null,
+    outcome: row.outcome as Outcome | null,
+    value: {
+      number: row.value === null ? null : Number(row.value),
+      elementId: row.element_id,
+      elementName: row.element_name,
+      proposalId: row.proposal_id,
+    },
+  }));
+}
+
+/** What a round rates: its elements, or the values of a value round (DT3). */
+export async function roundItems(
+  db: Kysely<DB>,
+  round: Pick<RoundRow, "id" | "kind">,
+): Promise<RoundElementRow[]> {
+  return kindOf(round) === "values" ? roundValues(db, round.id) : roundElements(db, round.id);
+}
+
 interface ElementScores {
   all: (number | null)[];
   byGroup: Map<string, (number | null)[]>;
 }
 
-/** Every score of a round per element, and per stakeholder group of the rater. */
+/** Every score of a round per item, and per stakeholder group of the rater. */
 export async function scoresOf(
   db: Kysely<DB>,
-  roundId: string,
+  round: Pick<RoundRow, "id" | "kind">,
 ): Promise<Map<string, ElementScores>> {
-  const rows = await db
-    .selectFrom("rating")
-    .select(["element_id", "team_id", "score"])
-    .where("round_id", "=", roundId)
-    .execute();
+  const rows =
+    kindOf(round) === "values"
+      ? await db
+          .selectFrom("value_rating")
+          .select(["value_id as item_id", "team_id", "score"])
+          .where("round_id", "=", round.id)
+          .execute()
+      : await db
+          .selectFrom("rating")
+          .select(["element_id as item_id", "team_id", "score"])
+          .where("round_id", "=", round.id)
+          .execute();
   const scores = new Map<string, ElementScores>();
   for (const row of rows) {
-    let element = scores.get(row.element_id);
+    let element = scores.get(row.item_id);
     if (!element) {
       element = { all: [], byGroup: new Map() };
-      scores.set(row.element_id, element);
+      scores.set(row.item_id, element);
     }
     element.all.push(row.score);
     if (row.team_id !== null) {
@@ -194,7 +269,7 @@ export async function outcomesOf(
   round: RoundRow,
 ): Promise<Map<string, ElementOutcome>> {
   const rule = ruleOf(round);
-  const scores = await scoresOf(db, round.id);
+  const scores = await scoresOf(db, round);
   const teams = await db
     .selectFrom("team")
     .select(["id", "name"])

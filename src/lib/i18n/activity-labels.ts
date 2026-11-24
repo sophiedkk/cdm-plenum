@@ -83,6 +83,9 @@ const ACTION_LABELS: Record<(typeof ACTIVITY_ACTIONS)[number], () => string> = {
   scope_sources_reordered: () => m.admin_action_scope_sources_reordered(),
   scope_updated: () => m.admin_action_scope_updated(),
   signed_in: () => m.admin_action_signed_in(),
+  value_list_added: () => m.admin_action_value_list_added(),
+  value_list_applied: () => m.admin_action_value_list_applied(),
+  value_list_removed: () => m.admin_action_value_list_removed(),
 };
 
 function isListed(action: string): action is (typeof ACTIVITY_ACTIONS)[number] {
