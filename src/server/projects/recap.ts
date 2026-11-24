@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The recap of a phase that is done (PR13, ADR 0020): read only, for every member. Scope: the
-// statement and its sources; Discover: how many elements went into round 1 and from where, the
+// model type, the statement and its sources; Discover: how many elements went into round 1 and from where, the
 // merged duplicates and the groups; Decide: the rounds and their outcomes. Every count is of
 // elements, people or rounds; no fact names a person (Q-ANON-1).
 import type { Kysely } from "kysely";
 import type { Outcome } from "@/lib/consensus";
+import { isModelType, type ModelType } from "@/lib/model-types";
 import { adjacentPhase, type ProjectPhase, phaseDone } from "@/lib/project-phases";
 import type { DB } from "../db/schema.gen.ts";
 import { type ModelStructure, modelStructures } from "../details/queries.ts";
@@ -20,6 +21,8 @@ type Db = Kysely<DB>;
 export interface ScopeRecap {
   phase: "scope";
   closedAt: string | null;
+  /** Null when the facilitator chose none (SC4). */
+  modelType: ModelType | null;
   concept: string;
   useCases: string;
   outOfScope: string;
@@ -85,6 +88,11 @@ async function closedAt(db: Db, projectId: string, phase: ProjectPhase): Promise
 }
 
 async function scopeRecap(db: Db, projectId: string): Promise<ScopeRecap> {
+  const project = await db
+    .selectFrom("project")
+    .select("model_type")
+    .where("id", "=", projectId)
+    .executeTakeFirst();
   const statement = await db
     .selectFrom("scope_statement")
     .select(["concept", "use_cases", "out_of_scope"])
@@ -99,6 +107,7 @@ async function scopeRecap(db: Db, projectId: string): Promise<ScopeRecap> {
   return {
     phase: "scope",
     closedAt: await closedAt(db, projectId, "scope"),
+    modelType: isModelType(project?.model_type) ? project.model_type : null,
     concept: statement?.concept ?? "",
     useCases: statement?.use_cases ?? "",
     outOfScope: statement?.out_of_scope ?? "",

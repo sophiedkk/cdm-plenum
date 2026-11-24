@@ -4,6 +4,7 @@
 // The scope statement of a project (SC1) and the comments on it (SC2). Every member reads the
 // statement and comments on it; only the facilitator edits it and sees who wrote a comment.
 import { type Kysely, sql, type Transaction } from "kysely";
+import { isModelType, type ModelType, modelTypeOpen } from "@/lib/model-types";
 import type { DB } from "../db/schema.gen.ts";
 import {
   done,
@@ -20,6 +21,7 @@ import type {
   AddScopeSourceInput,
   ReorderScopeSourcesInput,
   ScopeSourceInput,
+  SetModelTypeInput,
   UpdateScopeInput,
 } from "./schemas.ts";
 
@@ -36,6 +38,8 @@ export interface ScopeStatement {
   updatedAt: string;
   /** In the facilitator's order. */
   sources: ScopeSource[];
+  /** Null until the facilitator chooses one (SC4). */
+  modelType: ModelType | null;
 }
 
 /** The scope statement with its sources, for any member (SC1). */
@@ -62,6 +66,7 @@ export async function getScope(
       outOfScope: statement?.out_of_scope ?? "",
       updatedAt: (statement?.updated_at ?? new Date(0)).toISOString(),
       sources,
+      modelType: await modelTypeOf(db, project.id),
     });
   });
 }
@@ -85,6 +90,38 @@ export async function updateScope(
       .onConflict((oc) => oc.column("project_id").doUpdateSet(values))
       .execute();
     await log(trx, userId, project.id, "scope_updated", "project", project.id);
+    return done(null);
+  });
+}
+
+/** The model type of the project (SC4), or null before the facilitator chose one. */
+export async function modelTypeOf(db: Kysely<DB>, projectId: string): Promise<ModelType | null> {
+  const row = await db
+    .selectFrom("project")
+    .select("model_type")
+    .where("id", "=", projectId)
+    .executeTakeFirst();
+  return isModelType(row?.model_type) ? row.model_type : null;
+}
+
+/**
+ * Sets the model type of the project (facilitator only, SC4, ADR 0021): in the scope phase and
+ * ahead of it in discover (PR10); refused once the elements are rated
+ * (`model_type_after_discover`).
+ */
+export async function setModelType(
+  db: Kysely<DB>,
+  userId: string,
+  input: SetModelTypeInput,
+): Promise<ProjectResult<null>> {
+  return withProject(db, userId, input.projectId, { scope: ["update"] }, async (trx, project) => {
+    if (!modelTypeOpen(project.phase)) return refused("model_type_after_discover");
+    await trx
+      .updateTable("project")
+      .set({ model_type: input.modelType })
+      .where("id", "=", project.id)
+      .execute();
+    await log(trx, userId, project.id, "model_type_set", "project", project.id);
     return done(null);
   });
 }

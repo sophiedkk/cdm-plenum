@@ -11,6 +11,19 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Model type: on the Scope page the facilitator chooses what kind of model
+  the project builds: an observation, an evaluation, an instruction, an
+  action or a sub-block that other models reuse. Each type has a one-line
+  explanation. Participants read the choice on the Scope page and in the
+  scope recap. The type can change until the project leaves Discover. Every
+  type starts with the same four groups as before.
+
+- Base model: in the table of existing models, the facilitator marks one
+  model as the base with the "Base model" button in its column. Its column
+  moves first, rows it lacks say "Not in the base", and an element put on
+  the list takes its name from the base model. Press the button again to
+  unmark it.
+
 - Sign in without e-mail when you run the app locally: the development stack
   has a page at `/dev/sign-in` that lists every active account with one
   button each, and "Switch person" in the menu under your name opens it

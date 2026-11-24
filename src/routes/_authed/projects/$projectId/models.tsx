@@ -27,6 +27,7 @@ import {
   addOtherSourceFn,
   dismissSuggestionFn,
   putOnListFn,
+  setBaseModelFn,
   unmatchRowFn,
 } from "@/server/sources/functions";
 import {
@@ -72,6 +73,7 @@ function ExistingModels() {
   const dismiss = useServerFn(dismissSuggestionFn);
   const putOnList = useServerFn(putOnListFn);
   const unmatch = useServerFn(unmatchRowFn);
+  const setBase = useServerFn(setBaseModelFn);
   if (!models.ok || !coverage.ok) return <NotFoundState />;
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: sourceKeys.all(projectId) });
@@ -160,6 +162,7 @@ function ExistingModels() {
             coverage={coverage.value}
             putOnList={(rowIds) => putOnList({ data: { projectId, rowIds } })}
             unmatch={(rowId) => unmatch({ data: { projectId, rowId } })}
+            setBase={(sourceModelId, base) => setBase({ data: { projectId, sourceModelId, base } })}
             onListed={async () => {
               await Promise.all([
                 refresh(),

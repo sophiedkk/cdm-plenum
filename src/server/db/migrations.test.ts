@@ -10,6 +10,7 @@ import { ELEMENT_PROMPTS } from "@/lib/brainstorm";
 import { DATA_TYPES } from "@/lib/data-types";
 import { ELEMENT_GROUP_NAME_MAX, GROUP_MISSING_MAX } from "@/lib/element-groups";
 import { FIRST_LOOK_ANSWERS } from "@/lib/first-look";
+import { MODEL_TYPES } from "@/lib/model-types";
 import { CHANGE_CLASSES } from "@/lib/panel";
 import { createAuth } from "../auth.ts";
 import { ELEMENT_SOURCE_KINDS } from "../elements/queries.ts";
@@ -34,6 +35,7 @@ import * as flags from "./migrations/0009_detail_flags.ts";
 import * as sources from "./migrations/0012_source_models.ts";
 import { FIRST_LOOK_ANSWER_KEYS } from "./migrations/0013_first_look.ts";
 import * as groups from "./migrations/0014_element_groups.ts";
+import { MODEL_TYPE_KEYS } from "./migrations/0018_model_type.ts";
 import { migrations } from "./migrations/index.ts";
 import { baseTestDatabaseUrl, createTestDb } from "./test-db.ts";
 import { createRunDatabase, dropRunDatabase } from "./test-run-database.ts";
@@ -99,6 +101,10 @@ describe("migrations", () => {
 
   it("allow exactly the brainstorm questions of src/lib/brainstorm.ts", () => {
     expect([...ELEMENT_PROMPT_KEYS]).toEqual([...ELEMENT_PROMPTS]);
+  });
+
+  it("allow exactly the model types of src/lib/model-types.ts", () => {
+    expect([...MODEL_TYPE_KEYS]).toEqual([...MODEL_TYPES]);
   });
 
   it("allow exactly the change classes of src/lib/panel.ts", () => {

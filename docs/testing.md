@@ -152,7 +152,9 @@ Then work through these steps:
 
 1. **Scope, as facilitator:** open "Body temperature (demo)". It opens on
    the Overview, with the checklist for the scope phase; the Scope tab shows
-   the concept, use cases and three comments. Move the project on to
+   the concept, use cases and three comments. Under "Model type", choose
+   Observation and save; a participant sees the type and its one-line
+   explanation in the same place. Move the project on to
    discover with "Go on to Discover" at the end of the checklist.
 2. **Discover:** open "Heart rate (demo)". The Overview lists the parts of
    discover. "Review" on the first item opens Existing models: the pulse

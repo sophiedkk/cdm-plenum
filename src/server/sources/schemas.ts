@@ -43,6 +43,10 @@ export type OtherSourceInput = z.infer<typeof otherSourceInput>;
 export const sourceModelInput = z.object({ projectId: idSchema, sourceModelId });
 export type SourceModelInput = z.infer<typeof sourceModelInput>;
 
+/** Marks a source model as the base model, or unmarks it (EL25). */
+export const baseModelInput = z.object({ projectId: idSchema, sourceModelId, base: z.boolean() });
+export type BaseModelInput = z.infer<typeof baseModelInput>;
+
 /** The most rows "Put on the list" takes at once; a model has a few hundred elements at most. */
 export const PUT_ON_LIST_MAX = 1000;
 

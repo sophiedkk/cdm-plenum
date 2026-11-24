@@ -10,7 +10,7 @@ import { createTestDb } from "../db/test-db.ts";
 import { revealBoard } from "../elements/brainstorm.ts";
 import { addElement, mergeElements } from "../elements/queries.ts";
 import { addElementInput } from "../elements/schemas.ts";
-import { addScopeSource, updateScope } from "../scope/queries.ts";
+import { addScopeSource, setModelType, updateScope } from "../scope/queries.ts";
 import { insertImportedElement, setPhase } from "../test-fixtures.ts";
 import { type ProjectMembers, personLeaks, projectWithMembers } from "../test-project-members.ts";
 import { phaseRecap } from "./recap.ts";
@@ -51,8 +51,11 @@ describe("phaseRecap (PR13)", () => {
     });
   });
 
-  it("recaps the scope with its statement and sources for a participant", async () => {
+  it("recaps the scope with its model type, statement and sources for a participant", async () => {
     await setPhase(db, m.projectId, "scope");
+    expect(
+      await setModelType(db, m.facilitator, { projectId: m.projectId, modelType: "observation" }),
+    ).toEqual({ ok: true, value: null });
     const scoped = await updateScope(db, m.facilitator, {
       projectId: m.projectId,
       concept: "The blood pressure of an adult.",
@@ -71,6 +74,7 @@ describe("phaseRecap (PR13)", () => {
       ok: true,
       value: {
         phase: "scope",
+        modelType: "observation",
         concept: "The blood pressure of an adult.",
         sources: [{ label: "Invented form", url: null }],
       },

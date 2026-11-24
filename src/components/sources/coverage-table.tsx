@@ -5,6 +5,8 @@
 // column per model, a check per row and one button that puts the checked rows on the list. A row
 // already on the list keeps its checked box, disabled, so no control moves after a save. A row
 // matched by mapping or name is a suggestion: "Not the same" splits it into a row per element.
+// The base model (EL25, ADR 0021) is a toggle in its column header; the server puts its column
+// first, and a row it lacks says "Not in the base", so the table shows what the others add.
 import { useId, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -42,17 +44,23 @@ export function CoverageTable({
   coverage,
   putOnList,
   unmatch,
+  setBase,
   onListed,
 }: Readonly<{
   coverage: Coverage;
   putOnList: (rowIds: string[]) => Promise<Outcome<{ createdElementIds: string[] }>>;
   unmatch: (rowId: string) => Promise<Outcome<null>>;
-  /** After rows were put on the list or split: reload the table. */
+  /** Marks a model as the base model or unmarks it (EL25). */
+  setBase: (modelId: string, base: boolean) => Promise<Outcome<null>>;
+  /** After rows were put on the list or split, or the base changed: reload the table. */
   onListed: () => Promise<void> | void;
 }>) {
   const open = coverage.rows.filter((row) => !row.onList);
   // With one model nothing is matched, so the column would say "only one model" on every row.
   const showBasis = coverage.models.length > 1;
+  // A base needs another model to compare with.
+  const showBase = coverage.models.length > 1;
+  const base = coverage.models.find((model) => model.base) ?? null;
   // NOTE: ADR 0020 prototype: every row starts checked; the facilitator unchecks what is out.
   const [unchecked, setUnchecked] = useState<ReadonlySet<string>>(new Set());
   const [pending, setPending] = useState(false);
@@ -78,6 +86,27 @@ export function CoverageTable({
           count === 1 ? m.board_models_listed_one() : m.board_models_listed_many({ count }),
         );
         setUnchecked(new Set());
+        await onListed();
+      } else {
+        toast.error(refusalMessage(outcome.error));
+      }
+    } catch {
+      toast.error(m.common_error_unexpected());
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function toggleBase(model: Coverage["models"][number]) {
+    setPending(true);
+    try {
+      const outcome = await setBase(model.id, !model.base);
+      if (outcome.ok) {
+        toast.success(
+          model.base
+            ? m.board_models_base_cleared({ title: model.title })
+            : m.board_models_base_set({ title: model.title }),
+        );
         await onListed();
       } else {
         toast.error(refusalMessage(outcome.error));
@@ -125,7 +154,23 @@ export function CoverageTable({
                   scope="col"
                   className="px-3 py-2.5 text-center font-semibold whitespace-nowrap"
                 >
-                  {model.title}
+                  <span className="flex flex-col items-center gap-1.5">
+                    <span>{model.title}</span>
+                    {showBase && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="aria-pressed:bg-muted"
+                        aria-pressed={model.base}
+                        aria-label={m.board_models_base_named({ title: model.title })}
+                        disabled={pending}
+                        onClick={() => void toggleBase(model)}
+                      >
+                        {m.board_models_base()}
+                      </Button>
+                    )}
+                  </span>
                 </th>
               ))}
               {showBasis && (
@@ -153,6 +198,11 @@ export function CoverageTable({
                   <th scope="row" className="px-3 py-2.5 text-left font-normal">
                     <label htmlFor={boxId} className="flex flex-col">
                       <span>{name}</span>
+                      {base !== null && row.cells[base.id] === undefined && (
+                        <span className="text-xs text-muted-foreground">
+                          {m.board_models_not_in_base()}
+                        </span>
+                      )}
                       {row.onList && (
                         <span className="text-xs text-muted-foreground">
                           {m.board_models_on_list()}

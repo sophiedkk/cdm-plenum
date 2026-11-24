@@ -251,6 +251,7 @@ export interface Project {
   group_check_at: Timestamp | null;
   group_names_visible: Generated<boolean>;
   id: string;
+  model_type: string | null;
   panel_minimum_reason: string | null;
   phase: Generated<string>;
   private_brainstorm: Generated<boolean>;
@@ -389,6 +390,7 @@ export interface SourceModel {
   fhir_version: string | null;
   id: Generated<string>;
   imported_at: Timestamp | null;
+  is_base: Generated<boolean>;
   kind: string;
   link: string | null;
   project_id: string;
