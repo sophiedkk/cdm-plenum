@@ -258,7 +258,7 @@ async function factsOf(
     detail:
       project.phase === "detail"
         ? await detailProgress(db, project.id)
-        : { inModel: 0, proposed: 0, settled: 0, openObjections: 0 },
+        : { inModel: 0, proposed: 0, settled: 0, codesSettled: 0, openObjections: 0 },
     mailConfigured: deps.mailConfigured,
   };
 }

@@ -17,9 +17,13 @@ import {
 import {
   addressObjectionInput,
   answerDetailInput,
+  proposeCodesInput,
   proposeDetailInput,
+  reviewCodesInput,
   settleDetailInput,
+  skipReviewInput,
 } from "./schemas.ts";
+import { proposeCodes, reviewCodes, skipReview } from "./terminology.ts";
 
 export const detailBoardFn = createServerFn({ method: "GET" })
   .middleware([requireSession])
@@ -45,3 +49,18 @@ export const settleDetailFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(settleDetailInput)
   .handler(({ data, context }) => settleDetail(getDb(), context.userId, data));
+
+export const proposeCodesFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(proposeCodesInput)
+  .handler(({ data, context }) => proposeCodes(getDb(), context.userId, data));
+
+export const reviewCodesFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(reviewCodesInput)
+  .handler(({ data, context }) => reviewCodes(getDb(), context.userId, data));
+
+export const skipReviewFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(skipReviewInput)
+  .handler(({ data, context }) => skipReview(getDb(), context.userId, data));

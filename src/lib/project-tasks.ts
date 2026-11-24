@@ -38,7 +38,7 @@ export interface ProjectOverview {
   groupCheck: { asked: boolean; done: boolean };
   round: OverviewRound | null;
   /** The open structure proposals and how many the member answered in their current version (DT2). */
-  detail: { open: number; answered: number };
+  detail: { open: number; answered: number; toReview: number };
   /** The newest closed round, whose results every member may read (DE5). */
   lastClosedRoundId: string | null;
 }
@@ -63,7 +63,7 @@ export type ParticipantTask =
   | { kind: "rated_all"; roundId: string; number: number; total: number; closesAt: string }
   | { kind: "round_closing"; number: number }
   | { kind: "wait" }
-  | { kind: "detail"; open: number; answered: number }
+  | { kind: "detail"; open: number; answered: number; toReview: number }
   | { kind: "detail_answered" }
   | { kind: "handoff"; resultsRoundId: string | null };
 
@@ -95,8 +95,12 @@ export function participantTask(overview: ProjectOverview): ParticipantTask {
     }
     case "detail": {
       // NOTE: DT2. Only a participant answers; the facilitator settles.
-      if (overview.role !== "participant" || overview.detail.open === 0) return { kind: "wait" };
-      return overview.detail.answered >= overview.detail.open
+      const { open, answered, toReview } = overview.detail;
+      if (overview.role !== "participant" || (open === 0 && toReview === 0)) {
+        return { kind: "wait" };
+      }
+      // NOTE: DT4. A terminologist's review comes before the group's answers, so it is a task.
+      return answered >= open && toReview === 0
         ? { kind: "detail_answered" }
         : { kind: "detail", ...overview.detail };
     }

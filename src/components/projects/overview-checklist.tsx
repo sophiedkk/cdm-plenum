@@ -277,6 +277,10 @@ function itemView(
       return {
         text: m.projects_check_detail_settled({ settled: item.settled, total: item.inModel }),
       };
+    case "detail_codes":
+      return {
+        text: m.projects_check_detail_codes({ settled: item.settled, total: item.inModel }),
+      };
     case "undecided":
       if (item.done) return { text: m.projects_check_undecided_none() };
       return item.count === 0

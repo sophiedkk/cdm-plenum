@@ -42,6 +42,8 @@ export function FormDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent
         showCloseButton={false}
+        // A long form, such as the codes of many values, scrolls inside the window height.
+        className="max-h-[90vh] overflow-y-auto"
         {...(description === undefined ? { "aria-describedby": undefined } : {})}
       >
         <DialogHeader>

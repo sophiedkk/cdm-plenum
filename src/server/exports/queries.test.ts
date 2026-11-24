@@ -324,6 +324,11 @@ describe("exportElementsCsv (EX1)", () => {
       "ckm_revision",
       "merged_ckm_links",
       "proposed_values",
+      "element_code",
+      "binding_strength",
+      "value_set_url",
+      "value_codes",
+      "codes_status",
       "round_1_outcome",
       "round_2_outcome",
       "round_3_outcome",
@@ -343,6 +348,11 @@ describe("exportElementsCsv (EX1)", () => {
         ckm_revision: "2.1.5",
         merged_ckm_links: "",
         proposed_values: "",
+        element_code: "",
+        binding_strength: "",
+        value_set_url: "",
+        value_codes: "",
+        codes_status: "",
         round_1_outcome: "excluded",
         round_2_outcome: "",
         round_3_outcome: "",
@@ -359,6 +369,11 @@ describe("exportElementsCsv (EX1)", () => {
         ckm_revision: "",
         merged_ckm_links: "",
         proposed_values: "Standing (1); Sitting (2); Liggend; plat",
+        element_code: "",
+        binding_strength: "",
+        value_set_url: "",
+        value_codes: "",
+        codes_status: "",
         round_1_outcome: "no_consensus",
         round_2_outcome: "included",
         round_3_outcome: "",
@@ -376,11 +391,43 @@ describe("exportElementsCsv (EX1)", () => {
         ckm_revision: "2.1.5",
         merged_ckm_links: "",
         proposed_values: "",
+        element_code: "",
+        binding_strength: "",
+        value_set_url: "",
+        value_codes: "",
+        codes_status: "",
         round_1_outcome: "included",
         round_2_outcome: "",
         round_3_outcome: "",
       },
     ]);
+  });
+
+  it("writes the codes and binding of an element and whether they are settled (DT4, DT5)", async () => {
+    const { facilitator, projectId, elements } = await setup();
+    await db
+      .updateTable("element")
+      .set({ code_system: "http://loinc.org", code: "8480-6", binding_strength: "preferred" })
+      .where("id", "=", elements.position)
+      .execute();
+    await db
+      .updateTable("element_value")
+      .set({ code_system: "http://snomed.info/sct", code: "10904000" })
+      .where("element_id", "=", elements.position)
+      .where("position", "=", 1)
+      .execute();
+    await db
+      .insertInto("detail_proposal")
+      .values({ element_id: elements.position, kind: "terminology", review_state: "pending" })
+      .execute();
+    const rows = records(value(await exportElementsCsv(db, facilitator, projectId)));
+    expect(rows.find((row) => row["name"] === "Body position")).toMatchObject({
+      element_code: "http://loinc.org|8480-6",
+      binding_strength: "preferred",
+      value_set_url: "",
+      value_codes: "http://snomed.info/sct|10904000; ; ",
+      codes_status: "open",
+    });
   });
 
   it("marks an element in a round without an outcome as pending", async () => {
@@ -403,7 +450,7 @@ describe("exportElementsCsv (EX1)", () => {
     const { userId, projectId } = await facilitatorWithProject(db);
     const file = value(await exportElementsCsv(db, userId, projectId));
     expect(parseCsv(file.content)).toHaveLength(1);
-    expect(parseCsv(file.content)[0]).toHaveLength(11);
+    expect(parseCsv(file.content)[0]).toHaveLength(16);
   });
 
   describe("merged_ckm_links (EL5, O-5)", () => {

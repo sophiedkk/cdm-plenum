@@ -18,6 +18,18 @@ the project uses [Semantic Versioning](https://semver.org/).
   role. The page exists only with `DEV_SIGN_IN=true`, and the app refuses
   that setting unless it runs on `localhost`.
 
+- Codes in the detail phase: once an element's structure is settled, a
+  member of a terminology group or the facilitator proposes its codes on the
+  Details tab: an element code, a binding strength (required, extensible,
+  preferred or example) with an optional value set URL, and a code per value.
+  Pick SNOMED CT or LOINC, or type another code system's URI. A second
+  terminologist approves the proposal or sends it back with a note before the
+  group answers it; with no second terminologist, the facilitator skips the
+  review and gives the reason. Settled codes go onto the element, the CSV
+  export has columns for them and marks open codes, and the Overview counts
+  the elements with settled codes. Revising a settled structure reopens its
+  codes.
+
 - Detail phase: after the rounds, a project moves on to Detail, before
   hand-off. On the new Details tab, the facilitator or a member of an
   architecture group proposes the data type, cardinality and value list of

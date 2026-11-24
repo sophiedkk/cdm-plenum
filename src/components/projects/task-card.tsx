@@ -108,6 +108,9 @@ export function TaskCard({
             facts={[
               { term: m.projects_home_fact_proposals(), value: task.open },
               { term: m.projects_home_fact_answered(), value: task.answered },
+              ...(task.toReview > 0
+                ? [{ term: m.projects_home_fact_to_review(), value: task.toReview }]
+                : []),
             ]}
           />
           <Button asChild size="lg" className="mt-6">

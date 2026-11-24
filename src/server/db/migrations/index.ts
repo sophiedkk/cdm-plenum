@@ -19,6 +19,7 @@ import * as m0013 from "./0013_first_look.ts";
 import * as m0014 from "./0014_element_groups.ts";
 import * as m0015 from "./0015_unmatched_source_elements.ts";
 import * as m0016 from "./0016_detail_phase.ts";
+import * as m0017 from "./0017_detail_terminology.ts";
 
 export const migrations: Record<string, Migration> = {
   "0001_auth": m0001,
@@ -36,6 +37,7 @@ export const migrations: Record<string, Migration> = {
   "0014_element_groups": m0014,
   "0015_unmatched_source_elements": m0015,
   "0016_detail_phase": m0016,
+  "0017_detail_terminology": m0017,
 };
 
 export const migrationProvider: MigrationProvider = {

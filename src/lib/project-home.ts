@@ -99,7 +99,13 @@ export interface OverviewFacts {
   undecided: number;
   lastClosedRound: ClosedRound | null;
   /** The structure step of the detail phase (DT1, DT2): counts of elements and objections. */
-  detail: { inModel: number; proposed: number; settled: number; openObjections: number };
+  detail: {
+    inModel: number;
+    proposed: number;
+    settled: number;
+    codesSettled: number;
+    openObjections: number;
+  };
   /** Whether the server can send e-mail, so a reminder can go out. */
   mailConfigured: boolean;
 }
@@ -134,7 +140,8 @@ export type ChecklistItem =
   | { key: "undecided"; done: boolean; count: number }
   | { key: "detail_proposed"; done: boolean; proposed: number; inModel: number }
   | { key: "detail_objections"; done: boolean; count: number }
-  | { key: "detail_settled"; done: boolean; settled: number; inModel: number };
+  | { key: "detail_settled"; done: boolean; settled: number; inModel: number }
+  | { key: "detail_codes"; done: null; settled: number; inModel: number };
 
 /** The checklist of the phase the project is in; hand-off has none, its Overview exports. */
 export function checklist(phase: ProjectPhase, facts: OverviewFacts): ChecklistItem[] {
@@ -211,11 +218,13 @@ export function checklist(phase: ProjectPhase, facts: OverviewFacts): ChecklistI
       return items;
     }
     case "detail": {
-      const { inModel, proposed, settled, openObjections } = facts.detail;
+      const { inModel, proposed, settled, codesSettled, openObjections } = facts.detail;
       return [
         { key: "detail_proposed", done: inModel > 0 && proposed >= inModel, proposed, inModel },
         { key: "detail_objections", done: openObjections === 0, count: openObjections },
         { key: "detail_settled", done: inModel > 0 && settled >= inModel, settled, inModel },
+        // NOTE: DT4. Open codes do not hold up the hand-off, so this item only informs.
+        { key: "detail_codes", done: null, settled: codesSettled, inModel },
       ];
     }
     case "handoff":

@@ -179,11 +179,13 @@ Then work through these steps:
    Invite a new address and open the invitation from Mailpit in a private
    window.
 5. **Detail:** open "Oxygen saturation (demo)". The Details tab lists the
-   three elements in the model. SpO2 is settled; the architect's proposal
-   for "Inspired oxygen" has one open objection: mark it addressed with a
-   note, then settle it. Switch person to `architect.a@example.test` to
-   propose the structure of "Probe site", and to `nurse.b@example.test` to
-   answer it from "Your turn".
+   three elements in the model. SpO2 is settled, and its LOINC code waits
+   for the group: the demo has one terminologist, so the review was
+   skipped with a reason. The architect's proposal for "Inspired oxygen"
+   has one open objection: mark it addressed with a note, then settle it.
+   Switch person to `terminologist.a@example.test` to propose its codes,
+   to `architect.a@example.test` to propose the structure of "Probe site",
+   and to `nurse.b@example.test` to answer it from "Your turn".
 6. **Hand-off:** open "Respiratory rate (demo)". Two rounds are closed;
    round 2 settled one of the two elements without consensus. Export the
    elements as CSV and as a mind map from the Overview.
