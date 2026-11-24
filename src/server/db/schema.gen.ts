@@ -69,19 +69,32 @@ export interface DetailFlag {
 }
 
 export interface DetailProposal {
+  binding_strength: string | null;
+  code: string | null;
+  code_display: string | null;
+  code_system: string | null;
   data_type: string | null;
   element_id: string;
   id: Generated<string>;
+  kind: Generated<string>;
   max_occurs: number | null;
   min_occurs: number | null;
   proposed_at: Generated<Timestamp>;
   proposer_expert_type: string | null;
   proposer_member_id: string | null;
+  review_note: string | null;
+  review_state: string | null;
+  reviewed_at: Timestamp | null;
+  reviewer_member_id: string | null;
   settled_at: Timestamp | null;
+  value_set_url: string | null;
   version: Generated<number>;
 }
 
 export interface DetailProposalValue {
+  code: string | null;
+  code_display: string | null;
+  code_system: string | null;
   position: number;
   proposal_id: string;
   text: string;
@@ -90,6 +103,10 @@ export interface DetailProposalValue {
 
 export interface Element {
   author_member_id: string | null;
+  binding_strength: string | null;
+  code: string | null;
+  code_display: string | null;
+  code_system: string | null;
   created_at: Generated<Timestamp>;
   data_type: string | null;
   description: Generated<string>;
@@ -102,6 +119,7 @@ export interface Element {
   project_id: string;
   prompt: string | null;
   updated_at: Generated<Timestamp>;
+  value_set_url: string | null;
 }
 
 export interface ElementCkmLink {
@@ -167,6 +185,9 @@ export interface ElementSupport {
 }
 
 export interface ElementValue {
+  code: string | null;
+  code_display: string | null;
+  code_system: string | null;
   element_id: string;
   id: Generated<string>;
   position: number;

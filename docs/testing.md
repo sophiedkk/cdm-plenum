@@ -175,9 +175,11 @@ Sign in at <http://localhost:3000/sign-in> and open the link from Mailpit at
    Invite a new address and open the invitation from Mailpit in a private
    window.
 5. **Detail:** open "Oxygen saturation (demo)". The Details tab lists the
-   three elements in the model. SpO2 is settled; the architect's proposal
-   for "Inspired oxygen" has one open objection: mark it addressed with a
-   note, then settle it. Sign in as `architect.a@example.test` to propose
+   three elements in the model. SpO2 is settled, and its LOINC code waits
+   for the group: the demo has one terminologist, so the review was
+   skipped with a reason. The architect's proposal for "Inspired oxygen"
+   has one open objection: mark it addressed with a note, then settle it.
+   Sign in as `terminologist.a@example.test` to propose its codes. Sign in as `architect.a@example.test` to propose
    the structure of "Probe site", and as `nurse.b@example.test` to answer
    it from "Your turn".
 6. **Hand-off:** open "Respiratory rate (demo)". Two rounds are closed;

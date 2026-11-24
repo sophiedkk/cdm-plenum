@@ -62,6 +62,13 @@ export const PROJECT_ACTION_ERRORS = [
   "detail_settled",
   "detail_answer_not_found",
   "detail_objections_open",
+  "detail_structure_open",
+  "detail_not_terminologist",
+  "detail_value_codes_mismatch",
+  "detail_not_reviewed",
+  "detail_review_own",
+  "detail_review_not_pending",
+  "detail_review_possible",
 ] as const;
 export type ProjectActionError = (typeof PROJECT_ACTION_ERRORS)[number];
 

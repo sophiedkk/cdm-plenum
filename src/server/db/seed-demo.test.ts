@@ -185,6 +185,7 @@ describe("seedDemo", () => {
       .innerJoin("element", "element.id", "detail_proposal.element_id")
       .select(["element.name", "element.data_type", "detail_proposal.settled_at"])
       .where("element.project_id", "=", projectId)
+      .where("detail_proposal.kind", "=", "structure")
       .orderBy("element.name")
       .execute();
     expect(proposals.map((p) => [p.name, p.settled_at !== null, p.data_type])).toEqual([
@@ -201,6 +202,14 @@ describe("seedDemo", () => {
       .where("detail_answer.addressed_at", "is", null)
       .execute();
     expect(objections).toHaveLength(1);
+    const codes = await db
+      .selectFrom("detail_proposal")
+      .innerJoin("element", "element.id", "detail_proposal.element_id")
+      .select(["element.name", "detail_proposal.code", "detail_proposal.review_state"])
+      .where("element.project_id", "=", projectId)
+      .where("detail_proposal.kind", "=", "terminology")
+      .execute();
+    expect(codes).toEqual([{ name: "SpO2", code: "59408-5", review_state: "skipped" }]);
   });
 
   it("gives the hand-off project two closed rounds, the second settling one element", async () => {

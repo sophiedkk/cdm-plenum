@@ -16,6 +16,7 @@ import { grantAppRole, normalizeEmail } from "../admin/app-roles.ts";
 import type { CkmClient } from "../ckm/client.ts";
 import { parseArchetypeXml } from "../ckm/parse.ts";
 import { answerDetail, proposeDetail, settleDetail } from "../details/queries.ts";
+import { proposeCodes, skipReview } from "../details/terminology.ts";
 import { revealBoard } from "../elements/brainstorm.ts";
 import { answerFirstLook } from "../elements/first-look.ts";
 import { addElement, addElementComment, setElementValues } from "../elements/queries.ts";
@@ -716,8 +717,10 @@ async function seedHandoff(db: Kysely<DB>, facilitatorId: string, now: Date): Pr
 }
 
 /**
- * Detail phase: three elements in the model. The facilitator's proposal for SpO2 is settled; an
- * architect's proposal for the inspired oxygen has one open objection; the probe site has none.
+ * Detail phase: three elements in the model. The facilitator's proposal for SpO2 is settled, and
+ * the demo's one terminologist proposed its LOINC code; with no second terminologist, the
+ * facilitator skipped the review and three participants agreed. An architect's proposal for the
+ * inspired oxygen has one open objection; the probe site has none.
  */
 async function seedDetail(db: Kysely<DB>, facilitatorId: string, now: Date): Promise<string> {
   const project = await startProject(
@@ -794,6 +797,42 @@ async function seedDetail(db: Kysely<DB>, facilitatorId: string, now: Date): Pro
       version: spo2Proposal.version,
     }),
   );
+  // LOINC 59408-5: oxygen saturation in arterial blood by pulse oximetry (loinc.org/59408-5).
+  const codes = must(
+    "propose SpO2 codes",
+    await proposeCodes(db, raterIds[5] ?? facilitatorId, {
+      projectId,
+      elementId: spo2,
+      version: 0,
+      code: {
+        system: "http://loinc.org",
+        code: "59408-5",
+        display: "Oxygen saturation in Arterial blood by Pulse oximetry",
+      },
+      bindingStrength: null,
+      valueSetUrl: null,
+      valueCodes: [],
+    }),
+  );
+  must(
+    "skip SpO2 review",
+    await skipReview(db, facilitatorId, {
+      projectId,
+      ...codes,
+      reason: "The demo panel has one terminologist.",
+    }),
+  );
+  for (const raterId of raterIds.slice(0, 3)) {
+    must(
+      "agree SpO2 codes",
+      await answerDetail(db, raterId, {
+        projectId,
+        ...codes,
+        answer: "agree",
+        reason: null,
+      }),
+    );
+  }
   for (const [index, raterId] of raterIds.slice(0, 4).entries()) {
     must(
       "answer inspired oxygen",
