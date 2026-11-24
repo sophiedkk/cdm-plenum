@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { baseLocale, overwriteGetLocale } from "@/i18n/runtime";
 import { ADMIN_ACTION_ERRORS } from "@/server/admin/queries";
 import { CKM_ACTION_ERRORS } from "@/server/ckm/queries";
+import { DEV_SIGN_IN_ERRORS } from "@/server/dev-sign-in/queries";
 import { FHIR_ACTION_ERRORS } from "@/server/fhir/queries";
 import { PROJECT_ACTION_ERRORS } from "@/server/projects/access";
 import { ROUND_ACTION_ERRORS } from "@/server/rounds/access";
@@ -22,6 +23,7 @@ const SERVER_CODES = [
     ...FHIR_ACTION_ERRORS,
     ...SOURCE_ACTION_ERRORS,
     ...ADMIN_ACTION_ERRORS,
+    ...DEV_SIGN_IN_ERRORS,
     ...AUTH_REFUSALS,
   ]),
 ];

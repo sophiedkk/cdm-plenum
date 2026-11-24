@@ -19,6 +19,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { m } from "@/i18n/messages";
 import { getLocale } from "@/i18n/runtime";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { devSignInEnabledQueryOptions } from "@/server/dev-sign-in/query-options";
 import { sessionQueryOptions } from "@/server/session/query-options";
 import appCss from "@/styles/app.css?url";
 
@@ -29,9 +30,14 @@ export interface RouterContext {
 export const Route = createRootRouteWithContext<RouterContext>()({
   // NOTE: our own design after eduLIMS (ADR 0002). The session query is always stale, so every
   // navigation asks the server and a revoked session or role applies at once.
-  beforeLoad: async ({ context }) => ({
-    user: await context.queryClient.fetchQuery(sessionQueryOptions()),
-  }),
+  beforeLoad: async ({ context }) => {
+    const [user, devSignIn] = await Promise.all([
+      context.queryClient.fetchQuery(sessionQueryOptions()),
+      // Only whether the development sign-in page is on, for "Switch person" in the shell.
+      context.queryClient.ensureQueryData(devSignInEnabledQueryOptions()),
+    ]);
+    return { user, devSignIn };
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },

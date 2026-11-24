@@ -14,6 +14,7 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AuthedAdminRouteImport } from './routes/_authed/admin'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as DevSignInRouteImport } from './routes/dev/sign-in'
 import { Route as InviteInvitationIdRouteImport } from './routes/invite/$invitationId'
 import { Route as AuthedProjectsIndexRouteImport } from './routes/_authed/projects/index'
 import { Route as AuthedProjectsProjectIdRouteImport } from './routes/_authed/projects/$projectId'
@@ -61,6 +62,11 @@ const AuthedAdminRoute = AuthedAdminRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevSignInRoute = DevSignInRouteImport.update({
+  id: '/dev/sign-in',
+  path: '/dev/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InviteInvitationIdRoute = InviteInvitationIdRouteImport.update({
@@ -208,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/admin': typeof AuthedAdminRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/sign-in': typeof DevSignInRoute
   '/invite/$invitationId': typeof InviteInvitationIdRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRouteWithChildren
   '/projects/new': typeof AuthedProjectsNewRoute
@@ -238,6 +245,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/admin': typeof AuthedAdminRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/sign-in': typeof DevSignInRoute
   '/invite/$invitationId': typeof InviteInvitationIdRoute
   '/projects/new': typeof AuthedProjectsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -268,6 +276,7 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/_authed/admin': typeof AuthedAdminRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/sign-in': typeof DevSignInRoute
   '/invite/$invitationId': typeof InviteInvitationIdRoute
   '/_authed/projects/$projectId': typeof AuthedProjectsProjectIdRouteWithChildren
   '/_authed/projects/new': typeof AuthedProjectsNewRoute
@@ -300,6 +309,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/admin'
     | '/api/health'
+    | '/dev/sign-in'
     | '/invite/$invitationId'
     | '/projects/$projectId'
     | '/projects/new'
@@ -330,6 +340,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/admin'
     | '/api/health'
+    | '/dev/sign-in'
     | '/invite/$invitationId'
     | '/projects/new'
     | '/api/auth/$'
@@ -359,6 +370,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/_authed/admin'
     | '/api/health'
+    | '/dev/sign-in'
     | '/invite/$invitationId'
     | '/_authed/projects/$projectId'
     | '/_authed/projects/new'
@@ -390,6 +402,7 @@ export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   SignInRoute: typeof SignInRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  DevSignInRoute: typeof DevSignInRoute
   InviteInvitationIdRoute: typeof InviteInvitationIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -429,6 +442,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/sign-in': {
+      id: '/dev/sign-in'
+      path: '/dev/sign-in'
+      fullPath: '/dev/sign-in'
+      preLoaderRoute: typeof DevSignInRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invite/$invitationId': {
@@ -695,6 +715,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   SignInRoute: SignInRoute,
   ApiHealthRoute: ApiHealthRoute,
+  DevSignInRoute: DevSignInRoute,
   InviteInvitationIdRoute: InviteInvitationIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
