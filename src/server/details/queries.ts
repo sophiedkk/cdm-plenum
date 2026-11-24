@@ -1,25 +1,34 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The structure step of the detail phase (DT1, DT2, ADR 0017). A member of an architecture group
-// or the facilitator proposes the data type, cardinality and values of an element in the model;
-// participants answer by consent; the facilitator addresses objections and settles the proposal,
-// which copies the structure onto the element (owner decision 2026-11-23). No query hands a
-// member id to the screens: an objection reaches the facilitator without its author (EL2).
+// The detail phase (DT1 to DT5, ADR 0017). A member of an architecture group or the facilitator
+// proposes the data type, cardinality and values of an element in the model; once that is
+// settled, a terminologist or the facilitator proposes its codes (terminology.ts). Participants
+// answer both kinds by consent; the facilitator addresses objections and settles, which copies
+// the proposal onto the element (owner decision 2026-11-23). No query hands a member id to the
+// screens: an objection reaches the facilitator without its author (EL2).
 import type { Kysely, Transaction } from "kysely";
 import type { Cardinality } from "@/lib/cardinality";
 import type { Outcome } from "@/lib/consensus";
 import { type DataTypeKey, isDataTypeKey } from "@/lib/data-types";
 import {
+  type CodeProposal,
+  type ConsentState,
   type DetailBoard,
+  type DetailCode,
+  type DetailCodes,
   type DetailElement,
   type DetailFlagNote,
+  type DetailKind,
   type DetailObjection,
   type DetailProposal,
   type DetailSource,
   type DetailStructure,
   type DetailValue,
+  isBindingStrength,
   isDetailAnswer,
+  type ReviewState,
+  reviewDone,
 } from "@/lib/details";
 import { DETAIL_PHASE, preparesAhead, stepVisible, writeOpen } from "@/lib/phase-access";
 import type { DB } from "../db/schema.gen.ts";
@@ -73,7 +82,19 @@ export async function modelElements(db: Db, projectId: string) {
   if (included.length === 0) return [];
   return db
     .selectFrom("element")
-    .select(["id", "name", "description", "data_type", "min_occurs", "max_occurs"])
+    .select([
+      "id",
+      "name",
+      "description",
+      "data_type",
+      "min_occurs",
+      "max_occurs",
+      "code_system",
+      "code",
+      "code_display",
+      "binding_strength",
+      "value_set_url",
+    ])
     .where("project_id", "=", projectId)
     .where("merged_into", "is", null)
     .where("id", "in", included)
@@ -82,54 +103,103 @@ export async function modelElements(db: Db, projectId: string) {
     .execute();
 }
 
-/** Whether the user sits in a stakeholder group of expert type architecture (DT1). */
-async function inArchitectureGroup(db: Db, projectId: string, userId: string): Promise<boolean> {
+/**
+ * Whether the user is a participant in a stakeholder group of the expert type: architecture
+ * proposes structures (DT1), terminology proposes and reviews codes (DT4).
+ */
+export async function inExpertGroup(
+  db: Db,
+  projectId: string,
+  userId: string,
+  expertType: "architecture" | "terminology",
+): Promise<boolean> {
   const row = await db
     .selectFrom("teamMember")
     .innerJoin("team", "team.id", "teamMember.teamId")
+    .innerJoin("member", (join) =>
+      join
+        .onRef("member.userId", "=", "teamMember.userId")
+        .onRef("member.organizationId", "=", "team.organizationId"),
+    )
     .select("team.id")
     .where("team.organizationId", "=", projectId)
-    .where("team.expert_type", "=", "architecture")
+    .where("team.expert_type", "=", expertType)
     .where("teamMember.userId", "=", userId)
+    .where("member.role", "=", "participant")
     .executeTakeFirst();
   return row !== undefined;
 }
 
-/** Whether the member may propose now: the facilitator ahead of the phase, an architect in it. */
-function mayProposeIn(project: LockedProject, architect: boolean): boolean {
+/** Whether the member may propose now: the facilitator ahead of the phase, an expert in it. */
+export function mayProposeIn(project: LockedProject, expert: boolean): boolean {
   if (project.role === "facilitator") return preparesAhead(project.phase, DETAIL_PHASE);
-  return architect && writeOpen(project.role, project.phase, "detail_propose");
+  return expert && writeOpen(project.role, project.phase, "detail_propose");
 }
 
-async function valueLists(
+function codeOf(system: string | null, code: string | null, display: string | null) {
+  return system !== null && code !== null ? { system, code, display } : null;
+}
+
+/** A value of a list with its code, as the element or a proposal stores it. */
+type CodedValue = DetailValue & { code: DetailCode | null };
+
+export async function valueLists(
   db: Db,
   table: "element_value" | "detail_proposal_value",
   ids: readonly string[],
-): Promise<Map<string, DetailValue[]>> {
-  const lists = new Map<string, DetailValue[]>();
+): Promise<Map<string, CodedValue[]>> {
+  const lists = new Map<string, CodedValue[]>();
   if (ids.length === 0) return lists;
+  const columns = ["text", "value", "code_system", "code", "code_display"] as const;
   const rows =
     table === "element_value"
       ? await db
           .selectFrom("element_value")
-          .select(["element_id as owner", "text", "value"])
+          .select(["element_id as owner", ...columns])
           .where("element_id", "in", ids)
           .orderBy("element_id")
           .orderBy("position")
           .execute()
       : await db
           .selectFrom("detail_proposal_value")
-          .select(["proposal_id as owner", "text", "value"])
+          .select(["proposal_id as owner", ...columns])
           .where("proposal_id", "in", ids)
           .orderBy("proposal_id")
           .orderBy("position")
           .execute();
   for (const row of rows) {
     const list = lists.get(row.owner) ?? [];
-    list.push({ text: row.text, value: row.value === null ? null : Number(row.value) });
+    list.push({
+      text: row.text,
+      value: row.value === null ? null : Number(row.value),
+      code: codeOf(row.code_system, row.code, row.code_display),
+    });
     lists.set(row.owner, list);
   }
   return lists;
+}
+
+/** The meanings and numbers of a value list, without its codes. */
+const plain = (values: readonly CodedValue[]): DetailValue[] =>
+  values.map(({ text, value }) => ({ text, value }));
+
+/** The terminologists who could review a code proposal: participants in a terminology group. */
+export async function terminologists(db: Db, projectId: string): Promise<string[]> {
+  const rows = await db
+    .selectFrom("teamMember")
+    .innerJoin("team", "team.id", "teamMember.teamId")
+    .innerJoin("member", (join) =>
+      join
+        .onRef("member.userId", "=", "teamMember.userId")
+        .onRef("member.organizationId", "=", "team.organizationId"),
+    )
+    .select("member.id")
+    .distinct()
+    .where("team.organizationId", "=", projectId)
+    .where("team.expert_type", "=", "terminology")
+    .where("member.role", "=", "participant")
+    .execute();
+  return rows.map((row) => row.id);
 }
 
 /**
@@ -147,8 +217,14 @@ export async function detailBoard(
   return readProject(db, userId, projectId, null, async (reader, project) => {
     if (!stepVisible(project.role, project.phase, "details")) return refused("phase_closed");
     const facilitator = project.role === "facilitator";
-    const architect = !facilitator && (await inArchitectureGroup(reader, project.id, userId));
-    const readsAnswers = facilitator || architect;
+    const architect =
+      !facilitator && (await inExpertGroup(reader, project.id, userId, "architecture"));
+    const terminologist =
+      !facilitator && (await inExpertGroup(reader, project.id, userId, "terminology"));
+    const readers: Record<DetailKind, boolean> = {
+      structure: facilitator || architect,
+      terminology: facilitator || terminologist,
+    };
     const me = await actorMemberId(reader, project.id, userId);
     const elements = await modelElements(reader, project.id);
     const ids = elements.map((element) => element.id);
@@ -230,16 +306,12 @@ export async function detailBoard(
       }
     }
 
-    const proposalOf = new Map(proposals.map((proposal) => [proposal.element_id, proposal]));
-    const view = (elementId: string): DetailProposal | null => {
-      const row = proposalOf.get(elementId);
-      if (!row) return null;
-      const mine = answers.find(
-        (answer) =>
-          answer.proposal_id === row.id &&
-          answer.version === row.version &&
-          answer.member_id === me,
-      );
+    const proposalOf = (elementId: string, kind: DetailKind) =>
+      proposals.find((row) => row.element_id === elementId && row.kind === kind);
+    // NOTE: DT4. The facilitator may skip the review only when no terminologist but the proposer
+    // could do it.
+    const reviewers = facilitator ? await terminologists(reader, project.id) : [];
+    const consent = (row: (typeof proposals)[number], readsAnswers: boolean): ConsentState => {
       const objection = (answer: (typeof answers)[number]): DetailObjection => ({
         id: answer.id,
         version: answer.version,
@@ -248,15 +320,10 @@ export async function detailBoard(
       });
       const ofProposal = answers.filter((answer) => answer.proposal_id === row.id);
       const current = ofProposal.filter((answer) => answer.version === row.version);
+      const mine = current.find((answer) => answer.member_id === me);
       return {
         id: row.id,
         version: row.version,
-        structure: {
-          dataType: dataTypeOf(row.data_type),
-          cardinality: cardinalityOf(row.min_occurs, row.max_occurs),
-          values: proposalValues.get(row.id) ?? [],
-        },
-        proposedBy: row.proposer_expert_type === null ? "facilitator" : "architecture",
         settledAt: row.settled_at?.toISOString() ?? null,
         own:
           mine && isDetailAnswer(mine.answer) ? { answer: mine.answer, reason: mine.reason } : null,
@@ -273,29 +340,84 @@ export async function detailBoard(
           : null,
       };
     };
+    const structureView = (elementId: string): DetailProposal | null => {
+      const row = proposalOf(elementId, "structure");
+      if (!row) return null;
+      return {
+        ...consent(row, readers.structure),
+        structure: {
+          dataType: dataTypeOf(row.data_type),
+          cardinality: cardinalityOf(row.min_occurs, row.max_occurs),
+          values: plain(proposalValues.get(row.id) ?? []),
+        },
+        proposedBy: row.proposer_expert_type === null ? "facilitator" : "architecture",
+      };
+    };
+    const codesView = (elementId: string): CodeProposal | null => {
+      const row = proposalOf(elementId, "terminology");
+      const state = row?.review_state as ReviewState | undefined;
+      if (!row || state === undefined) return null;
+      if (!readers.terminology && !reviewDone(state)) return null;
+      return {
+        ...consent(row, readers.terminology),
+        codes: {
+          code: codeOf(row.code_system, row.code, row.code_display),
+          bindingStrength: isBindingStrength(row.binding_strength) ? row.binding_strength : null,
+          valueSetUrl: row.value_set_url,
+          valueCodes: (proposalValues.get(row.id) ?? []).map((value) => value.code),
+        },
+        proposedBy: row.proposer_expert_type === null ? "facilitator" : "terminology",
+        review: {
+          state,
+          note: readers.terminology ? row.review_note : null,
+          ownProposal: row.proposer_member_id === me,
+          skippable: facilitator && reviewers.every((id) => id === row.proposer_member_id),
+        },
+      };
+    };
+    const elementViews = elements.map((element): DetailElement => {
+      const values = elementValues.get(element.id) ?? [];
+      const codes = codesView(element.id);
+      return {
+        id: element.id,
+        name: element.name,
+        description: element.description,
+        current: {
+          dataType: dataTypeOf(element.data_type),
+          cardinality: cardinalityOf(element.min_occurs, element.max_occurs),
+          values: plain(values),
+        },
+        proposal: structureView(element.id),
+        currentCodes: {
+          code: codeOf(element.code_system, element.code, element.code_display),
+          bindingStrength: isBindingStrength(element.binding_strength)
+            ? element.binding_strength
+            : null,
+          valueSetUrl: element.value_set_url,
+          valueCodes: values.map((value) => value.code),
+        },
+        codes,
+        codesInReview: codes === null && proposalOf(element.id, "terminology") !== undefined,
+        sources: sources.get(element.id) ?? [],
+        flags: facilitator ? (flags.get(element.id) ?? []) : null,
+      };
+    });
 
     return done({
       mayPropose: mayProposeIn(project, architect),
+      mayProposeCodes: mayProposeIn(project, terminologist),
+      mayReview: terminologist && project.phase === DETAIL_PHASE,
       mayAnswer:
         project.role === "participant" && writeOpen(project.role, project.phase, "detail_answer"),
       open: project.phase === DETAIL_PHASE,
-      elements: elements.map(
-        (element): DetailElement => ({
-          id: element.id,
-          name: element.name,
-          description: element.description,
-          current: {
-            dataType: dataTypeOf(element.data_type),
-            cardinality: cardinalityOf(element.min_occurs, element.max_occurs),
-            values: elementValues.get(element.id) ?? [],
-          },
-          proposal: view(element.id),
-          sources: sources.get(element.id) ?? [],
-          flags: facilitator ? (flags.get(element.id) ?? []) : null,
-        }),
-      ),
+      elements: elementViews,
     });
   });
+}
+
+/** Whether the group may answer a proposal: a structure always, codes once reviewed (DT4). */
+function consentOpen(proposal: { kind: string; review_state: string | null }): boolean {
+  return proposal.kind === "structure" || reviewDone(proposal.review_state as ReviewState);
 }
 
 /** The proposal with its element, locked, when it belongs to the project. */
@@ -329,7 +451,7 @@ export async function proposeDetail(
       if (!preparesAhead(project.phase, DETAIL_PHASE)) return refused("phase_closed");
     } else {
       if (!(await phaseOpenFor(trx, project, "detail_propose"))) return refused("phase_closed");
-      if (!(await inArchitectureGroup(trx, project.id, userId))) {
+      if (!(await inExpertGroup(trx, project.id, userId, "architecture"))) {
         return refused("detail_not_architect");
       }
     }
@@ -360,6 +482,7 @@ export async function proposeDetail(
       .selectFrom("detail_proposal")
       .select(["id", "version"])
       .where("element_id", "=", element.id)
+      .where("kind", "=", "structure")
       .forUpdate()
       .executeTakeFirst();
     if ((existing?.version ?? 0) !== input.version) return refused("detail_version_changed");
@@ -389,6 +512,16 @@ export async function proposeDetail(
         )
         .execute();
     }
+    if (existing) {
+      // NOTE: owner decision 2026-11-23. A new structure may change the value list, so the codes
+      // of the element go back to their terminologist, settled or not.
+      await trx
+        .updateTable("detail_proposal")
+        .set({ settled_at: null, review_state: "returned", review_note: null, reviewed_at: null })
+        .where("element_id", "=", element.id)
+        .where("kind", "=", "terminology")
+        .execute();
+    }
     await log(trx, userId, project.id, "detail_proposed", "detail_proposal", saved.id);
     return done({ proposalId: saved.id, version: saved.version });
   });
@@ -414,6 +547,7 @@ export async function answerDetail(
     if (!proposal) return refused("detail_proposal_not_found");
     if (proposal.settled_at !== null) return refused("detail_settled");
     if (proposal.version !== input.version) return refused("detail_version_changed");
+    if (!consentOpen(proposal)) return refused("detail_not_reviewed");
     const me = await actorMemberId(trx, project.id, userId);
     await trx
       .insertInto("detail_answer")
@@ -515,18 +649,24 @@ export async function settleDetail(
       .executeTakeFirst();
     if (open) return refused("detail_objections_open");
 
+    if (!consentOpen(proposal)) return refused("detail_not_reviewed");
     const values = (await valueLists(trx, "detail_proposal_value", [proposal.id])).get(proposal.id);
-    await trx
-      .updateTable("element")
-      .set({
-        data_type: proposal.data_type,
-        min_occurs: proposal.min_occurs,
-        max_occurs: proposal.max_occurs,
-        updated_at: new Date(),
-      })
-      .where("id", "=", proposal.element_id)
-      .execute();
-    await writeValues(trx, proposal.element_id, values ?? []);
+    if (proposal.kind === "structure") {
+      await trx
+        .updateTable("element")
+        .set({
+          data_type: proposal.data_type,
+          min_occurs: proposal.min_occurs,
+          max_occurs: proposal.max_occurs,
+          updated_at: new Date(),
+        })
+        .where("id", "=", proposal.element_id)
+        .execute();
+      await writeValues(trx, proposal.element_id, plain(values ?? []));
+    } else {
+      const problem = await settleCodes(trx, proposal, values ?? []);
+      if (problem !== null) return refused(problem);
+    }
     await trx
       .updateTable("detail_proposal")
       .set({ settled_at: new Date() })
@@ -537,27 +677,92 @@ export async function settleDetail(
   });
 }
 
-/** How far the structure step is, for the facilitator's checklist (counts only). */
+/**
+ * Copies a code proposal onto the element and its values (DT5). Refused with
+ * `detail_structure_open` while the structure is not settled, and with
+ * `detail_value_codes_mismatch` when the value list no longer has one value per code.
+ */
+async function settleCodes(
+  trx: Transaction<DB>,
+  proposal: {
+    element_id: string;
+    code_system: string | null;
+    code: string | null;
+    code_display: string | null;
+    binding_strength: string | null;
+    value_set_url: string | null;
+  },
+  valueCodes: readonly CodedValue[],
+): Promise<"detail_structure_open" | "detail_value_codes_mismatch" | null> {
+  const structure = await trx
+    .selectFrom("detail_proposal")
+    .select("settled_at")
+    .where("element_id", "=", proposal.element_id)
+    .where("kind", "=", "structure")
+    .executeTakeFirst();
+  if (!structure?.settled_at) return "detail_structure_open";
+  const values = await trx
+    .selectFrom("element_value")
+    .select("position")
+    .where("element_id", "=", proposal.element_id)
+    .orderBy("position")
+    .forUpdate()
+    .execute();
+  if (values.length !== valueCodes.length) return "detail_value_codes_mismatch";
+  await trx
+    .updateTable("element")
+    .set({
+      code_system: proposal.code_system,
+      code: proposal.code,
+      code_display: proposal.code_display,
+      binding_strength: proposal.binding_strength,
+      value_set_url: proposal.value_set_url,
+      updated_at: new Date(),
+    })
+    .where("id", "=", proposal.element_id)
+    .execute();
+  for (const [index, row] of values.entries()) {
+    const code = valueCodes[index]?.code ?? null;
+    await trx
+      .updateTable("element_value")
+      .set({
+        code_system: code?.system ?? null,
+        code: code?.code ?? null,
+        code_display: code?.display ?? null,
+      })
+      .where("element_id", "=", proposal.element_id)
+      .where("position", "=", row.position)
+      .execute();
+  }
+  return null;
+}
+
+/** How far the detail phase is, for the facilitator's checklist (counts only). */
 export interface DetailProgress {
   /** Elements in the model. */
   inModel: number;
-  /** Of them, with a proposal. */
+  /** Of them, with a structure proposal. */
   proposed: number;
-  /** Of them, with the current version settled. */
+  /** Of them, with the current structure settled. */
   settled: number;
-  /** Objections to current versions the facilitator has not addressed. */
+  /** Of them, with their codes settled (DT4); open codes do not hold up the hand-off. */
+  codesSettled: number;
+  /** Objections to current versions of either kind the facilitator has not addressed. */
   openObjections: number;
 }
 
-/** The counts of the structure step (DT1, DT2). */
+/** The counts of the detail phase (DT1, DT2, DT4). */
 export async function detailProgress(db: Db, projectId: string): Promise<DetailProgress> {
   const ids = (await modelElements(db, projectId)).map((element) => element.id);
-  if (ids.length === 0) return { inModel: 0, proposed: 0, settled: 0, openObjections: 0 };
+  if (ids.length === 0) {
+    return { inModel: 0, proposed: 0, settled: 0, codesSettled: 0, openObjections: 0 };
+  }
   const proposals = await db
     .selectFrom("detail_proposal")
-    .select(["id", "version", "settled_at"])
+    .select(["id", "kind", "settled_at"])
     .where("element_id", "in", ids)
     .execute();
+  const structures = proposals.filter((proposal) => proposal.kind === "structure");
   const open = proposals.filter((proposal) => proposal.settled_at === null);
   const objections =
     open.length === 0
@@ -577,31 +782,52 @@ export async function detailProgress(db: Db, projectId: string): Promise<DetailP
           .executeTakeFirst();
   return {
     inModel: ids.length,
-    proposed: proposals.length,
-    settled: proposals.length - open.length,
+    proposed: structures.length,
+    settled: structures.filter((proposal) => proposal.settled_at !== null).length,
+    codesSettled: proposals.filter(
+      (proposal) => proposal.kind === "terminology" && proposal.settled_at !== null,
+    ).length,
     openObjections: Number(objections?.count ?? 0),
   };
 }
 
-/** The open proposals and how many of them the user answered in their current version (DT2). */
+/**
+ * What waits for the user in the detail phase: the open proposals the group answers (a
+ * structure, or codes once reviewed), how many of them they answered in their current version,
+ * and, for a terminologist, the code proposals of others that wait for their review (DT4).
+ */
 export async function ownDetailProgress(
   db: Db,
   projectId: string,
   userId: string,
-): Promise<{ open: number; answered: number }> {
+): Promise<{ open: number; answered: number; toReview: number }> {
+  const none = { open: 0, answered: 0, toReview: 0 };
   const ids = (await modelElements(db, projectId)).map((element) => element.id);
-  if (ids.length === 0) return { open: 0, answered: 0 };
-  const open = await db
+  if (ids.length === 0) return none;
+  const unsettled = await db
     .selectFrom("detail_proposal")
-    .select(["id", "version"])
+    .select(["id", "kind", "review_state", "proposer_member_id"])
     .where("element_id", "in", ids)
     .where("settled_at", "is", null)
     .execute();
-  if (open.length === 0) return { open: 0, answered: 0 };
+  const me = await db
+    .selectFrom("member")
+    .select("id")
+    .where("organizationId", "=", projectId)
+    .where("userId", "=", userId)
+    .executeTakeFirst();
+  const toReview =
+    me !== undefined && (await inExpertGroup(db, projectId, userId, "terminology"))
+      ? unsettled.filter(
+          (proposal) =>
+            proposal.review_state === "pending" && proposal.proposer_member_id !== me.id,
+        ).length
+      : 0;
+  const open = unsettled.filter(consentOpen);
+  if (open.length === 0 || me === undefined) return { ...none, toReview };
   const answered = await db
     .selectFrom("detail_answer")
     .innerJoin("detail_proposal", "detail_proposal.id", "detail_answer.proposal_id")
-    .innerJoin("member", "member.id", "detail_answer.member_id")
     .select((eb) => eb.fn.countAll<string>().as("count"))
     .where(
       "detail_answer.proposal_id",
@@ -609,10 +835,9 @@ export async function ownDetailProgress(
       open.map((proposal) => proposal.id),
     )
     .whereRef("detail_answer.version", "=", "detail_proposal.version")
-    .where("member.organizationId", "=", projectId)
-    .where("member.userId", "=", userId)
+    .where("detail_answer.member_id", "=", me.id)
     .executeTakeFirst();
-  return { open: open.length, answered: Number(answered?.count ?? 0) };
+  return { open: open.length, answered: Number(answered?.count ?? 0), toReview };
 }
 
 /** An element in the model with the structure it carries and whether its proposal is settled. */
@@ -621,6 +846,9 @@ export interface ModelStructure {
   name: string;
   settled: boolean;
   structure: DetailStructure;
+  /** Whether the codes are settled; open codes are marked open (DT4). */
+  codesSettled: boolean;
+  codes: DetailCodes;
 }
 
 /** The elements in the model with their structure, for the recap of the detail phase (PR13). */
@@ -628,26 +856,37 @@ export async function modelStructures(db: Db, projectId: string): Promise<ModelS
   const elements = await modelElements(db, projectId);
   const ids = elements.map((element) => element.id);
   const values = await valueLists(db, "element_value", ids);
-  const settled = new Set(
+  const settledRows =
     ids.length === 0
       ? []
-      : (
-          await db
-            .selectFrom("detail_proposal")
-            .select("element_id")
-            .where("element_id", "in", ids)
-            .where("settled_at", "is not", null)
-            .execute()
-        ).map((row) => row.element_id),
-  );
-  return elements.map((element) => ({
-    id: element.id,
-    name: element.name,
-    settled: settled.has(element.id),
-    structure: {
-      dataType: dataTypeOf(element.data_type),
-      cardinality: cardinalityOf(element.min_occurs, element.max_occurs),
-      values: values.get(element.id) ?? [],
-    },
-  }));
+      : await db
+          .selectFrom("detail_proposal")
+          .select(["element_id", "kind"])
+          .where("element_id", "in", ids)
+          .where("settled_at", "is not", null)
+          .execute();
+  const settled = (id: string, kind: DetailKind) =>
+    settledRows.some((row) => row.element_id === id && row.kind === kind);
+  return elements.map((element) => {
+    const list = values.get(element.id) ?? [];
+    return {
+      id: element.id,
+      name: element.name,
+      settled: settled(element.id, "structure"),
+      structure: {
+        dataType: dataTypeOf(element.data_type),
+        cardinality: cardinalityOf(element.min_occurs, element.max_occurs),
+        values: plain(list),
+      },
+      codesSettled: settled(element.id, "terminology"),
+      codes: {
+        code: codeOf(element.code_system, element.code, element.code_display),
+        bindingStrength: isBindingStrength(element.binding_strength)
+          ? element.binding_strength
+          : null,
+        valueSetUrl: element.value_set_url,
+        valueCodes: list.map((value) => value.code),
+      },
+    };
+  });
 }

@@ -35,7 +35,7 @@ flowchart LR
 | Scope | The facilitator writes the concept, use cases and sources; participants comment. |
 | Discover | The facilitator puts elements from existing models (CKM archetypes, FHIR profiles, forms) on the list and participants take a first look at them. Each participant then adds what is missing, alone, until the facilitator reveals the board, merges duplicates and groups the elements for the participants to check. |
 | Decide | Participants rate each element anonymously in e-Delphi rounds against a consensus rule fixed in advance. Elements without consensus go to a next round with the group's scores. |
-| Detail | The facilitator or an architect proposes the data type, cardinality and values of each element in the model; participants agree or object, and the facilitator settles. |
+| Detail | The facilitator or an architect proposes the data type, cardinality and values of each element in the model; then a terminologist proposes its codes, which a second terminologist reviews. Participants agree or object, and the facilitator settles. |
 | Hand-off | The agreed elements are exported as CSV and as a mind map, the ratings for the study report. |
 
 ## Screenshots
@@ -87,7 +87,7 @@ phase:
 | Body temperature (demo) | Scope | A scope statement with three comments |
 | Heart rate (demo) | Discover | A private brainstorm by five participants, board not revealed yet |
 | Blood pressure (demo) | Decide | A closed first round with results and an open second round |
-| Oxygen saturation (demo) | Detail | One settled structure and one with an open objection |
+| Oxygen saturation (demo) | Detail | One settled structure with codes to answer, and one structure with an open objection |
 | Respiratory rate (demo) | Hand-off | Two closed rounds, ready for export |
 
 Your address becomes facilitator of every project and administrator of the

@@ -41,6 +41,10 @@ interface ElementRow {
   minOccurs: number | null;
   maxOccurs: number | null;
   mergedInto: string | null;
+  codeSystem: string | null;
+  code: string | null;
+  bindingStrength: string | null;
+  valueSetUrl: string | null;
   archetypeId: string | null;
   atCode: string | null;
   revision: string | null;
@@ -60,6 +64,10 @@ async function elementRows(trx: Db, projectId: string): Promise<ElementRow[]> {
       "element.min_occurs as minOccurs",
       "element.max_occurs as maxOccurs",
       "element.merged_into as mergedInto",
+      "element.code_system as codeSystem",
+      "element.code",
+      "element.binding_strength as bindingStrength",
+      "element.value_set_url as valueSetUrl",
       "link.archetype_id as archetypeId",
       "link.at_code as atCode",
       "link.revision",
@@ -98,6 +106,14 @@ function types(element: ElementRow): { rmType: string | null; fhirType: string |
   return { rmType: null, fhirType: null };
 }
 
+/**
+ * A code as `system|code`, the token form of FHIR search
+ * (<https://hl7.org/fhir/R4/search.html#token>); null without a code.
+ */
+function token(system: string | null, code: string | null): string | null {
+  return system !== null && code !== null ? `${system}|${code}` : null;
+}
+
 function cardinality(element: ElementRow): string | null {
   if (element.minOccurs !== 0 && element.minOccurs !== 1) return null;
   return formatCardinality({ min: element.minOccurs, max: element.maxOccurs });
@@ -112,7 +128,8 @@ function push<T>(map: Map<string, T[]>, key: string, value: T): void {
 
 /**
  * EX1: one row per element that is not merged into another, with its types, cardinality, sources,
- * CKM link, the CKM links of merged duplicates, proposed values and the outcome of each round. The
+ * CKM link, the CKM links of merged duplicates, proposed values, its codes and binding (DT5) with
+ * whether they are settled, and the outcome of each round. The
  * sources of elements merged into it are listed with its own (Q-AUDIT-1); their CKM links go in
  * `merged_ckm_links`, so the three `ckm_` columns stay the element's own link (EL5, O-5).
  */
@@ -177,15 +194,31 @@ export async function exportElementsCsv(
         "element_value.element_id as elementId",
         "element_value.text",
         "element_value.value",
+        "element_value.code_system as codeSystem",
+        "element_value.code",
       ])
       .where("element.project_id", "=", project.id)
       .orderBy("element_value.element_id")
       .orderBy("element_value.position")
       .execute();
     const values = new Map<string, string[]>();
+    const valueCodes = new Map<string, string[]>();
     for (const row of valueRows) {
       push(values, row.elementId, row.value === null ? row.text : `${row.text} (${row.value})`);
+      push(valueCodes, row.elementId, token(row.codeSystem, row.code) ?? "");
     }
+
+    // NOTE: DT4. Open codes do not hold up the hand-off; the export marks them open.
+    const codeRows = await trx
+      .selectFrom("detail_proposal")
+      .innerJoin("element", "element.id", "detail_proposal.element_id")
+      .select(["detail_proposal.element_id as elementId", "detail_proposal.settled_at"])
+      .where("element.project_id", "=", project.id)
+      .where("detail_proposal.kind", "=", "terminology")
+      .execute();
+    const codesStatus = new Map(
+      codeRows.map((row) => [row.elementId, row.settled_at === null ? "open" : "settled"]),
+    );
 
     const rounds = await trx
       .selectFrom("round")
@@ -219,6 +252,11 @@ export async function exportElementsCsv(
       "ckm_revision",
       "merged_ckm_links",
       "proposed_values",
+      "element_code",
+      "binding_strength",
+      "value_set_url",
+      "value_codes",
+      "codes_status",
       ...rounds.map((round) => `round_${round.number}_outcome`),
     ];
     const rows: CsvCell[][] = elements
@@ -237,6 +275,13 @@ export async function exportElementsCsv(
           element.revision,
           mergedLinks.get(element.id)?.join("; "),
           values.get(element.id)?.join("; "),
+          token(element.codeSystem, element.code),
+          element.bindingStrength,
+          element.valueSetUrl,
+          valueCodes.get(element.id)?.some((code) => code !== "")
+            ? valueCodes.get(element.id)?.join("; ")
+            : null,
+          codesStatus.get(element.id),
           ...rounds.map((round) => outcomes.get(`${round.id}/${element.id}`)),
         ];
       });

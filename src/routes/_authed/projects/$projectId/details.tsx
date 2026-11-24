@@ -14,16 +14,20 @@ import { requireStep } from "@/lib/guards";
 import {
   addressObjectionFn,
   answerDetailFn,
+  proposeCodesFn,
   proposeDetailFn,
+  reviewCodesFn,
   settleDetailFn,
+  skipReviewFn,
 } from "@/server/details/functions";
 import { detailBoardQueryOptions, detailKeys } from "@/server/details/query-options";
 import { elementKeys } from "@/server/elements/query-options";
 import { projectKeys } from "@/server/projects/query-options";
 
 /**
- * The structure of the elements in the model (DT1, DT2, ADR 0017): a proposal per element, the
- * participants' consent and the facilitator's settling.
+ * The details of the elements in the model (DT1 to DT5, ADR 0017): per element a structure
+ * proposal, then a code proposal with its review, the participants' consent and the
+ * facilitator's settling.
  */
 export const Route = createFileRoute("/_authed/projects/$projectId/details")({
   beforeLoad: requireStep("details"),
@@ -45,6 +49,9 @@ function DetailsPage() {
   const answer = useServerFn(answerDetailFn);
   const address = useServerFn(addressObjectionFn);
   const settle = useServerFn(settleDetailFn);
+  const proposeCodes = useServerFn(proposeCodesFn);
+  const review = useServerFn(reviewCodesFn);
+  const skipReview = useServerFn(skipReviewFn);
 
   if (!board.ok) {
     if (board.error === "not_found") throw notFound();
@@ -58,6 +65,12 @@ function DetailsPage() {
       answer({ data: { projectId, proposalId, version, answer: value, reason } }),
     address: (answerId, note) => address({ data: { projectId, answerId, note } }),
     settle: (proposalId, version) => settle({ data: { projectId, proposalId, version } }),
+    proposeCodes: (elementId, version, codes) =>
+      proposeCodes({ data: { projectId, elementId, version, ...codes } }),
+    review: (proposalId, version, decision, note) =>
+      review({ data: { projectId, proposalId, version, decision, note } }),
+    skipReview: (proposalId, version, reason) =>
+      skipReview({ data: { projectId, proposalId, version, reason } }),
     onChanged: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: detailKeys.all(projectId) }),
@@ -66,7 +79,7 @@ function DetailsPage() {
       ]);
     },
   };
-  const { elements, mayPropose, mayAnswer, open } = board.value;
+  const { elements, mayPropose, mayProposeCodes, mayReview, mayAnswer, open } = board.value;
 
   return (
     <>
@@ -85,6 +98,8 @@ function DetailsPage() {
               key={element.id}
               element={element}
               mayPropose={mayPropose}
+              mayProposeCodes={mayProposeCodes}
+              mayReview={mayReview}
               mayAnswer={mayAnswer}
               facilitator={facilitator}
               open={open}
