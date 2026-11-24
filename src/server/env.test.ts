@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, expect, it } from "vitest";
-import { parseEnv } from "./env.ts";
+import { isLocalUrl, parseEnv } from "./env.ts";
 
 const VALID = {
   DATABASE_URL: "postgres://user:pass@localhost:5432/db",
@@ -91,5 +91,41 @@ describe("parseEnv", () => {
         "Invalid environment configuration: FHIR_REGISTRY_URL",
       );
     }
+  });
+
+  it("leaves DEV_SIGN_IN off when it is unset, empty or false", () => {
+    expect(parseEnv(VALID).DEV_SIGN_IN).toBe(false);
+    expect(parseEnv({ ...VALID, DEV_SIGN_IN: "" }).DEV_SIGN_IN).toBe(false);
+    expect(parseEnv({ ...VALID, DEV_SIGN_IN: "false" }).DEV_SIGN_IN).toBe(false);
+  });
+
+  it("accepts DEV_SIGN_IN with a BETTER_AUTH_URL on localhost or 127.0.0.1", () => {
+    for (const url of ["http://localhost:3000", "http://127.0.0.1:3100"]) {
+      expect(parseEnv({ ...VALID, BETTER_AUTH_URL: url, DEV_SIGN_IN: "true" }).DEV_SIGN_IN).toBe(
+        true,
+      );
+    }
+  });
+
+  it("refuses DEV_SIGN_IN with any other BETTER_AUTH_URL, and says why", () => {
+    for (const url of [
+      "https://cdm-plenum.example.org",
+      "http://localhost.example.org:3000",
+      "http://10.0.0.5:3000",
+    ]) {
+      expect(() => parseEnv({ ...VALID, BETTER_AUTH_URL: url, DEV_SIGN_IN: "true" })).toThrow(
+        "Invalid environment configuration: DEV_SIGN_IN (DEV_SIGN_IN=true needs a BETTER_AUTH_URL on localhost or 127.0.0.1)",
+      );
+    }
+  });
+
+  it("refuses a DEV_SIGN_IN that is not true or false", () => {
+    expect(() => parseEnv({ ...VALID, DEV_SIGN_IN: "yes" })).toThrow(/DEV_SIGN_IN/);
+  });
+
+  it("tells a local URL from a public one", () => {
+    expect(isLocalUrl("http://localhost:3000")).toBe(true);
+    expect(isLocalUrl("http://127.0.0.1")).toBe(true);
+    expect(isLocalUrl("https://cdm-plenum.example.org")).toBe(false);
   });
 });

@@ -88,6 +88,10 @@ The defaults point at the services of `compose.dev.yaml`. CI overrides them.
 | `E2E_PORT` | `3100` | e2e, the app |
 | `E2E_CKM_PORT` | `3101` | e2e, the CKM stub |
 
+`playwright.config.ts` starts the app with `DEV_SIGN_IN=true`, so
+`tests/e2e/dev-sign-in.spec.ts` can test the development sign-in page. The
+other specs sign in through Mailpit with `signIn`.
+
 ## The CKM contract test
 
 The unit and e2e suites never call the live CKM: the unit tests use recorded
@@ -142,21 +146,23 @@ scripts/dev/compose.sh exec dev pnpm db:migrate
 scripts/dev/compose.sh exec dev pnpm db:seed-demo --facilitator you@example.test
 ```
 
-Sign in at <http://localhost:3000/sign-in> and open the link from Mailpit at
-<http://localhost:8025>. Then work through these steps:
+Sign in at <http://localhost:3000/dev/sign-in> as your own address, and use
+"Switch person" to change role ([Sign in without e-mail](#sign-in-without-e-mail)).
+Then work through these steps:
 
 1. **Scope, as facilitator:** open "Body temperature (demo)". It opens on
    the Overview, with the checklist for the scope phase; the Scope tab shows
-   the concept, use cases and three comments. Move the project on to
+   the concept, use cases and three comments. Under "Model type", choose
+   Observation and save; a participant sees the type and its one-line
+   explanation in the same place. Move the project on to
    discover with "Go on to Discover" at the end of the checklist.
 2. **Discover:** open "Heart rate (demo)". The Overview lists the parts of
    discover. "Review" on the first item opens Existing models: the pulse
    archetype from openEHR CKM (stored in `tests/fixtures/ckm`, no network)
    with its elements on the list. Three participants took the first look, so
    the Elements tab shows their answers counted per element; five of eight
-   brainstormed privately, with "Heart rate" twice. Sign in as
-   `gp.a@example.test` in a private window, who has not taken the first look
-   yet. "Your turn" starts the first look; answer a few, then
+   brainstormed privately, with "Heart rate" twice. Switch person to
+   `gp.a@example.test`, who has not taken the first look yet. "Your turn" starts the first look; answer a few, then
    "Add what is missing" opens the board with one column per question, the
    archetype's elements dashed and the others' elements as a count. Add one
    in a column with Enter. Tick "Refers to another model" under a column's
@@ -164,8 +170,8 @@ Sign in at <http://localhost:3000/sign-in> and open the link from Mailpit at
    its title and a link; its card names the model. As facilitator, reveal the board, merge the
    duplicate, then "Group" on the Overview: drag an element to another group
    (with the mouse or a finger) or click it and choose "Move here", rename a
-   group and "Ask the group to check". As `gp.a@example.test`, "Your turn"
-   now asks to check the groups.
+   group and "Ask the group to check". Switch person to `gp.a@example.test`:
+   "Your turn" now asks to check the groups.
 3. **Decide:** open "Blood pressure (demo)". On the Elements tab, link an
    element to a CKM archetype element (this calls the live CKM). Round 1 is closed: 5 elements in
    the model, 1 not in the model and 2 without consensus. Round 2 is open;
@@ -181,13 +187,13 @@ Sign in at <http://localhost:3000/sign-in> and open the link from Mailpit at
    for the group: the demo has one terminologist, so the review was
    skipped with a reason. The architect's proposal for "Inspired oxygen"
    has one open objection: mark it addressed with a note, then settle it.
-   Sign in as `terminologist.a@example.test` to propose its codes. Sign in as `architect.a@example.test` to propose
-   the structure of "Probe site", and as `nurse.b@example.test` to answer
-   it from "Your turn".
+   Switch person to `terminologist.a@example.test` to propose its codes,
+   to `architect.a@example.test` to propose the structure of "Probe site",
+   and to `nurse.b@example.test` to answer it from "Your turn".
 6. **Hand-off:** open "Respiratory rate (demo)". Two rounds are closed;
    round 2 settled one of the two elements without consensus. Export the
    elements as CSV and as a mind map from the Overview.
-7. **As participant,** sign in as `nurse.a@example.test` in a private window.
+7. **As participant,** switch person to `nurse.a@example.test`.
    The project list shows what waits per project. Open Blood pressure: its
    home shows "Your turn: rate round 2" and what is decided so far. Rate the
    two elements. You should see no other participant's ratings, and no
@@ -202,6 +208,31 @@ scripts/dev/compose.sh down -v
 ```
 
 This removes the database volume and everything in it.
+
+## Sign in without e-mail
+
+The development stack has a sign-in page at
+<http://localhost:3000/dev/sign-in>. It lists every active account with one
+button each: administrators and facilitators first, then everyone by the
+first stakeholder group they joined. Choose a person to sign in as them. To
+act as someone else, choose "Switch person" in the menu under your name. You
+need no link from Mailpit and no private window per role.
+
+The page is a normal sign-in underneath, so every role and phase check still
+applies: you see exactly what that person would see.
+
+- **Turn it on:** `compose.dev.yaml` sets `DEV_SIGN_IN=true`. If your stack
+  was running before you pulled this change, restart it with
+  `scripts/dev/compose.sh down` and `scripts/dev/compose.sh up -d`.
+- **Where it works:** only when `BETTER_AUTH_URL` is on `localhost` or
+  `127.0.0.1`; with any other address the app refuses to start. Without the
+  setting the page answers "not found". Never set it on a server
+  ([deployment](deployment.md)).
+- **Who is on it:** the accounts in your development database. Load the demo
+  people with `db:seed-demo` (see [Try it by hand](#try-it-by-hand)).
+- **In the e2e suite:** `playwright.config.ts` turns it on for
+  `tests/e2e/dev-sign-in.spec.ts`; the other specs sign in through Mailpit
+  with `signIn`.
 
 ## What the tests do not cover yet
 

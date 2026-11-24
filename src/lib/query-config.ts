@@ -29,6 +29,10 @@ export const STALE_TIME = {
    * brainstorm, board and rating pages. The project layout reads them again on every navigation.
    */
   overview: 0,
+  /** The people on the development sign-in page: always revalidated, so a new account shows. */
+  devSignIn: 0,
+  /** Whether DEV_SIGN_IN is on: it changes only when the server restarts. */
+  devSignInSetting: Number.POSITIVE_INFINITY,
 } as const;
 
 /** The `staleTime` of a query that sets none. */

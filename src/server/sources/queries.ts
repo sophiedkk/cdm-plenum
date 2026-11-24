@@ -30,6 +30,7 @@ import { log } from "../projects/queries.ts";
 import {
   type AddCkmSourceInput,
   type AddFhirSourceInput,
+  type BaseModelInput,
   type OtherSourceInput,
   type ProjectInput,
   type PutOnListInput,
@@ -50,6 +51,7 @@ export const SOURCE_ACTION_ERRORS = [
   "source_row_not_found",
   "source_row_not_suggested",
   "source_row_on_list",
+  "source_base_not_in_table",
 ] as const;
 export type SourceActionError =
   | CkmActionError
@@ -147,7 +149,7 @@ async function inProject<T>(
 
 type NewModel = Omit<
   DB["source_model"],
-  "id" | "project_id" | "created_at" | "imported_at" | "added_by_member_id"
+  "id" | "project_id" | "created_at" | "imported_at" | "added_by_member_id" | "is_base"
 > & { kind: SourceModelKind; status: SourceModelStatus };
 
 /** Inserts a model and its elements, in the order given. */
@@ -819,6 +821,8 @@ export interface CoverageModel {
   kind: SourceModelKind;
   status: SourceModelStatus;
   title: string;
+  /** The base model the others are compared with (EL25); its column comes first. */
+  base: boolean;
 }
 
 /** A row of the coverage table with its id and whether its element is on the list already. */
@@ -840,19 +844,25 @@ interface CoverageModelRow {
   kind: string;
   status: string;
   title: string;
+  is_base: boolean;
 }
 
-/** The added and imported models with elements, in the order added, matched into rows. */
+/**
+ * The added and imported models with elements, the base model first and the others in the order
+ * added, matched into rows. The base model's elements then lead each row and name it, so a
+ * candidate put on the list derives from the base (EL25, zib 2.0 P4.3).
+ */
 async function coverageOf(
   db: Kysely<DB>,
   projectId: string,
 ): Promise<{ models: CoverageModelRow[]; rows: CoverageRowView[] }> {
   const models = await db
     .selectFrom("source_model")
-    .select(["id", "kind", "status", "title"])
+    .select(["id", "kind", "status", "title", "is_base"])
     .where("project_id", "=", projectId)
     .where("status", "in", ["added", "imported"])
     .where("kind", "<>", "other")
+    .orderBy("is_base", "desc")
     .orderBy("created_at")
     .orderBy("id")
     .execute();
@@ -899,9 +909,59 @@ export async function sourceCoverage(
         kind: model.kind as SourceModelKind,
         status: model.status as SourceModelStatus,
         title: model.title,
+        base: model.is_base,
       })),
       rows,
     });
+  });
+}
+
+/**
+ * Marks a model of the coverage table as the base model, or unmarks it (facilitator only, EL25,
+ * ADR 0021). Marking a model unmarks the earlier base in the same transaction, so a project has
+ * at most one. Refused with `source_not_found` for a model of another project and with
+ * `source_base_not_in_table` for a suggestion or an other source, which have no column.
+ */
+export async function setBaseModel(
+  db: Kysely<DB>,
+  userId: string,
+  input: BaseModelInput,
+): Promise<SourceActionResult<null>> {
+  return inProject(db, userId, input.projectId, { source: ["review"] }, async (trx, project) => {
+    const model = await trx
+      .selectFrom("source_model")
+      .select(["id", "kind", "status", "is_base"])
+      .where("id", "=", input.sourceModelId)
+      .where("project_id", "=", project.id)
+      .forUpdate()
+      .executeTakeFirst();
+    if (!model) return refused("source_not_found");
+    if (model.status === "suggested" || model.kind === "other") {
+      return refused("source_base_not_in_table");
+    }
+    if (model.is_base === input.base) return { ok: true, value: null };
+    if (input.base) {
+      await trx
+        .updateTable("source_model")
+        .set({ is_base: false })
+        .where("project_id", "=", project.id)
+        .where("is_base", "=", true)
+        .execute();
+    }
+    await trx
+      .updateTable("source_model")
+      .set({ is_base: input.base })
+      .where("id", "=", model.id)
+      .execute();
+    await log(
+      trx,
+      userId,
+      project.id,
+      input.base ? "source_base_set" : "source_base_cleared",
+      "source_model",
+      model.id,
+    );
+    return { ok: true, value: null };
   });
 }
 

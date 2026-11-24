@@ -17,7 +17,7 @@ import { SIGN_IN_LINK_MINUTES, SIGN_UP_REFUSED } from "@/lib/sign-in";
 import { isDeactivated, isDeactivatedEmail } from "./admin/queries.ts";
 import { getDb } from "./db/index.ts";
 import type { DB } from "./db/schema.gen.ts";
-import { type Env, getEnv } from "./env.ts";
+import { devSignInEnabled, type Env, getEnv } from "./env.ts";
 import {
   acceptInvitationsOnSignIn,
   hasAccount,
@@ -104,6 +104,13 @@ export const SIGN_IN_RATE_LIMIT = { window: 60, max: 30 } as const;
 /** The paths `SIGN_IN_RATE_LIMIT` applies to: asking for a sign-in link, and opening one. */
 export const SIGN_IN_RATE_LIMITED_PATHS = ["/sign-in/magic-link", "/magic-link/verify"] as const;
 
+/**
+ * The `metadata` key of `auth.api.signInMagicLink` that hands the link to a function instead of
+ * e-mail, for the development sign-in page (src/server/dev-sign-in/link.ts). JSON over HTTP
+ * cannot carry a function, so only server code can use it, and only with DEV_SIGN_IN on.
+ */
+export const DEV_SIGN_IN_DELIVERY = "devSignInDelivery";
+
 export function createAuth(env: Env, db: Kysely<DB>, deps: AuthDeps) {
   return betterAuth({
     database: { db, type: "postgres" },
@@ -164,12 +171,17 @@ export function createAuth(env: Env, db: Kysely<DB>, deps: AuthDeps) {
       magicLink({
         expiresIn: SIGN_IN_LINK_MINUTES * 60,
         storeToken: "hashed",
-        sendMagicLink: async ({ email, url }) => {
+        sendMagicLink: async ({ email, url, metadata }) => {
           // An address that may not sign in gets no e-mail; the response is the same, so the
           // sign-in form does not tell which addresses have an account or an invitation.
           const now = new Date();
           if (!(await hasAccount(db, email)) && !(await mayCreateAccount(db, email, now))) return;
           if (await isDeactivatedEmail(db, email)) return;
+          const delivery: unknown = metadata?.[DEV_SIGN_IN_DELIVERY];
+          if (typeof delivery === "function") {
+            if (devSignInEnabled(env)) delivery(url);
+            return;
+          }
           await deliverSignInLink(
             deps.mailer,
             {

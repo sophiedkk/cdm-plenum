@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
+import type { Kysely } from "kysely";
+import type { DB } from "../../src/server/db/schema.gen.ts";
 import type { FhirClient, FhirResult } from "../../src/server/fhir/client.ts";
 import { type FhirStructure, parseStructureDefinition } from "../../src/server/fhir/parse.ts";
 import { fhirFixtureJson } from "../../src/server/fhir/test-package.ts";
@@ -8,8 +10,9 @@ import { addFhirSource, suggestSource } from "../../src/server/sources/queries.t
 // Existing models in English and Dutch (EL7, EL12, EL20, ADR 0020): the facilitator opens the page
 // from the Overview's first item, adds an archetype from the CKM stub, unchecks one row of the
 // coverage table and puts the rest on the list, and accepts a participant's suggestion. With two
-// FHIR profiles of the synthetic package, "Not the same" splits a suggested match. A participant
-// never reaches the page. Every state is axe-clean (Q-ACC-1, Q-I18N-1).
+// FHIR profiles of the synthetic package, "Not the same" splits a suggested match, and the
+// facilitator marks one profile as the base model (EL25): its column moves first and the rows it
+// lacks say "Not in the base". A participant never reaches the page. Every state is axe-clean (Q-ACC-1, Q-I18N-1).
 import { signInTo, userIdOf } from "./board-seed.ts";
 import {
   BROWSER_LOCALE,
@@ -37,6 +40,27 @@ const FHIR_PROFILES = {
   "http://example.org/fhir/StructureDefinition/BloodPressureModel":
     "StructureDefinition-BloodPressureModel.json",
 } as const;
+
+/** Adds the two FHIR profiles to the project; returns their titles in the order added. */
+async function addBothProfiles(db: Kysely<DB>, projectId: string, facilitator: string) {
+  const titles: string[] = [];
+  for (const url of Object.keys(FHIR_PROFILES)) {
+    const added = await addFhirSource(db, fixtureFhir as FhirClient, facilitator, {
+      projectId,
+      packageName: FHIR_PACKAGE,
+      version: FHIR_VERSION,
+      url,
+    });
+    if (!added.ok) throw new Error(added.error);
+    const row = await db
+      .selectFrom("source_model")
+      .select("title")
+      .where("id", "=", added.value.sourceModelId)
+      .executeTakeFirstOrThrow();
+    titles.push(row.title);
+  }
+  return titles;
+}
 
 /** Serves the two profiles of the synthetic package, so no spec calls the registry. */
 const fixtureFhir: Pick<FhirClient, "structureDefinition"> = {
@@ -146,16 +170,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
     test("the facilitator splits a suggested match with Not the same", async ({ page, db }) => {
       const project = await seedProject(db, "discover");
-      const facilitator = project.facilitator.userId;
-      for (const url of Object.keys(FHIR_PROFILES)) {
-        const added = await addFhirSource(db, fixtureFhir as FhirClient, facilitator, {
-          projectId: project.projectId,
-          packageName: FHIR_PACKAGE,
-          version: FHIR_VERSION,
-          url,
-        });
-        if (!added.ok) throw new Error(added.error);
-      }
+      await addBothProfiles(db, project.projectId, project.facilitator.userId);
 
       await signInTo(
         page,
@@ -178,6 +193,50 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(table.getByRole("checkbox")).toHaveCount(rows + 1);
       await expect(notSame).toHaveCount(suggestions - 1);
       await expectAxeCleanAfterToasts(page);
+    });
+
+    test("the facilitator marks a base model and unmarks it (EL25)", async ({ page, db }) => {
+      const project = await seedProject(db, "discover");
+      const [first, second] = await addBothProfiles(
+        db,
+        project.projectId,
+        project.facilitator.userId,
+      );
+      if (!first || !second) throw new Error("two profiles expected");
+
+      await signInTo(
+        page,
+        project.facilitator.email,
+        locale,
+        `/projects/${project.projectId}/models`,
+      );
+      const table = page.getByRole("table", { name: text.board_models_coverage_title });
+      const columns = table.getByRole("columnheader");
+      const markSecond = table.getByRole("button", {
+        name: fill(text.board_models_base_named, { title: second }),
+      });
+      await expectHydrated(markSecond);
+      await expect(markSecond).toHaveAttribute("aria-pressed", "false");
+      await expect(columns.nth(2)).toContainText(first);
+      await expect(table.getByText(text.board_models_not_in_base)).toHaveCount(0);
+
+      await markSecond.click();
+      await expect(
+        page.getByText(fill(text.board_models_base_set, { title: second })),
+      ).toBeVisible();
+      await expect(markSecond).toHaveAttribute("aria-pressed", "true");
+      await expect(columns.nth(2)).toContainText(second);
+      await expect(columns.nth(3)).toContainText(first);
+      await expect(table.getByText(text.board_models_not_in_base).first()).toBeVisible();
+      await expectAxeCleanAfterToasts(page);
+
+      await markSecond.click();
+      await expect(
+        page.getByText(fill(text.board_models_base_cleared, { title: second })),
+      ).toBeVisible();
+      await expect(markSecond).toHaveAttribute("aria-pressed", "false");
+      await expect(columns.nth(2)).toContainText(first);
+      await expect(table.getByText(text.board_models_not_in_base)).toHaveCount(0);
     });
   });
 }

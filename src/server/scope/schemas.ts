@@ -3,6 +3,7 @@
 
 // The input of the scope server functions, checked before any handler runs.
 import { z } from "zod";
+import { MODEL_TYPES } from "@/lib/model-types";
 import { idSchema } from "../projects/schemas.ts";
 
 /** The longest part of the scope statement, source label and comment the app stores. */
@@ -22,6 +23,12 @@ export const updateScopeInput = z.object({
   outOfScope: text(SCOPE_TEXT_MAX),
 });
 export type UpdateScopeInput = z.infer<typeof updateScopeInput>;
+
+export const setModelTypeInput = z.object({
+  projectId: idSchema,
+  modelType: z.enum(MODEL_TYPES),
+});
+export type SetModelTypeInput = z.infer<typeof setModelTypeInput>;
 
 /** An absolute http or https address; anything else could run script in a link. */
 export const httpUrl = z

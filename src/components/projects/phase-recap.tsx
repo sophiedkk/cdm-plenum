@@ -10,7 +10,7 @@ import { StructureFacts } from "@/components/details/structure-facts";
 import { DateTime } from "@/components/status/date-time";
 import { StatusBadge } from "@/components/status/status-badge";
 import { m } from "@/i18n/messages";
-import { groupName } from "@/lib/i18n/labels";
+import { groupName, modelTypeDescription, modelTypeLabel } from "@/lib/i18n/labels";
 import type {
   DecideRecap,
   DetailRecap,
@@ -66,6 +66,15 @@ function ScopeView({ recap }: Readonly<{ recap: ScopeRecap }>) {
     <>
       <Heading title={m.projects_recap_scope_title()} closedAt={recap.closedAt} />
       <div className="flex max-w-3xl flex-col gap-6">
+        <TextBlock title={m.scope_model_type_heading()}>
+          {recap.modelType === null ? (
+            m.scope_model_type_none()
+          ) : (
+            <>
+              {modelTypeLabel(recap.modelType)}: {modelTypeDescription(recap.modelType)}
+            </>
+          )}
+        </TextBlock>
         <TextBlock title={m.scope_concept()}>{recap.concept || empty}</TextBlock>
         <TextBlock title={m.scope_use_cases()}>{recap.useCases || empty}</TextBlock>
         <TextBlock title={m.scope_out_of_scope()}>{recap.outOfScope || empty}</TextBlock>

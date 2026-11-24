@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The scope page (SC1, SC2): the facilitator edits the statement and orders the sources with
-// the keyboard only; a participant reads it and comments without being named to others
-// (Q-ANON-1); axe-clean in English and Dutch (Q-ACC-1, Q-I18N-1).
+// The scope page (SC1, SC2, SC4): the facilitator edits the statement, orders the sources with
+// the keyboard only and chooses the model type; a participant reads it and comments without being
+// named to others (Q-ANON-1); axe-clean in English and Dutch (Q-ACC-1, Q-I18N-1).
 import { addScopeComment } from "../../src/server/scope/queries.ts";
 import { seedScope, signInTo, userIdOf } from "./board-seed.ts";
 import {
@@ -98,6 +98,53 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         }),
       ).toBeFocused();
       await expectAxeClean(page);
+    });
+
+    test("the facilitator chooses the model type and a participant reads it (SC4)", async ({
+      page,
+      db,
+      browser,
+    }) => {
+      const project = await seedProject(db);
+      const participant = await seedParticipant(db, project);
+      await signInTo(
+        page,
+        project.facilitator.email,
+        locale,
+        `/projects/${project.projectId}/scope`,
+      );
+      const section = page.getByRole("region", { name: text.scope_model_type_heading });
+      const evaluation = section.getByRole("radio", { name: text.scope_model_type_evaluation });
+      await expectHydrated(evaluation);
+      await expect(section.getByRole("radio")).toHaveCount(5);
+      await expect(section.getByText(text.scope_model_type_cluster_description)).toBeVisible();
+      await expectAxeClean(page);
+
+      // Saving without a choice names what is missing.
+      await section.getByRole("button", { name: text.scope_model_type_save }).click();
+      await expect(section.getByText(text.scope_model_type_required)).toBeVisible();
+      await evaluation.click();
+      await section.getByRole("button", { name: text.scope_model_type_save }).click();
+      await expect(page.getByText(text.scope_model_type_saved)).toBeVisible();
+      await expect(evaluation).toBeChecked();
+      await expectAxeClean(page);
+      const stored = await db
+        .selectFrom("project")
+        .select("model_type")
+        .where("id", "=", project.projectId)
+        .executeTakeFirstOrThrow();
+      expect(stored.model_type).toBe("evaluation");
+
+      // axe needs a page of its own context.
+      const context = await browser.newContext({ locale: BROWSER_LOCALE[locale] });
+      const reader = await context.newPage();
+      await signInTo(reader, participant, locale, `/projects/${project.projectId}/scope`);
+      const read = reader.getByRole("region", { name: text.scope_model_type_heading });
+      await expect(read.getByText(text.scope_model_type_evaluation, { exact: true })).toBeVisible();
+      await expect(read.getByText(text.scope_model_type_evaluation_description)).toBeVisible();
+      await expect(read.getByRole("radio")).toHaveCount(0);
+      await expectAxeClean(reader);
+      await context.close();
     });
 
     test("a participant reads the scope and comments; only the facilitator sees who", async ({

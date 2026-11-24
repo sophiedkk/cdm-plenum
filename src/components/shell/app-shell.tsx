@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-import { Link } from "@tanstack/react-router";
-import { ChevronDownIcon, CircleUserIcon, LogOutIcon } from "lucide-react";
+import { Link, useRouteContext } from "@tanstack/react-router";
+import { ChevronDownIcon, CircleUserIcon, LogOutIcon, UsersIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,10 +33,12 @@ const NAV_LINK =
 
 /**
  * One menu under the person's name (ADR 0018): language and theme as radio groups, and sign out.
- * The trigger names the person, so a screen reader hears who is signed in.
+ * With DEV_SIGN_IN on it also opens the development sign-in page. The trigger names the person,
+ * so a screen reader hears who is signed in.
  */
 export function PersonMenu({ user }: Readonly<{ user: SessionUser }>) {
   const { signOut, pending } = useSignOut();
+  const devSignIn = useRouteContext({ from: "__root__", select: (context) => context.devSignIn });
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
@@ -52,6 +54,14 @@ export function PersonMenu({ user }: Readonly<{ user: SessionUser }>) {
         <DropdownMenuSeparator />
         <ThemeMenuGroup />
         <DropdownMenuSeparator />
+        {devSignIn && (
+          <DropdownMenuItem asChild>
+            <Link to="/dev/sign-in">
+              <UsersIcon aria-hidden="true" />
+              {m.shell_dev_sign_in_switch()}
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem disabled={pending} onSelect={() => void signOut()}>
           <LogOutIcon aria-hidden="true" />
           {m.shell_sign_out()}

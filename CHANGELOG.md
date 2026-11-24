@@ -21,6 +21,26 @@ the project uses [Semantic Versioning](https://semver.org/).
   The CSV export has the columns `refers_to` and `refers_to_url`, and the
   mind map links the element to its model.
 
+- Model type: on the Scope page the facilitator chooses what kind of model
+  the project builds: an observation, an evaluation, an instruction, an
+  action or a sub-block that other models reuse. Each type has a one-line
+  explanation. Participants read the choice on the Scope page and in the
+  scope recap. The type can change until the project leaves Discover. Every
+  type starts with the same four groups as before.
+
+- Base model: in the table of existing models, the facilitator marks one
+  model as the base with the "Base model" button in its column. Its column
+  moves first, rows it lacks say "Not in the base", and an element put on
+  the list takes its name from the base model. Press the button again to
+  unmark it.
+
+- Sign in without e-mail when you run the app locally: the development stack
+  has a page at `/dev/sign-in` that lists every active account with one
+  button each, and "Switch person" in the menu under your name opens it
+  again. You no longer need a link from Mailpit or a private window per
+  role. The page exists only with `DEV_SIGN_IN=true`, and the app refuses
+  that setting unless it runs on `localhost`.
+
 - Codes in the detail phase: once an element's structure is settled, a
   member of a terminology group or the facilitator proposes its codes on the
   Details tab: an element code, a binding strength (required, extensible,

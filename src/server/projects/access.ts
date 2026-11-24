@@ -74,6 +74,7 @@ export const PROJECT_ACTION_ERRORS = [
   "merge_kind_conflict",
   "detail_reference_structure",
   "detail_reference_codes",
+  "model_type_after_discover",
 ] as const;
 export type ProjectActionError = (typeof PROJECT_ACTION_ERRORS)[number];
 

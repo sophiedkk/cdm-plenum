@@ -8,6 +8,7 @@ import { m } from "@/i18n/messages";
 import type { SignInError } from "@/lib/sign-in";
 import type { AdminActionError } from "@/server/admin/queries";
 import type { CkmActionError } from "@/server/ckm/queries";
+import type { DevSignInError } from "@/server/dev-sign-in/queries";
 import type { ProjectActionError } from "@/server/projects/access";
 import type { RoundActionError } from "@/server/rounds/access";
 import type { SourceActionError } from "@/server/sources/queries";
@@ -27,6 +28,7 @@ export type RefusalCode =
   | CkmActionError
   | SourceActionError
   | AdminActionError
+  | DevSignInError
   | AuthRefusal;
 
 /** The message key of each refusal code; `satisfies` makes a missing code a type error. */
@@ -102,6 +104,7 @@ export const REFUSAL_MESSAGE_KEYS = {
   merge_kind_conflict: "common_refusal_merge_kind_conflict",
   detail_reference_structure: "common_refusal_detail_reference_structure",
   detail_reference_codes: "common_refusal_detail_reference_codes",
+  model_type_after_discover: "common_refusal_model_type_after_discover",
   round_outside_decide: "common_refusal_round_outside_decide",
   minimum_reason_required: "common_refusal_minimum_reason_required",
   proposals_first_round_only: "common_refusal_proposals_first_round_only",
@@ -133,6 +136,7 @@ export const REFUSAL_MESSAGE_KEYS = {
   source_row_not_found: "common_refusal_source_row_not_found",
   source_row_not_suggested: "common_refusal_source_row_not_suggested",
   source_row_on_list: "common_refusal_source_row_on_list",
+  source_base_not_in_table: "common_refusal_source_base_not_in_table",
   account_not_found: "common_refusal_account_not_found",
   own_account: "common_refusal_own_account",
   unauthenticated: "common_refusal_unauthenticated",

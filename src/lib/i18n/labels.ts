@@ -6,6 +6,7 @@
 import { m } from "@/i18n/messages";
 import type { ElementPrompt } from "@/lib/brainstorm";
 import type { GroupLabel } from "@/lib/element-groups";
+import type { ModelType } from "@/lib/model-types";
 import type { ProjectPhase } from "@/lib/project-phases";
 import type { ExpertType, ProjectRole } from "@/lib/project-roles";
 
@@ -81,4 +82,30 @@ export function groupName(group: GroupLabel): string {
 /** The brainstorm question in a word or two, for a table column; null for another source. */
 export function promptLabel(prompt: ElementPrompt | null): string {
   return prompt === null ? m.board_prompt_short_none() : PROMPT_LABELS[prompt]();
+}
+
+const MODEL_TYPE_LABELS: Record<ModelType, () => string> = {
+  observation: () => m.scope_model_type_observation(),
+  evaluation: () => m.scope_model_type_evaluation(),
+  instruction: () => m.scope_model_type_instruction(),
+  action: () => m.scope_model_type_action(),
+  cluster: () => m.scope_model_type_cluster(),
+};
+
+const MODEL_TYPE_DESCRIPTIONS: Record<ModelType, () => string> = {
+  observation: () => m.scope_model_type_observation_description(),
+  evaluation: () => m.scope_model_type_evaluation_description(),
+  instruction: () => m.scope_model_type_instruction_description(),
+  action: () => m.scope_model_type_action_description(),
+  cluster: () => m.scope_model_type_cluster_description(),
+};
+
+/** The name of a model type (SC4) in the active locale. */
+export function modelTypeLabel(type: ModelType): string {
+  return MODEL_TYPE_LABELS[type]();
+}
+
+/** The one-line explanation of a model type (SC4) in the active locale. */
+export function modelTypeDescription(type: ModelType): string {
+  return MODEL_TYPE_DESCRIPTIONS[type]();
 }

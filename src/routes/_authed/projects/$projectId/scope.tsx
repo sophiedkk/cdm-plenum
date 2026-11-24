@@ -9,12 +9,14 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { CommentThread } from "@/components/comments/comment-thread";
 import { projectTitle } from "@/components/projects/project-title";
+import { ModelTypeForm, ModelTypeView } from "@/components/scope/model-type";
 import { AddSourceForm, ScopeSourceList } from "@/components/scope/scope-sources";
 import { ScopeStatementForm, ScopeStatementView } from "@/components/scope/scope-statement";
 import { PageHeader } from "@/components/shell/route-states";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import { refusalMessage } from "@/lib/i18n/refusals";
+import { modelTypeOpen } from "@/lib/model-types";
 import { writeOpen } from "@/lib/phase-access";
 import { projectKeys } from "@/server/projects/query-options";
 import {
@@ -22,6 +24,7 @@ import {
   addScopeSourceFn,
   removeScopeSourceFn,
   reorderScopeSourcesFn,
+  setModelTypeFn,
   updateScopeFn,
 } from "@/server/scope/functions";
 import type { ScopeSource } from "@/server/scope/queries";
@@ -56,6 +59,8 @@ function Scope() {
   const isFacilitator = project.role === "facilitator";
   // A participant comments in the scope phase only; the server checks it again (PR9).
   const canComment = writeOpen(project.role, project.phase, "scope_comment");
+  // The facilitator chooses the type until discover ends; the server checks it again (SC4).
+  const canSetType = isFacilitator && modelTypeOpen(project.phase);
   const queryClient = useQueryClient();
   const { data: scope } = useSuspenseQuery(scopeQueryOptions(projectId));
   const { data: comments } = useSuspenseQuery(scopeCommentsQueryOptions(projectId, isFacilitator));
@@ -68,6 +73,7 @@ function Scope() {
   const reorderSources = useServerFn(reorderScopeSourcesFn);
   const removeSource = useServerFn(removeScopeSourceFn);
   const addComment = useServerFn(addScopeCommentFn);
+  const setModelType = useServerFn(setModelTypeFn);
 
   if (!scope.ok || !comments.ok) return null;
   const statement = scope.value;
@@ -175,6 +181,25 @@ function Scope() {
             />
           ) : (
             <ScopeStatementView texts={statement} />
+          )}
+        </section>
+
+        <section aria-labelledby="scope-model-type" className="flex flex-col gap-4">
+          <h3 id="scope-model-type" className={SECTION_HEADING}>
+            {m.scope_model_type_heading()}
+          </h3>
+          {canSetType ? (
+            <ModelTypeForm
+              key={statement.modelType ?? "none"}
+              type={statement.modelType}
+              save={(modelType) => setModelType({ data: { projectId, modelType } })}
+              onSaved={async () => {
+                await refreshScope();
+                toast.success(m.scope_model_type_saved());
+              }}
+            />
+          ) : (
+            <ModelTypeView type={statement.modelType} />
           )}
         </section>
 
