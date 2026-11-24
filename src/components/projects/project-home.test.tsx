@@ -73,7 +73,7 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
     firstLook: { total: 0, answered: 0 },
     groupCheck: { asked: false, done: false },
     round: ROUND,
-    detail: { open: 0, answered: 0 },
+    detail: { open: 0, answered: 0, toReview: 0 },
     lastClosedRoundId: "round-1",
     ...changes,
   };

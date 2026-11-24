@@ -157,7 +157,9 @@ page from these patterns; each has a real use and a test you can copy.
   too: `models` and `grouping` (the facilitator's), `first_look` and
   `group_check` (a participant `answer`s there). The detail phase has the
   step `details` (`src/server/details/`, ADR 0017): a participant `answer`s
-  structure proposals there, and an architect also proposes.
+  structure and code proposals there; an architect also proposes a
+  structure, a terminologist codes, and a second terminologist reviews them
+  (`terminology.ts`).
 - **Phase recaps:** a done phase step in the header links to
   `/projects/$projectId/recap/$phase` (PR13, `phaseDone` in
   `src/lib/project-phases.ts`); the current and later steps are no links.

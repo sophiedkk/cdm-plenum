@@ -1,11 +1,13 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The structure step of the detail phase in English and Dutch (DT1, DT2, ADR 0017): an architect
-// proposes the structure of an element in the model, a participant objects from their "Your
-// turn", and the facilitator addresses the objection and settles the proposal, which puts the
-// structure on the element. Every page is axe-clean in both themes (Q-ACC-1, Q-I18N-1).
+// The detail phase in English and Dutch (DT1 to DT5, ADR 0017). Structure: an architect proposes
+// the structure of an element in the model, a participant objects from their "Your turn", and the
+// facilitator addresses the objection and settles. Codes: a terminologist proposes them, a second
+// terminologist approves them, a participant agrees and the facilitator settles, which puts the
+// codes on the element. Every page is axe-clean in both themes (Q-ACC-1, Q-I18N-1).
 import type { Page } from "@playwright/test";
+import { proposeDetail, settleDetail } from "../../src/server/details/queries.ts";
 import {
   closedRoundWithOutcomes,
   emailOf,
@@ -143,6 +145,113 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
           return row;
         })
         .toEqual({ data_type: "quantity", min_occurs: 1, max_occurs: 1 });
+      await expectAxeCleanInBothThemes(page);
+    });
+
+    test("a terminologist proposes codes, a second approves, the facilitator settles", async ({
+      page,
+      db,
+    }) => {
+      const project = await seedProject(db, "detail");
+      const participant = await seedParticipant(db, project);
+      const terminologist = async (name: string) =>
+        emailOf(
+          await joinedParticipant(
+            db,
+            project.facilitator.userId,
+            project.projectId,
+            "Terminology",
+            uniqueName(name),
+          ),
+        );
+      const proposer = await terminologist("terminologist");
+      const reviewer = await terminologist("reviewer");
+      const site = await insertElement(db, project.projectId, "Measurement site");
+      await closedRoundWithOutcomes(db, project.projectId, [[site, "included"]]);
+      const structure = await proposeDetail(db, project.facilitator.userId, {
+        projectId: project.projectId,
+        elementId: site,
+        version: 0,
+        dataType: "coded_text",
+        cardinality: { min: 0, max: 1 },
+        values: [
+          { text: "Left arm", value: null },
+          { text: "Right arm", value: null },
+        ],
+      });
+      if (!structure.ok) throw new Error(structure.error);
+      const settled = await settleDetail(db, project.facilitator.userId, {
+        projectId: project.projectId,
+        ...structure.value,
+      });
+      if (!settled.ok) throw new Error(settled.error);
+      const detailsUrl = `/projects/${project.projectId}/details`;
+      const codesOf = fill(text.details_codes_of, { name: "Measurement site" });
+
+      // The first terminologist proposes the codes.
+      await signInTo(page, proposer, locale, detailsUrl);
+      const proposeButton = card(page, "Measurement site").getByRole("button", {
+        name: new RegExp(`^${text.details_propose_codes}`),
+      });
+      await expectHydrated(proposeButton);
+      await proposeButton.click();
+      const dialog = page.getByRole("dialog", {
+        name: fill(text.details_codes_title, { name: "Measurement site" }),
+      });
+      const elementCode = dialog.getByRole("group", { name: text.details_element_code });
+      await elementCode.getByLabel(text.details_code_system).selectOption("snomed");
+      await elementCode.getByLabel(text.details_code, { exact: true }).fill("246153002");
+      await dialog.getByLabel(text.details_binding).selectOption("extensible");
+      const left = dialog.getByRole("group", {
+        name: fill(text.details_value_code_legend, { value: "Left arm" }),
+      });
+      await left.getByLabel(text.details_code_system).selectOption("snomed");
+      await left.getByLabel(text.details_code, { exact: true }).fill("368208006");
+      await expectAxeCleanInBothThemes(page);
+      await dialog.getByRole("button", { name: text.details_propose_submit }).click();
+      await expect(dialog).toHaveCount(0);
+      await expect(card(page, "Measurement site")).toContainText(text.details_review_pending);
+
+      // A participant sees only that codes wait for review.
+      await switchUser(page, participant, locale, detailsUrl);
+      await expect(card(page, "Measurement site")).toContainText(text.details_codes_in_review);
+      await expect(card(page, "Measurement site")).not.toContainText("368208006");
+      await expectAxeCleanInBothThemes(page);
+
+      // The second terminologist approves.
+      await switchUser(page, reviewer, locale, detailsUrl);
+      const approve = card(page, "Measurement site").getByRole("button", {
+        name: new RegExp(`^${text.details_review_approve}`),
+      });
+      await expectHydrated(approve);
+      await approve.click();
+      await expect(card(page, "Measurement site")).toContainText(text.details_review_approved);
+
+      // The participant agrees with the codes.
+      await switchUser(page, participant, locale, detailsUrl);
+      const agree = card(page, "Measurement site").getByRole("button", {
+        name: new RegExp(`^${text.details_agree}\\s*: ${codesOf}$`),
+      });
+      await expectHydrated(agree);
+      await agree.click();
+      await expect(card(page, "Measurement site")).toContainText(text.details_own_agreed);
+
+      // The facilitator settles; the codes go onto the element.
+      await switchUser(page, project.facilitator.email, locale, detailsUrl);
+      const settle = card(page, "Measurement site").getByRole("button", {
+        name: new RegExp(`^${text.details_settle}\\s*: ${codesOf}$`),
+      });
+      await expectHydrated(settle);
+      await settle.click();
+      await expect
+        .poll(async () =>
+          db
+            .selectFrom("element")
+            .select(["code", "binding_strength"])
+            .where("id", "=", site)
+            .executeTakeFirstOrThrow(),
+        )
+        .toEqual({ code: "246153002", binding_strength: "extensible" });
       await expectAxeCleanInBothThemes(page);
     });
   });

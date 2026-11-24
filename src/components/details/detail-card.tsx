@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// One element in the model on the detail page (DT1, DT2): its proposal, the participant's
-// consent answer, and for the facilitator and the proposers the answers without names. The
+// One element in the model on the detail page (DT1 to DT5): its structure, then its codes, each
+// with the participant's consent answer and, for the facilitator and the proposers of that kind,
+// the answers without names. Codes first wait for a second terminologist's review. The
 // facilitator marks objections addressed and settles; a form opens below its button, so the
 // buttons keep their place.
 import { CheckIcon, CircleDotIcon, CircleIcon, PencilIcon } from "lucide-react";
@@ -15,16 +16,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { m } from "@/i18n/messages";
 import { formatCardinality } from "@/lib/cardinality";
 import {
+  type CodeProposal,
+  type ConsentState,
   DETAIL_TEXT_MAX,
   type DetailAnswer,
+  type DetailCodes,
   type DetailElement,
   type DetailObjection,
-  type DetailProposal,
   type DetailStructure,
   openObjections,
+  reviewDone,
 } from "@/lib/details";
 import type { Outcome } from "@/lib/forms/outcome";
 import { refusalMessage } from "@/lib/i18n/refusals";
+import { CodeFacts } from "./code-facts";
+import { CodeForm } from "./code-form";
 import { ProposalForm } from "./proposal-form";
 import { StructureFacts } from "./structure-facts";
 
@@ -42,6 +48,18 @@ export interface DetailActions {
     reason: string | null,
   ) => Promise<Outcome<unknown>>;
   address: (answerId: string, note: string) => Promise<Outcome<unknown>>;
+  proposeCodes: (
+    elementId: string,
+    version: number,
+    codes: DetailCodes,
+  ) => Promise<Outcome<unknown>>;
+  review: (
+    proposalId: string,
+    version: number,
+    decision: "approve" | "return",
+    note: string | null,
+  ) => Promise<Outcome<unknown>>;
+  skipReview: (proposalId: string, version: number, reason: string) => Promise<Outcome<unknown>>;
   settle: (proposalId: string, version: number) => Promise<Outcome<unknown>>;
   onChanged: () => Promise<void> | void;
 }
@@ -135,7 +153,7 @@ function NoteForm({
   );
 }
 
-function ProposalStatus({ proposal }: Readonly<{ proposal: DetailProposal | null }>) {
+function ProposalStatus({ proposal }: Readonly<{ proposal: ConsentState | null }>) {
   if (proposal === null) return <StatusBadge icon={CircleIcon} label={m.details_status_none()} />;
   return proposal.settledAt === null ? (
     <StatusBadge tone="info" icon={CircleDotIcon} label={m.details_status_open()} />
@@ -149,7 +167,7 @@ function AnswerPart({
   name,
   proposal,
   actions,
-}: Readonly<{ name: string; proposal: DetailProposal; actions: DetailActions }>) {
+}: Readonly<{ name: string; proposal: ConsentState; actions: DetailActions }>) {
   const [objecting, setObjecting] = useState(false);
   const [pending, setPending] = useState(false);
   const own = proposal.own;
@@ -267,7 +285,7 @@ function AnswersPart({
   proposal,
   mayAddress,
   actions,
-}: Readonly<{ proposal: DetailProposal; mayAddress: boolean; actions: DetailActions }>) {
+}: Readonly<{ proposal: ConsentState; mayAddress: boolean; actions: DetailActions }>) {
   const answers = proposal.answers;
   if (answers === null) return null;
   return (
@@ -414,7 +432,7 @@ function SettleButton({
   proposal,
   name,
   actions,
-}: Readonly<{ proposal: DetailProposal; name: string; actions: DetailActions }>) {
+}: Readonly<{ proposal: ConsentState; name: string; actions: DetailActions }>) {
   const [pending, setPending] = useState(false);
   return (
     <Button
@@ -440,9 +458,214 @@ function SettleButton({
   );
 }
 
+/** The button that opens the code form in a dialog (DT4, DT5). */
+function ProposeCodesButton({
+  element,
+  actions,
+}: Readonly<{ element: DetailElement; actions: DetailActions }>) {
+  const codes = element.codes;
+  return (
+    <FormDialog
+      title={m.details_codes_title({ name: element.name })}
+      description={m.details_codes_description()}
+      trigger={
+        <Button type="button" variant="outline" size="sm">
+          <PencilIcon aria-hidden="true" data-icon="inline-start" />
+          {codes === null ? m.details_propose_codes() : m.details_revise_codes()}
+          <span className="sr-only">: {element.name}</span>
+        </Button>
+      }
+    >
+      {({ close, cancel }) => (
+        <CodeForm
+          initial={codes?.codes ?? element.currentCodes}
+          values={element.current.values}
+          submitLabel={m.details_propose_submit()}
+          submit={(next) => actions.proposeCodes(element.id, codes?.version ?? 0, next)}
+          onDone={async () => {
+            toast.success(m.details_codes_proposed());
+            close();
+            await actions.onChanged();
+          }}
+          actions={cancel}
+        />
+      )}
+    </FormDialog>
+  );
+}
+
+const REVIEW_TEXT = {
+  pending: () => m.details_review_pending(),
+  approved: () => m.details_review_approved(),
+  returned: () => m.details_review_returned(),
+  skipped: () => m.details_review_skipped(),
+} as const;
+
+/**
+ * Where the review of the codes stands (DT4); a second terminologist approves or returns, and the
+ * facilitator skips with a reason when no other terminologist can review.
+ */
+function ReviewPart({
+  name,
+  codes,
+  mayReview,
+  maySkip,
+  actions,
+}: Readonly<{
+  name: string;
+  codes: CodeProposal;
+  mayReview: boolean;
+  maySkip: boolean;
+  actions: DetailActions;
+}>) {
+  const [asking, setAsking] = useState<"return" | "skip" | null>(null);
+  const [pending, setPending] = useState(false);
+  const { state, note } = codes.review;
+  const waiting = state === "pending";
+  const approve = async () => {
+    setPending(true);
+    await run(
+      () => actions.review(codes.id, codes.version, "approve", null),
+      m.details_review_saved(),
+      actions.onChanged,
+    );
+    setPending(false);
+  };
+  return (
+    <div className="border-t pt-3">
+      <p>
+        {REVIEW_TEXT[state]()}
+        {note !== null && (
+          <span className="block whitespace-pre-wrap text-muted-foreground">{note}</span>
+        )}
+        {state === "returned" && note === null && (
+          <span className="block text-muted-foreground">
+            {m.details_review_structure_changed()}
+          </span>
+        )}
+      </p>
+      {waiting && mayReview && !codes.review.ownProposal && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pending}
+            aria-busy={pending}
+            onClick={() => void approve()}
+          >
+            {m.details_review_approve()}
+            <span className="sr-only">: {name}</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            aria-expanded={asking === "return"}
+            onClick={() => setAsking(asking === "return" ? null : "return")}
+          >
+            {m.details_review_return()}
+            <span className="sr-only">: {name}</span>
+          </Button>
+        </div>
+      )}
+      {waiting && maySkip && codes.review.skippable && (
+        <div className="mt-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-expanded={asking === "skip"}
+            onClick={() => setAsking(asking === "skip" ? null : "skip")}
+          >
+            {m.details_review_skip()}
+            <span className="sr-only">: {name}</span>
+          </Button>
+        </div>
+      )}
+      {asking !== null && (
+        <NoteForm
+          label={
+            asking === "return" ? m.details_review_return_label() : m.details_review_skip_label()
+          }
+          submitLabel={
+            asking === "return" ? m.details_review_return_submit() : m.details_review_skip_submit()
+          }
+          onCancel={() => setAsking(null)}
+          onSubmit={async (text) => {
+            const saved = await run(
+              () =>
+                asking === "return"
+                  ? actions.review(codes.id, codes.version, "return", text)
+                  : actions.skipReview(codes.id, codes.version, text),
+              m.details_review_saved(),
+              actions.onChanged,
+            );
+            if (saved) setAsking(null);
+            return saved;
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** A part of the card, structure or codes: its heading with the status, then its content. */
+function Part({
+  title,
+  status,
+  children,
+}: Readonly<{ title: string; status: ReactNode; children: ReactNode }>) {
+  return (
+    <section className="flex flex-col gap-3 border-t pt-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="font-semibold">{title}</h4>
+        {status}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** The consent of one proposal: the answers for its readers, the own answer, and settling. */
+function ConsentPart({
+  name,
+  settleLabel,
+  proposal,
+  mayAnswer,
+  facilitator,
+  open,
+  actions,
+}: Readonly<{
+  name: string;
+  /** The accessible name the settle button adds, so two in one card differ. */
+  settleLabel: string;
+  proposal: ConsentState;
+  mayAnswer: boolean;
+  facilitator: boolean;
+  open: boolean;
+  actions: DetailActions;
+}>) {
+  const settleable =
+    facilitator && open && proposal.settledAt === null && openObjections(proposal).length === 0;
+  return (
+    <>
+      <AnswersPart proposal={proposal} mayAddress={facilitator && open} actions={actions} />
+      {mayAnswer && proposal.settledAt === null && (
+        <AnswerPart name={name} proposal={proposal} actions={actions} />
+      )}
+      {settleable && (
+        <div>
+          <SettleButton proposal={proposal} name={settleLabel} actions={actions} />
+        </div>
+      )}
+    </>
+  );
+}
+
 export function DetailCard({
   element,
   mayPropose,
+  mayProposeCodes,
+  mayReview,
   mayAnswer,
   facilitator,
   open,
@@ -450,52 +673,99 @@ export function DetailCard({
 }: Readonly<{
   element: DetailElement;
   mayPropose: boolean;
+  mayProposeCodes: boolean;
+  mayReview: boolean;
   mayAnswer: boolean;
   facilitator: boolean;
-  /** Whether the phase takes answers, notes and settling. */
+  /** Whether the phase takes answers, reviews, notes and settling. */
   open: boolean;
   actions: DetailActions;
 }>) {
   const proposal = element.proposal;
+  const codes = element.codes;
   const headingId = useId();
-  const settleable = facilitator && open && proposal !== null && proposal.settledAt === null;
-  const tools: ReactNode[] = [];
-  if (mayPropose) tools.push(<ProposeButton key="propose" element={element} actions={actions} />);
-  if (settleable && openObjections(proposal).length === 0)
-    tools.push(
-      <SettleButton key="settle" proposal={proposal} name={element.name} actions={actions} />,
-    );
+  const structureSettled = proposal?.settledAt != null;
+  const showCodes = structureSettled || codes !== null || element.codesInReview;
   return (
     <li aria-labelledby={headingId} className="flex flex-col gap-3 rounded-lg border p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id={headingId} className="text-lg font-semibold">
-          {element.name}
-        </h3>
-        <ProposalStatus proposal={proposal} />
-      </div>
+      <h3 id={headingId} className="text-lg font-semibold">
+        {element.name}
+      </h3>
       {element.description !== "" && (
         <p className="whitespace-pre-wrap text-muted-foreground">{element.description}</p>
       )}
-      {proposal === null ? (
-        <p className="text-muted-foreground">{m.details_no_proposal()}</p>
-      ) : (
-        <>
-          <StructureFacts structure={proposal.structure} />
-          <p className="text-sm text-muted-foreground">
-            {proposal.proposedBy === "facilitator"
-              ? m.details_by_facilitator({ version: proposal.version })
-              : m.details_by_architecture({ version: proposal.version })}
-          </p>
-        </>
+      <Part title={m.details_structure()} status={<ProposalStatus proposal={proposal} />}>
+        {proposal === null ? (
+          <p className="text-muted-foreground">{m.details_no_proposal()}</p>
+        ) : (
+          <>
+            <StructureFacts structure={proposal.structure} />
+            <p className="text-sm text-muted-foreground">
+              {proposal.proposedBy === "facilitator"
+                ? m.details_by_facilitator({ version: proposal.version })
+                : m.details_by_architecture({ version: proposal.version })}
+            </p>
+          </>
+        )}
+        {mayPropose && <StartFrom element={element} />}
+        {proposal !== null && (
+          <ConsentPart
+            name={element.name}
+            settleLabel={element.name}
+            proposal={proposal}
+            mayAnswer={mayAnswer}
+            facilitator={facilitator}
+            open={open}
+            actions={actions}
+          />
+        )}
+        {mayPropose && (
+          <div>
+            <ProposeButton element={element} actions={actions} />
+          </div>
+        )}
+      </Part>
+      {showCodes && (
+        <Part title={m.details_codes()} status={<ProposalStatus proposal={codes} />}>
+          {codes === null ? (
+            <p className="text-muted-foreground">
+              {element.codesInReview ? m.details_codes_in_review() : m.details_no_codes()}
+            </p>
+          ) : (
+            <>
+              <CodeFacts codes={codes.codes} values={element.current.values} />
+              <p className="text-sm text-muted-foreground">
+                {codes.proposedBy === "facilitator"
+                  ? m.details_by_facilitator({ version: codes.version })
+                  : m.details_by_terminology({ version: codes.version })}
+              </p>
+              <ReviewPart
+                name={element.name}
+                codes={codes}
+                mayReview={mayReview}
+                maySkip={facilitator && open}
+                actions={actions}
+              />
+              {reviewDone(codes.review.state) && (
+                <ConsentPart
+                  name={m.details_codes_of({ name: element.name })}
+                  settleLabel={m.details_codes_of({ name: element.name })}
+                  proposal={codes}
+                  mayAnswer={mayAnswer}
+                  facilitator={facilitator}
+                  open={open}
+                  actions={actions}
+                />
+              )}
+            </>
+          )}
+          {mayProposeCodes && structureSettled && (
+            <div>
+              <ProposeCodesButton element={element} actions={actions} />
+            </div>
+          )}
+        </Part>
       )}
-      {mayPropose && <StartFrom element={element} />}
-      {proposal !== null && (
-        <AnswersPart proposal={proposal} mayAddress={facilitator && open} actions={actions} />
-      )}
-      {mayAnswer && proposal !== null && proposal.settledAt === null && (
-        <AnswerPart name={element.name} proposal={proposal} actions={actions} />
-      )}
-      {tools.length > 0 && <div className="flex flex-wrap gap-2">{tools}</div>}
     </li>
   );
 }
