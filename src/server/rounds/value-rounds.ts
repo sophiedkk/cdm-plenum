@@ -33,7 +33,8 @@ async function lockedStructure(trx: Transaction<DB>, projectId: string, proposal
     .innerJoin("element", "element.id", "detail_proposal.element_id")
     .select([
       "detail_proposal.id",
-      "detail_proposal.element_id",
+      // The joined element's id: never null, unlike the proposal's own column (DT6 trees).
+      "element.id as element_id",
       "detail_proposal.version",
       "detail_proposal.settled_at",
       "detail_proposal.data_type",

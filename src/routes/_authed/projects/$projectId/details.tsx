@@ -115,8 +115,6 @@ function DetailsPage() {
               board={tree.value}
               facilitator={facilitator}
               actions={actions}
-              projectId={projectId}
-              valueRounds={valueRounds}
               proposeTree={(version, input) =>
                 proposeTree({ data: { projectId, version, ...input } })
               }
@@ -134,6 +132,8 @@ function DetailsPage() {
                 facilitator={facilitator}
                 open={open}
                 actions={actions}
+                projectId={projectId}
+                valueRounds={valueRounds}
               />
             ))}
           </ul>

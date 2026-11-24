@@ -156,13 +156,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       // The cards come element by element in the board's order, which the test does not fix.
       for (let index = 0; index < scores.size; index++) {
         const region = page.getByRole("region").filter({ has: page.getByRole("radiogroup") });
+        // Wait for this card's position first, so the heading read below is not the last card's.
+        await expect(region).toContainText(
+          fill(text.rounds_value_card_position, { index: index + 1, total: 5 }),
+        );
         const heading = region.getByRole("heading", { level: 3 });
         await expect(heading).toBeVisible();
         const value = (await heading.textContent()) ?? "";
         const score = scores.get(value) ?? 0;
-        await expect(region).toContainText(
-          fill(text.rounds_value_card_position, { index: index + 1, total: 5 }),
-        );
+        expect(score).toBeGreaterThan(0);
         const option = region.getByRole("radio", {
           name:
             score === 1
