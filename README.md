@@ -98,8 +98,11 @@ scripts/dev/compose.sh exec dev pnpm db:seed-demo --facilitator you@example.test
 ```
 
 The participants have `example.test` addresses (for example
-`nurse.a@example.test`); sign in as one in a private window to see the
-participant's view: their task on each project's home, the first look in
+`nurse.a@example.test`). The development stack has a sign-in page without
+e-mail at <http://localhost:3000/dev/sign-in> with one button per person, and
+"Switch person" in the menu under your name opens it again
+([docs/testing.md](docs/testing.md#sign-in-without-e-mail) explains it). Sign in as a
+participant to see their view: their task on each project's home, the first look in
 Heart rate, round 2 to rate in Blood pressure, and the structure proposals to
 answer in Oxygen saturation.
 

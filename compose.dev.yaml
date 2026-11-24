@@ -33,6 +33,9 @@ services:
       MAIL_FROM: cdm-plenum@example.test
       BETTER_AUTH_SECRET: dev-only-secret-not-for-production-use-0000
       BETTER_AUTH_URL: http://localhost:3000
+      # The page http://localhost:3000/dev/sign-in signs you in as anyone, without e-mail.
+      # The app refuses to start with it when BETTER_AUTH_URL is not on localhost.
+      DEV_SIGN_IN: "true"
     command: ["pnpm", "dev"]
     depends_on:
       postgres:

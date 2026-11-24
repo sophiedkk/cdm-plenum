@@ -8,6 +8,7 @@ import { m } from "@/i18n/messages";
 import type { SignInError } from "@/lib/sign-in";
 import type { AdminActionError } from "@/server/admin/queries";
 import type { CkmActionError } from "@/server/ckm/queries";
+import type { DevSignInError } from "@/server/dev-sign-in/queries";
 import type { ProjectActionError } from "@/server/projects/access";
 import type { RoundActionError } from "@/server/rounds/access";
 import type { SourceActionError } from "@/server/sources/queries";
@@ -27,6 +28,7 @@ export type RefusalCode =
   | CkmActionError
   | SourceActionError
   | AdminActionError
+  | DevSignInError
   | AuthRefusal;
 
 /** The message key of each refusal code; `satisfies` makes a missing code a type error. */

@@ -9,6 +9,14 @@ import { z } from "zod";
 const optional = <T extends z.ZodType>(schema: T) =>
   z.preprocess((value) => (value === "" ? undefined : value), schema.optional());
 
+/** The hosts the development sign-in accepts: this machine, never a public address. */
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1"]);
+
+/** Returns whether `url` points at this machine (`localhost` or `127.0.0.1`). */
+export function isLocalUrl(url: string): boolean {
+  return LOCAL_HOSTS.has(new URL(url).hostname);
+}
+
 export const envSchema = z
   .object({
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
@@ -21,6 +29,9 @@ export const envSchema = z
     CKM_BASE_URL: optional(z.url({ protocol: /^https?$/ })),
     // The FHIR package registry (ADR 0011); unset is the public registry, set in src/server/fhir/.
     FHIR_REGISTRY_URL: optional(z.url({ protocol: /^https?$/ })),
+    // The development sign-in page (/dev/sign-in): sign in as anyone, without e-mail. Only with a
+    // BETTER_AUTH_URL on this machine, checked below.
+    DEV_SIGN_IN: optional(z.enum(["true", "false"])).transform((value) => value === "true"),
   })
   .superRefine((env, ctx) => {
     if (env.CKM_BASE_URL !== undefined && /[?#]/.test(env.CKM_BASE_URL)) {
@@ -32,6 +43,9 @@ export const envSchema = z
         path: ["FHIR_REGISTRY_URL"],
         message: "no query or fragment",
       });
+    }
+    if (env.DEV_SIGN_IN && !isLocalUrl(env.BETTER_AUTH_URL)) {
+      ctx.addIssue({ code: "custom", path: ["DEV_SIGN_IN"], message: "localhost only" });
     }
     if (env.SMTP_URL !== undefined && env.MAIL_FROM === undefined) {
       ctx.addIssue({ code: "custom", path: ["MAIL_FROM"], message: "required with SMTP_URL" });
@@ -45,9 +59,17 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
   const result = envSchema.safeParse(source);
   if (!result.success) {
     const names = [...new Set(result.error.issues.map((issue) => issue.path.join(".")))];
-    throw new Error(`Invalid environment configuration: ${names.join(", ")}`);
+    const hint = names.includes("DEV_SIGN_IN")
+      ? " (DEV_SIGN_IN=true needs a BETTER_AUTH_URL on localhost or 127.0.0.1)"
+      : "";
+    throw new Error(`Invalid environment configuration: ${names.join(", ")}${hint}`);
   }
   return result.data;
+}
+
+/** Whether the development sign-in page is on: the setting, with the host checked again. */
+export function devSignInEnabled(env: Pick<Env, "DEV_SIGN_IN" | "BETTER_AUTH_URL">): boolean {
+  return env.DEV_SIGN_IN && isLocalUrl(env.BETTER_AUTH_URL);
 }
 
 let cached: Env | undefined;

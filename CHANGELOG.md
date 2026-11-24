@@ -11,6 +11,13 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Sign in without e-mail when you run the app locally: the development stack
+  has a page at `/dev/sign-in` that lists every active account with one
+  button each, and "Switch person" in the menu under your name opens it
+  again. You no longer need a link from Mailpit or a private window per
+  role. The page exists only with `DEV_SIGN_IN=true`, and the app refuses
+  that setting unless it runs on `localhost`.
+
 - Detail phase: after the rounds, a project moves on to Detail, before
   hand-off. On the new Details tab, the facilitator or a member of an
   architecture group proposes the data type, cardinality and value list of

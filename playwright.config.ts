@@ -55,6 +55,8 @@ export default defineConfig({
         SMTP_URL: smtpUrl(),
         MAIL_FROM: "cdm-plenum-e2e@example.test",
         CKM_BASE_URL: `${ckmStubUrl()}/ckm/rest`,
+        // The development sign-in page, so tests/e2e/dev-sign-in.spec.ts can test it.
+        DEV_SIGN_IN: "true",
       },
       reuseExistingServer: false,
       stdout: "pipe",
