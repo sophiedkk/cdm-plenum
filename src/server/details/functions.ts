@@ -19,11 +19,13 @@ import {
   answerDetailInput,
   proposeCodesInput,
   proposeDetailInput,
+  proposeTreeInput,
   reviewCodesInput,
   settleDetailInput,
   skipReviewInput,
 } from "./schemas.ts";
 import { proposeCodes, reviewCodes, skipReview } from "./terminology.ts";
+import { proposeTree, treeBoard } from "./tree.ts";
 
 export const detailBoardFn = createServerFn({ method: "GET" })
   .middleware([requireSession])
@@ -59,6 +61,16 @@ export const reviewCodesFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(reviewCodesInput)
   .handler(({ data, context }) => reviewCodes(getDb(), context.userId, data));
+
+export const treeBoardFn = createServerFn({ method: "GET" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => treeBoard(getDb(), context.userId, data.projectId));
+
+export const proposeTreeFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(proposeTreeInput)
+  .handler(({ data, context }) => proposeTree(getDb(), context.userId, data));
 
 export const skipReviewFn = createServerFn({ method: "POST" })
   .middleware([requireSession])

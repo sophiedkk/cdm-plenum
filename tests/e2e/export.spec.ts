@@ -29,7 +29,8 @@ const HEADER =
   '"name","description","openehr_type","fhir_type","cardinality","sources",' +
   '"ckm_archetype_id","ckm_at_code","ckm_revision","merged_ckm_links","proposed_values",' +
   '"element_code","binding_strength","value_set_url","value_codes","codes_status",' +
-  '"refers_to","refers_to_url"';
+  '"refers_to","refers_to_url","group_path","group_cardinality","group_sub_block",' +
+  '"registration"';
 
 for (const locale of ["en", "nl"] as const satisfies Locale[]) {
   test.describe(`export page in ${locale}`, () => {

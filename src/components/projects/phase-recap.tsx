@@ -6,6 +6,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { ReferenceText } from "@/components/board/reference-text";
 import { CodeFacts } from "@/components/details/code-facts";
+import { ModelTreeView } from "@/components/details/model-tree";
 import { StructureFacts } from "@/components/details/structure-facts";
 import { DateTime } from "@/components/status/date-time";
 import { StatusBadge } from "@/components/status/status-badge";
@@ -239,6 +240,15 @@ function DetailView({ recap }: Readonly<{ recap: DetailRecap }>) {
       {recap.elements.length === 0 ? (
         <p className="text-muted-foreground">{m.projects_recap_empty()}</p>
       ) : (
+        <section className="mb-12 flex max-w-3xl flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-semibold">{m.details_tree()}</h3>
+            {!recap.treeSettled && <StatusBadge label={m.projects_recap_detail_not_settled()} />}
+          </div>
+          <ModelTreeView tree={recap.tree} label={m.details_tree()} />
+        </section>
+      )}
+      {recap.elements.length > 0 && (
         <ul className="flex max-w-3xl flex-col divide-y border-y">
           {recap.elements.map((element) => (
             <li key={element.id} className="flex flex-col gap-2 py-4">
