@@ -4,11 +4,15 @@
 // The exports of docs/architecture.md, "Exports": built from the database on request, never
 // stored, for the project's facilitator only, and logged with ids only (AD2, Q-PRIV-2).
 import type { Kysely, Transaction } from "kysely";
+import { m } from "@/i18n/messages";
+import type { ElementPrompt } from "@/lib/brainstorm";
 import { formatCardinality } from "@/lib/cardinality";
 import { type CsvCell, writeCsv } from "@/lib/csv";
 import { dataTypeByKey, fhirTypeForRmType, isDataTypeKey } from "@/lib/data-types";
 import { type MindMapNode, writeFreeMind } from "@/lib/freemind";
+import { ancestry, type TreeGroup } from "@/lib/model-tree";
 import type { DB } from "../db/schema.gen.ts";
+import { projectGroups } from "../details/tree.ts";
 import { done, type ProjectResult, withProject } from "../projects/access.ts";
 import { log } from "../projects/queries.ts";
 import { shownGroups } from "./rating-groups.ts";
@@ -51,6 +55,46 @@ interface ElementRow {
   rmType: string | null;
   referenceTitle: string | null;
   referenceUrl: string | null;
+  groupId: string | null;
+  registration: boolean;
+}
+
+/** The English name of a group: its own, or the name of the brainstorm question it stands for. */
+function exportGroupName(group: TreeGroup): string {
+  if (group.name !== null) return group.name;
+  return group.prompt === null ? "" : GROUP_NAMES_EN[group.prompt]();
+}
+
+// NOTE: no spec governs this, our own design: the export's columns and texts are English, as the
+// header row is, so a file reads the same whoever downloads it.
+const GROUP_NAMES_EN: Record<ElementPrompt, () => string> = {
+  recorded: () => m.board_group_recorded({}, { locale: "en" }),
+  patient_state: () => m.board_group_patient_state({}, { locale: "en" }),
+  method: () => m.board_group_method({}, { locale: "en" }),
+  context: () => m.board_group_context({}, { locale: "en" }),
+};
+
+/**
+ * The tree columns of an element (DT6): the path of its group from the top of the model, as
+ * `Measurement > Cuff`; that group's cardinality; the sub-block it is in, nearest first, as
+ * `title <link>` or the group name for a sub-block without a link; and `yes` for a registration
+ * element.
+ */
+function treeCells(groups: readonly TreeGroup[], element: ElementRow): CsvCell[] {
+  const path = element.groupId === null ? [] : ancestry(groups, element.groupId);
+  const own = path.at(-1);
+  const subBlock = [...path].reverse().find((group) => group.subBlock);
+  const link = subBlock?.subBlockLink;
+  return [
+    path.length === 0 ? null : path.map(exportGroupName).join(" > "),
+    own?.cardinality ? formatCardinality(own.cardinality) : null,
+    subBlock === undefined
+      ? null
+      : link
+        ? [link.title, link.url && `<${link.url}>`].filter(Boolean).join(" ")
+        : exportGroupName(subBlock),
+    element.registration ? "yes" : null,
+  ];
 }
 
 /** Every element of the project, merged ones included, ordered by name. Never the author. */
@@ -76,6 +120,8 @@ async function elementRows(trx: Db, projectId: string): Promise<ElementRow[]> {
       "link.rm_type as rmType",
       "element.reference_title as referenceTitle",
       "element.reference_url as referenceUrl",
+      "element.group_id as groupId",
+      "element.registration",
     ])
     .where("element.project_id", "=", projectId)
     .orderBy("element.name")
@@ -137,6 +183,8 @@ function push<T>(map: Map<string, T[]>, key: string, value: T): void {
  * sources of elements merged into it are listed with its own (Q-AUDIT-1); their CKM links go in
  * `merged_ckm_links`, so the three `ckm_` columns stay the element's own link (EL5, O-5).
  * A reference element names the model it refers to in `refers_to` and `refers_to_url` (EL26).
+ * The tree of the model (DT6) adds the group path, the group's cardinality, the sub-block and
+ * the registration flag after them.
  */
 export async function exportElementsCsv(
   db: Kysely<DB>,
@@ -246,6 +294,8 @@ export async function exportElementsCsv(
       outcomeRows.map((row) => [`${row.roundId}/${row.elementId}`, row.outcome ?? "pending"]),
     );
 
+    const groups = await projectGroups(trx, project.id);
+
     const header: CsvCell[] = [
       "name",
       "description",
@@ -265,6 +315,10 @@ export async function exportElementsCsv(
       "codes_status",
       "refers_to",
       "refers_to_url",
+      "group_path",
+      "group_cardinality",
+      "group_sub_block",
+      "registration",
       ...rounds.map((round) => `round_${round.number}_outcome`),
     ];
     const rows: CsvCell[][] = elements
@@ -292,6 +346,7 @@ export async function exportElementsCsv(
           codesStatus.get(element.id),
           element.referenceTitle,
           element.referenceUrl,
+          ...treeCells(groups, element),
           ...rounds.map((round) => outcomes.get(`${round.id}/${element.id}`)),
         ];
       });

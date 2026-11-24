@@ -6,6 +6,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { RulerIcon } from "lucide-react";
 import { type DetailActions, DetailCard } from "@/components/details/detail-card";
+import { TreeSection } from "@/components/details/tree-section";
 import { projectTitle } from "@/components/projects/project-title";
 import { EmptyState, NotFoundState, PageHeader } from "@/components/shell/route-states";
 import { StepClosedNote } from "@/components/status/step-closed-note";
@@ -16,25 +17,33 @@ import {
   answerDetailFn,
   proposeCodesFn,
   proposeDetailFn,
+  proposeTreeFn,
   reviewCodesFn,
   settleDetailFn,
   skipReviewFn,
 } from "@/server/details/functions";
-import { detailBoardQueryOptions, detailKeys } from "@/server/details/query-options";
+import {
+  detailBoardQueryOptions,
+  detailKeys,
+  treeBoardQueryOptions,
+} from "@/server/details/query-options";
 import { elementKeys } from "@/server/elements/query-options";
 import { projectKeys } from "@/server/projects/query-options";
 import { addValueListFn } from "@/server/rounds/functions";
 import { roundKeys } from "@/server/rounds/query-options";
 
 /**
- * The details of the elements in the model (DT1 to DT5, ADR 0017): per element a structure
- * proposal, then a code proposal with its review, the participants' consent and the
- * facilitator's settling.
+ * The details of the elements in the model (DT1 to DT6, ADR 0017, ADR 0021): the tree of the
+ * model, then per element a structure proposal, then a code proposal with its review, the
+ * participants' consent and the facilitator's settling.
  */
 export const Route = createFileRoute("/_authed/projects/$projectId/details")({
   beforeLoad: requireStep("details"),
   loader: async ({ context, params }) => {
-    await context.queryClient.ensureQueryData(detailBoardQueryOptions(params.projectId));
+    await Promise.all([
+      context.queryClient.ensureQueryData(detailBoardQueryOptions(params.projectId)),
+      context.queryClient.ensureQueryData(treeBoardQueryOptions(params.projectId)),
+    ]);
   },
   head: ({ match }) => ({
     meta: [{ title: projectTitle(match.context, m.details_title()) }],
@@ -47,6 +56,8 @@ function DetailsPage() {
   const { project } = Route.useRouteContext();
   const queryClient = useQueryClient();
   const { data: board } = useSuspenseQuery(detailBoardQueryOptions(projectId));
+  const { data: tree } = useSuspenseQuery(treeBoardQueryOptions(projectId));
+  const proposeTree = useServerFn(proposeTreeFn);
   const propose = useServerFn(proposeDetailFn);
   const answer = useServerFn(answerDetailFn);
   const address = useServerFn(addressObjectionFn);
@@ -98,23 +109,35 @@ function DetailsPage() {
           description={m.details_empty()}
         />
       ) : (
-        <ul className="flex flex-col gap-4">
-          {elements.map((element) => (
-            <DetailCard
-              key={element.id}
-              element={element}
-              mayPropose={mayPropose}
-              mayProposeCodes={mayProposeCodes}
-              mayReview={mayReview}
-              mayAnswer={mayAnswer}
+        <div className="flex flex-col gap-4">
+          {tree.ok && (
+            <TreeSection
+              board={tree.value}
               facilitator={facilitator}
-              open={open}
               actions={actions}
               projectId={projectId}
               valueRounds={valueRounds}
+              proposeTree={(version, input) =>
+                proposeTree({ data: { projectId, version, ...input } })
+              }
             />
-          ))}
-        </ul>
+          )}
+          <ul className="flex flex-col gap-4">
+            {elements.map((element) => (
+              <DetailCard
+                key={element.id}
+                element={element}
+                mayPropose={mayPropose}
+                mayProposeCodes={mayProposeCodes}
+                mayReview={mayReview}
+                mayAnswer={mayAnswer}
+                facilitator={facilitator}
+                open={open}
+                actions={actions}
+              />
+            ))}
+          </ul>
+        </div>
       )}
     </>
   );

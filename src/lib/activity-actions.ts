@@ -84,6 +84,7 @@ export const ACTIVITY_ACTIONS = [
   "value_list_added",
   "value_list_applied",
   "value_list_removed",
+  "tree_proposed",
 ] as const;
 
 /** The project moved to a phase; one code per phase. */

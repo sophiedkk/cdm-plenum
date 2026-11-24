@@ -53,6 +53,7 @@ import type {
   ProposeDetailInput,
   SettleDetailInput,
 } from "./schemas.ts";
+import { settleTree } from "./tree-settle.ts";
 
 type Db = Kysely<DB>;
 
@@ -471,19 +472,24 @@ export async function detailBoard(
   });
 }
 
-/** Whether the group may answer a proposal: a structure always, codes once reviewed (DT4). */
+/** Whether the group may answer a proposal: a structure or tree always, codes once reviewed (DT4). */
 function consentOpen(proposal: { kind: string; review_state: string | null }): boolean {
-  return proposal.kind === "structure" || reviewDone(proposal.review_state as ReviewState);
+  return proposal.kind !== "terminology" || reviewDone(proposal.review_state as ReviewState);
 }
 
-/** The proposal with its element, locked, when it belongs to the project. */
+/** The proposal, locked, when its element or, for a tree (DT6), the proposal is in the project. */
 async function lockedProposal(trx: Transaction<DB>, projectId: string, proposalId: string) {
   return trx
     .selectFrom("detail_proposal")
-    .innerJoin("element", "element.id", "detail_proposal.element_id")
+    .leftJoin("element", "element.id", "detail_proposal.element_id")
     .selectAll("detail_proposal")
     .where("detail_proposal.id", "=", proposalId)
-    .where("element.project_id", "=", projectId)
+    .where((eb) =>
+      eb.or([
+        eb("element.project_id", "=", projectId),
+        eb("detail_proposal.project_id", "=", projectId),
+      ]),
+    )
     .forUpdate("detail_proposal")
     .executeTakeFirst();
 }
@@ -691,10 +697,15 @@ export async function addressObjection(
     const answer = await trx
       .selectFrom("detail_answer")
       .innerJoin("detail_proposal", "detail_proposal.id", "detail_answer.proposal_id")
-      .innerJoin("element", "element.id", "detail_proposal.element_id")
+      .leftJoin("element", "element.id", "detail_proposal.element_id")
       .select(["detail_answer.id", "detail_proposal.id as proposal_id"])
       .where("detail_answer.id", "=", input.answerId)
-      .where("element.project_id", "=", project.id)
+      .where((eb) =>
+        eb.or([
+          eb("element.project_id", "=", project.id),
+          eb("detail_proposal.project_id", "=", project.id),
+        ]),
+      )
       .where("detail_answer.answer", "=", "objection")
       .whereRef("detail_answer.version", "=", "detail_proposal.version")
       .where("detail_proposal.settled_at", "is", null)
@@ -753,7 +764,13 @@ export async function settleDetail(
 
     if (!consentOpen(proposal)) return refused("detail_not_reviewed");
     const values = (await valueLists(trx, "detail_proposal_value", [proposal.id])).get(proposal.id);
-    if (proposal.kind === "structure") {
+    if (proposal.kind === "tree") {
+      // NOTE: DT6, owner decision 2026-11-23: settling copies the tree onto the groups and elements.
+      const problem = await settleTree(trx, project.id, proposal.id);
+      if (problem !== null) return refused(problem);
+    } else if (proposal.element_id === null) {
+      return refused("detail_proposal_not_found");
+    } else if (proposal.kind === "structure") {
       await trx
         .updateTable("element")
         .set({
@@ -766,7 +783,11 @@ export async function settleDetail(
         .execute();
       await writeValues(trx, proposal.element_id, plain(values ?? []));
     } else {
-      const problem = await settleCodes(trx, proposal, values ?? []);
+      const problem = await settleCodes(
+        trx,
+        { ...proposal, element_id: proposal.element_id },
+        values ?? [],
+      );
       if (problem !== null) return refused(problem);
     }
     await trx
@@ -867,7 +888,8 @@ export async function detailProgress(db: Db, projectId: string): Promise<DetailP
   const proposals = await db
     .selectFrom("detail_proposal")
     .select(["id", "kind", "settled_at"])
-    .where("element_id", "in", ids)
+    // The tree proposal (DT6) counts towards the open objections.
+    .where((eb) => eb.or([eb("element_id", "in", ids), eb("project_id", "=", projectId)]))
     .execute();
   const structures = proposals.filter((proposal) => proposal.kind === "structure");
   const open = proposals.filter((proposal) => proposal.settled_at === null);
@@ -915,7 +937,7 @@ export async function ownDetailProgress(
   const unsettled = await db
     .selectFrom("detail_proposal")
     .select(["id", "kind", "review_state", "proposer_member_id"])
-    .where("element_id", "in", ids)
+    .where((eb) => eb.or([eb("element_id", "in", ids), eb("project_id", "=", projectId)]))
     .where("settled_at", "is", null)
     .execute();
   const me = await db

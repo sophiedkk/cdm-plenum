@@ -12,7 +12,14 @@ import {
   DETAIL_TEXT_MAX,
   VALUE_SET_URL_MAX,
 } from "@/lib/details";
-import { ELEMENT_VALUES_MAX } from "@/lib/elements";
+import { ELEMENT_GROUP_NAME_MAX } from "@/lib/element-groups";
+import { ELEMENT_VALUES_MAX, isReferenceUrl } from "@/lib/elements";
+import {
+  SUB_BLOCK_TITLE_MAX,
+  SUB_BLOCK_URL_MAX,
+  TREE_ELEMENTS_MAX,
+  TREE_GROUPS_MAX,
+} from "@/lib/model-tree";
 import { cardinalitySchema, dataTypeSchema, elementValueSchema } from "../elements/schemas.ts";
 import { idSchema } from "../projects/schemas.ts";
 
@@ -104,3 +111,56 @@ export const skipReviewInput = z.object({
   reason: text,
 });
 export type SkipReviewInput = z.infer<typeof skipReviewInput>;
+
+/** The existing sub-block a group is linked to (DT6): a title and an optional http(s) link. */
+export const subBlockLinkSchema = z.object({
+  title: z.string().trim().min(1).max(SUB_BLOCK_TITLE_MAX),
+  url: z
+    .string()
+    .trim()
+    .max(SUB_BLOCK_URL_MAX)
+    .refine(isReferenceUrl, "not an http or https link")
+    .nullable()
+    .default(null),
+});
+
+/**
+ * A group as the tree proposal places it (DT6). `name` names a group the proposal adds, under a
+ * new random id; the server ignores it for a group the project has. Only a sub-block takes a link.
+ */
+export const treeGroupInput = z
+  .object({
+    id: z.uuid(),
+    name: z.string().trim().min(1).max(ELEMENT_GROUP_NAME_MAX).nullable().default(null),
+    parentId: z.uuid().nullable(),
+    cardinality: cardinalitySchema,
+    subBlock: z.boolean(),
+    subBlockLink: subBlockLinkSchema.nullable().default(null),
+  })
+  .refine((group) => group.subBlock || group.subBlockLink === null, { path: ["subBlockLink"] });
+
+/** An element in the model as the tree proposal places and marks it (DT6). */
+export const treeElementInput = z.object({
+  id: z.uuid(),
+  groupId: z.uuid().nullable(),
+  registration: z.boolean(),
+});
+
+const unique = (ids: readonly string[]) => new Set(ids).size === ids.length;
+
+/**
+ * The tree proposal of the project (DT6): the groups in depth-first order and the elements.
+ * `version` is the version the proposer saw, 0 for a first proposal.
+ */
+export const proposeTreeInput = z
+  .object({
+    projectId: idSchema,
+    version: z.number().int().min(0),
+    groups: z.array(treeGroupInput).max(TREE_GROUPS_MAX),
+    elements: z.array(treeElementInput).max(TREE_ELEMENTS_MAX),
+  })
+  .refine((input) => unique(input.groups.map((group) => group.id)), { path: ["groups"] })
+  .refine((input) => unique(input.elements.map((element) => element.id)), {
+    path: ["elements"],
+  });
+export type ProposeTreeInput = z.infer<typeof proposeTreeInput>;

@@ -5,9 +5,10 @@
 
 import type { ColumnType } from "kysely";
 
-export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
-  ? ColumnType<S, I | undefined, U>
-  : ColumnType<T, T | undefined, T>;
+export type Generated<T> =
+  T extends ColumnType<infer S, infer I, infer U>
+    ? ColumnType<S, I | undefined, U>
+    : ColumnType<T, T | undefined, T>;
 
 export type Numeric = ColumnType<string, number | string, number | string>;
 
@@ -73,11 +74,12 @@ export interface DetailProposal {
   code_display: string | null;
   code_system: string | null;
   data_type: string | null;
-  element_id: string;
+  element_id: string | null;
   id: Generated<string>;
   kind: Generated<string>;
   max_occurs: number | null;
   min_occurs: number | null;
+  project_id: string | null;
   proposed_at: Generated<Timestamp>;
   proposer_expert_type: string | null;
   proposer_member_id: string | null;
@@ -120,6 +122,7 @@ export interface Element {
   prompt: string | null;
   reference_title: string | null;
   reference_url: string | null;
+  registration: Generated<boolean>;
   updated_at: Generated<Timestamp>;
   value_set_url: string | null;
 }
@@ -152,10 +155,16 @@ export interface ElementElsewhere {
 export interface ElementGroup {
   created_at: Generated<Timestamp>;
   id: Generated<string>;
+  max_occurs: number | null;
+  min_occurs: number | null;
   name: string | null;
+  parent_id: string | null;
   position: number;
   project_id: string;
   prompt: string | null;
+  sub_block: Generated<boolean>;
+  sub_block_title: string | null;
+  sub_block_url: string | null;
 }
 
 export interface ElementSameAs {
@@ -439,6 +448,26 @@ export interface TeamMember {
   userId: string;
 }
 
+export interface TreeProposalElement {
+  element_id: string;
+  group_id: string | null;
+  proposal_id: string;
+  registration: boolean;
+}
+
+export interface TreeProposalGroup {
+  group_id: string;
+  max_occurs: number | null;
+  min_occurs: number | null;
+  name: string | null;
+  parent_id: string | null;
+  position: number;
+  proposal_id: string;
+  sub_block: Generated<boolean>;
+  sub_block_title: string | null;
+  sub_block_url: string | null;
+}
+
 export interface User {
   createdAt: Generated<Timestamp>;
   deactivated_at: Timestamp | null;
@@ -510,6 +539,8 @@ export interface DB {
   source_model: SourceModel;
   team: Team;
   teamMember: TeamMember;
+  tree_proposal_element: TreeProposalElement;
+  tree_proposal_group: TreeProposalGroup;
   user: User;
   value_rating: ValueRating;
   verification: Verification;

@@ -1,16 +1,18 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
+import type { Kysely } from "kysely";
+import type { Outcome } from "@/lib/consensus";
 // The recap of a phase that is done (PR13, ADR 0020): read only, for every member. Scope: the
 // model type, the statement and its sources; Discover: how many elements went into round 1 and from where, the
 // merged duplicates and the groups; Decide: the rounds and their outcomes. Every count is of
 // elements, people or rounds; no fact names a person (Q-ANON-1).
-import type { Kysely } from "kysely";
-import type { Outcome } from "@/lib/consensus";
+import type { ModelTree } from "@/lib/model-tree";
 import { isModelType, type ModelType } from "@/lib/model-types";
 import { adjacentPhase, type ProjectPhase, phaseDone } from "@/lib/project-phases";
 import type { DB } from "../db/schema.gen.ts";
 import { type ModelStructure, modelStructures } from "../details/queries.ts";
+import { treeRecap } from "../details/tree.ts";
 import { type ElementGroup, groupingOf } from "../elements/groups.ts";
 import { visibleAuthor } from "../elements/queries.ts";
 import type { SourceModelKind } from "../sources/queries.ts";
@@ -69,6 +71,9 @@ export interface DetailRecap {
   closedAt: string | null;
   /** The elements in the model with their structure (DT1, DT2). */
   elements: ModelStructure[];
+  /** The tree of the model (DT6) and whether a tree proposal is settled. */
+  tree: ModelTree;
+  treeSettled: boolean;
 }
 
 export type PhaseRecap = ScopeRecap | DiscoverRecap | DecideRecap | DetailRecap;
@@ -279,12 +284,16 @@ export async function phaseRecap(
         );
       case "decide":
         return done(await decideRecap(reader, project.id));
-      case "detail":
+      case "detail": {
+        const { tree, settled } = await treeRecap(reader, project.id);
         return done({
           phase: "detail",
           closedAt: await closedAt(reader, project.id, "detail"),
           elements: await modelStructures(reader, project.id),
+          tree,
+          treeSettled: settled,
         });
+      }
       case "handoff":
         return refused("recap_not_ready");
     }

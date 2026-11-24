@@ -70,7 +70,7 @@ export interface DetailActions {
 }
 
 /** Runs a server call, shows a refusal or the success text, and refreshes after a success. */
-async function run(
+export async function run(
   call: () => Promise<Outcome<unknown>>,
   success: string,
   onChanged: () => Promise<void> | void,
@@ -158,7 +158,7 @@ function NoteForm({
   );
 }
 
-function ProposalStatus({ proposal }: Readonly<{ proposal: ConsentState | null }>) {
+export function ProposalStatus({ proposal }: Readonly<{ proposal: ConsentState | null }>) {
   if (proposal === null) return <StatusBadge icon={CircleIcon} label={m.details_status_none()} />;
   return proposal.settledAt === null ? (
     <StatusBadge tone="info" icon={CircleDotIcon} label={m.details_status_open()} />
@@ -632,7 +632,7 @@ function Part({
 }
 
 /** The consent of one proposal: the answers for its readers, the own answer, and settling. */
-function ConsentPart({
+export function ConsentPart({
   name,
   settleLabel,
   proposal,

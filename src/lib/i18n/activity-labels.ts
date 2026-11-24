@@ -86,6 +86,7 @@ const ACTION_LABELS: Record<(typeof ACTIVITY_ACTIONS)[number], () => string> = {
   value_list_added: () => m.admin_action_value_list_added(),
   value_list_applied: () => m.admin_action_value_list_applied(),
   value_list_removed: () => m.admin_action_value_list_removed(),
+  tree_proposed: () => m.admin_action_tree_proposed(),
 };
 
 function isListed(action: string): action is (typeof ACTIVITY_ACTIONS)[number] {
