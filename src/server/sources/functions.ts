@@ -18,6 +18,7 @@ import {
   listSourceModels,
   listSourceModelsWithAuthors,
   putOnList,
+  setBaseModel,
   sourceCoverage,
   suggestSource,
   unmatchRow,
@@ -25,6 +26,7 @@ import {
 import {
   addCkmSourceInput,
   addFhirSourceInput,
+  baseModelInput,
   otherSourceInput,
   projectInput,
   putOnListInput,
@@ -91,3 +93,8 @@ export const unmatchRowFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(unmatchRowInput)
   .handler(({ data, context }) => unmatchRow(getDb(), context.userId, data));
+
+export const setBaseModelFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(baseModelInput)
+  .handler(({ data, context }) => setBaseModel(getDb(), context.userId, data));

@@ -3,7 +3,7 @@
 
 // Source models on real PostgreSQL (EL12, EL7, EL11, EL20), with a FHIR client on the synthetic
 // package and a fake CKM on the blood pressure fixture: every refusal per role and phase,
-// anonymity of suggestions, the import and the coverage table.
+// anonymity of suggestions, the import, the coverage table and its base model (EL25).
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ProjectPhase } from "@/lib/project-phases";
@@ -34,6 +34,7 @@ import {
   listSourceModels,
   listSourceModelsWithAuthors,
   putOnList,
+  setBaseModel,
   sourceCoverage,
   suggestSource,
   unmatchRow,
@@ -794,6 +795,168 @@ describe("sourceCoverage", () => {
       ok: false,
       error: "not_found",
     });
+  });
+});
+
+describe("setBaseModel (EL25, ADR 0021)", () => {
+  async function table(projectId: string, userId: string) {
+    const coverage = await sourceCoverage(db, userId, { projectId });
+    if (!coverage.ok) throw new Error(coverage.error);
+    return coverage.value;
+  }
+
+  async function bases(projectId: string): Promise<string[]> {
+    const rows = await db
+      .selectFrom("source_model")
+      .select("id")
+      .where("project_id", "=", projectId)
+      .where("is_base", "=", true)
+      .execute();
+    return rows.map((row) => row.id);
+  }
+
+  it("puts the base model's column first, moves the mark and takes it off", async () => {
+    const { projectId, facilitator } = await projectWithMembers(db, "discover");
+    const profile = await addProfile(projectId, facilitator);
+    const model = await addProfile(projectId, facilitator, MODEL);
+    const before = await table(projectId, facilitator);
+    expect(before.models.map((m) => [m.id, m.base])).toEqual([
+      [profile, false],
+      [model, false],
+    ]);
+
+    const input = { projectId, sourceModelId: model, base: true };
+    expect(await setBaseModel(db, facilitator, input)).toEqual({ ok: true, value: null });
+    const marked = await table(projectId, facilitator);
+    expect(marked.models.map((m) => [m.id, m.base])).toEqual([
+      [model, true],
+      [profile, false],
+    ]);
+    // The rows follow the base model's order, so its elements lead.
+    expect(Object.keys(marked.rows[0]?.cells ?? {})[0]).toBe(model);
+
+    // Marking another model moves the mark: at most one base per project.
+    const other = { projectId, sourceModelId: profile, base: true };
+    expect(await setBaseModel(db, facilitator, other)).toEqual({ ok: true, value: null });
+    expect(await bases(projectId)).toEqual([profile]);
+
+    expect(await setBaseModel(db, facilitator, { ...other, base: false })).toEqual({
+      ok: true,
+      value: null,
+    });
+    expect(await bases(projectId)).toEqual([]);
+    const cleared = await table(projectId, facilitator);
+    expect(cleared.models.map((m) => m.id)).toEqual([profile, model]);
+    const actions = await db
+      .selectFrom("activity_log")
+      .select("action")
+      .where("project_id", "=", projectId)
+      .where("action", "like", "source_base_%")
+      .orderBy("occurred_at")
+      .orderBy("id")
+      .execute();
+    expect(actions.map((row) => row.action)).toEqual([
+      "source_base_set",
+      "source_base_set",
+      "source_base_cleared",
+    ]);
+  });
+
+  it("names a candidate put on the list after the base model's element", async () => {
+    const { projectId, facilitator } = await projectWithMembers(db, "discover");
+    await addProfile(projectId, facilitator);
+    const model = await addProfile(projectId, facilitator, MODEL);
+    await setBaseModel(db, facilitator, { projectId, sourceModelId: model, base: true });
+    const systolic = (await table(projectId, facilitator)).rows.find(
+      (row) => row.key === "http://loinc.org|8480-6",
+    );
+    const baseName = systolic?.cells[model]?.[0]?.name;
+    if (!systolic || !baseName) throw new Error("no systolic row in the base model");
+    const listed = await putOnList(db, facilitator, { projectId, rowIds: [systolic.id] });
+    if (!listed.ok) throw new Error(listed.error);
+    const element = await db
+      .selectFrom("element")
+      .select("name")
+      .where("id", "=", listed.value.createdElementIds[0] ?? "")
+      .executeTakeFirstOrThrow();
+    expect(element.name).toBe(baseName);
+  });
+
+  it("refuses a suggestion and an other source, which have no column", async () => {
+    const { projectId, facilitator, participant } = await projectWithMembers(db, "discover");
+    const other = await addOtherSource(db, facilitator, otherInput(projectId));
+    if (!other.ok) throw new Error(other.error);
+    const suggested = await suggestSource(db, participant, otherInput(projectId, "Clinic form"));
+    if (!suggested.ok) throw new Error(suggested.error);
+    for (const sourceModelId of [other.value.sourceModelId, suggested.value.sourceModelId]) {
+      expect(await setBaseModel(db, facilitator, { projectId, sourceModelId, base: true })).toEqual(
+        { ok: false, error: "source_base_not_in_table" },
+      );
+    }
+    expect(await bases(projectId)).toEqual([]);
+  });
+
+  it("refuses a participant, an outsider and the facilitator after discover", async () => {
+    const { projectId, facilitator, participant, outsider } = await projectWithMembers(
+      db,
+      "discover",
+    );
+    const sourceModelId = await addProfile(projectId, facilitator);
+    const input = { projectId, sourceModelId, base: true };
+    expect(await setBaseModel(db, participant, input)).toEqual({ ok: false, error: "forbidden" });
+    expect(await setBaseModel(db, outsider, input)).toEqual({ ok: false, error: "not_found" });
+    await setPhase(db, projectId, "decide");
+    expect(await setBaseModel(db, facilitator, input)).toEqual({
+      ok: false,
+      error: "source_after_discover",
+    });
+    expect(await bases(projectId)).toEqual([]);
+  });
+
+  it("does not find a model of another project", async () => {
+    const one = await projectWithMembers(db, "discover");
+    const sourceModelId = await addProfile(one.projectId, one.facilitator);
+    const { createProject } = await import("../projects/queries.ts");
+    const second = await createProject(db, one.facilitator, { name: "Pulse" }, "en");
+    if (!second.ok) throw new Error(second.error);
+    expect(
+      await setBaseModel(db, one.facilitator, {
+        projectId: second.value.projectId,
+        sourceModelId,
+        base: true,
+      }),
+    ).toEqual({ ok: false, error: "source_not_found" });
+    expect(await bases(one.projectId)).toEqual([]);
+  });
+
+  it("holds at most one base per project in the database itself", async () => {
+    const { projectId, facilitator } = await projectWithMembers(db, "discover");
+    await addProfile(projectId, facilitator);
+    await addProfile(projectId, facilitator, MODEL);
+    await expect(
+      db
+        .transaction()
+        .execute((trx) =>
+          trx
+            .updateTable("source_model")
+            .set({ is_base: true })
+            .where("project_id", "=", projectId)
+            .execute(),
+        ),
+    ).rejects.toThrow(/source_model_base_unique/);
+    const other = await addOtherSource(db, facilitator, otherInput(projectId));
+    if (!other.ok) throw new Error(other.error);
+    await expect(
+      db
+        .transaction()
+        .execute((trx) =>
+          trx
+            .updateTable("source_model")
+            .set({ is_base: true })
+            .where("id", "=", other.value.sourceModelId)
+            .execute(),
+        ),
+    ).rejects.toThrow(/source_model_base_check/);
   });
 });
 

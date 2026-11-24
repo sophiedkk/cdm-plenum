@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The scope statement (SC1) and its comments (SC2) on real PostgreSQL, with a negative test per
-// role (Q-SEC-1) and the anonymity of comment authors (Q-ANON-1, ADR 0005).
+// The scope statement (SC1), the model type (SC4) and the comments (SC2) on real PostgreSQL, with
+// a negative test per role (Q-SEC-1) and the anonymity of comment authors (Q-ANON-1, ADR 0005).
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
-import { emailOf } from "../test-fixtures.ts";
+import { emailOf, setPhase } from "../test-fixtures.ts";
 import { type ProjectMembers, personLeaks, projectWithMembers } from "../test-project-members.ts";
 import {
   addScopeComment,
@@ -17,9 +17,10 @@ import {
   listScopeCommentsWithAuthors,
   removeScopeSource,
   reorderScopeSources,
+  setModelType,
   updateScope,
 } from "./queries.ts";
-import { addScopeSourceInput, updateScopeInput } from "./schemas.ts";
+import { addScopeSourceInput, setModelTypeInput, updateScopeInput } from "./schemas.ts";
 
 let db: Kysely<DB>;
 let m: ProjectMembers;
@@ -178,6 +179,73 @@ describe("scope statement (SC1)", () => {
     expect(
       updateScopeInput.safeParse({ projectId, ...scopeText, concept: "x".repeat(10_001) }).success,
     ).toBe(false);
+  });
+});
+
+describe("model type (SC4)", () => {
+  it("is null until the facilitator sets it; every member reads it", async () => {
+    const before = await getScope(db, m.participant, m.projectId);
+    expect(before.ok && before.value.modelType).toBeNull();
+    expect(
+      await setModelType(db, m.facilitator, { projectId: m.projectId, modelType: "evaluation" }),
+    ).toEqual({ ok: true, value: null });
+    const after = await getScope(db, m.participant, m.projectId);
+    expect(after.ok && after.value.modelType).toBe("evaluation");
+    expect(await logActions()).toContain("model_type_set");
+  });
+
+  it("lets the facilitator change it ahead, in discover (PR10)", async () => {
+    await setPhase(db, m.projectId, "discover");
+    expect(
+      await setModelType(db, m.facilitator, { projectId: m.projectId, modelType: "cluster" }),
+    ).toEqual({ ok: true, value: null });
+    const read = await getScope(db, m.facilitator, m.projectId);
+    expect(read.ok && read.value.modelType).toBe("cluster");
+  });
+
+  it("refuses it after discover with model_type_after_discover", async () => {
+    for (const phase of ["decide", "detail", "handoff"] as const) {
+      await setPhase(db, m.projectId, phase);
+      expect(
+        await setModelType(db, m.facilitator, { projectId: m.projectId, modelType: "action" }),
+      ).toEqual({ ok: false, error: "model_type_after_discover" });
+    }
+    const read = await getScope(db, m.facilitator, m.projectId);
+    expect(read.ok && read.value.modelType).toBeNull();
+  });
+
+  it("refuses a participant with forbidden and a non-member with not_found", async () => {
+    const input = { projectId: m.projectId, modelType: "observation" } as const;
+    expect(await setModelType(db, m.participant, input)).toEqual({
+      ok: false,
+      error: "forbidden",
+    });
+    expect(await setModelType(db, m.outsider, input)).toEqual({ ok: false, error: "not_found" });
+  });
+
+  it("takes only the five types", () => {
+    expect(
+      setModelTypeInput.safeParse({ projectId: m.projectId, modelType: "composition" }).success,
+    ).toBe(false);
+    expect(setModelTypeInput.safeParse({ projectId: m.projectId, modelType: null }).success).toBe(
+      false,
+    );
+  });
+
+  it("keeps the four starting groups for every type (EL18, migration 0014)", async () => {
+    await setModelType(db, m.facilitator, { projectId: m.projectId, modelType: "instruction" });
+    const groups = await db
+      .selectFrom("element_group")
+      .select("prompt")
+      .where("project_id", "=", m.projectId)
+      .orderBy("position")
+      .execute();
+    expect(groups.map((group) => group.prompt)).toEqual([
+      "recorded",
+      "patient_state",
+      "method",
+      "context",
+    ]);
   });
 });
 

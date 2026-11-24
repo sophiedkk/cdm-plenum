@@ -11,6 +11,19 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Model type: on the Scope page the facilitator chooses what kind of model
+  the project builds: an observation, an evaluation, an instruction, an
+  action or a sub-block that other models reuse. Each type has a one-line
+  explanation. Participants read the choice on the Scope page and in the
+  scope recap. The type can change until the project leaves Discover. Every
+  type starts with the same four groups as before.
+
+- Base model: in the table of existing models, the facilitator marks one
+  model as the base with the "Base model" button in its column. Its column
+  moves first, rows it lacks say "Not in the base", and an element put on
+  the list takes its name from the base model. Press the button again to
+  unmark it.
+
 - Codes in the detail phase: once an element's structure is settled, a
   member of a terminology group or the facilitator proposes its codes on the
   Details tab: an element code, a binding strength (required, extensible,

@@ -15,6 +15,7 @@ import {
   listScopeCommentsWithAuthors,
   removeScopeSource,
   reorderScopeSources,
+  setModelType,
   updateScope,
 } from "./queries.ts";
 import {
@@ -22,6 +23,7 @@ import {
   addScopeSourceInput,
   reorderScopeSourcesInput,
   scopeSourceInput,
+  setModelTypeInput,
   updateScopeInput,
 } from "./schemas.ts";
 
@@ -34,6 +36,11 @@ export const updateScopeFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(updateScopeInput)
   .handler(({ data, context }) => updateScope(getDb(), context.userId, data));
+
+export const setModelTypeFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(setModelTypeInput)
+  .handler(({ data, context }) => setModelType(getDb(), context.userId, data));
 
 export const addScopeSourceFn = createServerFn({ method: "POST" })
   .middleware([requireSession])

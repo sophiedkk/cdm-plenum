@@ -69,6 +69,7 @@ export const PROJECT_ACTION_ERRORS = [
   "detail_review_own",
   "detail_review_not_pending",
   "detail_review_possible",
+  "model_type_after_discover",
 ] as const;
 export type ProjectActionError = (typeof PROJECT_ACTION_ERRORS)[number];
 
