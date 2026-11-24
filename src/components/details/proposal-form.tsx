@@ -3,7 +3,8 @@
 
 // The structure proposal of an element (DT1): data type, cardinality and, for a coded text,
 // ordinal or scale, the value list with its meanings and numbers. One save sends all three, so
-// a revision is one new version for the group to answer.
+// a revision is one new version for the group to answer. A reference to another model gets the
+// cardinality only (EL26).
 import { revalidateLogic } from "@tanstack/react-form";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { type ReactNode, useRef } from "react";
@@ -76,12 +77,15 @@ function toStructure(values: FormValues): DetailStructure {
 }
 
 export function ProposalForm({
+  reference = false,
   initial,
   submitLabel,
   submit,
   onDone,
   actions,
 }: Readonly<{
+  /** Whether the element refers to another model, which leaves out data type and values. */
+  reference?: boolean;
   /** The structure to start from: the current proposal, or what the element carries now. */
   initial: DetailStructure;
   submitLabel: string;
@@ -141,7 +145,7 @@ export function ProposalForm({
       <form.AppForm>
         <form.FormErrors />
       </form.AppForm>
-      <form.AppField name="dataType">{() => <DataTypeField />}</form.AppField>
+      {!reference && <form.AppField name="dataType">{() => <DataTypeField />}</form.AppField>}
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-1 font-medium">{m.board_cardinality_legend()}</legend>
         <p className="text-sm text-muted-foreground">{m.details_cardinality_hint()}</p>

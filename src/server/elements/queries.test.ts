@@ -100,6 +100,7 @@ describe("addElement (EL1)", () => {
         ckmLink: null,
         mergedCkmLinks: [],
         prompt: null,
+        reference: null,
         commentCount: 0,
         createdAt: expect.any(String),
       },

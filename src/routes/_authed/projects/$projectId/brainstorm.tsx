@@ -125,7 +125,8 @@ function Brainstorm() {
           </Link>
         )}
         actions={{
-          add: (prompt, name) => addElement({ data: { projectId, name, description: "", prompt } }),
+          add: (prompt, name, reference) =>
+            addElement({ data: { projectId, name, description: "", prompt, reference } }),
           onAdded: async (name) => {
             await refresh();
             toast.success(m.board_added({ name }));

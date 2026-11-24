@@ -7,6 +7,7 @@
 // participant gets no word of another participant's elements.
 import type { Kysely } from "kysely";
 import { ELEMENT_PROMPTS, type ElementPrompt, isElementPrompt } from "@/lib/brainstorm";
+import { type ElementReference, toReference } from "@/lib/elements";
 import { stepVisible } from "@/lib/phase-access";
 import type { DB } from "../db/schema.gen.ts";
 import { done, type ProjectResult, readProject, refused } from "../projects/access.ts";
@@ -18,6 +19,8 @@ export interface BoardCard {
   id: string;
   name: string;
   description: string;
+  /** The model a reference element refers to (EL26); null for a data element. */
+  reference: ElementReference | null;
 }
 
 export interface BoardColumn {
@@ -72,6 +75,9 @@ export async function brainstormBoard(
         "element.name",
         "element.description",
         "element.prompt",
+        "element.kind",
+        "element.reference_title",
+        "element.reference_url",
         "element.author_member_id",
         "member.role",
         eb
@@ -100,7 +106,12 @@ export async function brainstormBoard(
     let added = 0;
     let own = 0;
     for (const row of rows) {
-      const card = { id: row.id, name: row.name, description: row.description };
+      const card = {
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        reference: toReference(row),
+      };
       const mine = row.author_member_id === me;
       if (!privateStep) hints.push(card);
       if (!row.imported) {

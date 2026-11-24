@@ -429,6 +429,7 @@ async function addElements(
         cardinality: element.cardinality,
         source: source(index),
         prompt: element.prompt,
+        reference: null,
       }),
     );
     if (element.values) {
@@ -595,6 +596,7 @@ async function seedDiscover(db: Kysely<DB>, facilitatorId: string, now: Date): P
         cardinality: null,
         source: "",
         prompt: element.prompt,
+        reference: null,
       }),
     );
   }

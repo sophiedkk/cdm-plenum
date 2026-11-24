@@ -4,7 +4,8 @@
 // The compact board (Q-USE-1, ADR 0013): one table row per element, and a disclosure button on
 // the name that opens the details in the row below. A table keeps the column headers, so a
 // screen reader announces "Data type" or "Comments" with each value. Before the phase that
-// decides them, the brainstorm question replaces data type, cardinality and CKM (EL21).
+// decides them, the brainstorm question replaces data type, cardinality and CKM (EL21). A reference
+// to another model names that model under its name and leaves the data type empty (EL26).
 import { ChevronRightIcon, GitMergeIcon, LinkIcon } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { CommentOutcome } from "@/components/comments/comment-thread";
@@ -27,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { dataTypeName } from "./data-type-text";
 import { type CardElement, ElementDetails } from "./element-details";
 import type { ElementMarkProps, MarkTarget } from "./element-marks";
+import { ReferenceText } from "./reference-text";
 
 /** The column headers of the first look's counts (EL22): one column per answer. */
 const FIRST_LOOK_HEADERS: Record<FirstLookAnswer, () => string> = {
@@ -164,6 +166,9 @@ function ElementRows({
             />
             {element.name}
           </Button>
+          {element.reference && (
+            <ReferenceText reference={element.reference} className="px-1 pb-1 font-normal" />
+          )}
         </TableHead>
         <TableCell className="hidden w-full max-w-0 truncate text-muted-foreground md:table-cell">
           {element.description}
@@ -171,9 +176,11 @@ function ElementRows({
         {detailFields ? (
           <>
             <TableCell>
-              {element.dataType === null && element.ckmLink === null
-                ? notDecided
-                : shortDataType(element)}
+              {element.reference !== null
+                ? null
+                : element.dataType === null && element.ckmLink === null
+                  ? notDecided
+                  : shortDataType(element)}
             </TableCell>
             <TableCell className="tabular-nums">
               {element.cardinality === null ? notDecided : formatCardinality(element.cardinality)}

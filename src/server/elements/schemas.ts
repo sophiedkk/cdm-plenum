@@ -15,7 +15,10 @@ import {
   ELEMENT_SOURCE_LABEL_MAX,
   ELEMENT_VALUE_TEXT_MAX,
   ELEMENT_VALUES_MAX,
+  isReferenceUrl,
   MERGE_SOURCES_MAX,
+  REFERENCE_TITLE_MAX,
+  REFERENCE_URL_MAX,
 } from "@/lib/elements";
 import { FIRST_LOOK_ANSWERS } from "@/lib/first-look";
 import { idSchema } from "../projects/schemas.ts";
@@ -36,11 +39,30 @@ export const cardinalitySchema = z
   .nullable()
   .default(null);
 
+/**
+ * The model a reference element names (EL26), or null for a data element. The link is optional
+ * and http or https only, so the board never renders a script link.
+ */
+export const referenceSchema = z
+  .object({
+    title: z.string().trim().min(1).max(REFERENCE_TITLE_MAX),
+    url: z
+      .string()
+      .trim()
+      .max(REFERENCE_URL_MAX)
+      .refine(isReferenceUrl, "not an http or https link")
+      .nullable()
+      .default(null),
+  })
+  .nullable()
+  .default(null);
+
 const elementFields = {
   name: z.string().trim().min(1).max(ELEMENT_NAME_MAX),
   description: z.string().trim().max(ELEMENT_DESCRIPTION_MAX).default(""),
   dataType: dataTypeSchema,
   cardinality: cardinalitySchema,
+  reference: referenceSchema,
 };
 
 export const addElementInput = z.object({

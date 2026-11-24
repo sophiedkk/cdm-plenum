@@ -159,7 +159,9 @@ Sign in at <http://localhost:3000/sign-in> and open the link from Mailpit at
    yet. "Your turn" starts the first look; answer a few, then
    "Add what is missing" opens the board with one column per question, the
    archetype's elements dashed and the others' elements as a count. Add one
-   in a column with Enter. As facilitator, reveal the board, merge the
+   in a column with Enter. Tick "Refers to another model" under a column's
+   field to add an element that stands for a whole model, such as a zib, with
+   its title and a link; its card names the model. As facilitator, reveal the board, merge the
    duplicate, then "Group" on the Overview: drag an element to another group
    (with the mouse or a finger) or click it and choose "Move here", rename a
    group and "Ask the group to check". As `gp.a@example.test`, "Your turn"

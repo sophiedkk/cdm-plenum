@@ -49,6 +49,8 @@ interface ElementRow {
   atCode: string | null;
   revision: string | null;
   rmType: string | null;
+  referenceTitle: string | null;
+  referenceUrl: string | null;
 }
 
 /** Every element of the project, merged ones included, ordered by name. Never the author. */
@@ -72,6 +74,8 @@ async function elementRows(trx: Db, projectId: string): Promise<ElementRow[]> {
       "link.at_code as atCode",
       "link.revision",
       "link.rm_type as rmType",
+      "element.reference_title as referenceTitle",
+      "element.reference_url as referenceUrl",
     ])
     .where("element.project_id", "=", projectId)
     .orderBy("element.name")
@@ -132,6 +136,7 @@ function push<T>(map: Map<string, T[]>, key: string, value: T): void {
  * whether they are settled, and the outcome of each round. The
  * sources of elements merged into it are listed with its own (Q-AUDIT-1); their CKM links go in
  * `merged_ckm_links`, so the three `ckm_` columns stay the element's own link (EL5, O-5).
+ * A reference element names the model it refers to in `refers_to` and `refers_to_url` (EL26).
  */
 export async function exportElementsCsv(
   db: Kysely<DB>,
@@ -257,6 +262,8 @@ export async function exportElementsCsv(
       "value_set_url",
       "value_codes",
       "codes_status",
+      "refers_to",
+      "refers_to_url",
       ...rounds.map((round) => `round_${round.number}_outcome`),
     ];
     const rows: CsvCell[][] = elements
@@ -282,6 +289,8 @@ export async function exportElementsCsv(
             ? valueCodes.get(element.id)?.join("; ")
             : null,
           codesStatus.get(element.id),
+          element.referenceTitle,
+          element.referenceUrl,
           ...rounds.map((round) => outcomes.get(`${round.id}/${element.id}`)),
         ];
       });
@@ -298,7 +307,8 @@ export async function exportElementsCsv(
 /**
  * EX2: the concept as the root and one node per included element with its description. An
  * element counts as included when its outcome in the last closed round that rated it is
- * `included`. Before any round has closed, every element that is not merged is on the map.
+ * `included`. Before any round has closed, every element that is not merged is on the map. A
+ * reference element links to the model it refers to and names it first in its note (EL26).
  */
 export async function exportMindMap(
   db: Kysely<DB>,
@@ -343,7 +353,11 @@ export async function exportMindMap(
       children: included.map((element) => ({
         id: `ID_${element.id.replaceAll("-", "")}`,
         text: element.name,
-        note: element.description,
+        note:
+          element.referenceTitle === null
+            ? element.description
+            : [`Refers to: ${element.referenceTitle}`, element.description].join("\n"),
+        ...(element.referenceUrl === null ? {} : { link: element.referenceUrl }),
       })),
     };
 

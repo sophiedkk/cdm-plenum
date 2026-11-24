@@ -4,8 +4,9 @@
 // The brainstorm board (EL23, ADR 0020): a strip with how many people added elements, then one
 // column per brainstorm question (EL14). The member's own cards are marked, cards from existing
 // models are dashed, and before the reveal other people's cards are a count only (EL13). Typing in
-// a column and pressing Enter adds an element under that question. After the reveal similar names
-// show while typing, with "Same as this" to support that element instead (EL15, EL16).
+// a column and pressing Enter adds an element under that question; "refers to another model"
+// opens the model's title and link below the name (EL26). After the reveal similar names show
+// while typing, with "Same as this" to support that element instead (EL15, EL16).
 import { revalidateLogic, useStore } from "@tanstack/react-form";
 import { CopyIcon } from "lucide-react";
 import { type ReactNode, useId, useRef } from "react";
@@ -16,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { m } from "@/i18n/messages";
 import { type ElementPrompt, similarElements } from "@/lib/brainstorm";
-import { ELEMENT_NAME_MAX } from "@/lib/elements";
+import { ELEMENT_NAME_MAX, type ElementReference, REFERENCE_TITLE_MAX } from "@/lib/elements";
 import type { Outcome } from "@/lib/forms/outcome";
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
 import { promptQuestion } from "@/lib/i18n/labels";
@@ -24,6 +25,14 @@ import { refusalMessage } from "@/lib/i18n/refusals";
 import { cn } from "@/lib/utils";
 import type { BoardCard, BoardColumn, BrainstormBoard } from "@/server/elements/brainstorm-board";
 import { addElementSchema, type HintElement } from "./add-element-schema";
+import {
+  checkReference,
+  fromReference,
+  ReferenceChoice,
+  referenceShape,
+  toReference,
+} from "./reference-fields";
+import { ReferenceText } from "./reference-text";
 
 /** The strip above the board: who has added, how many, and the reader's own count. */
 export function BoardStrip({ board }: Readonly<{ board: BrainstormBoard }>) {
@@ -69,6 +78,7 @@ function Card({ card, kind }: Readonly<{ card: BoardCard; kind: "own" | "model" 
       )}
     >
       {card.name}
+      {card.reference && <ReferenceText reference={card.reference} className="mt-0.5" />}
     </li>
   );
 }
@@ -126,7 +136,11 @@ function ColumnNameField({ label }: Readonly<{ label: string }>) {
 
 /** What the board does: add under a question, and mark a similar element as the same. */
 export interface QuestionBoardActions {
-  add: (prompt: ElementPrompt, name: string) => Promise<Outcome<unknown>>;
+  add: (
+    prompt: ElementPrompt,
+    name: string,
+    reference: ElementReference | null,
+  ) => Promise<Outcome<unknown>>;
   onAdded: (name: string) => Promise<void> | void;
   /** Supports a hinted element; left out when marks are closed (EL16). */
   markSame?: ((element: HintElement) => Promise<Outcome<unknown>>) | undefined;
@@ -148,13 +162,15 @@ function ColumnAddForm({
   const formRef = useRef<HTMLFormElement>(null);
   const label = m.board_column_add_label({ question: promptQuestion(prompt) });
   const form = useAppForm({
-    defaultValues: { name: "", description: "" },
+    defaultValues: { name: "", description: "", ...fromReference(null) },
     validationLogic: revalidateLogic(),
-    validators: { onDynamic: addElementSchema() },
+    validators: {
+      onDynamic: addElementSchema().extend(referenceShape).superRefine(checkReference),
+    },
     onSubmit: async ({ value, formApi }) => {
       const name = value.name.trim();
       try {
-        const outcome = await actions.add(prompt, name);
+        const outcome = await actions.add(prompt, name, toReference(value));
         if (!outcome.ok) {
           applyServerRefusal(formApi, { form: refusalMessage(outcome.error) });
           return;
@@ -203,6 +219,48 @@ function ColumnAddForm({
         <form.FormErrors />
       </form.AppForm>
       <form.AppField name="name">{() => <ColumnNameField label={label} />}</form.AppField>
+      <form.AppField name="refers">
+        {(field) => (
+          <ReferenceChoice
+            checked={field.state.value}
+            onChange={(checked) => field.handleChange(checked)}
+          />
+        )}
+      </form.AppField>
+      <form.Subscribe selector={(state) => state.values.refers}>
+        {(refers) =>
+          refers && (
+            <>
+              <form.AppField name="referenceTitle">
+                {(field) => (
+                  <field.TextField
+                    label={m.board_reference_title_label()}
+                    description={m.board_reference_title_description({ max: REFERENCE_TITLE_MAX })}
+                    autoComplete="off"
+                  />
+                )}
+              </form.AppField>
+              <form.AppField name="referenceUrl">
+                {(field) => (
+                  <field.TextField
+                    label={m.board_reference_url_label()}
+                    type="url"
+                    inputMode="url"
+                    autoComplete="off"
+                  />
+                )}
+              </form.AppField>
+              {/* NOTE: HTML, implicit submission. Enter submits a form with one text field only,
+                  so with the title and link open the form needs its own button. */}
+              <div>
+                <form.AppForm>
+                  <form.SubmitButton size="sm">{m.board_add()}</form.SubmitButton>
+                </form.AppForm>
+              </div>
+            </>
+          )
+        }
+      </form.Subscribe>
       <div role="status" className="text-xs">
         {hints.length > 0 && (
           <>

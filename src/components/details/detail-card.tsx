@@ -9,6 +9,7 @@
 import { CheckIcon, CircleDotIcon, CircleIcon, PencilIcon } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { toast } from "sonner";
+import { ReferenceText } from "@/components/board/reference-text";
 import { FormDialog } from "@/components/members/form-dialog";
 import { StatusBadge } from "@/components/status/status-badge";
 import { Button } from "@/components/ui/button";
@@ -413,6 +414,7 @@ function ProposeButton({
     >
       {({ close, cancel }) => (
         <ProposalForm
+          reference={element.reference !== null}
           initial={proposal?.structure ?? element.current}
           submitLabel={m.details_propose_submit()}
           submit={(structure) => actions.propose(element.id, proposal?.version ?? 0, structure)}
@@ -685,12 +687,15 @@ export function DetailCard({
   const codes = element.codes;
   const headingId = useId();
   const structureSettled = proposal?.settledAt != null;
-  const showCodes = structureSettled || codes !== null || element.codesInReview;
+  // NOTE: EL26, P3.2. A reference takes its codes from the model it names: no code step.
+  const showCodes =
+    element.reference === null && (structureSettled || codes !== null || element.codesInReview);
   return (
     <li aria-labelledby={headingId} className="flex flex-col gap-3 rounded-lg border p-4">
       <h3 id={headingId} className="text-lg font-semibold">
         {element.name}
       </h3>
+      {element.reference && <ReferenceText reference={element.reference} />}
       {element.description !== "" && (
         <p className="whitespace-pre-wrap text-muted-foreground">{element.description}</p>
       )}
@@ -699,7 +704,7 @@ export function DetailCard({
           <p className="text-muted-foreground">{m.details_no_proposal()}</p>
         ) : (
           <>
-            <StructureFacts structure={proposal.structure} />
+            <StructureFacts structure={proposal.structure} reference={element.reference !== null} />
             <p className="text-sm text-muted-foreground">
               {proposal.proposedBy === "facilitator"
                 ? m.details_by_facilitator({ version: proposal.version })

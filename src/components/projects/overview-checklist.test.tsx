@@ -71,7 +71,7 @@ function facts(changes: Partial<OverviewFacts> = {}): OverviewFacts {
     round: null,
     undecided: 0,
     lastClosedRound: null,
-    detail: { inModel: 0, proposed: 0, settled: 0, codesSettled: 0, openObjections: 0 },
+    detail: { inModel: 0, proposed: 0, settled: 0, codable: 0, codesSettled: 0, openObjections: 0 },
     mailConfigured: true,
     ...changes,
   };

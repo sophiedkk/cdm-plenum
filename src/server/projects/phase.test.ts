@@ -49,6 +49,7 @@ async function add(userId: string, projectId: string, name: string): Promise<voi
       cardinality: null,
       source: "",
       prompt: null,
+      reference: null,
     }),
   );
 }

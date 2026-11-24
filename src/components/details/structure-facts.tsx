@@ -2,22 +2,30 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The structure of an element (DT1): data type in neutral words with its openEHR and FHIR types,
-// cardinality and the value list. The detail page and the recap of the detail phase show it.
+// cardinality and the value list. The detail page and the recap of the detail phase show it. A
+// reference to another model has a cardinality only (EL26), so its data type is left out.
 import { dataTypeName, dataTypePair } from "@/components/board/data-type-text";
 import { m } from "@/i18n/messages";
 import { formatCardinality } from "@/lib/cardinality";
 import type { DetailStructure } from "@/lib/details";
 
-export function StructureFacts({ structure }: Readonly<{ structure: DetailStructure }>) {
+export function StructureFacts({
+  structure,
+  reference = false,
+}: Readonly<{ structure: DetailStructure; reference?: boolean }>) {
   const { dataType, cardinality, values } = structure;
   return (
     <dl className="grid gap-x-4 gap-y-1 sm:grid-cols-[10rem_1fr]">
-      <dt className="text-muted-foreground">{m.board_field_data_type()}</dt>
-      <dd>
-        {dataType === null
-          ? m.board_not_decided()
-          : `${dataTypeName(dataType)} (${dataTypePair(dataType)})`}
-      </dd>
+      {!reference && (
+        <>
+          <dt className="text-muted-foreground">{m.board_field_data_type()}</dt>
+          <dd>
+            {dataType === null
+              ? m.board_not_decided()
+              : `${dataTypeName(dataType)} (${dataTypePair(dataType)})`}
+          </dd>
+        </>
+      )}
       <dt className="text-muted-foreground">{m.board_field_cardinality()}</dt>
       <dd>{cardinality === null ? m.board_not_decided() : formatCardinality(cardinality)}</dd>
       {values.length > 0 && (

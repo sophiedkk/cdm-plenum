@@ -57,6 +57,7 @@ async function add(userId: string, projectId: string, name: string): Promise<str
       cardinality: null,
       source: "",
       prompt: null,
+      reference: null,
     }),
   ).elementId;
 }

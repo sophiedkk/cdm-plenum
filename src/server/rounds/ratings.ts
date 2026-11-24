@@ -6,6 +6,7 @@
 // Ratings carry the rating code only; rater-link.ts is the one place that resolves it (ADR 0005).
 import type { Kysely } from "kysely";
 import { groupOrder } from "@/lib/element-groups";
+import type { ElementReference } from "@/lib/elements";
 import type { DB } from "../db/schema.gen.ts";
 import { log, ownGroupId } from "../projects/queries.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
@@ -149,6 +150,8 @@ export interface MyElement {
   id: string;
   name: string;
   description: string;
+  /** The model a reference element refers to (EL26); the rating question stays the same. */
+  reference: ElementReference | null;
   /** The element's group; null for an element without one, listed after the groups. */
   group: RoundGroup | null;
   own: OwnRating;
@@ -251,6 +254,7 @@ export async function myRatings(
       id: element.id,
       name: element.name,
       description: element.description,
+      reference: element.reference,
       group: groupOf.get(element.id) ?? null,
       own: own.get(element.id) ?? NOT_RATED,
       flags: flags.get(element.id) ?? [],

@@ -402,6 +402,7 @@ describe("the counts of the detail phase", () => {
       inModel: 2,
       proposed: 2,
       settled: 1,
+      codable: 2,
       codesSettled: 0,
       openObjections: 1,
     });

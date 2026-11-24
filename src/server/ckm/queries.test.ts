@@ -283,6 +283,29 @@ describe("linkElement (EL4)", () => {
     expect(await links()).toEqual([]);
   });
 
+  it("refuses a reference to another model, which names no archetype element (EL26)", async () => {
+    const { facilitator, projectId } = await setup();
+    const row = await db
+      .insertInto("element")
+      .values({
+        project_id: projectId,
+        name: "Blood pressure",
+        kind: "reference",
+        reference_title: "Zib Bloeddruk",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const result = await linkElement(db, ckm, facilitator, {
+      projectId,
+      elementId: row.id,
+      cid: CID,
+      revision: REVISION,
+      path: SYSTOLIC,
+    });
+    expect(result).toEqual({ ok: false, error: "ckm_reference" });
+    expect(await links()).toEqual([]);
+  });
+
   it("refuses a path that is no element of the archetype", async () => {
     const { facilitator, projectId, elementId } = await setup();
     const result = await linkElement(db, ckm, facilitator, {

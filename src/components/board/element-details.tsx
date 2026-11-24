@@ -118,7 +118,9 @@ export function ElementDetails({
         <dl className="flex flex-col gap-2 text-sm">
           {detailFields ? (
             <>
-              <Row term={m.board_field_data_type()}>{dataTypeText(element)}</Row>
+              {element.reference === null && (
+                <Row term={m.board_field_data_type()}>{dataTypeText(element)}</Row>
+              )}
               <Row term={m.board_field_cardinality()}>
                 {element.cardinality === null
                   ? m.board_not_decided()
@@ -189,11 +191,14 @@ export function ElementDetails({
                 <span className="sr-only">: {element.name}</span>
               </Button>
             )}
-            <Button type="button" variant="outline" size="sm" onClick={onLink}>
-              <LinkIcon aria-hidden="true" data-icon="inline-start" />
-              {m.board_link_ckm()}
-              <span className="sr-only">: {element.name}</span>
-            </Button>
+            {/* NOTE: EL26, P3.2. A reference names a whole model, so it links to no element. */}
+            {element.reference === null && (
+              <Button type="button" variant="outline" size="sm" onClick={onLink}>
+                <LinkIcon aria-hidden="true" data-icon="inline-start" />
+                {m.board_link_ckm()}
+                <span className="sr-only">: {element.name}</span>
+              </Button>
+            )}
           </div>
         )}
         {marks && <ElementMarks name={element.name} marks={marks} />}

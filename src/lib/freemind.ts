@@ -10,6 +10,8 @@ export interface MindMapNode {
   id: string;
   text: string;
   note?: string;
+  /** A web link the node opens, as FreeMind's `LINK` attribute. */
+  link?: string;
   children?: readonly MindMapNode[];
 }
 
@@ -51,9 +53,10 @@ function note(text: string): string {
 
 function node(item: MindMapNode, depth: number): string {
   const position = depth === 1 ? ' POSITION="right"' : "";
+  const link = item.link === undefined ? "" : ` LINK="${xmlEscape(item.link)}"`;
   const children = (item.children ?? []).map((child) => node(child, depth + 1)).join("");
   return (
-    `<node ID="${xmlEscape(item.id)}"${position} TEXT="${xmlEscape(item.text)}">\n` +
+    `<node ID="${xmlEscape(item.id)}"${position} TEXT="${xmlEscape(item.text)}"${link}>\n` +
     (depth === 0 ? '<font NAME="SansSerif" SIZE="14" BOLD="true"/>\n' : "") +
     (item.note === undefined ? "" : note(item.note)) +
     children +

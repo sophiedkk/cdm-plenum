@@ -112,12 +112,15 @@ export interface Element {
   description: Generated<string>;
   group_id: string | null;
   id: Generated<string>;
+  kind: Generated<string>;
   max_occurs: number | null;
   merged_into: string | null;
   min_occurs: number | null;
   name: string;
   project_id: string;
   prompt: string | null;
+  reference_title: string | null;
+  reference_url: string | null;
   updated_at: Generated<Timestamp>;
   value_set_url: string | null;
 }

@@ -15,6 +15,7 @@ import type { Outcome } from "@/lib/forms/outcome";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import { cn } from "@/lib/utils";
 import type { FirstLook } from "@/server/elements/first-look";
+import { ReferenceText } from "./reference-text";
 
 const ANSWER_LABELS: Record<FirstLookAnswer, () => string> = {
   belongs: () => m.board_first_look_belongs(),
@@ -94,6 +95,7 @@ export function FirstLookCard({
         >
           {element.name}
         </h3>
+        {element.reference && <ReferenceText reference={element.reference} className="mt-1" />}
         {element.description !== "" && (
           <p className="mt-1 text-muted-foreground">{element.description}</p>
         )}

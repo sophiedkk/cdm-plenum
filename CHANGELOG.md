@@ -11,6 +11,16 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Elements that refer to another model: when you add an element on the
+  brainstorm board or the Elements tab, tick "Refers to another model" and
+  give the model's title, such as a zib, an archetype or a profile, with an
+  optional link. The element stands for that whole model. The board, the
+  first look, the rating card and the round results name the model under the
+  element, and it is rated with the same question as any other element. In
+  the detail phase it gets a cardinality only: no data type, values or codes.
+  The CSV export has the columns `refers_to` and `refers_to_url`, and the
+  mind map links the element to its model.
+
 - Codes in the detail phase: once an element's structure is settled, a
   member of a terminology group or the facilitator proposes its codes on the
   Details tab: an element code, a binding strength (required, extensible,

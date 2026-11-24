@@ -20,6 +20,7 @@ afterEach(() => {
 const SYSTOLIC: ResultRowElement = {
   id: "e-1",
   name: "Systolic pressure",
+  reference: null,
   outcome: "included",
   result: elementResult([7, 8, 8, 9, 9, null], DEFAULT_RULE),
   groups: [
@@ -33,6 +34,7 @@ const SYSTOLIC: ResultRowElement = {
 const CUFF: ResultRowElement = {
   id: "e-2",
   name: "Cuff size",
+  reference: null,
   outcome: "no_consensus",
   result: elementResult([2, 9], DEFAULT_RULE),
   groups: [],

@@ -103,6 +103,7 @@ export interface OverviewFacts {
     inModel: number;
     proposed: number;
     settled: number;
+    codable: number;
     codesSettled: number;
     openObjections: number;
   };
@@ -218,13 +219,13 @@ export function checklist(phase: ProjectPhase, facts: OverviewFacts): ChecklistI
       return items;
     }
     case "detail": {
-      const { inModel, proposed, settled, codesSettled, openObjections } = facts.detail;
+      const { inModel, proposed, settled, codable, codesSettled, openObjections } = facts.detail;
       return [
         { key: "detail_proposed", done: inModel > 0 && proposed >= inModel, proposed, inModel },
         { key: "detail_objections", done: openObjections === 0, count: openObjections },
         { key: "detail_settled", done: inModel > 0 && settled >= inModel, settled, inModel },
         // NOTE: DT4. Open codes do not hold up the hand-off, so this item only informs.
-        { key: "detail_codes", done: null, settled: codesSettled, inModel },
+        { key: "detail_codes", done: null, settled: codesSettled, inModel: codable },
       ];
     }
     case "handoff":
