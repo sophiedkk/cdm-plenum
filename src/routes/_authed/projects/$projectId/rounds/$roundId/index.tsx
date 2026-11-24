@@ -18,7 +18,9 @@ import { ProposalList } from "@/components/rounds/proposals";
 import { valueOrNotFound } from "@/components/rounds/result-value";
 import { RoundStatusBadge } from "@/components/rounds/round-badges";
 import { RoundForm, ruleSentences } from "@/components/rounds/round-form";
+import { roundName, withShownNames } from "@/components/rounds/round-kind";
 import { RatingsByParticipantTable, ResponseRateTable } from "@/components/rounds/round-tables";
+import { type ValueListRow, ValueLists } from "@/components/rounds/value-lists";
 import { NotFoundState } from "@/components/shell/route-states";
 import { DateTime } from "@/components/status/date-time";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -36,14 +38,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import { refusalMessage } from "@/lib/i18n/refusals";
-import { detailFieldsShown, ROUND_PHASE } from "@/lib/phase-access";
+import { detailFieldsShown, roundPhaseOf } from "@/lib/phase-access";
 import { mayRate } from "@/lib/project-roles";
+import { detailKeys } from "@/server/details/query-options";
 import { elementKeys } from "@/server/elements/query-options";
-import { projectQueryOptions } from "@/server/projects/query-options";
+import { projectKeys, projectQueryOptions } from "@/server/projects/query-options";
 import {
   addProposalToBoardFn,
+  applyValueListFn,
   closeRoundFn,
   openRoundFn,
+  removeValueListFn,
   updateRoundFn,
 } from "@/server/rounds/functions";
 import type { RoundDetail } from "@/server/rounds/queries";
@@ -71,16 +76,17 @@ export const Route = createFileRoute("/_authed/projects/$projectId/rounds/$round
     );
     const isFacilitator = context.project.role === "facilitator";
     const loads: Promise<unknown>[] = [];
+    const isValues = round.kind === "values";
     if (isFacilitator && round.status === "draft") {
-      loads.push(queryClient.ensureQueryData(roundBoardQueryOptions(projectId)));
+      if (!isValues) loads.push(queryClient.ensureQueryData(roundBoardQueryOptions(projectId)));
       loads.push(queryClient.ensureQueryData(panelStatusQueryOptions(projectId)));
     }
     if (isFacilitator && round.status !== "draft") {
       loads.push(queryClient.ensureQueryData(responseRateQueryOptions(projectId, roundId)));
-      if (detailFieldsShown(context.project.phase)) {
+      if (detailFieldsShown(context.project.phase) && !isValues) {
         loads.push(queryClient.ensureQueryData(roundFlagsQueryOptions(projectId, roundId)));
       }
-      if (round.number === 1) {
+      if (round.number === 1 && !isValues) {
         loads.push(queryClient.ensureQueryData(roundProposalsQueryOptions(projectId, roundId)));
       }
       if (round.facilitatorSeesRaters) {
@@ -96,15 +102,12 @@ export const Route = createFileRoute("/_authed/projects/$projectId/rounds/$round
       loads.push(queryClient.ensureQueryData(myRatingsQueryOptions(projectId, roundId)));
     }
     await Promise.all(loads);
-    return { number: round.number };
+    return { kind: round.kind, number: round.number };
   },
   head: ({ match, loaderData }) => ({
     meta: [
       {
-        title: projectTitle(
-          match.context,
-          loaderData ? m.rounds_round_name({ number: loaderData.number }) : m.rounds_title(),
-        ),
+        title: projectTitle(match.context, loaderData ? roundName(loaderData) : m.rounds_title()),
       },
     ],
   }),
@@ -155,13 +158,17 @@ function RoundFacts({ round }: Readonly<{ round: RoundDetail }>) {
         <span>
           {m.rounds_closes_at_short()} <DateTime value={round.closesAt} />
         </span>
-        <span>{m.rounds_summary_element_count({ count: round.elements.length })}</span>
+        <span>
+          {round.kind === "values"
+            ? m.rounds_summary_value_count({ count: round.elements.length })
+            : m.rounds_summary_element_count({ count: round.elements.length })}
+        </span>
       </p>
       {running && (
         <>
           <p className="text-sm">
             <span className="text-muted-foreground">{m.rounds_summary_rule_short()}</span>{" "}
-            {ruleSentences(round.rule)[0]}
+            {ruleSentences(round.rule, round.kind)[0]}
           </p>
           <AnonymityLine round={round} />
         </>
@@ -182,7 +189,7 @@ function RoundSetupDetails({ round }: Readonly<{ round: RoundDetail }>) {
           <dt className="text-muted-foreground">{m.rounds_summary_rule()}</dt>
           <dd>
             <ul className="flex list-disc flex-col gap-1 pl-5">
-              {ruleSentences(round.rule).map((line) => (
+              {ruleSentences(round.rule, round.kind).map((line) => (
                 <li key={line}>{line}</li>
               ))}
             </ul>
@@ -219,12 +226,18 @@ function RateCall({ round }: Readonly<{ round: RoundDetail }>) {
         <h3 id="rate-call-heading" className="font-semibold">
           {m.rounds_rate_call_heading()}
         </h3>
-        <p className="text-sm">{m.rounds_rate_progress({ rated, total: mine.elements.length })}</p>
+        <p className="text-sm">
+          {round.kind === "values"
+            ? m.rounds_value_rate_progress({ rated, total: mine.elements.length })
+            : m.rounds_rate_progress({ rated, total: mine.elements.length })}
+        </p>
       </div>
       <Button asChild>
         <Link to="/projects/$projectId/rounds/$roundId/rate" params={{ projectId, roundId }}>
           <VoteIcon aria-hidden="true" />
-          {m.rounds_rate_now({ number: round.number })}
+          {round.kind === "values"
+            ? m.rounds_value_rate_now({ number: round.number })
+            : m.rounds_rate_now({ number: round.number })}
         </Link>
       </Button>
     </section>
@@ -244,19 +257,21 @@ function RoundPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <h2 className="text-xl font-semibold">{m.rounds_round_name({ number: round.number })}</h2>
+        <h2 className="text-xl font-semibold">{roundName(round)}</h2>
         <RoundFacts round={round} />
       </div>
       {canRate && round.status === "open" && <RateCall round={round} />}
-      {closed && <Results projectId={projectId} roundId={roundId} />}
+      {closed && <Results projectId={projectId} roundId={roundId} facilitator={isFacilitator} />}
       {isFacilitator && round.status === "draft" && <DraftSetup round={round} />}
       {isFacilitator && round.status !== "draft" && <RoundProgress round={round} />}
-      {isFacilitator && round.status !== "draft" && detailFieldsShown(project.phase) && (
-        <Flags round={round} />
-      )}
-      {isFacilitator && round.status !== "draft" && round.number === 1 && (
-        <Proposals round={round} />
-      )}
+      {isFacilitator &&
+        round.status !== "draft" &&
+        round.kind === "elements" &&
+        detailFieldsShown(project.phase) && <Flags round={round} />}
+      {isFacilitator &&
+        round.status !== "draft" &&
+        round.kind === "elements" &&
+        round.number === 1 && <Proposals round={round} />}
       {!closed && round.status !== "draft" && (
         <p className="text-sm text-muted-foreground">{m.rounds_results_after_close()}</p>
       )}
@@ -288,15 +303,40 @@ function OpeningSnapshot({
   );
 }
 
+/** The value lists of a draft value round, from the values it holds (DT3). */
+function valueListRows(round: RoundDetail): ValueListRow[] {
+  const rows = new Map<string, ValueListRow>();
+  for (const item of round.elements) {
+    if (!item.value) continue;
+    const row = rows.get(item.value.proposalId);
+    if (row) row.total += 1;
+    else {
+      rows.set(item.value.proposalId, {
+        proposalId: item.value.proposalId,
+        elementName: item.value.elementName,
+        total: 1,
+      });
+    }
+  }
+  return [...rows.values()];
+}
+
 function DraftSetup({ round }: Readonly<{ round: RoundDetail }>) {
   const { projectId } = Route.useParams();
   const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
   const revealsBoard = detail.ok && detail.value.privateBrainstorm && !detail.value.boardRevealed;
-  // NOTE: PR10. The facilitator prepares a round ahead, but opens it in the decide phase only.
-  const mayOpen = detail.ok && detail.value.phase === ROUND_PHASE;
-  const { data: boardResult } = useSuspenseQuery(roundBoardQueryOptions(projectId));
+  const isValues = round.kind === "values";
+  // NOTE: PR10. The facilitator prepares a round ahead, but opens an element round in the decide
+  // phase only and a value round (DT3) in the detail phase only.
+  const mayOpen = detail.ok && detail.value.phase === roundPhaseOf(round.kind);
+  // The loader fetched the board of an element round; a value round has none to choose from.
+  const { data: boardResult } = useQuery({
+    ...roundBoardQueryOptions(projectId),
+    enabled: !isValues,
+  });
   const { data: panelResult } = useSuspenseQuery(panelStatusQueryOptions(projectId));
-  const board = valueOrNotFound(boardResult);
+  const board = isValues || boardResult === undefined ? null : valueOrNotFound(boardResult);
+  const removeValueList = useServerFn(removeValueListFn);
   const panel = valueOrNotFound(panelResult);
   const updateRound = useServerFn(updateRoundFn);
   const openRound = useServerFn(openRoundFn);
@@ -312,10 +352,11 @@ function DraftSetup({ round }: Readonly<{ round: RoundDetail }>) {
           {m.rounds_setup_heading()}
         </h3>
         <RoundForm
+          kind={round.kind}
           key={`${timeZone}-${round.closesAt}-${round.elements.length}-${JSON.stringify(round.rule)}-${round.facilitatorSeesRaters}-${round.proposalRule}`}
           elements={board}
           initial={{
-            elementIds: round.elements.map((element) => element.id),
+            elementIds: isValues ? [] : round.elements.map((element) => element.id),
             rule: round.rule,
             facilitatorSeesRaters: round.facilitatorSeesRaters,
             closesAt: toLocalInput(round.closesAt, timeZone),
@@ -333,6 +374,23 @@ function DraftSetup({ round }: Readonly<{ round: RoundDetail }>) {
           }}
         />
       </section>
+      {isValues && (
+        <ValueLists
+          mode="draft"
+          rows={valueListRows(round)}
+          act={async (proposalId) => {
+            const result = await removeValueList({
+              data: { projectId, roundId: round.id, proposalId },
+            });
+            if (!result.ok) return result;
+            await Promise.all([
+              refreshProject(),
+              queryClient.invalidateQueries({ queryKey: detailKeys.all(projectId) }),
+            ]);
+            return { ok: true };
+          }}
+        />
+      )}
       <section aria-labelledby="open-heading" className="flex max-w-3xl flex-col gap-4">
         <h3 id="open-heading" className="text-lg font-semibold">
           {m.rounds_open_heading()}
@@ -349,7 +407,9 @@ function DraftSetup({ round }: Readonly<{ round: RoundDetail }>) {
           </Alert>
         )}
         {!mayOpen ? (
-          <p className="text-sm text-muted-foreground">{m.rounds_open_in_decide()}</p>
+          <p className="text-sm text-muted-foreground">
+            {isValues ? m.rounds_value_open_in_detail() : m.rounds_open_in_decide()}
+          </p>
         ) : (
           <div>
             <OpenRoundDialog
@@ -407,7 +467,11 @@ function CloseRound({ round }: Readonly<{ round: RoundDetail }>) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{m.rounds_close_title({ number: round.number })}</AlertDialogTitle>
-            <AlertDialogDescription>{m.rounds_close_explained()}</AlertDialogDescription>
+            <AlertDialogDescription>
+              {round.kind === "values"
+                ? m.rounds_value_close_explained()
+                : m.rounds_close_explained()}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{m.common_cancel()}</AlertDialogCancel>
@@ -475,23 +539,69 @@ function ByParticipant({ round }: Readonly<{ round: RoundDetail }>) {
     <details>
       <DisclosureSummary>{m.rounds_by_participant_heading()}</DisclosureSummary>
       <div className="mt-2">
-        <RatingsByParticipantTable participants={participants} elements={round.elements} />
+        <RatingsByParticipantTable
+          participants={participants}
+          elements={withShownNames(round.elements)}
+        />
       </div>
     </details>
   );
 }
 
-function Results({ projectId, roundId }: Readonly<{ projectId: string; roundId: string }>) {
+function Results({
+  projectId,
+  roundId,
+  facilitator,
+}: Readonly<{ projectId: string; roundId: string; facilitator: boolean }>) {
   const { data } = useSuspenseQuery(roundResultsQueryOptions(projectId, roundId));
   const results = valueOrNotFound(data);
+  const applyValueList = useServerFn(applyValueListFn);
+  const queryClient = useQueryClient();
+  const isValues = results.round.kind === "values";
+  const names = new Map(results.lists.map((list) => [list.proposalId, list.elementName]));
   return (
-    <section aria-labelledby="results-heading" className="flex flex-col gap-2">
-      <h3 id="results-heading" className="text-lg font-semibold">
-        {m.rounds_results_heading()}
-      </h3>
-      <ResultsTable elements={results.elements} />
-      <p className="text-sm text-muted-foreground">{m.rounds_results_intro()}</p>
-    </section>
+    <>
+      <section aria-labelledby="results-heading" className="flex flex-col gap-2">
+        <h3 id="results-heading" className="text-lg font-semibold">
+          {m.rounds_results_heading()}
+        </h3>
+        <ResultsTable
+          kind={results.round.kind}
+          elements={isValues ? withShownNames(results.elements) : results.elements}
+        />
+        <p className="text-sm text-muted-foreground">{m.rounds_results_intro()}</p>
+      </section>
+      {isValues && (
+        <ValueLists
+          mode="closed"
+          canAct={facilitator}
+          rows={results.lists.map((list) => ({
+            proposalId: list.proposalId,
+            elementName: list.elementName,
+            total: list.total,
+            kept: list.kept,
+            appliedVersion: list.appliedVersion,
+            changed: list.appliedVersion === null && list.currentVersion !== list.version,
+          }))}
+          act={async (proposalId) => {
+            const result = await applyValueList({ data: { projectId, roundId, proposalId } });
+            if (!result.ok) return result;
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: roundKeys.project(projectId) }),
+              queryClient.invalidateQueries({ queryKey: detailKeys.all(projectId) }),
+              queryClient.invalidateQueries({ queryKey: projectKeys.overview(projectId) }),
+            ]);
+            toast.success(
+              m.rounds_value_list_apply_done({
+                name: names.get(proposalId) ?? "",
+                version: result.value.version,
+              }),
+            );
+            return { ok: true };
+          }}
+        />
+      )}
+    </>
   );
 }
 

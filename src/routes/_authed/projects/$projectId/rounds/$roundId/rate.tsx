@@ -13,6 +13,7 @@ import { ProposeSection } from "@/components/rounds/proposals";
 import { RatingCards, shownCard } from "@/components/rounds/rating-cards";
 import { RatingElement } from "@/components/rounds/rating-element";
 import { valueOrNotFound } from "@/components/rounds/result-value";
+import { withShownNames } from "@/components/rounds/round-kind";
 import { NotFoundState } from "@/components/shell/route-states";
 import { DateTime } from "@/components/status/date-time";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -26,10 +27,12 @@ import type { OwnFlag } from "@/server/rounds/flags";
 import {
   addProposalFn,
   clearRatingFn,
+  clearValueRatingFn,
   deleteProposalFn,
   removeDetailFlagFn,
   saveDetailFlagFn,
   saveRatingFn,
+  saveValueRatingFn,
 } from "@/server/rounds/functions";
 import {
   myProposalsQueryOptions,
@@ -63,18 +66,22 @@ export const Route = createFileRoute("/_authed/projects/$projectId/rounds/$round
       queryClient.ensureQueryData(myRatingsQueryOptions(params.projectId, params.roundId)),
       queryClient.ensureQueryData(roundBoardQueryOptions(params.projectId)),
     ]);
-    const { number } = valueOrNotFound(mine).round;
-    if (number === 1) {
+    const { number, kind } = valueOrNotFound(mine).round;
+    if (number === 1 && kind === "elements") {
       await queryClient.ensureQueryData(myProposalsQueryOptions(params.projectId, params.roundId));
     }
-    return { number };
+    return { number, kind };
   },
   head: ({ match, loaderData }) => ({
     meta: [
       {
         title: projectTitle(
           match.context,
-          loaderData ? m.rounds_rate_title({ number: loaderData.number }) : m.rounds_title(),
+          loaderData
+            ? loaderData.kind === "values"
+              ? m.rounds_value_rate_title({ number: loaderData.number })
+              : m.rounds_rate_title({ number: loaderData.number })
+            : m.rounds_title(),
         ),
       },
     ],
@@ -114,10 +121,16 @@ function RatePage() {
   const board = valueOrNotFound(boardResult);
   const saveRating = useServerFn(saveRatingFn);
   const clearRating = useServerFn(clearRatingFn);
+  const saveValueRating = useServerFn(saveValueRatingFn);
+  const clearValueRating = useServerFn(clearValueRatingFn);
   const saveFlag = useServerFn(saveDetailFlagFn);
   const removeFlag = useServerFn(removeDetailFlagFn);
   const queryClient = useQueryClient();
-  const { round, elements } = mine;
+  const { round } = mine;
+  // NOTE: DT3. A value round rates values: no details to flag, no proposals, and each card
+  // names its value with its number, under its element.
+  const isValues = round.kind === "values";
+  const elements = isValues ? withShownNames(mine.elements) : mine.elements;
   const editable = round.status === "open" && canRate;
   const rated = elements.filter((element) => element.own.rated).length;
   const boardElements = new Map(board.map((element) => [element.id, element]));
@@ -145,12 +158,20 @@ function RatePage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold">{m.rounds_rate_title({ number: round.number })}</h2>
+        <h2 className="text-lg font-semibold">
+          {isValues
+            ? m.rounds_value_rate_title({ number: round.number })
+            : m.rounds_rate_title({ number: round.number })}
+        </h2>
         <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
           <span>
             {m.rounds_closes_at_short()} <DateTime value={round.closesAt} />
           </span>
-          <span>{m.rounds_rate_progress({ rated, total })}</span>
+          <span>
+            {isValues
+              ? m.rounds_value_rate_progress({ rated, total })
+              : m.rounds_rate_progress({ rated, total })}
+          </span>
           <span className="flex items-center gap-2">
             {round.facilitatorSeesRaters ? (
               <EyeIcon aria-hidden="true" className="size-4 shrink-0" />
@@ -186,6 +207,7 @@ function RatePage() {
         </Alert>
       )}
       <RatingCards
+        kind={round.kind}
         number={round.number}
         elements={elements}
         shown={shown}
@@ -207,16 +229,21 @@ function RatePage() {
         renderCard={(element, position, headingRef) => (
           <RatingElement
             key={element.id}
+            kind={round.kind}
             element={element}
-            details={detailFields ? detailsOf(boardElements.get(element.id)) : null}
+            details={detailFields && !isValues ? detailsOf(boardElements.get(element.id)) : null}
             position={position}
             headingRef={headingRef}
             rule={round.rule}
             editable={editable}
             save={async (score, reason) => {
-              const result = await saveRating({
-                data: { projectId, roundId, elementId: element.id, score, reason },
-              });
+              const result = isValues
+                ? await saveValueRating({
+                    data: { projectId, roundId, valueId: element.id, score, reason },
+                  })
+                : await saveRating({
+                    data: { projectId, roundId, elementId: element.id, score, reason },
+                  });
               if (result.ok) {
                 const trimmed = reason.trim();
                 rememberOwn(element.id, {
@@ -228,9 +255,9 @@ function RatePage() {
               return result.ok ? { ok: true } : result;
             }}
             clear={async () => {
-              const result = await clearRating({
-                data: { projectId, roundId, elementId: element.id },
-              });
+              const result = isValues
+                ? await clearValueRating({ data: { projectId, roundId, valueId: element.id } })
+                : await clearRating({ data: { projectId, roundId, elementId: element.id } });
               if (result.ok) rememberOwn(element.id, { rated: false, score: null, reason: null });
               return result.ok ? { ok: true } : result;
             }}
@@ -258,9 +285,10 @@ function RatePage() {
             }}
           />
         )}
-        flags={detailFields}
+        flags={detailFields && !isValues}
         afterOverview={
-          round.number === 1 && <Proposals editable={editable} rule={round.proposalRule} />
+          round.number === 1 &&
+          !isValues && <Proposals editable={editable} rule={round.proposalRule} />
         }
       />
       <p className="text-sm text-muted-foreground">{m.rounds_rate_autosave()}</p>

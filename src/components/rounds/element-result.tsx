@@ -110,7 +110,13 @@ export function GroupResultsTable({
   name,
   groups,
   showOutcome,
-}: Readonly<{ name: string; groups: readonly GroupResult[]; showOutcome: boolean }>) {
+  kind = "elements",
+}: Readonly<{
+  name: string;
+  groups: readonly GroupResult[];
+  showOutcome: boolean;
+  kind?: "elements" | "values";
+}>) {
   const shown = shownGroups(groups);
   if (shown.length === 0) {
     return <p className="text-sm text-muted-foreground">{m.rounds_result_no_groups()}</p>;
@@ -156,7 +162,7 @@ export function GroupResultsTable({
               </th>
               {showOutcome && (
                 <td className="py-1 pr-4">
-                  <OutcomeBadge outcome={group.result.outcome} />
+                  <OutcomeBadge outcome={group.result.outcome} kind={kind} />
                 </td>
               )}
               <td className="py-1 pr-4">{medianText(group.result)}</td>
@@ -188,7 +194,10 @@ export interface ResultRowElement {
 
 const COLUMNS = 6;
 
-function ResultRow({ element }: Readonly<{ element: ResultRowElement }>) {
+function ResultRow({
+  element,
+  kind,
+}: Readonly<{ element: ResultRowElement; kind: "elements" | "values" }>) {
   const [open, setOpen] = useState(false);
   const detailsId = useId();
   return (
@@ -201,7 +210,7 @@ function ResultRow({ element }: Readonly<{ element: ResultRowElement }>) {
           )}
         </TableHead>
         <TableCell>
-          <OutcomeBadge outcome={element.outcome} />
+          <OutcomeBadge outcome={element.outcome} kind={kind} />
         </TableCell>
         <TableCell>{medianText(element.result)}</TableCell>
         <TableCell>
@@ -238,7 +247,12 @@ function ResultRow({ element }: Readonly<{ element: ResultRowElement }>) {
                   caption={m.rounds_result_distribution({ name: element.name })}
                 />
               </div>
-              <GroupResultsTable name={element.name} groups={element.groups} showOutcome />
+              <GroupResultsTable
+                name={element.name}
+                groups={element.groups}
+                showOutcome
+                kind={kind}
+              />
             </div>
           )}
         </TableCell>
@@ -251,13 +265,24 @@ function ResultRow({ element }: Readonly<{ element: ResultRowElement }>) {
  * The results of a closed round, one row per element, for every member (DE5, Q-USE-1), under
  * the group headings in the order the server gives (DE19).
  */
-export function ResultsTable({ elements }: Readonly<{ elements: readonly ResultRowElement[] }>) {
+export function ResultsTable({
+  elements,
+  kind = "elements",
+}: Readonly<{
+  elements: readonly ResultRowElement[];
+  /** A value round lists values under their element (DT3). */
+  kind?: "elements" | "values";
+}>) {
   return (
     <Table>
-      <TableCaption className="sr-only">{m.rounds_results_caption()}</TableCaption>
+      <TableCaption className="sr-only">
+        {kind === "values" ? m.rounds_value_results_caption() : m.rounds_results_caption()}
+      </TableCaption>
       <TableHeader>
         <TableRow>
-          <TableHead scope="col">{m.rounds_result_element()}</TableHead>
+          <TableHead scope="col">
+            {kind === "values" ? m.rounds_value_overview_item() : m.rounds_result_element()}
+          </TableHead>
           <TableHead scope="col">{m.rounds_result_outcome()}</TableHead>
           <TableHead scope="col">{m.rounds_result_median()}</TableHead>
           <TableHead scope="col">{m.rounds_result_distribution_column()}</TableHead>
@@ -270,7 +295,7 @@ export function ResultsTable({ elements }: Readonly<{ elements: readonly ResultR
       <TableBody>
         {elements.map((element, index) => (
           <GroupRows key={element.id} columns={COLUMNS} heading={headingBefore(elements, index)}>
-            <ResultRow element={element} />
+            <ResultRow element={element} kind={kind} />
           </GroupRows>
         ))}
       </TableBody>

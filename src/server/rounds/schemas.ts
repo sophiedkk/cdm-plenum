@@ -111,6 +111,25 @@ export type SaveRatingInput = z.infer<typeof saveRatingInput>;
 export const ratingInput = roundInput.extend({ elementId: z.uuid() });
 export type RatingInput = z.infer<typeof ratingInput>;
 
+/** A rating of one value of a value round (DT3); a null score is "unable to rate". */
+export const saveValueRatingInput = roundInput.extend({
+  valueId: z.uuid(),
+  score: score.nullable(),
+  reason: z.string().max(RATING_REASON_MAX).optional(),
+});
+export type SaveValueRatingInput = z.infer<typeof saveValueRatingInput>;
+
+export const valueRatingInput = roundInput.extend({ valueId: z.uuid() });
+export type ValueRatingInput = z.infer<typeof valueRatingInput>;
+
+/** The structure proposal whose value list goes into a value round (DT3). */
+export const valueListInput = z.object({ projectId: idSchema, proposalId: z.uuid() });
+export type ValueListInput = z.infer<typeof valueListInput>;
+
+/** One value list of a value round (DT3). */
+export const roundValueListInput = roundInput.extend({ proposalId: z.uuid() });
+export type RoundValueListInput = z.infer<typeof roundValueListInput>;
+
 /** A proposal for an element missing from round 1 (DE16). */
 export const addProposalInput = roundInput.extend({
   name: z.string().trim().min(1).max(PROPOSAL_NAME_MAX),

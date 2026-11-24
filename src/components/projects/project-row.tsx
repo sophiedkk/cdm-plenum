@@ -34,7 +34,11 @@ export function waitingText(waiting: Waiting, timeZone: string): string | null {
     }
     case "checklist": {
       if (waiting.round) {
-        return m.projects_waiting_round({
+        const text =
+          waiting.roundKind === "values"
+            ? m.projects_waiting_value_round
+            : m.projects_waiting_round;
+        return text({
           number: waiting.round.number,
           completed: waiting.round.completed,
           raters: waiting.round.raters,

@@ -21,6 +21,7 @@ import {
   type ConsentState,
   DETAIL_TEXT_MAX,
   type DetailAnswer,
+  type DetailBoard,
   type DetailCodes,
   type DetailElement,
   type DetailObjection,
@@ -34,6 +35,7 @@ import { CodeFacts } from "./code-facts";
 import { CodeForm } from "./code-form";
 import { ProposalForm } from "./proposal-form";
 import { StructureFacts } from "./structure-facts";
+import { ValueRoundPart } from "./value-round-part";
 
 /** What the card does through the server; each call returns the server's outcome. */
 export interface DetailActions {
@@ -62,6 +64,8 @@ export interface DetailActions {
   ) => Promise<Outcome<unknown>>;
   skipReview: (proposalId: string, version: number, reason: string) => Promise<Outcome<unknown>>;
   settle: (proposalId: string, version: number) => Promise<Outcome<unknown>>;
+  /** Puts the values of a structure proposal in a value round (DT3). */
+  addValueList: (proposalId: string) => Promise<Outcome<{ number: number }>>;
   onChanged: () => Promise<void> | void;
 }
 
@@ -672,7 +676,12 @@ export function DetailCard({
   facilitator,
   open,
   actions,
+  projectId,
+  valueRounds,
 }: Readonly<{
+  projectId: string;
+  /** The facilitator's view of what can start now (DT3); null for anyone else. */
+  valueRounds: DetailBoard["valueRounds"];
   element: DetailElement;
   mayPropose: boolean;
   mayProposeCodes: boolean;
@@ -712,6 +721,26 @@ export function DetailCard({
             </p>
           </>
         )}
+        <ValueRoundPart
+          projectId={projectId}
+          element={element}
+          valueRounds={valueRounds}
+          facilitator={facilitator}
+          open={open}
+          add={async (proposalId) => {
+            try {
+              const outcome = await actions.addValueList(proposalId);
+              if (!outcome.ok) {
+                toast.error(refusalMessage(outcome.error));
+                return;
+              }
+              toast.success(m.details_value_round_added({ number: outcome.value.number }));
+              await actions.onChanged();
+            } catch {
+              toast.error(m.common_error_unexpected());
+            }
+          }}
+        />
         {mayPropose && <StartFrom element={element} />}
         {proposal !== null && (
           <ConsentPart

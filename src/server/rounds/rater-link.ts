@@ -33,6 +33,7 @@ export interface ParticipantRatings {
   email: string;
   /** The stakeholder group the participant rated in; null when that group was removed. */
   groupName: string | null;
+  /** By item: `elementId` is the element, or in a value round the value (DT3). */
   ratings: { elementId: string; score: number | null; reason: string | null }[];
   /** The ids of the elements the participant proposed in this round (DE16). */
   proposalIds: string[];
@@ -42,9 +43,9 @@ export interface ParticipantRatings {
 
 /**
  * Query 2 of 2: who gave which rating, proposed which element and set which detail flag in a
- * round (DE4, DE16, DE17). The caller runs it only for the facilitator of a round whose
- * `facilitator_sees_raters` is true. The three are one union, so the code-to-member table is
- * read once.
+ * round (DE4, DE16, DE17), or rated which value of a value round (DT3). The caller runs it only
+ * for the facilitator of a round whose `facilitator_sees_raters` is true. The four are one union,
+ * so the code-to-member table is read once.
  */
 export async function ratingsByParticipantQuery(
   db: Kysely<DB>,
@@ -63,6 +64,20 @@ export async function ratingsByParticipantQuery(
       sql<string | null>`null::uuid`.as("flagId"),
     ])
     .where("rating.round_id", "=", roundId)
+    .unionAll((eb) =>
+      eb
+        .selectFrom("value_rating")
+        .select((eb) => [
+          "value_rating.rating_code_id as codeId",
+          "value_rating.team_id as teamId",
+          eb.ref("value_rating.value_id").$castTo<string | null>().as("elementId"),
+          "value_rating.score",
+          "value_rating.reason",
+          sql<string | null>`null::uuid`.as("proposalId"),
+          sql<string | null>`null::uuid`.as("flagId"),
+        ])
+        .where("value_rating.round_id", "=", roundId),
+    )
     .unionAll((eb) =>
       eb
         .selectFrom("round_proposal")

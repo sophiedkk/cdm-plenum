@@ -24,7 +24,7 @@ import { summaryOf } from "../elements/first-look.ts";
 import { checkProgress } from "../elements/groups.ts";
 import { markSummary } from "../elements/marks.ts";
 import { joinedPanel, projectPanel } from "../rounds/queries.ts";
-import { statusOf } from "../rounds/round.ts";
+import { type RoundKind, statusOf } from "../rounds/round.ts";
 import { done, type LockedProject, type ProjectResult, readProject } from "./access.ts";
 import { projectOverview } from "./phase.ts";
 import { listProjects } from "./queries.ts";
@@ -49,6 +49,7 @@ async function decided(db: Kysely<DB>, projectId: string): Promise<DecidedSoFar>
     .distinctOn("round_element.element_id")
     .select(["round_element.element_id", "round_element.outcome"])
     .where("round.project_id", "=", projectId)
+    .where("round.kind", "=", "elements")
     .where("round.closed_at", "is not", null)
     .orderBy("round_element.element_id")
     .orderBy("round.number", "desc")
@@ -58,6 +59,7 @@ async function decided(db: Kysely<DB>, projectId: string): Promise<DecidedSoFar>
     .selectFrom("round")
     .select(["id", "number"])
     .where("project_id", "=", projectId)
+    .where("kind", "=", "elements")
     .where("closed_at", "is not", null)
     .orderBy("number", "desc")
     .executeTakeFirst();
@@ -91,16 +93,21 @@ export async function decidedSoFar(
   });
 }
 
-/** The newest round that is not closed, with its response, as the facilitator follows it. */
+/**
+ * The newest round of the kind that is not closed, with its response, as the facilitator
+ * follows it: an element round in decide, a value round in detail (DT3).
+ */
 async function followedRound(
   db: Kysely<DB>,
   projectId: string,
   now: Date,
+  kind: RoundKind,
 ): Promise<ChecklistRound | null> {
   const round = await db
     .selectFrom("round")
     .selectAll()
     .where("project_id", "=", projectId)
+    .where("kind", "=", kind)
     .where("closed_at", "is", null)
     .orderBy("number", "desc")
     .executeTakeFirst();
@@ -109,7 +116,7 @@ async function followedRound(
   if (status === "closed") return null;
   const elements = await count(
     db
-      .selectFrom("round_element")
+      .selectFrom(kind === "values" ? "round_value" : "round_element")
       .select((eb) => eb.fn.countAll<string>().as("count"))
       .where("round_id", "=", round.id)
       .executeTakeFirst(),
@@ -130,7 +137,7 @@ async function followedRound(
   );
   // One row per rater code that answered every element; the code never leaves this query.
   const finished = await db
-    .selectFrom("rating")
+    .selectFrom(kind === "values" ? "value_rating" : "rating")
     .select("rating_code_id")
     .where("round_id", "=", round.id)
     .groupBy("rating_code_id")
@@ -250,7 +257,8 @@ async function factsOf(
     firstLookFinished: look.finished,
     groupCheckAsked: check.asked,
     groupChecked: check.checked,
-    round: await followedRound(db, project.id, deps.now),
+    round: await followedRound(db, project.id, deps.now, "elements"),
+    valueRound: await followedRound(db, project.id, deps.now, "values"),
     undecided: elements.filter(
       (element) => element.status === "no_consensus" || element.status === "not_rated",
     ).length,

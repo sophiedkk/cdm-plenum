@@ -64,6 +64,35 @@ export async function groupsOf(
 }
 
 /**
+ * The heading of each item of a round, by item id: an element's group (EL18), or in a value
+ * round the element whose value list holds the value (DT3), in the order of the board.
+ */
+export async function itemGroupsOf(
+  db: Kysely<DB>,
+  items: readonly { id: string; value?: { elementId: string; elementName: string } }[],
+): Promise<Map<string, PlacedGroup>> {
+  const values = items.flatMap((item) => (item.value ? [{ id: item.id, ...item.value }] : []));
+  if (values.length === 0) {
+    return groupsOf(
+      db,
+      items.map((item) => item.id),
+    );
+  }
+  const position = new Map<string, number>();
+  const groups = new Map<string, PlacedGroup>();
+  for (const value of values) {
+    if (!position.has(value.elementId)) position.set(value.elementId, position.size);
+    groups.set(value.id, {
+      id: value.elementId,
+      name: value.elementName,
+      prompt: null,
+      position: position.get(value.elementId) ?? 0,
+    });
+  }
+  return groups;
+}
+
+/**
  * The elements block by block, each group's elements in the round's order, the elements without
  * a group last. `order` takes the group ids in the facilitator's order and returns the order to
  * show; leave it out to keep the facilitator's.

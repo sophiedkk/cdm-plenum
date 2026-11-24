@@ -10,6 +10,8 @@ import {
   PROJECT_STEPS,
   participantAccess,
   preparesAhead,
+  ratingWriteOf,
+  roundPhaseOf,
   SOURCE_PHASE,
   stepVisible,
   writeOpen,
@@ -118,6 +120,7 @@ describe("writeOpen", () => {
       ["element_comment", ["discover"]],
       ["element_mark", ["discover"]],
       ["rate", ["decide"]],
+      ["value_rate", ["detail"]],
       ["source_suggest", ["discover"]],
       ["first_look_answer", ["discover"]],
       ["group_remark", ["discover"]],
@@ -134,6 +137,17 @@ describe("writeOpen", () => {
         );
       }
     }
+  });
+});
+
+describe("rating per round kind (DT3)", () => {
+  it("opens rating in an element round in decide and in a value round in detail only", () => {
+    const rating = (kind: "elements" | "values") =>
+      PROJECT_PHASES.filter((phase) => writeOpen("participant", phase, ratingWriteOf(kind)));
+    expect(rating("elements")).toEqual(["decide"]);
+    expect(rating("values")).toEqual(["detail"]);
+    expect(roundPhaseOf("elements")).toBe("decide");
+    expect(roundPhaseOf("values")).toBe("detail");
   });
 });
 

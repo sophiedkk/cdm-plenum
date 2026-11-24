@@ -55,6 +55,7 @@ const CLOSES = "2026-11-26T22:05:00.000Z";
 
 const ROUND: NonNullable<ProjectOverview["round"]> = {
   id: "round-2",
+  kind: "elements",
   number: 2,
   status: "open",
   closesAt: CLOSES,
@@ -181,6 +182,27 @@ describe("TaskCard (PR8)", () => {
         .getAllByRole("link")
         .map((link) => [link.textContent, link.getAttribute("href")]),
     ).toEqual([["Start rating", "/projects/p1/rounds/round-2/rate"]]);
+  });
+
+  it("asks to rate the values of a value round in the detail phase (DT3)", () => {
+    render(
+      <TaskCard
+        projectId="p1"
+        overview={overview({
+          phase: "detail",
+          round: { ...ROUND, kind: "values", number: 3, elements: 5 },
+        })}
+      />,
+    );
+    const card = screen.getByRole("region", { name: "Your turn: rate the values of round 3" });
+    expect([...card.querySelectorAll("dt")].map((term) => term.textContent)).toEqual([
+      "Values",
+      "Closes",
+      "Rated by you",
+    ]);
+    expect(screen.getByRole("link", { name: "Start rating" }).getAttribute("href")).toBe(
+      "/projects/p1/rounds/round-2/rate",
+    );
   });
 
   it("goes on rating once something is rated", () => {
@@ -364,6 +386,7 @@ describe("ProjectRow (PR2, PR8)", () => {
             kind: "task",
             task: {
               kind: "rate",
+              roundKind: "elements",
               roundId: "round-2",
               number: 2,
               rated: 0,
@@ -440,8 +463,14 @@ describe("ProjectRow (PR2, PR8)", () => {
       },
       "Check the groups",
     ],
-    [{ kind: "checklist", open: 1, next: "decide", round: null }, "1 step before Decide"],
-    [{ kind: "checklist", open: 3, next: "decide", round: null }, "3 steps before Decide"],
+    [
+      { kind: "checklist", open: 1, next: "decide", round: null, roundKind: "elements" },
+      "1 step before Decide",
+    ],
+    [
+      { kind: "checklist", open: 3, next: "decide", round: null, roundKind: "elements" },
+      "3 steps before Decide",
+    ],
     [{ kind: "ready", next: "handoff" }, "Ready to go on to Hand-off"],
     [{ kind: "nothing" }, null],
   ])("words %j as %j", (waiting, text) => {
@@ -463,9 +492,32 @@ describe("ProjectRow (PR2, PR8)", () => {
             completed: 3,
             raters: 8,
           },
+          roundKind: "elements",
         },
         "UTC",
       ),
     ).toBe("Round 2: 3 of 8 completed, closes Thu Nov 26");
+  });
+
+  it("names a value round of the detail phase as one (DT3)", () => {
+    expect(
+      waitingText(
+        {
+          kind: "checklist",
+          open: 2,
+          next: "handoff",
+          round: {
+            id: "round-3",
+            number: 3,
+            status: "open",
+            closesAt: CLOSES,
+            completed: 1,
+            raters: 4,
+          },
+          roundKind: "values",
+        },
+        "UTC",
+      ),
+    ).toBe("Value round 3: 1 of 4 completed, closes Thu Nov 26");
   });
 });

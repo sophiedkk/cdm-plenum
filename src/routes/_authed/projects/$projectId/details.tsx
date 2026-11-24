@@ -29,6 +29,8 @@ import {
 } from "@/server/details/query-options";
 import { elementKeys } from "@/server/elements/query-options";
 import { projectKeys } from "@/server/projects/query-options";
+import { addValueListFn } from "@/server/rounds/functions";
+import { roundKeys } from "@/server/rounds/query-options";
 
 /**
  * The details of the elements in the model (DT1 to DT6, ADR 0017, ADR 0021): the tree of the
@@ -63,6 +65,7 @@ function DetailsPage() {
   const proposeCodes = useServerFn(proposeCodesFn);
   const review = useServerFn(reviewCodesFn);
   const skipReview = useServerFn(skipReviewFn);
+  const addValueList = useServerFn(addValueListFn);
 
   if (!board.ok) {
     if (board.error === "not_found") throw notFound();
@@ -75,6 +78,7 @@ function DetailsPage() {
     answer: (proposalId, version, value, reason) =>
       answer({ data: { projectId, proposalId, version, answer: value, reason } }),
     address: (answerId, note) => address({ data: { projectId, answerId, note } }),
+    addValueList: (proposalId) => addValueList({ data: { projectId, proposalId } }),
     settle: (proposalId, version) => settle({ data: { projectId, proposalId, version } }),
     proposeCodes: (elementId, version, codes) =>
       proposeCodes({ data: { projectId, elementId, version, ...codes } }),
@@ -87,10 +91,12 @@ function DetailsPage() {
         queryClient.invalidateQueries({ queryKey: detailKeys.all(projectId) }),
         queryClient.invalidateQueries({ queryKey: elementKeys.board(projectId) }),
         queryClient.invalidateQueries({ queryKey: projectKeys.overview(projectId) }),
+        queryClient.invalidateQueries({ queryKey: roundKeys.project(projectId) }),
       ]);
     },
   };
-  const { elements, mayPropose, mayProposeCodes, mayReview, mayAnswer, open } = board.value;
+  const { elements, mayPropose, mayProposeCodes, mayReview, mayAnswer, open, valueRounds } =
+    board.value;
 
   return (
     <>
@@ -126,6 +132,8 @@ function DetailsPage() {
                 facilitator={facilitator}
                 open={open}
                 actions={actions}
+                projectId={projectId}
+                valueRounds={valueRounds}
               />
             ))}
           </ul>

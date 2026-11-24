@@ -12,6 +12,7 @@ import {
   VoteIcon,
 } from "lucide-react";
 import { StatusBadge, type StatusTone } from "@/components/status/status-badge";
+import { m } from "@/i18n/messages";
 import type { Outcome } from "@/lib/consensus";
 import { outcomeLabel, roundStatusLabel } from "@/lib/i18n/round-labels";
 import type { RoundStatus } from "@/server/rounds/round";
@@ -35,8 +36,20 @@ export function RoundStatusBadge({ status }: Readonly<{ status: RoundStatus }>) 
   return <StatusBadge tone={style.tone} icon={style.icon} label={roundStatusLabel(status)} />;
 }
 
-/** The outcome of an element under the round's rule, in words (Q-ACC-2). */
-export function OutcomeBadge({ outcome }: Readonly<{ outcome: Outcome }>) {
+/**
+ * The outcome of an element under the round's rule, in words (Q-ACC-2). A value of a value
+ * round is kept in its list or left out of it (DT3).
+ */
+export function OutcomeBadge({
+  outcome,
+  kind = "elements",
+}: Readonly<{ outcome: Outcome; kind?: "elements" | "values" }>) {
   const style = OUTCOME_STYLE[outcome];
-  return <StatusBadge tone={style.tone} icon={style.icon} label={outcomeLabel(outcome)} />;
+  const label =
+    kind === "values" && outcome !== "no_consensus"
+      ? outcome === "included"
+        ? m.rounds_value_outcome_included()
+        : m.rounds_value_outcome_excluded()
+      : outcomeLabel(outcome);
+  return <StatusBadge tone={style.tone} icon={style.icon} label={label} />;
 }

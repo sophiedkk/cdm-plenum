@@ -75,6 +75,7 @@ export const PROJECT_ACTION_ERRORS = [
   "detail_reference_structure",
   "detail_reference_codes",
   "model_type_after_discover",
+  "detail_in_value_round",
   "tree_group_not_found",
   "tree_group_name_required",
   "tree_cycle",

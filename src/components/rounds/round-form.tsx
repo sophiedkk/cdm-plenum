@@ -37,7 +37,8 @@ export interface ElementChoice {
 
 /** What the form sends: the server function's input without the project and round ids. */
 export interface RoundSetup {
-  elementIds: string[];
+  /** Left out for a value round, which takes its lists from the Details page (DT3). */
+  elementIds?: string[];
   rule: ConsensusRule;
   facilitatorSeesRaters: boolean;
   closesAt: string;
@@ -98,7 +99,7 @@ function ruleOfValues(values: RuleValues): ConsensusRule | null {
  * The checks of `createRoundInput` and `ruleError` with translated messages. Call it during
  * render, so the messages follow the active locale.
  */
-export function roundSetupSchema(now: () => Date = () => new Date()) {
+export function roundSetupSchema(now: () => Date = () => new Date(), withElements = true) {
   const score = z.string().refine(
     (text) => {
       const value = parseNumber(text);
@@ -117,7 +118,9 @@ export function roundSetupSchema(now: () => Date = () => new Date()) {
   );
   return z
     .object({
-      elementIds: z.array(z.string()).min(1, { error: () => m.rounds_elements_required() }),
+      elementIds: withElements
+        ? z.array(z.string()).min(1, { error: () => m.rounds_elements_required() })
+        : z.array(z.string()),
       scaleMin: score,
       scaleMax: score,
       bottomBandMax: score,
@@ -152,7 +155,10 @@ export function roundSetupSchema(now: () => Date = () => new Date()) {
 }
 
 /** The rule in plain words, as the round will apply it. */
-export function ruleSentences(rule: ConsensusRule): string[] {
+export function ruleSentences(
+  rule: ConsensusRule,
+  kind: "elements" | "values" = "elements",
+): string[] {
   const top = m.rounds_band_range({
     from: formatNumber(rule.topBandMin),
     to: formatNumber(rule.scaleMax),
@@ -163,11 +169,15 @@ export function ruleSentences(rule: ConsensusRule): string[] {
   });
   const agreement = formatNumber(rule.agreementPct);
   const opposition = formatNumber(rule.oppositionPct);
-  return [
-    m.rounds_rule_included({ agreement, top, opposition, bottom }),
-    m.rounds_rule_excluded({ agreement, top, opposition, bottom }),
-    m.rounds_rule_otherwise(),
-  ];
+  const words = { agreement, top, opposition, bottom };
+  if (kind === "values") {
+    return [
+      m.rounds_value_rule_included(words),
+      m.rounds_value_rule_excluded(words),
+      m.rounds_value_rule_otherwise(),
+    ];
+  }
+  return [m.rounds_rule_included(words), m.rounds_rule_excluded(words), m.rounds_rule_otherwise()];
 }
 
 function textOf(rule: ConsensusRule): RuleValues {
@@ -216,8 +226,11 @@ export function RoundForm({
   save,
   onSaved,
   actions,
+  kind = "elements",
 }: Readonly<{
-  elements: readonly ElementChoice[];
+  /** A value round (DT3) has no elements to choose: `elements` is then null. */
+  kind?: "elements" | "values";
+  elements: readonly ElementChoice[] | null;
   initial: {
     elementIds: string[];
     rule: ConsensusRule;
@@ -242,7 +255,7 @@ export function RoundForm({
       proposalRule: initial.proposalRule ?? "",
     },
     validationLogic: revalidateLogic(),
-    validators: { onDynamic: roundSetupSchema() },
+    validators: { onDynamic: roundSetupSchema(undefined, elements !== null) },
     onSubmit: async ({ value, formApi }) => {
       const rule = ruleOfValues(value);
       const closesAt = fromLocalInput(value.closesAt);
@@ -250,7 +263,7 @@ export function RoundForm({
       let outcome: RoundSetupOutcome;
       try {
         outcome = await save({
-          elementIds: value.elementIds,
+          ...(elements === null ? {} : { elementIds: value.elementIds }),
           rule,
           facilitatorSeesRaters: value.facilitatorSeesRaters,
           closesAt,
@@ -305,14 +318,22 @@ export function RoundForm({
         <form.FormErrors />
       </form.AppForm>
 
-      <form.Field name="elementIds">
-        {(field) => <ElementsField field={field} elements={elements} />}
-      </form.Field>
+      {elements !== null && (
+        <form.Field name="elementIds">
+          {(field) => <ElementsField field={field} elements={elements} />}
+        </form.Field>
+      )}
 
       <FieldSet>
         <FieldLegend>{m.rounds_rule_legend()}</FieldLegend>
-        <FieldDescription>{m.rounds_setup_question()}</FieldDescription>
-        <FieldDescription>{m.rounds_rule_default_explained()}</FieldDescription>
+        <FieldDescription>
+          {kind === "values" ? m.rounds_value_setup_question() : m.rounds_setup_question()}
+        </FieldDescription>
+        <FieldDescription>
+          {kind === "values"
+            ? m.rounds_value_rule_default_explained()
+            : m.rounds_rule_default_explained()}
+        </FieldDescription>
         <div className="grid gap-4 sm:grid-cols-2">
           <form.AppField name="scaleMin">
             {(field) => (
@@ -377,7 +398,7 @@ export function RoundForm({
           <p className="mb-2 font-medium">{m.rounds_rule_in_words()}</p>
           {shownRule ? (
             <ul className="flex list-disc flex-col gap-1 pl-5">
-              {ruleSentences(shownRule).map((line) => (
+              {ruleSentences(shownRule, kind).map((line) => (
                 <li key={line}>{line}</li>
               ))}
             </ul>

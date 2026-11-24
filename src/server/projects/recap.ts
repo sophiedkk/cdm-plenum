@@ -134,6 +134,7 @@ async function discoverRecap(
     .selectFrom("round")
     .select(["id", "closed_at"])
     .where("project_id", "=", projectId)
+    .where("kind", "=", "elements")
     .where("number", "=", 1)
     .where("opened_at", "is not", null)
     .executeTakeFirst();
@@ -227,6 +228,7 @@ async function decideRecap(db: Db, projectId: string): Promise<DecideRecap> {
     .selectFrom("round")
     .select(["id", "number", "closed_at"])
     .where("project_id", "=", projectId)
+    .where("kind", "=", "elements")
     .where("opened_at", "is not", null)
     .orderBy("number")
     .execute();

@@ -233,6 +233,36 @@ describe("the keys N and P (DE18)", () => {
   });
 });
 
+describe("the overview of a value round (DT3)", () => {
+  it("lists the values under their element and names the column and the link by value", () => {
+    const severity = { id: "e-9", name: "Severity", prompt: null };
+    const values = [
+      { ...element("v-1", "1: Mild", { rated: true, score: 7, reason: null }), group: severity },
+      {
+        ...element("v-2", "2: Severe", { rated: false, score: null, reason: null }),
+        group: severity,
+      },
+    ];
+    render(
+      <RatingCards
+        kind="values"
+        number={3}
+        elements={values}
+        shown="overview"
+        cardLink={(index, children) => <a href={`?card=${index}`}>{children}</a>}
+        go={vi.fn()}
+        renderCard={() => null}
+      />,
+    );
+    const table = screen.getByRole("table", { name: "Your ratings in round 3" });
+    expect(within(table).getByRole("columnheader", { name: "Value" })).toBeTruthy();
+    expect(within(table).getAllByRole("rowgroup")).toBeTruthy();
+    expect(within(table).getByRole("columnheader", { name: "Severity" })).toBeTruthy();
+    expect(within(table).getByRole("link", { name: "2: Severe" })).toBeTruthy();
+    expect(screen.getByText(/Select a value to go back/)).toBeTruthy();
+  });
+});
+
 describe("shownCard", () => {
   it("keeps the requested card within the round and falls back to the first", () => {
     expect(shownCard(undefined, 3)).toBe(1);

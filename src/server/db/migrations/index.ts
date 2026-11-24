@@ -24,6 +24,7 @@ import * as m0018 from "./0018_model_type.ts";
 import * as m0019 from "./0019_base_model.ts";
 import * as m0020 from "./0020_reference_element.ts";
 import * as m0021 from "./0021_model_tree.ts";
+import * as m0022 from "./0022_value_rounds.ts";
 
 export const migrations: Record<string, Migration> = {
   "0001_auth": m0001,
@@ -46,6 +47,7 @@ export const migrations: Record<string, Migration> = {
   "0019_base_model": m0019,
   "0020_reference_element": m0020,
   "0021_model_tree": m0021,
+  "0022_value_rounds": m0022,
 };
 
 export const migrationProvider: MigrationProvider = {

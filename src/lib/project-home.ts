@@ -95,6 +95,8 @@ export interface OverviewFacts {
   /** Elements on the list that came from existing models, merged ones left out (EL7). */
   listedFromModels: number;
   round: ChecklistRound | null;
+  /** The value round the facilitator follows in the detail phase (DT3). */
+  valueRound: ChecklistRound | null;
   /** Elements without a decision: no consensus in their newest closed round, or not rated. */
   undecided: number;
   lastClosedRound: ClosedRound | null;
@@ -138,6 +140,7 @@ export type ChecklistItem =
       duplicates: number;
     }
   | { key: "round"; done: false; round: ChecklistRound | null; closed: ClosedRound | null }
+  | { key: "value_round"; done: false; round: ChecklistRound }
   | { key: "undecided"; done: boolean; count: number }
   | { key: "detail_proposed"; done: boolean; proposed: number; inModel: number }
   | { key: "detail_objections"; done: boolean; count: number }
@@ -220,7 +223,13 @@ export function checklist(phase: ProjectPhase, facts: OverviewFacts): ChecklistI
     }
     case "detail": {
       const { inModel, proposed, settled, codable, codesSettled, openObjections } = facts.detail;
+      // NOTE: DT3. A value round shows while it is a draft or runs, as the decide round does.
+      const valueRound: ChecklistItem[] =
+        facts.valueRound === null
+          ? []
+          : [{ key: "value_round", done: false, round: facts.valueRound }];
       return [
+        ...valueRound,
         { key: "detail_proposed", done: inModel > 0 && proposed >= inModel, proposed, inModel },
         { key: "detail_objections", done: openObjections === 0, count: openObjections },
         { key: "detail_settled", done: inModel > 0 && settled >= inModel, settled, inModel },
@@ -241,7 +250,14 @@ export function openItems(items: readonly ChecklistItem[]): number {
 /** What waits for the person in a project, for its row in the projects list. */
 export type Waiting =
   | { kind: "task"; task: ParticipantTask }
-  | { kind: "checklist"; open: number; next: ProjectPhase; round: ChecklistRound | null }
+  | {
+      kind: "checklist";
+      open: number;
+      next: ProjectPhase;
+      round: ChecklistRound | null;
+      /** What the followed round rates: elements in decide, values in detail (DT3). */
+      roundKind: "elements" | "values";
+    }
   | { kind: "ready"; next: ProjectPhase }
   | { kind: "nothing" };
 
@@ -255,11 +271,13 @@ export function waitingFor(overview: ProjectOverview, facts: OverviewFacts | nul
     if (next === null) return { kind: "nothing" };
     const open = openItems(checklist(overview.phase, facts));
     if (open === 0) return { kind: "ready", next };
+    const round = overview.phase === "detail" ? facts.valueRound : facts.round;
     return {
       kind: "checklist",
       open,
       next,
-      round: facts.round?.status === "open" ? facts.round : null,
+      round: round?.status === "open" ? round : null,
+      roundKind: overview.phase === "detail" ? "values" : "elements",
     };
   }
   const task = participantTask(overview);

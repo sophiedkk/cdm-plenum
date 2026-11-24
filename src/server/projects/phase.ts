@@ -4,7 +4,7 @@
 // The phase of a project and its overview (PR4, PR8, ADR 0013): the facilitator moves the
 // project one phase on or back, and every member reads the counts the overview shows.
 import type { Kysely } from "kysely";
-import { ROUND_PHASE } from "@/lib/phase-access";
+import { ROUND_PHASE, VALUE_ROUND_PHASE } from "@/lib/phase-access";
 import { adjacentPhase, isProjectPhase, type ProjectPhase } from "@/lib/project-phases";
 import { mayRate, RATER_ROLES } from "@/lib/project-roles";
 import type { OverviewRound, ProjectOverview } from "@/lib/project-tasks";
@@ -13,17 +13,20 @@ import { ownDetailProgress } from "../details/queries.ts";
 import { lookElements } from "../elements/first-look.ts";
 import { checkProgress } from "../elements/groups.ts";
 import { ownRatingCode } from "../rounds/rater-link.ts";
-import { statusOf } from "../rounds/round.ts";
+import { kindOf, type RoundKind, statusOf } from "../rounds/round.ts";
 import { done, type ProjectResult, readProject, refused, withProject } from "./access.ts";
 import { log, ownGroupId } from "./queries.ts";
 import type { MovePhaseInput } from "./schemas.ts";
 
-/** Whether a round of the project is opened and not closed, its closing date passed or not. */
-async function hasOpenRound(db: Kysely<DB>, projectId: string): Promise<boolean> {
+/**
+ * Whether a round of the kind is opened and not closed, its closing date passed or not.
+ */
+async function hasOpenRound(db: Kysely<DB>, projectId: string, kind: RoundKind): Promise<boolean> {
   const row = await db
     .selectFrom("round")
     .select("id")
     .where("project_id", "=", projectId)
+    .where("kind", "=", kind)
     .where("opened_at", "is not", null)
     .where("closed_at", "is", null)
     .executeTakeFirst();
@@ -34,7 +37,8 @@ async function hasOpenRound(db: Kysely<DB>, projectId: string): Promise<boolean>
  * Moves the project to the next or the previous phase (PR4, facilitator only, `forbidden` for a
  * participant). Refused with `phase_changed` when the project is no longer in `from`, with
  * `no_next_phase` or `no_previous_phase` past either end, and with `round_still_open` when it
- * would leave the decide phase while a round is open (PR10). Returns the new phase.
+ * would leave the decide phase while a round is open (PR10), or the detail phase while a value
+ * round is open (DT3). Returns the new phase.
  */
 // NOTE: no requirement sets conditions on a move, our own design: the facilitator decides when
 // a phase is done, and a move back is allowed, for example to add elements a round showed missing.
@@ -56,7 +60,12 @@ export async function movePhase(
     }
     // NOTE: PR10, owner decision 2026-11-20. A round runs inside the decide phase only, so its
     // raters always find the rounds step open while they rate.
-    if (input.from === ROUND_PHASE && (await hasOpenRound(trx, project.id))) {
+    const runs: Partial<Record<ProjectPhase, RoundKind>> = {
+      [ROUND_PHASE]: "elements",
+      [VALUE_ROUND_PHASE]: "values",
+    };
+    const kind = runs[input.from];
+    if (kind !== undefined && (await hasOpenRound(trx, project.id, kind))) {
       return refused("round_still_open");
     }
     await trx.updateTable("project").set({ phase: to }).where("id", "=", project.id).execute();
@@ -109,6 +118,7 @@ export async function projectOverview(
       .selectFrom("round")
       .select("id")
       .where("project_id", "=", project.id)
+      .where("kind", "=", "elements")
       .where("closed_at", "is not", null)
       .orderBy("number", "desc")
       .executeTakeFirst();
@@ -175,9 +185,12 @@ async function runningRound(
   if (!round) return null;
   const status = statusOf(round, now);
   if (status !== "open" && status !== "awaiting_close") return null;
+  const kind = kindOf(round);
+  const items = kind === "values" ? "round_value" : "round_element";
+  const ratings = kind === "values" ? "value_rating" : "rating";
   const elements = await count(
     db
-      .selectFrom("round_element")
+      .selectFrom(items)
       .select((eb) => eb.fn.countAll<string>().as("count"))
       .where("round_id", "=", round.id)
       .executeTakeFirst(),
@@ -190,7 +203,7 @@ async function runningRound(
         ? 0
         : await count(
             db
-              .selectFrom("rating")
+              .selectFrom(ratings)
               .select((eb) => eb.fn.countAll<string>().as("count"))
               .where("round_id", "=", round.id)
               .where("rating_code_id", "=", code)
@@ -216,7 +229,7 @@ async function runningRound(
     );
     // One row per rater code that answered every element; the code never leaves this query.
     const finished = await db
-      .selectFrom("rating")
+      .selectFrom(ratings)
       .select("rating_code_id")
       .where("round_id", "=", round.id)
       .groupBy("rating_code_id")
@@ -226,6 +239,7 @@ async function runningRound(
   }
   return {
     id: round.id,
+    kind,
     number: round.number,
     status,
     closesAt: round.closes_at.toISOString(),

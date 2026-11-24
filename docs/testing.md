@@ -193,6 +193,12 @@ Then work through these steps:
    tree of the model as the architect under "Tree of the model": add a group,
    put it inside another with "Part of", mark a sub-block and a registration
    element, then answer it as a nurse and settle it as the facilitator.
+   To try a value round, give a structure proposal a coded list, then press
+   "Rate the values in a round" on its card. Add a second element's list,
+   open the round from the Rounds page (the round dates default to two
+   weeks), rate as a participant from "Your turn", and close the round once
+   its date has passed. "Apply to the proposal" makes the kept values a new
+   version that the group answers again.
 6. **Hand-off:** open "Respiratory rate (demo)". Two rounds are closed;
    round 2 settled one of the two elements without consensus. Export the
    elements as CSV and as a mind map from the Overview.

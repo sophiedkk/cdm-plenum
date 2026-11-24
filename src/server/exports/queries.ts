@@ -277,6 +277,7 @@ export async function exportElementsCsv(
       .selectFrom("round")
       .select(["id", "number"])
       .where("project_id", "=", project.id)
+      .where("kind", "=", "elements")
       .orderBy("number")
       .execute();
     const outcomeRows = await trx
@@ -387,6 +388,7 @@ export async function exportMindMap(
       .selectFrom("round")
       .select("id")
       .where("project_id", "=", project.id)
+      .where("kind", "=", "elements")
       .where("closed_at", "is not", null)
       .executeTakeFirst();
     // Ordered by round number, so the last outcome written per element is the latest one.

@@ -10,6 +10,8 @@ import type { ProjectRole } from "./project-roles.ts";
 /** The round that takes ratings or waits to be closed: opened and not yet closed. */
 export interface OverviewRound {
   id: string;
+  /** What the round rates: elements (decide), or values of structure proposals (detail, DT3). */
+  kind: "elements" | "values";
   number: number;
   /** `awaiting_close`: the closing date has passed and the facilitator has not closed it yet. */
   status: "open" | "awaiting_close";
@@ -54,6 +56,8 @@ export type ParticipantTask =
     }
   | {
       kind: "rate";
+      /** Whether the round rates elements or values (DT3). */
+      roundKind: "elements" | "values";
       roundId: string;
       number: number;
       rated: number;
@@ -80,7 +84,7 @@ export function participantTask(overview: ProjectOverview): ParticipantTask {
         groupCheck: overview.groupCheck,
       };
     case "decide": {
-      const round = overview.round;
+      const round = overview.round?.kind === "elements" ? overview.round : null;
       if (round === null || round.rated === null) return { kind: "wait" };
       if (round.status === "awaiting_close") return { kind: "round_closing", number: round.number };
       const common = {
@@ -91,9 +95,28 @@ export function participantTask(overview: ProjectOverview): ParticipantTask {
       };
       return round.rated >= round.elements
         ? { kind: "rated_all", ...common }
-        : { kind: "rate", ...common, rated: round.rated };
+        : { kind: "rate", roundKind: "elements", ...common, rated: round.rated };
     }
     case "detail": {
+      // NOTE: DT3, owner decision 2026-11-24. An open value round asks for ratings first; once
+      // the member rated every value, the answers to the proposals are the task.
+      const round = overview.round;
+      if (
+        round?.kind === "values" &&
+        round.status === "open" &&
+        round.rated !== null &&
+        round.rated < round.elements
+      ) {
+        return {
+          kind: "rate",
+          roundKind: "values",
+          roundId: round.id,
+          number: round.number,
+          total: round.elements,
+          closesAt: round.closesAt,
+          rated: round.rated,
+        };
+      }
       // NOTE: DT2. Only a participant answers; the facilitator settles.
       const { open, answered, toReview } = overview.detail;
       if (overview.role !== "participant" || (open === 0 && toReview === 0)) {

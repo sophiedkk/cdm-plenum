@@ -40,7 +40,10 @@ export function RatingCards({
   renderCard,
   afterOverview,
   flags = false,
+  kind = "elements",
 }: Readonly<{
+  /** What the round rates: elements, or the values of a value round (DT3). */
+  kind?: "elements" | "values";
   number: number;
   elements: readonly MyElement[];
   /** Whether the overview lists the flagged details (DE17), as the phase shows them (EL21). */
@@ -88,6 +91,7 @@ export function RatingCards({
           number={number}
           elements={elements}
           flags={flags}
+          kind={kind}
           headingRef={headingRef}
           cardLink={(index, name) => cardLink(index, name, "underline underline-offset-4")}
         />

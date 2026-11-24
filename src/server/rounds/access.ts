@@ -38,6 +38,17 @@ export const ROUND_ACTION_ERRORS = [
   "proposal_not_found",
   "proposal_already_on_board",
   "round_outside_decide",
+  "round_outside_detail",
+  "phase_closed",
+  "value_not_in_round",
+  "value_round_items",
+  "value_list_not_found",
+  "value_list_empty",
+  "value_list_settled",
+  "value_list_in_round",
+  "value_list_changed",
+  "value_list_applied",
+  "value_list_unchanged",
 ] as const;
 export type RoundActionError = (typeof ROUND_ACTION_ERRORS)[number];
 
@@ -108,11 +119,12 @@ export async function asMember<T>(
     trx: Transaction<DB>,
     role: ProjectRole,
     roundsVisible: boolean,
+    phase: ProjectPhase,
   ) => Promise<RoundResult<T>>,
 ): Promise<RoundResult<T>> {
   return db.transaction().execute(async (trx) => {
     const member = await projectRole(trx, projectId, userId);
     if (!member) return refused<T>("not_found");
-    return action(trx, member.role, stepVisible(member.role, member.phase, "rounds"));
+    return action(trx, member.role, stepVisible(member.role, member.phase, "rounds"), member.phase);
   });
 }

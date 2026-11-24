@@ -26,7 +26,14 @@ import {
   setPanelMinimums,
   updateRound,
 } from "./queries.ts";
-import { clearRating, myRatings, ratingsByParticipant, saveRating } from "./ratings.ts";
+import {
+  clearRating,
+  clearValueRating,
+  myRatings,
+  ratingsByParticipant,
+  saveRating,
+  saveValueRating,
+} from "./ratings.ts";
 import { responseRate, roundResults } from "./results.ts";
 import {
   addProposalInput,
@@ -38,10 +45,15 @@ import {
   proposalInput,
   ratingInput,
   roundInput,
+  roundValueListInput,
   saveDetailFlagInput,
   saveRatingInput,
+  saveValueRatingInput,
   updateRoundInput,
+  valueListInput,
+  valueRatingInput,
 } from "./schemas.ts";
+import { addValueList, applyValueList, removeValueList } from "./value-rounds.ts";
 
 const now = () => ({ now: new Date() });
 
@@ -99,6 +111,31 @@ export const clearRatingFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(ratingInput)
   .handler(({ data, context }) => clearRating(getDb(), context.userId, data));
+
+export const saveValueRatingFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(saveValueRatingInput)
+  .handler(({ data, context }) => saveValueRating(getDb(), context.userId, data));
+
+export const clearValueRatingFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(valueRatingInput)
+  .handler(({ data, context }) => clearValueRating(getDb(), context.userId, data));
+
+export const addValueListFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(valueListInput)
+  .handler(({ data, context }) => addValueList(getDb(), context.userId, data, now()));
+
+export const removeValueListFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(roundValueListInput)
+  .handler(({ data, context }) => removeValueList(getDb(), context.userId, data));
+
+export const applyValueListFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(roundValueListInput)
+  .handler(({ data, context }) => applyValueList(getDb(), context.userId, data));
 
 export const myRatingsFn = createServerFn({ method: "GET" })
   .middleware([requireSession])

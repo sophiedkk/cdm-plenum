@@ -11,6 +11,18 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Value rounds: in the Detail phase the facilitator can put the value list of
+  a structure proposal to a rating round. "Rate the values in a round" on an
+  element's card adds its values to a draft value round; the values of
+  several elements can go in one round, each under its element's name. It
+  runs on the Rounds page with the same rating card, scale, results and
+  adjustable consensus rule as an element round, and participants rate it
+  from "Your turn" during the Detail phase. When the round is closed, "Apply
+  to the proposal" turns the values it kept into a new version of the
+  proposal, which the group answers again. The round settles nothing itself.
+  While a value list is in a round, its proposal cannot be revised or
+  settled. The Overview checklist shows a running value round.
+
 - The tree of the model: in the structure step of the detail phase, an
   architect or the facilitator proposes the tree. Groups nest, each has a
   cardinality, a group can be a sub-block (reusable, optionally linked to an
