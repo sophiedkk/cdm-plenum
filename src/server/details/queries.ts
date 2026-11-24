@@ -30,6 +30,7 @@ import {
   type ReviewState,
   reviewDone,
 } from "@/lib/details";
+import { type ElementReference, toReference } from "@/lib/elements";
 import { DETAIL_PHASE, preparesAhead, stepVisible, writeOpen } from "@/lib/phase-access";
 import type { DB } from "../db/schema.gen.ts";
 import { valuesProblem, writeValues } from "../elements/queries.ts";
@@ -94,6 +95,9 @@ export async function modelElements(db: Db, projectId: string) {
       "code_display",
       "binding_strength",
       "value_set_url",
+      "kind",
+      "reference_title",
+      "reference_url",
     ])
     .where("project_id", "=", projectId)
     .where("merged_into", "is", null)
@@ -382,6 +386,7 @@ export async function detailBoard(
         id: element.id,
         name: element.name,
         description: element.description,
+        reference: toReference(element),
         current: {
           dataType: dataTypeOf(element.data_type),
           cardinality: cardinalityOf(element.min_occurs, element.max_occurs),
@@ -438,6 +443,7 @@ async function lockedProposal(trx: Transaction<DB>, projectId: string, proposalI
  * and only from an architecture group (`detail_not_architect`). A revision raises the version,
  * so every member answers again and the proposal is open until settled again (owner decision
  * 2026-11-23). Refused with `detail_version_changed` when someone else proposed in the meantime.
+ * A reference to another model gets a cardinality only (`detail_reference_structure`, EL26).
  */
 export async function proposeDetail(
   db: Db,
@@ -457,7 +463,7 @@ export async function proposeDetail(
     }
     const element = await trx
       .selectFrom("element")
-      .select("id")
+      .select(["id", "kind"])
       .where("id", "=", input.elementId)
       .where("project_id", "=", project.id)
       .where("merged_into", "is", null)
@@ -465,6 +471,9 @@ export async function proposeDetail(
     if (!element) return refused("element_not_found");
     const inModel = (await modelElements(trx, project.id)).some((row) => row.id === element.id);
     if (!inModel) return refused("detail_not_in_model");
+    if (element.kind === "reference" && (input.dataType !== null || input.values.length > 0)) {
+      return refused("detail_reference_structure");
+    }
     const problem = valuesProblem(input.dataType, input.values);
     if (problem !== null) return refused(problem);
 
@@ -745,6 +754,8 @@ export interface DetailProgress {
   proposed: number;
   /** Of them, with the current structure settled. */
   settled: number;
+  /** Of them, the ones that take codes: every element but a reference element (EL26). */
+  codable: number;
   /** Of them, with their codes settled (DT4); open codes do not hold up the hand-off. */
   codesSettled: number;
   /** Objections to current versions of either kind the facilitator has not addressed. */
@@ -753,9 +764,12 @@ export interface DetailProgress {
 
 /** The counts of the detail phase (DT1, DT2, DT4). */
 export async function detailProgress(db: Db, projectId: string): Promise<DetailProgress> {
-  const ids = (await modelElements(db, projectId)).map((element) => element.id);
+  const elements = await modelElements(db, projectId);
+  const ids = elements.map((element) => element.id);
+  // NOTE: EL26. A reference element gets no codes, so it does not count towards them.
+  const codable = elements.filter((element) => element.kind !== "reference").length;
   if (ids.length === 0) {
-    return { inModel: 0, proposed: 0, settled: 0, codesSettled: 0, openObjections: 0 };
+    return { inModel: 0, proposed: 0, settled: 0, codable: 0, codesSettled: 0, openObjections: 0 };
   }
   const proposals = await db
     .selectFrom("detail_proposal")
@@ -782,6 +796,7 @@ export async function detailProgress(db: Db, projectId: string): Promise<DetailP
           .executeTakeFirst();
   return {
     inModel: ids.length,
+    codable,
     proposed: structures.length,
     settled: structures.filter((proposal) => proposal.settled_at !== null).length,
     codesSettled: proposals.filter(
@@ -844,6 +859,8 @@ export async function ownDetailProgress(
 export interface ModelStructure {
   id: string;
   name: string;
+  /** The model a reference element refers to (EL26); null for a data element. */
+  reference: ElementReference | null;
   settled: boolean;
   structure: DetailStructure;
   /** Whether the codes are settled; open codes are marked open (DT4). */
@@ -872,6 +889,7 @@ export async function modelStructures(db: Db, projectId: string): Promise<ModelS
     return {
       id: element.id,
       name: element.name,
+      reference: toReference(element),
       settled: settled(element.id, "structure"),
       structure: {
         dataType: dataTypeOf(element.data_type),

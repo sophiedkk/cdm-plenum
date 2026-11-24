@@ -22,6 +22,7 @@ import * as m0016 from "./0016_detail_phase.ts";
 import * as m0017 from "./0017_detail_terminology.ts";
 import * as m0018 from "./0018_model_type.ts";
 import * as m0019 from "./0019_base_model.ts";
+import * as m0020 from "./0020_reference_element.ts";
 
 export const migrations: Record<string, Migration> = {
   "0001_auth": m0001,
@@ -42,6 +43,7 @@ export const migrations: Record<string, Migration> = {
   "0017_detail_terminology": m0017,
   "0018_model_type": m0018,
   "0019_base_model": m0019,
+  "0020_reference_element": m0020,
 };
 
 export const migrationProvider: MigrationProvider = {

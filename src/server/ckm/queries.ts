@@ -23,6 +23,7 @@ export const CKM_ACTION_ERRORS = [
   "ckm_unusable",
   "ckm_revision_changed",
   "ckm_element_not_found",
+  "ckm_reference",
 ] as const;
 export type CkmActionError = ProjectActionError | (typeof CKM_ACTION_ERRORS)[number];
 
@@ -196,13 +197,16 @@ export async function linkElement(
   return withProject(db, userId, input.projectId, permission, async (trx, project) => {
     const element = await trx
       .selectFrom("element")
-      .select("id")
+      .select(["id", "kind"])
       .where("id", "=", input.elementId)
       .where("project_id", "=", project.id)
       .where("merged_into", "is", null)
       .forUpdate()
       .executeTakeFirst();
     if (!element) return refused("element_not_found");
+    // NOTE: Architectuur zibs 2.0, P3.2. A reference names a whole model, never one of its
+    // elements, so it takes no link to an archetype element (EL26).
+    if (element.kind === "reference") return refused("ckm_reference");
     const link = linkRow(element.id, archetype, target);
     await trx
       .insertInto("element_ckm_link")

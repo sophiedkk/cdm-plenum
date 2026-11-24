@@ -11,6 +11,7 @@ import { type ExpressionBuilder, type Kysely, sql, type Transaction } from "kyse
 import { type ElementPrompt, isElementPrompt } from "@/lib/brainstorm";
 import type { Cardinality } from "@/lib/cardinality";
 import { CODED_DATA_TYPE_KEYS, type DataTypeKey, isDataTypeKey } from "@/lib/data-types";
+import { type ElementReference, toReference } from "@/lib/elements";
 import { stepVisible } from "@/lib/phase-access";
 import type { DB } from "../db/schema.gen.ts";
 import {
@@ -81,6 +82,8 @@ export interface BoardElement {
   mergedCkmLinks: ElementCkmLink[];
   /** The brainstorm question the element answers (EL14), null for an import or the board form. */
   prompt: ElementPrompt | null;
+  /** The model a reference element refers to (EL26); null for a data element. */
+  reference: ElementReference | null;
   commentCount: number;
   createdAt: string;
 }
@@ -113,8 +116,20 @@ const PUBLIC_COLUMNS = [
   "element.min_occurs",
   "element.max_occurs",
   "element.prompt",
+  "element.kind",
+  "element.reference_title",
+  "element.reference_url",
   "element.created_at",
 ] as const;
+
+/** The element columns of a reference, or of a data element when `reference` is null (EL26). */
+function referenceColumns(reference: ElementReference | null) {
+  return {
+    kind: reference === null ? "data" : "reference",
+    reference_title: reference?.title ?? null,
+    reference_url: reference?.url ?? null,
+  };
+}
 
 function toCardinality(min: number | null, max: number | null): Cardinality | null {
   if (min !== 0 && min !== 1) return null;
@@ -338,6 +353,7 @@ async function boardElements(
     ckmLink: linkOf.get(row.id) ?? null,
     mergedCkmLinks: mergedLinks.get(row.id) ?? [],
     prompt: isElementPrompt(row.prompt) ? row.prompt : null,
+    reference: toReference(row),
     commentCount: countOf.get(row.id) ?? 0,
     createdAt: row.created_at.toISOString(),
   }));
@@ -426,7 +442,7 @@ async function activeElement(
 ) {
   let query = trx
     .selectFrom("element")
-    .select(["id", "data_type", "description"])
+    .select(["id", "data_type", "description", "kind"])
     .where("id", "=", elementId)
     .where("project_id", "=", projectId)
     .where("merged_into", "is", null);
@@ -441,7 +457,8 @@ async function activeElement(
 
 /**
  * Adds an element with a `brainstorm` source (any member, EL1). A participant adds in the
- * discover phase only (`phase_closed`, PR9); the facilitator in any phase (PR10).
+ * discover phase only (`phase_closed`, PR9); the facilitator in any phase (PR10). A reference to
+ * another model takes no data type (`reference_data_type`, EL26).
  */
 export async function addElement(
   db: Kysely<DB>,
@@ -451,6 +468,9 @@ export async function addElement(
   return db.transaction().execute((trx) =>
     readProject(trx, userId, input.projectId, null, async (trx, project) => {
       if (!(await phaseOpenFor(trx, project, "element_add"))) return refused("phase_closed");
+      if (input.reference !== null && input.dataType !== null) {
+        return refused("reference_data_type");
+      }
       const authorMemberId = await actorMemberId(trx, project.id, userId);
       const row = await trx
         .insertInto("element")
@@ -462,6 +482,7 @@ export async function addElement(
           min_occurs: input.cardinality?.min ?? null,
           max_occurs: input.cardinality?.max ?? null,
           prompt: input.prompt,
+          ...referenceColumns(input.reference),
           author_member_id: authorMemberId,
         })
         .returning("id")
@@ -512,8 +533,10 @@ export async function valuesOf(trx: Db, elementId: string): Promise<ElementValue
 }
 
 /**
- * Edits an element's wording, data type and cardinality (facilitator only, EL5). A data type
- * that no longer fits the element's proposed values is refused (`element_has_values`).
+ * Edits an element's wording, data type, cardinality and the model it refers to (facilitator
+ * only, EL5, EL26). A data type that no longer fits the element's proposed values is refused
+ * (`element_has_values`), as is a reference with a data type (`reference_data_type`). An element
+ * with a detail proposal keeps its kind (`element_kind_locked`), so no proposal loses its fit.
  */
 export async function updateElement(
   db: Kysely<DB>,
@@ -523,6 +546,16 @@ export async function updateElement(
   return withProject(db, userId, input.projectId, { element: ["update"] }, async (trx, project) => {
     const element = await activeElement(trx, project.id, input.elementId, { lock: true });
     if (!element) return refused("element_not_found");
+    if (input.reference !== null && input.dataType !== null) return refused("reference_data_type");
+    const kind = referenceColumns(input.reference).kind;
+    if (kind !== element.kind) {
+      const proposal = await trx
+        .selectFrom("detail_proposal")
+        .select("id")
+        .where("element_id", "=", element.id)
+        .executeTakeFirst();
+      if (proposal) return refused("element_kind_locked");
+    }
     if (valuesProblem(input.dataType, await valuesOf(trx, element.id)) !== null) {
       return refused("element_has_values");
     }
@@ -534,6 +567,7 @@ export async function updateElement(
         data_type: input.dataType,
         min_occurs: input.cardinality?.min ?? null,
         max_occurs: input.cardinality?.max ?? null,
+        ...referenceColumns(input.reference),
         updated_at: new Date(),
       })
       .where("id", "=", element.id)
@@ -607,7 +641,8 @@ function mergedDescription(descriptions: string[]): string {
  * gets `merged_into` and leaves the board. Refused when an element was put in a round
  * (`element_in_round`), so a rating history never moves, or when the moved values do not fit the
  * result's data type (`merge_values_conflict`). In the private step a merge of elements by
- * different authors is refused (`merge_before_reveal`, EL13).
+ * different authors is refused (`merge_before_reveal`, EL13). A data element and a reference to
+ * another model do not merge (`merge_kind_conflict`, EL26).
  */
 export async function mergeElements(
   db: Kysely<DB>,
@@ -618,7 +653,7 @@ export async function mergeElements(
     const ids = [input.intoId, ...input.fromIds];
     const rows = await trx
       .selectFrom("element")
-      .select(["id", "data_type", "description", "author_member_id"])
+      .select(["id", "data_type", "description", "author_member_id", "kind"])
       .where("project_id", "=", project.id)
       .where("merged_into", "is", null)
       .where("id", "in", ids)
@@ -632,6 +667,7 @@ export async function mergeElements(
     if (authors.size > 1 && (await inPrivateStep(trx, project.id))) {
       return refused("merge_before_reveal");
     }
+    if (new Set(rows.map((row) => row.kind)).size > 1) return refused("merge_kind_conflict");
     const byId = new Map(rows.map((row) => [row.id, row]));
     const inRound = await trx
       .selectFrom("round_element")

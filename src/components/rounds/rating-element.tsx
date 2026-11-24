@@ -13,6 +13,7 @@
 import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
 import { type ReactNode, type Ref, useId, useRef, useState } from "react";
+import { ReferenceText } from "@/components/board/reference-text";
 import { Button } from "@/components/ui/button";
 import { FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
@@ -468,6 +469,7 @@ export function RatingElement({
             {m.rounds_card_position({ index: position.index, total: position.total })}
           </p>
         </div>
+        {element.reference && <ReferenceText reference={element.reference} />}
         {element.description && (
           <p className="break-words text-muted-foreground">{element.description}</p>
         )}

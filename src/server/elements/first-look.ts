@@ -5,6 +5,7 @@
 // them one at a time and answers whether the element belongs to the concept. A member reads and
 // writes only their own answers; the facilitator reads counts, never who answered what (EL2).
 import type { Kysely } from "kysely";
+import { type ElementReference, toReference } from "@/lib/elements";
 import { type FirstLookAnswer, type FirstLookCounts, isFirstLookAnswer } from "@/lib/first-look";
 import { SOURCE_PHASE, stepVisible } from "@/lib/phase-access";
 import type { DB } from "../db/schema.gen.ts";
@@ -33,6 +34,8 @@ export interface FirstLookElement {
   id: string;
   name: string;
   description: string;
+  /** The model a reference element refers to (EL26); null for a data element. */
+  reference: ElementReference | null;
   foundIn: FoundIn[];
   /** The reader's answer; null before they answer. */
   answer: FirstLookAnswer | null;
@@ -51,7 +54,7 @@ export interface FirstLook {
 export async function lookElements(
   db: Db,
   projectId: string,
-): Promise<{ id: string; name: string; description: string; foundIn: FoundIn[] }[]> {
+): Promise<Omit<FirstLookElement, "answer">[]> {
   const rows = await db
     .selectFrom("element")
     .innerJoin("element_source_link as link", "link.element_id", "element.id")
@@ -61,6 +64,9 @@ export async function lookElements(
       "element.id",
       "element.name",
       "element.description",
+      "element.kind",
+      "element.reference_title",
+      "element.reference_url",
       "element.created_at",
       "source_model.id as model_id",
       "source_model.kind",
@@ -74,10 +80,7 @@ export async function lookElements(
     .orderBy("source_model.created_at")
     .orderBy("source_model.id")
     .execute();
-  const byId = new Map<
-    string,
-    { id: string; name: string; description: string; foundIn: FoundIn[]; models: Set<string> }
-  >();
+  const byId = new Map<string, Omit<FirstLookElement, "answer"> & { models: Set<string> }>();
   for (const row of rows) {
     let entry = byId.get(row.id);
     if (!entry) {
@@ -85,6 +88,7 @@ export async function lookElements(
         id: row.id,
         name: row.name,
         description: row.description,
+        reference: toReference(row),
         foundIn: [],
         models: new Set(),
       };

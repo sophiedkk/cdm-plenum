@@ -11,6 +11,7 @@ import {
   groupResults,
   type Outcome,
 } from "@/lib/consensus";
+import { type ElementReference, toReference } from "@/lib/elements";
 import { EXPERT_TYPES, type PanelCounts } from "@/lib/panel";
 import type { DB, Round } from "../db/schema.gen.ts";
 
@@ -111,6 +112,8 @@ export interface RoundElementRow {
   id: string;
   name: string;
   description: string;
+  /** The model a reference element refers to (EL26); null for a data element. */
+  reference: ElementReference | null;
   outcome: Outcome | null;
 }
 
@@ -119,12 +122,26 @@ export async function roundElements(db: Kysely<DB>, roundId: string): Promise<Ro
   const rows = await db
     .selectFrom("round_element")
     .innerJoin("element", "element.id", "round_element.element_id")
-    .select(["element.id", "element.name", "element.description", "round_element.outcome"])
+    .select([
+      "element.id",
+      "element.name",
+      "element.description",
+      "element.kind",
+      "element.reference_title",
+      "element.reference_url",
+      "round_element.outcome",
+    ])
     .where("round_element.round_id", "=", roundId)
     .orderBy("element.created_at")
     .orderBy("element.id")
     .execute();
-  return rows.map((row) => ({ ...row, outcome: row.outcome as Outcome | null }));
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    reference: toReference(row),
+    outcome: row.outcome as Outcome | null,
+  }));
 }
 
 interface ElementScores {

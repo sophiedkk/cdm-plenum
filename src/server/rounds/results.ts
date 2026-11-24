@@ -6,6 +6,7 @@
 // never by rater (ADR 0005).
 import type { Kysely } from "kysely";
 import type { Outcome } from "@/lib/consensus";
+import type { ElementReference } from "@/lib/elements";
 import type { ExpertType } from "@/lib/panel";
 import { RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
@@ -25,6 +26,8 @@ import type { RoundInput } from "./schemas.ts";
 export interface ElementRoundResult extends ElementOutcome {
   id: string;
   name: string;
+  /** The model a reference element refers to (EL26); null for a data element. */
+  reference: ElementReference | null;
   /** The outcome written when the round closed. */
   outcome: Outcome;
   /** The element's group (EL18); null for one without, listed after the groups (DE19). */
@@ -64,6 +67,7 @@ export async function roundResults(
       return {
         id: element.id,
         name: element.name,
+        reference: element.reference,
         outcome: element.outcome ?? outcome.result.outcome,
         ...outcome,
         group: groupOf.get(element.id) ?? null,

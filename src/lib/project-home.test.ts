@@ -35,7 +35,7 @@ function facts(changes: Partial<OverviewFacts> = {}): OverviewFacts {
     round: null,
     undecided: 0,
     lastClosedRound: { id: "round-1", number: 1 },
-    detail: { inModel: 0, proposed: 0, settled: 0, codesSettled: 0, openObjections: 0 },
+    detail: { inModel: 0, proposed: 0, settled: 0, codable: 0, codesSettled: 0, openObjections: 0 },
     mailConfigured: true,
     ...changes,
   };
@@ -70,13 +70,22 @@ describe("checklist (PR4)", () => {
     const detail = (inModel: number, proposed: number, settled: number, openObjections: number) =>
       checklist(
         "detail",
-        facts({ detail: { inModel, proposed, settled, codesSettled: 1, openObjections } }),
+        facts({
+          detail: {
+            inModel,
+            proposed,
+            settled,
+            codable: inModel - 1,
+            codesSettled: 1,
+            openObjections,
+          },
+        }),
       );
     expect(detail(4, 3, 1, 2)).toEqual([
       { key: "detail_proposed", done: false, proposed: 3, inModel: 4 },
       { key: "detail_objections", done: false, count: 2 },
       { key: "detail_settled", done: false, settled: 1, inModel: 4 },
-      { key: "detail_codes", done: null, settled: 1, inModel: 4 },
+      { key: "detail_codes", done: null, settled: 1, inModel: 3 },
     ]);
     expect(openItems(detail(4, 4, 4, 0))).toBe(0);
     // Nothing in the model is nothing done: the round must include elements first.

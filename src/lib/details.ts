@@ -5,6 +5,7 @@
 // model and the members' consent answers. The server and the screens share these types.
 import type { Cardinality } from "./cardinality.ts";
 import type { DataTypeKey } from "./data-types.ts";
+import type { ElementReference } from "./elements.ts";
 
 /** The consent answers (DT2), in the order of the buttons. */
 export const DETAIL_ANSWERS = ["agree", "objection"] as const;
@@ -159,6 +160,8 @@ export interface DetailElement {
   id: string;
   name: string;
   description: string;
+  /** The model a reference element refers to (EL26); null for a data element. */
+  reference: ElementReference | null;
   /** What the element carries now: the last settled structure, or what the board set. */
   current: DetailStructure;
   proposal: DetailProposal | null;

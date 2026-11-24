@@ -12,12 +12,25 @@ import { baseLocale, overwriteGetLocale } from "@/i18n/runtime";
 import { DATA_TYPES } from "@/lib/data-types";
 import { type ElementFields, ElementForm, type ElementOutcome } from "./element-form";
 
+// The Radix checkbox of "refers to another model" measures itself; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 afterEach(() => {
   cleanup();
   overwriteGetLocale(() => baseLocale);
 });
 
-const EMPTY: ElementFields = { name: "", description: "", dataType: null, cardinality: null };
+const EMPTY: ElementFields = {
+  name: "",
+  description: "",
+  dataType: null,
+  cardinality: null,
+  reference: null,
+};
 
 /** The facilitator's edit form, which holds every field (EL5). */
 function renderForm(
@@ -52,7 +65,13 @@ describe("ElementForm", () => {
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: " Systolic " } });
     fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Peak" } });
     fireEvent.click(button);
-    const sent = { name: "Systolic", description: "Peak", dataType: null, cardinality: null };
+    const sent = {
+      name: "Systolic",
+      description: "Peak",
+      dataType: null,
+      cardinality: null,
+      reference: null,
+    };
     await waitFor(() => expect(onDone).toHaveBeenCalledWith(sent));
     expect(submit).toHaveBeenCalledWith(sent);
   });
@@ -111,6 +130,7 @@ describe("ElementForm", () => {
       description: "Peak",
       dataType: "quantity",
       cardinality: { min: 1, max: null },
+      reference: null,
     };
     await waitFor(() => expect(onDone).toHaveBeenCalledWith(sent));
     expect(submit).toHaveBeenCalledWith(sent);
@@ -123,6 +143,7 @@ describe("ElementForm", () => {
       description: "",
       dataType: "count",
       cardinality: { min: 0, max: 3 },
+      reference: null,
     });
     expect(screen.getByRole("radio", { name: /^Count/ })).toHaveProperty("checked", true);
     expect(screen.getByLabelText("Maximum number")).toHaveProperty("value", "3");
@@ -133,6 +154,7 @@ describe("ElementForm", () => {
         description: "",
         dataType: "count",
         cardinality: { min: 0, max: 3 },
+        reference: null,
       }),
     );
   });
@@ -144,6 +166,7 @@ describe("ElementForm", () => {
       description: "",
       dataType: "count",
       cardinality: { min: 0, max: 3 },
+      reference: null,
     };
     renderForm(submit, initial, "edit", false);
     expect(screen.getAllByRole("textbox")).toHaveLength(2);
@@ -155,11 +178,91 @@ describe("ElementForm", () => {
 
   it("shows a server refusal at the top of the form, translated", async () => {
     const submit = vi.fn(async () => ({ ok: false, error: "element_has_values" }) as const);
-    renderForm(submit, { name: "Pain", description: "", dataType: "ordinal", cardinality: null });
+    renderForm(submit, {
+      name: "Pain",
+      description: "",
+      dataType: "ordinal",
+      cardinality: null,
+      reference: null,
+    });
     fireEvent.click(screen.getByRole("button", { name: "Add element" }));
     expect((await screen.findByRole("alert")).textContent).toContain(
       "proposed values that do not fit the new data type",
     );
+  });
+
+  it("opens the model's title and link below the choice and sends a reference without a data type (EL26)", async () => {
+    const { submit, onDone, button } = renderForm(undefined, EMPTY, "add");
+    expect(screen.queryByLabelText("Title of the model")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Blood pressure" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Refers to another model" }));
+    fireEvent.change(await screen.findByLabelText("Title of the model"), {
+      target: { value: " Zib Bloeddruk " },
+    });
+    fireEvent.change(screen.getByLabelText("Link to the model (optional)"), {
+      target: { value: "https://models.example.test/bloeddruk" },
+    });
+    fireEvent.click(button);
+    const sent = {
+      name: "Blood pressure",
+      description: "",
+      dataType: null,
+      cardinality: null,
+      reference: { title: "Zib Bloeddruk", url: "https://models.example.test/bloeddruk" },
+    };
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith(sent));
+    expect(submit).toHaveBeenCalledWith(sent);
+  });
+
+  it("hides the data type of a reference and keeps its cardinality (EL26)", async () => {
+    const submit = vi.fn(async () => ({ ok: true }) as const);
+    renderForm(submit, {
+      ...EMPTY,
+      name: "Blood pressure",
+      cardinality: { min: 0, max: 1 },
+      reference: { title: "Zib Bloeddruk", url: null },
+    });
+    const choice = screen.getByRole("checkbox", { name: "Refers to another model" });
+    expect(choice.getAttribute("aria-checked")).toBe("true");
+    expect((screen.getByLabelText("Title of the model") as HTMLInputElement).value).toBe(
+      "Zib Bloeddruk",
+    );
+    expect(screen.queryByRole("group", { name: "Data type" })).toBeNull();
+    expect(screen.getByLabelText("Minimum")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Add element" }));
+    await waitFor(() =>
+      expect(submit).toHaveBeenCalledWith({
+        name: "Blood pressure",
+        description: "",
+        dataType: null,
+        cardinality: { min: 0, max: 1 },
+        reference: { title: "Zib Bloeddruk", url: null },
+      }),
+    );
+  });
+
+  it("needs the model's title and an http or https link (EL26)", async () => {
+    const { submit, button } = renderForm(vi.fn(), EMPTY, "add");
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Blood pressure" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Refers to another model" }));
+    fireEvent.change(await screen.findByLabelText("Link to the model (optional)"), {
+      target: { value: "javascript:alert(1)" },
+    });
+    fireEvent.click(button);
+    expect(await screen.findByText("Give the title of the model.")).toBeTruthy();
+    expect(screen.getByText(/starts with http:\/\/ or https:\/\//)).toBeTruthy();
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it("shows the refusal of a reference with a data type, translated (EL26)", async () => {
+    const submit = vi.fn(async () => ({ ok: false, error: "reference_data_type" }) as const);
+    renderForm(submit, {
+      ...EMPTY,
+      name: "Blood pressure",
+      reference: { title: "Zib", url: null },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add element" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("has no data type of its own");
   });
 
   it("speaks Dutch when the locale is Dutch", () => {

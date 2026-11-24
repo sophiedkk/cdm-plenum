@@ -27,6 +27,7 @@ type Db = Kysely<DB>;
  * Proposes or revises the codes of an element in the model (DT4, DT5). The facilitator proposes
  * up to and in the detail phase (PR10); a participant only in the detail phase (`phase_closed`)
  * and only from a terminology group (`detail_not_terminologist`). Refused with
+ * `detail_reference_codes` for a reference to another model (EL26), with
  * `detail_structure_open` until the element's structure is settled, and with
  * `detail_value_codes_mismatch` unless there is one entry per value of its list. Every version
  * waits for a review again, and every member answers it again.
@@ -60,6 +61,9 @@ export async function proposeCodes(
         .executeTakeFirst();
       return refused(exists ? "detail_not_in_model" : "element_not_found");
     }
+    // NOTE: EL26, Architectuur zibs 2.0, P3.2. A reference takes its codes from the model it
+    // names, so it gets no code proposal of its own.
+    if (element.kind === "reference") return refused("detail_reference_codes");
     const structure = await trx
       .selectFrom("detail_proposal")
       .select("settled_at")

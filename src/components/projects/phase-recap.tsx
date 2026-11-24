@@ -4,6 +4,7 @@
 // The recap of a done phase (PR13, ADR 0020): read only, one view per phase, each fact once.
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { ReferenceText } from "@/components/board/reference-text";
 import { CodeFacts } from "@/components/details/code-facts";
 import { StructureFacts } from "@/components/details/structure-facts";
 import { DateTime } from "@/components/status/date-time";
@@ -244,11 +245,15 @@ function DetailView({ recap }: Readonly<{ recap: DetailRecap }>) {
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-semibold">{element.name}</h3>
                 {!element.settled && <StatusBadge label={m.projects_recap_detail_not_settled()} />}
-                {!element.codesSettled && (
+                {!element.codesSettled && element.reference === null && (
                   <StatusBadge label={m.projects_recap_detail_codes_open()} />
                 )}
               </div>
-              <StructureFacts structure={element.structure} />
+              {element.reference && <ReferenceText reference={element.reference} />}
+              <StructureFacts
+                structure={element.structure}
+                reference={element.reference !== null}
+              />
               {element.codesSettled && (
                 <CodeFacts codes={element.codes} values={element.structure.values} />
               )}

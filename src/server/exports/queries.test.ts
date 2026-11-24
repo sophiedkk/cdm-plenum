@@ -329,6 +329,8 @@ describe("exportElementsCsv (EX1)", () => {
       "value_set_url",
       "value_codes",
       "codes_status",
+      "refers_to",
+      "refers_to_url",
       "round_1_outcome",
       "round_2_outcome",
       "round_3_outcome",
@@ -353,6 +355,8 @@ describe("exportElementsCsv (EX1)", () => {
         value_set_url: "",
         value_codes: "",
         codes_status: "",
+        refers_to: "",
+        refers_to_url: "",
         round_1_outcome: "excluded",
         round_2_outcome: "",
         round_3_outcome: "",
@@ -374,6 +378,8 @@ describe("exportElementsCsv (EX1)", () => {
         value_set_url: "",
         value_codes: "",
         codes_status: "",
+        refers_to: "",
+        refers_to_url: "",
         round_1_outcome: "no_consensus",
         round_2_outcome: "included",
         round_3_outcome: "",
@@ -396,6 +402,8 @@ describe("exportElementsCsv (EX1)", () => {
         value_set_url: "",
         value_codes: "",
         codes_status: "",
+        refers_to: "",
+        refers_to_url: "",
         round_1_outcome: "included",
         round_2_outcome: "",
         round_3_outcome: "",
@@ -430,6 +438,44 @@ describe("exportElementsCsv (EX1)", () => {
     });
   });
 
+  it("names the model a reference element refers to, with its link (EL26)", async () => {
+    const { userId, projectId } = await facilitatorWithProject(db);
+    await db
+      .insertInto("element")
+      .values([
+        {
+          project_id: projectId,
+          name: "Blood pressure",
+          kind: "reference",
+          reference_title: "Zib Bloeddruk",
+          reference_url: "https://models.example.test/zib/bloeddruk",
+          min_occurs: 0,
+          max_occurs: 1,
+        },
+        {
+          project_id: projectId,
+          name: "Body weight",
+          kind: "reference",
+          reference_title: "Weight",
+        },
+      ])
+      .execute();
+    const rows = records(value(await exportElementsCsv(db, userId, projectId)));
+    expect(rows).toEqual([
+      expect.objectContaining({
+        name: "Blood pressure",
+        openehr_type: "",
+        fhir_type: "",
+        cardinality: "0..1",
+        proposed_values: "",
+        element_code: "",
+        refers_to: "Zib Bloeddruk",
+        refers_to_url: "https://models.example.test/zib/bloeddruk",
+      }),
+      expect.objectContaining({ name: "Body weight", refers_to: "Weight", refers_to_url: "" }),
+    ]);
+  });
+
   it("marks an element in a round without an outcome as pending", async () => {
     const { facilitator, projectId, elements } = await setup();
     const round3 = await db
@@ -450,7 +496,7 @@ describe("exportElementsCsv (EX1)", () => {
     const { userId, projectId } = await facilitatorWithProject(db);
     const file = value(await exportElementsCsv(db, userId, projectId));
     expect(parseCsv(file.content)).toHaveLength(1);
-    expect(parseCsv(file.content)[0]).toHaveLength(16);
+    expect(parseCsv(file.content)[0]).toHaveLength(18);
   });
 
   describe("merged_ckm_links (EL5, O-5)", () => {
@@ -569,6 +615,26 @@ describe("exportMindMap (EX2)", () => {
     const file = value(await exportMindMap(db, userId, projectId));
     const names = [...file.content.matchAll(/POSITION="right" TEXT="([^"]*)"/g)].map((m) => m[1]);
     expect(names).toEqual(["Diastolic", "Mean arterial pressure"]);
+  });
+
+  it("links a reference element to its model and names the model first in its note (EL26)", async () => {
+    const { userId, projectId } = await facilitatorWithProject(db);
+    await db
+      .insertInto("element")
+      .values({
+        project_id: projectId,
+        name: "Blood pressure",
+        description: "Measured at rest.",
+        kind: "reference",
+        reference_title: "Zib Bloeddruk",
+        reference_url: "https://models.example.test/zib?id=1&lang=nl",
+      })
+      .execute();
+    const file = value(await exportMindMap(db, userId, projectId));
+    expect(file.content).toContain(
+      'TEXT="Blood pressure" LINK="https://models.example.test/zib?id=1&amp;lang=nl">',
+    );
+    expect(file.content).toContain("<p>Refers to: Zib Bloeddruk</p><p>Measured at rest.</p>");
   });
 
   it("uses the project name as the root while the scope has no concept", async () => {

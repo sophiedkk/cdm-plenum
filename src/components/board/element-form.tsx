@@ -8,10 +8,23 @@ import { useAppForm } from "@/components/form/app-form";
 import { m } from "@/i18n/messages";
 import type { Cardinality } from "@/lib/cardinality";
 import { type DataTypeKey, isDataTypeKey } from "@/lib/data-types";
-import { ELEMENT_DESCRIPTION_MAX, ELEMENT_NAME_MAX } from "@/lib/elements";
+import {
+  ELEMENT_DESCRIPTION_MAX,
+  ELEMENT_NAME_MAX,
+  type ElementReference,
+  REFERENCE_TITLE_MAX,
+} from "@/lib/elements";
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
 import { type RefusalCode, refusalMessage } from "@/lib/i18n/refusals";
 import { DataTypeField, maxKindOptions, minOccursOptions, SelectField } from "./element-fields";
+import {
+  checkReference,
+  fromReference,
+  ReferenceChoice,
+  type ReferenceValues,
+  referenceShape,
+  toReference,
+} from "./reference-fields";
 
 /** What the form sends: the fields of `addElementInput` and `updateElementInput`. */
 export interface ElementFields {
@@ -19,6 +32,8 @@ export interface ElementFields {
   description: string;
   dataType: DataTypeKey | null;
   cardinality: Cardinality | null;
+  /** The model the element refers to (EL26); null for a data element. */
+  reference: ElementReference | null;
 }
 
 export type ElementOutcome = { ok: true } | { ok: false; error: RefusalCode };
@@ -30,7 +45,7 @@ export interface CardinalityValues {
   maxNumber: string;
 }
 
-interface FormValues extends CardinalityValues {
+interface FormValues extends CardinalityValues, ReferenceValues {
   name: string;
   description: string;
   dataType: string;
@@ -57,8 +72,12 @@ export function elementFormSchema() {
       minOccurs: z.string(),
       maxKind: z.string(),
       maxNumber: z.string(),
+      ...referenceShape,
     })
-    .superRefine(checkCardinality);
+    .superRefine((value, ctx) => {
+      checkCardinality(value, ctx);
+      checkReference(value, ctx);
+    });
 }
 
 /** The cardinality of EL1 with translated messages: both parts or neither, and a valid maximum. */
@@ -96,8 +115,9 @@ export function fromCardinality(cardinality: Cardinality | null): CardinalityVal
 /**
  * The element form. Adding asks for a name and a description only (EL1, EL21); editing (EL5, the
  * facilitator's) also sets the data type and the cardinality while `detailFields` shows them.
- * Without them the form keeps their saved values. A refusal from the server shows at the top of
- * the form; a failed call shows the general error there.
+ * Without them the form keeps their saved values. Both can mark the element as a reference to
+ * another model (EL26), which opens its title and link below and takes away the data type. A
+ * refusal from the server shows at the top of the form; a failed call shows the general error.
  */
 export function ElementForm({
   initial,
@@ -123,15 +143,18 @@ export function ElementForm({
       description: initial?.description ?? "",
       dataType: initial?.dataType ?? "",
       ...fromCardinality(initial?.cardinality ?? null),
+      ...fromReference(initial?.reference ?? null),
     } satisfies FormValues as FormValues,
     validationLogic: revalidateLogic(),
     validators: { onDynamic: elementFormSchema() },
     onSubmit: async ({ value, formApi }) => {
+      const reference = toReference(value);
       const fields: ElementFields = {
         name: value.name.trim(),
         description: value.description.trim(),
-        dataType: isDataTypeKey(value.dataType) ? value.dataType : null,
+        dataType: reference === null && isDataTypeKey(value.dataType) ? value.dataType : null,
         cardinality: toCardinality(value),
+        reference,
       };
       let outcome: ElementOutcome;
       try {
@@ -179,9 +202,48 @@ export function ElementForm({
           />
         )}
       </form.AppField>
+      <form.AppField name="refers">
+        {(field) => (
+          <ReferenceChoice
+            checked={field.state.value}
+            onChange={(checked) => field.handleChange(checked)}
+          />
+        )}
+      </form.AppField>
+      <form.Subscribe selector={(state) => state.values.refers}>
+        {(refers) =>
+          refers && (
+            <>
+              <form.AppField name="referenceTitle">
+                {(field) => (
+                  <field.TextField
+                    label={m.board_reference_title_label()}
+                    description={m.board_reference_title_description({ max: REFERENCE_TITLE_MAX })}
+                    autoComplete="off"
+                  />
+                )}
+              </form.AppField>
+              <form.AppField name="referenceUrl">
+                {(field) => (
+                  <field.TextField
+                    label={m.board_reference_url_label()}
+                    type="url"
+                    inputMode="url"
+                    autoComplete="off"
+                  />
+                )}
+              </form.AppField>
+            </>
+          )
+        }
+      </form.Subscribe>
       {mode === "edit" && detailFields && (
         <>
-          <form.AppField name="dataType">{() => <DataTypeField />}</form.AppField>
+          <form.Subscribe selector={(state) => state.values.refers}>
+            {(refers) =>
+              !refers && <form.AppField name="dataType">{() => <DataTypeField />}</form.AppField>
+            }
+          </form.Subscribe>
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-1 font-medium">{m.board_cardinality_legend()}</legend>
             <p className="text-sm text-muted-foreground">{m.board_cardinality_hint()}</p>

@@ -7,6 +7,7 @@
 // only repeat them.
 import { ChevronDownIcon } from "lucide-react";
 import { useId, useState } from "react";
+import { ReferenceText } from "@/components/board/reference-text";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { m } from "@/i18n/messages";
 import type { ElementResult, Outcome } from "@/lib/consensus";
+import type { ElementReference } from "@/lib/elements";
 import type { RoundGroup } from "@/server/rounds/groups";
 import type { GroupResult } from "@/server/rounds/round";
 import { MiniDistribution, shownGroups } from "./distribution";
@@ -175,6 +177,8 @@ export function GroupResultsTable({
 export interface ResultRowElement {
   id: string;
   name: string;
+  /** The model a reference element refers to (EL26); null for a data element. */
+  reference: ElementReference | null;
   outcome: Outcome;
   result: ElementResult;
   groups: GroupResult[];
@@ -192,6 +196,9 @@ function ResultRow({ element }: Readonly<{ element: ResultRowElement }>) {
       <TableRow>
         <TableHead scope="row" className="font-medium whitespace-normal">
           {element.name}
+          {element.reference && (
+            <ReferenceText reference={element.reference} className="font-normal" />
+          )}
         </TableHead>
         <TableCell>
           <OutcomeBadge outcome={element.outcome} />
