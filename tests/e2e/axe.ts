@@ -12,6 +12,16 @@ export const WCAG_21_AA = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] as const;
  * page, in every state a spec reaches (an error shown, a dialog open), in English and Dutch.
  */
 export async function expectAxeClean(page: Page): Promise<void> {
+  // A toast or dialog that is still fading in fails the contrast rule; a spinner never ends.
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every(
+        (animation) =>
+          animation.playState !== "running" ||
+          animation.effect?.getTiming().iterations === Number.POSITIVE_INFINITY,
+      ),
+  );
   const results = await new AxeBuilder({ page }).withTags([...WCAG_21_AA]).analyze();
   const summary = results.violations.map((violation) => ({
     rule: violation.id,
