@@ -78,7 +78,7 @@ describe("searchPackages", () => {
         { name: "example.fhir.other", description: "", fhirVersion: "" },
       ],
     });
-    expect(requests).toEqual(["/registry/catalog?name=example&fhirversion=R4"]);
+    expect(requests).toEqual(["/registry/catalog?name=example&fhirversion=R4&prerelease=true"]);
   });
 
   it("calls a row without a name unusable", async () => {
@@ -303,6 +303,28 @@ describe("structureDefinitions and structureDefinition", () => {
       name: PACKAGE,
       version: "1.0.0",
       fhirVersions: ["5.0.0"],
+    });
+    routes.set(`/registry/${PACKAGE}/1.0.0`, bytes(tarGz(files)));
+    expect(await client().structureDefinitions(PACKAGE, "1.0.0")).toEqual({ kind: "not_r4" });
+  });
+
+  it("reads the older fhir-version-list as the FHIR versions", async () => {
+    const files = fixturePackageFiles();
+    files["package/package.json"] = JSON.stringify({
+      name: PACKAGE,
+      version: "1.0.0",
+      "fhir-version-list": ["4.0.1"],
+    });
+    routes.set(`/registry/${PACKAGE}/1.0.0`, bytes(tarGz(files)));
+    expect((await client().structureDefinitions(PACKAGE, "1.0.0")).kind).toBe("ok");
+  });
+
+  it("refuses a package whose fhir-version-list names another FHIR version", async () => {
+    const files = fixturePackageFiles();
+    files["package/package.json"] = JSON.stringify({
+      name: PACKAGE,
+      version: "1.0.0",
+      "fhir-version-list": ["5.0.0"],
     });
     routes.set(`/registry/${PACKAGE}/1.0.0`, bytes(tarGz(files)));
     expect(await client().structureDefinitions(PACKAGE, "1.0.0")).toEqual({ kind: "not_r4" });

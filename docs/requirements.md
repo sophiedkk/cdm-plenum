@@ -308,7 +308,7 @@ checked on 2026-11-20 by its contract test (`pnpm test:fhir`):
 
 | Need | Call |
 |---|---|
-| Search packages (EL10) | `GET catalog?name=…&fhirversion=R4` returns a JSON array with `Name`, `Description` and `FhirVersion`; a search for `nictiz` lists the Nictiz packages. |
+| Search packages (EL10) | `GET catalog?name=…&fhirversion=R4&prerelease=true` returns a JSON array with `Name`, `Description` and `FhirVersion`; a search for `nictiz` lists the Nictiz packages. Every version of the zib2020 and nl-core packages is a prerelease, so the catalogue lists them only with `prerelease=true`. |
 | Versions of a package (EL10) | `GET {package}` returns `versions`, an object with one entry per version and its `fhirVersion`. The versions are not in order; the client sorts them by semantic version. |
 | Contents of a version (EL10, EL11, EL12) | `GET {package}/{version}` returns the version as a gzipped tarball (`application/tar+gzip`). `package/package.json` names the package, version and `fhirVersions`; `package/.index.json` lists each file with its `resourceType`, `url`, `kind` and `type`. Each StructureDefinition is a JSON file in `package/` with its snapshot. The client refuses a tarball over 32 MiB, or one that unpacks to more than 160 MiB; `hl7.fhir.r4.core` 4.0.1 is about 13 MB packed and 49 MB unpacked. |
 

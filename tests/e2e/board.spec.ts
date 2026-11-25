@@ -326,6 +326,16 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(dialog.getByRole("alert")).toContainText(text.common_refusal_ckm_refused);
       await expectAxeClean(page);
 
+      // The FHIR tab offers the packages EL10 names; opening one needs the live registry.
+      await dialog.getByRole("tab", { name: text.board_models_kind_fhir }).click();
+      await expect(
+        dialog.getByRole("heading", { name: text.board_models_fhir_quick }),
+      ).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "hl7.fhir.r4.core" })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "nictiz.fhir.nl.r4.nl-core" })).toBeVisible();
+      await expectAxeClean(page);
+      await dialog.getByRole("tab", { name: text.board_models_kind_ckm }).click();
+
       await search.fill("blood pressure");
       await page.keyboard.press("Enter");
       await expect(dialog.getByText(BP_ID)).toBeVisible();

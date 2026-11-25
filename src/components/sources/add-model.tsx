@@ -12,6 +12,7 @@ import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
 import { FormDialog } from "@/components/members/form-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { m } from "@/i18n/messages";
 import type { Outcome } from "@/lib/forms/outcome";
@@ -34,6 +35,25 @@ export interface AddModelActions {
   fhirProfiles: (packageName: string, version: string) => Promise<Outcome<ModelHit[]>>;
   addFhir: (packageName: string, version: string, url: string) => Promise<Outcome<unknown>>;
   addOther: (title: string, link: string | null) => Promise<Outcome<unknown>>;
+}
+
+// NOTE: EL10 names these packages; no spec governs showing them as buttons, our own design (the
+// catalogue search matches package names only, so a concept cannot be searched).
+export const FHIR_QUICK_PICKS = [
+  "hl7.fhir.r4.core",
+  "hl7.fhir.uv.ips",
+  "nictiz.fhir.nl.r4.zib2020",
+  "nictiz.fhir.nl.r4.nl-core",
+] as const;
+
+/** Whether a profile matches the filter text on its title or canonical URL, ignoring case. */
+export function matchesProfileFilter(hit: ModelHit, filter: string): boolean {
+  const needle = filter.trim().toLowerCase();
+  return (
+    needle === "" ||
+    hit.title.toLowerCase().includes(needle) ||
+    hit.detail.toLowerCase().includes(needle)
+  );
 }
 
 const SEARCH_MAX = 100;
@@ -247,7 +267,9 @@ function FhirProfiles({
   const [hits, setHits] = useState<ModelHit[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [filter, setFilter] = useState("");
   const headingId = useId();
+  const filterId = useId();
   const { fhirProfiles } = actions;
   useEffect(() => {
     let live = true;
@@ -265,13 +287,29 @@ function FhirProfiles({
   }, [fhirProfiles, packageName, version]);
   if (error !== null) return <p className="text-destructive">{error}</p>;
   if (hits === null) return <p className="text-muted-foreground">{m.common_loading()}</p>;
+  const shown = hits.filter((hit) => matchesProfileFilter(hit, filter));
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
       <h3 id={headingId} className="font-semibold">
-        {m.board_models_fhir_profiles({ count: hits.length })}
+        {m.board_models_fhir_profiles({ count: shown.length })}
       </h3>
+      <div className="flex flex-col gap-1">
+        <label htmlFor={filterId} className="text-sm font-medium">
+          {m.board_models_fhir_filter()}
+        </label>
+        <Input
+          id={filterId}
+          type="search"
+          autoComplete="off"
+          value={filter}
+          onChange={(event) => setFilter(event.target.value)}
+        />
+      </div>
+      {shown.length === 0 && (
+        <p className="text-muted-foreground">{m.board_models_fhir_filter_none()}</p>
+      )}
       <ul className="flex max-h-72 flex-col overflow-y-auto border-t">
-        {hits.map((hit) => (
+        {shown.map((hit) => (
           <li key={hit.key} className="flex items-center justify-between gap-3 border-b py-2">
             <span className="flex min-w-0 flex-col">
               <span className="break-words">{hit.title}</span>
@@ -380,6 +418,7 @@ function AddModelPanel({
 }>) {
   const [error, setError] = useState<string | null>(null);
   const [fhirPackage, setFhirPackage] = useState<string | null>(null);
+  const quickId = useId();
 
   async function added(outcome: Outcome<unknown>) {
     if (!outcome.ok) {
@@ -420,13 +459,34 @@ function AddModelPanel({
         </TabsContent>
         <TabsContent value="fhir" className="pt-4">
           {fhirPackage === null ? (
-            <SearchAndPick
-              label={m.board_models_search_fhir()}
-              min={2}
-              search={actions.searchFhir}
-              pickLabel={(hit) => m.board_models_open_package({ name: hit.key })}
-              pick={async (hit) => setFhirPackage(hit.key)}
-            />
+            <div className="flex flex-col gap-4">
+              <section aria-labelledby={quickId} className="flex flex-col gap-2">
+                <h3 id={quickId} className="text-sm font-medium">
+                  {m.board_models_fhir_quick()}
+                </h3>
+                <ul className="flex flex-wrap gap-2">
+                  {FHIR_QUICK_PICKS.map((name) => (
+                    <li key={name}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setFhirPackage(name)}
+                      >
+                        {name}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+              <SearchAndPick
+                label={m.board_models_search_fhir()}
+                min={2}
+                search={actions.searchFhir}
+                pickLabel={(hit) => m.board_models_open_package({ name: hit.key })}
+                pick={async (hit) => setFhirPackage(hit.key)}
+              />
+            </div>
           ) : (
             <div className="flex flex-col gap-3">
               <p className="flex flex-wrap items-center gap-2">
