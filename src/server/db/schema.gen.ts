@@ -124,6 +124,7 @@ export interface Element {
   reference_title: string | null;
   reference_url: string | null;
   registration: Generated<boolean>;
+  tree_position: number | null;
   units: Generated<string[]>;
   updated_at: Generated<Timestamp>;
   value_set_url: string | null;
@@ -460,6 +461,7 @@ export interface TeamMemberLeft {
 export interface TreeProposalElement {
   element_id: string;
   group_id: string | null;
+  position: number;
   proposal_id: string;
   registration: boolean;
 }

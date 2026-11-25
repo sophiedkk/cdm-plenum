@@ -926,3 +926,32 @@ describe.each(EXPORTS)("%s access and log (Q-SEC-1, AD2)", (_name, run, action) 
     });
   });
 });
+
+describe("the order of elements within a group in the exports (DT6, #99)", () => {
+  it("writes the elements of a group in the tree's order, in the CSV and the mind map", async () => {
+    const { userId, projectId } = await facilitatorWithProject(db);
+    const recorded = await db
+      .selectFrom("element_group")
+      .select("id")
+      .where("project_id", "=", projectId)
+      .where("prompt", "=", "recorded")
+      .executeTakeFirstOrThrow();
+    // Name order is Apple, Banana, Cherry, Zed; the tree puts Cherry before Apple.
+    await db
+      .insertInto("element")
+      .values([
+        { project_id: projectId, name: "Apple", group_id: recorded.id, tree_position: 1 },
+        { project_id: projectId, name: "Banana" },
+        { project_id: projectId, name: "Cherry", group_id: recorded.id, tree_position: 0 },
+        { project_id: projectId, name: "Zed", group_id: recorded.id },
+      ])
+      .execute();
+    const names = records(value(await exportElementsCsv(db, userId, projectId))).map(
+      (row) => row["name"],
+    );
+    expect(names).toEqual(["Cherry", "Banana", "Apple", "Zed"]);
+    const map = value(await exportMindMap(db, userId, projectId));
+    const mapped = [...map.content.matchAll(/POSITION="right" TEXT="([^"]*)"/g)].map((m) => m[1]);
+    expect(mapped).toEqual(["Cherry", "Banana", "Apple", "Zed"]);
+  });
+});
