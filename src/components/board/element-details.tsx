@@ -1,11 +1,6 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The details of one element on the board (EL1, EL4, EL5, EL6, EL9): its description, fields,
-// sources, CKM link and the links of merged duplicates, proposed values, comments and actions,
-// and the member's own marks (EL16). The author shows only in the facilitator's view (EL2). Data
-// type, cardinality and values show from the phase that decides them (EL21); the facilitator
-// keeps the actions that set them in every phase.
 import { useQuery } from "@tanstack/react-query";
 import {
   FileSpreadsheetIcon,
@@ -18,6 +13,12 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { type CommentOutcome, CommentThread } from "@/components/comments/comment-thread";
+// The details of one element on the board (EL1, EL4, EL5, EL6, EL9): its description, fields,
+// sources, CKM link and the links of merged duplicates, proposed values, comments and actions,
+// and the member's own marks (EL16). The author shows only in the facilitator's view (EL2). Data
+// type, cardinality and values show from the phase that decides them (EL21); the facilitator
+// keeps the actions that set them in every phase.
+import { useModelType } from "@/components/projects/model-type-context";
 import { StatusBadge } from "@/components/status/status-badge";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
@@ -108,6 +109,7 @@ export function ElementDetails({
   /** Left out when marks are closed: before the reveal or outside the discover phase (EL16). */
   marks?: ElementMarkProps | undefined;
 }>) {
+  const modelType = useModelType();
   const comments = useQuery(elementCommentsQueryOptions(projectId, element.id, isFacilitator));
   const coded = isCoded(element);
 
@@ -129,7 +131,9 @@ export function ElementDetails({
             </>
           ) : (
             <Row term={m.board_column_question()}>
-              {element.prompt === null ? promptLabel(null) : promptQuestion(element.prompt)}
+              {element.prompt === null
+                ? promptLabel(null, modelType)
+                : promptQuestion(element.prompt, modelType)}
             </Row>
           )}
           <Row term={m.board_field_sources()}>

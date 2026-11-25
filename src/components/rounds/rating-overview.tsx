@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
+import type { ReactNode, Ref } from "react";
 // The overview after the last rating card (DE18): every element with the participant's own
 // rating, or "not rated yet", and the details they flagged while the phase shows details (EL21),
 // each with a link back to its card.
-import type { ReactNode, Ref } from "react";
+import { useModelType } from "@/components/projects/model-type-context";
 import { m } from "@/i18n/messages";
 import type { MyElement, OwnRating } from "@/server/rounds/ratings";
 import { detailLabel } from "./detail-flags";
@@ -35,6 +36,7 @@ export function RatingOverview({
   headingRef?: Ref<HTMLHeadingElement>;
   cardLink: (index: number, name: string) => ReactNode;
 }>) {
+  const modelType = useModelType();
   return (
     <section aria-labelledby="rating-overview-heading" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
@@ -72,7 +74,7 @@ export function RatingOverview({
             {elements.map((element, index) => (
               <GroupRows
                 key={element.id}
-                heading={headingBefore(elements, index)}
+                heading={headingBefore(elements, index, modelType)}
                 columns={flags ? 3 : 2}
               >
                 <tr>

@@ -1,14 +1,15 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
+import { ChevronRightIcon, GitMergeIcon, LinkIcon } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import type { CommentOutcome } from "@/components/comments/comment-thread";
 // The compact board (Q-USE-1, ADR 0013): one table row per element, and a disclosure button on
 // the name that opens the details in the row below. A table keeps the column headers, so a
 // screen reader announces "Data type" or "Comments" with each value. Before the phase that
 // decides them, the brainstorm question replaces data type, cardinality and CKM (EL21). A reference
 // to another model names that model under its name and leaves the data type empty (EL26).
-import { ChevronRightIcon, GitMergeIcon, LinkIcon } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
-import type { CommentOutcome } from "@/components/comments/comment-thread";
+import { useModelType } from "@/components/projects/model-type-context";
 import { StatusBadge } from "@/components/status/status-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -133,6 +134,7 @@ function ElementRows({
   opened: boolean;
   actions: ElementActions;
 }>) {
+  const modelType = useModelType();
   const detailsId = `${useId()}details`;
   const [expanded, setExpanded] = useState(opened);
   const toggle = useRef<HTMLButtonElement>(null);
@@ -187,7 +189,7 @@ function ElementRows({
             </TableCell>
           </>
         ) : (
-          <TableCell>{promptLabel(element.prompt)}</TableCell>
+          <TableCell>{promptLabel(element.prompt, modelType)}</TableCell>
         )}
         <TableCell className="text-right tabular-nums">{element.sources.length}</TableCell>
         {ckmColumn && (

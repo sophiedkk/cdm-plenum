@@ -22,6 +22,7 @@ import { fromCardinality, toCardinality } from "@/components/board/element-form"
 import { useAppForm } from "@/components/form/app-form";
 import { type BaseFieldProps, FieldFeedback, useFieldA11y } from "@/components/form/field-a11y";
 import { useFieldContext } from "@/components/form/form-context";
+import { useModelType } from "@/components/projects/model-type-context";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { m } from "@/i18n/messages";
@@ -43,6 +44,7 @@ import {
   shiftGroup,
   type TreeInput,
 } from "@/lib/model-tree";
+import type { ModelType } from "@/lib/model-types";
 
 interface EditGroup {
   id: string;
@@ -74,12 +76,12 @@ interface FormValues {
   elements: EditElement[];
 }
 
-function fromTree(tree: ModelTree): FormValues {
+function fromTree(tree: ModelTree, type: ModelType | null): FormValues {
   return {
     groups: tree.groups.map((group) => ({
       id: group.id,
       added: false,
-      label: groupName(group),
+      label: groupName(group, type),
       name: "",
       parentId: group.parentId,
       ...fromCardinality(group.cardinality),
@@ -205,8 +207,9 @@ export function TreeForm({
 }>) {
   const formRef = useRef<HTMLFormElement>(null);
   const base = useId();
+  const modelType = useModelType();
   const form = useAppForm({
-    defaultValues: fromTree(initial),
+    defaultValues: fromTree(initial, modelType),
     validationLogic: revalidateLogic(),
     validators: { onDynamic: treeSchema() },
     onSubmit: async ({ value, formApi }) => {

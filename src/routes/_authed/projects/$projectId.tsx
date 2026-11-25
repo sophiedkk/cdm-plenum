@@ -3,6 +3,7 @@
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound, Outlet, useMatchRoute } from "@tanstack/react-router";
+import { ModelTypeProvider } from "@/components/projects/model-type-context";
 import { ProjectHeader, ProjectTabs } from "@/components/projects/project-header";
 import { projectTitle } from "@/components/projects/project-title";
 import { NotFoundState } from "@/components/shell/route-states";
@@ -59,7 +60,9 @@ function ProjectLayout() {
         here={here}
       />
       {facilitator && <ProjectTabs projectId={projectId} />}
-      <Outlet />
+      <ModelTypeProvider value={project.modelType}>
+        <Outlet />
+      </ModelTypeProvider>
     </>
   );
 }
