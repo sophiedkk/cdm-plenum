@@ -161,7 +161,8 @@
    30; weights 400 and 600. Components use these, never a pixel size. */
 @utility type-page-title {
   font-size: 1.5rem;
-  line-height: 2rem;
+  /* The height of the old 20 px title, so a page keeps its first screen (Q-USE-1). */
+  line-height: 1.75rem;
   font-weight: 600;
   letter-spacing: -0.025em;
 }
