@@ -123,61 +123,59 @@ export function GroupResultsTable({
     return <p className="text-sm text-muted-foreground">{m.rounds_result_no_groups()}</p>;
   }
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full max-w-3xl caption-top text-sm">
-        <caption className="mb-1 text-left font-medium">
-          {m.rounds_result_groups_caption({ name })}
-        </caption>
-        <thead>
-          <tr className="text-left">
+    <Table aria-label={m.rounds_result_groups_caption({ name })} className="max-w-3xl caption-top">
+      <caption className="mb-1 text-left font-medium">
+        {m.rounds_result_groups_caption({ name })}
+      </caption>
+      <thead>
+        <tr className="text-left">
+          <th scope="col" className="py-1 pr-4 font-medium">
+            {m.rounds_response_group()}
+          </th>
+          {showOutcome && (
             <th scope="col" className="py-1 pr-4 font-medium">
-              {m.rounds_response_group()}
+              {m.rounds_result_outcome()}
+            </th>
+          )}
+          <th scope="col" className="py-1 pr-4 font-medium">
+            {m.rounds_result_median()}
+          </th>
+          <th scope="col" className="py-1 pr-4 font-medium">
+            {m.rounds_result_top_band()}
+          </th>
+          <th scope="col" className="py-1 pr-4 font-medium">
+            {m.rounds_result_bottom_band()}
+          </th>
+          <th scope="col" className="py-1 pr-4 font-medium">
+            {m.rounds_result_distribution_column()}
+          </th>
+          <th scope="col" className="py-1 font-medium">
+            {m.rounds_result_responses()}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {shown.map((group) => (
+          <tr key={group.groupId}>
+            <th scope="row" className="py-1 pr-4 text-left font-normal">
+              {group.groupName}
             </th>
             {showOutcome && (
-              <th scope="col" className="py-1 pr-4 font-medium">
-                {m.rounds_result_outcome()}
-              </th>
-            )}
-            <th scope="col" className="py-1 pr-4 font-medium">
-              {m.rounds_result_median()}
-            </th>
-            <th scope="col" className="py-1 pr-4 font-medium">
-              {m.rounds_result_top_band()}
-            </th>
-            <th scope="col" className="py-1 pr-4 font-medium">
-              {m.rounds_result_bottom_band()}
-            </th>
-            <th scope="col" className="py-1 pr-4 font-medium">
-              {m.rounds_result_distribution_column()}
-            </th>
-            <th scope="col" className="py-1 font-medium">
-              {m.rounds_result_responses()}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {shown.map((group) => (
-            <tr key={group.groupId}>
-              <th scope="row" className="py-1 pr-4 text-left font-normal">
-                {group.groupName}
-              </th>
-              {showOutcome && (
-                <td className="py-1 pr-4">
-                  <OutcomeBadge outcome={group.result.outcome} kind={kind} />
-                </td>
-              )}
-              <td className="py-1 pr-4">{medianText(group.result)}</td>
-              <td className="py-1 pr-4">{formatPercent(group.result.topPct)}</td>
-              <td className="py-1 pr-4">{formatPercent(group.result.bottomPct)}</td>
               <td className="py-1 pr-4">
-                <MiniDistribution result={group.result} />
+                <OutcomeBadge outcome={group.result.outcome} kind={kind} />
               </td>
-              <td className="py-1 whitespace-nowrap">{answersText(group.result)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+            )}
+            <td className="py-1 pr-4">{medianText(group.result)}</td>
+            <td className="py-1 pr-4">{formatPercent(group.result.topPct)}</td>
+            <td className="py-1 pr-4">{formatPercent(group.result.bottomPct)}</td>
+            <td className="py-1 pr-4">
+              <MiniDistribution result={group.result} />
+            </td>
+            <td className="py-1 whitespace-nowrap">{answersText(group.result)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
   );
 }
 
@@ -195,6 +193,14 @@ export interface ResultRowElement {
 
 const COLUMNS = 6;
 
+// Below sm a row is a block: name, outcome, figures, then the details button, so the action
+// never sits past the edge of a phone. A figure shows its column header (data-label).
+const ROW_STACK =
+  "max-sm:flex max-sm:flex-wrap max-sm:items-center max-sm:gap-x-4 max-sm:gap-y-1 max-sm:py-2";
+const CELL_STACK = "max-sm:p-0";
+const CELL_LABEL =
+  "max-sm:p-0 max-sm:before:mr-1 max-sm:before:text-muted-foreground max-sm:before:content-[attr(data-label)]";
+
 function ResultRow({
   element,
   kind,
@@ -203,22 +209,29 @@ function ResultRow({
   const detailsId = useId();
   return (
     <>
-      <TableRow>
-        <TableHead scope="row" className="font-medium whitespace-normal">
+      <TableRow className={ROW_STACK}>
+        <TableHead
+          scope="row"
+          className="font-medium whitespace-normal max-sm:h-auto max-sm:basis-full max-sm:p-0"
+        >
           {element.name}
           {element.reference && (
             <ReferenceText reference={element.reference} className="font-normal" />
           )}
         </TableHead>
-        <TableCell>
+        <TableCell className={CELL_STACK}>
           <OutcomeBadge outcome={element.outcome} kind={kind} />
         </TableCell>
-        <TableCell>{medianText(element.result)}</TableCell>
-        <TableCell>
+        <TableCell data-label={m.rounds_result_median()} className={CELL_LABEL}>
+          {medianText(element.result)}
+        </TableCell>
+        <TableCell className={CELL_STACK}>
           <MiniDistribution result={element.result} />
         </TableCell>
-        <TableCell>{answersText(element.result)}</TableCell>
-        <TableCell className="text-right">
+        <TableCell data-label={m.rounds_result_responses()} className={CELL_LABEL}>
+          {answersText(element.result)}
+        </TableCell>
+        <TableCell className="text-right max-sm:basis-full max-sm:p-0 max-sm:text-left">
           <Button
             type="button"
             variant="ghost"
@@ -237,8 +250,8 @@ function ResultRow({
           </Button>
         </TableCell>
       </TableRow>
-      <TableRow id={detailsId} hidden={!open} className="hover:bg-transparent">
-        <TableCell colSpan={COLUMNS} className="whitespace-normal">
+      <TableRow id={detailsId} hidden={!open} className="hover:bg-transparent max-sm:block">
+        <TableCell colSpan={COLUMNS} className="whitespace-normal max-sm:block">
           {open && (
             <div className="flex flex-col gap-4 py-2">
               <div className="grid gap-6 md:grid-cols-2">
@@ -278,11 +291,12 @@ export function ResultsTable({
   return (
     <Table
       aria-label={kind === "values" ? m.rounds_value_results_caption() : m.rounds_results_caption()}
+      className="max-sm:block"
     >
       <TableCaption className="sr-only">
         {kind === "values" ? m.rounds_value_results_caption() : m.rounds_results_caption()}
       </TableCaption>
-      <TableHeader>
+      <TableHeader className="max-sm:sr-only">
         <TableRow>
           <TableHead scope="col">
             {kind === "values" ? m.rounds_value_overview_item() : m.rounds_result_element()}
@@ -296,7 +310,7 @@ export function ResultsTable({
           </TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>
+      <TableBody className="max-sm:block">
         {elements.map((element, index) => (
           <GroupRows
             key={element.id}

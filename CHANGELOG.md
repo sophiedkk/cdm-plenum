@@ -47,6 +47,15 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- After you follow a link or a tab, focus moves to the heading of the new page
+  instead of staying on a link that is gone, so a keyboard or screen reader
+  user starts at the top of the page.
+- On the grouping board, picking a card no longer pushes the lists down: the
+  "Move here" button now sits below each list. On a touch screen you can scroll
+  past a card, and a cancelled touch no longer drops the card on a group.
+- On a phone, the round results and the participant's element board show each
+  row as a block with its name, outcome and details button inside the screen,
+  instead of a table that scrolls sideways.
 - The Nictiz zib and nl-core packages and the FHIR R4 core package can now
   be found and opened. The search left out prerelease packages, and the R4
   core package was refused as "not R4".
