@@ -10,7 +10,13 @@ import { getEnv } from "../env.ts";
 import { getMailer } from "../mail.ts";
 import { requireSession } from "../middleware.ts";
 import { projectInput } from "../projects/schemas.ts";
-import { invitationPreview, invite, listInvitations, revokeInvitation } from "./queries.ts";
+import {
+  invitationPreview,
+  invite,
+  listInvitations,
+  restoreInvitation,
+  revokeInvitation,
+} from "./queries.ts";
 import { invitationIdInput, invitationInput, inviteInput } from "./schemas.ts";
 
 export const inviteFn = createServerFn({ method: "POST" })
@@ -39,6 +45,13 @@ export const revokeInvitationFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(invitationInput)
   .handler(({ data, context }) => revokeInvitation(getDb(), context.userId, data));
+
+export const restoreInvitationFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(invitationInput)
+  .handler(({ data, context }) =>
+    restoreInvitation(getDb(), context.userId, data, { now: new Date() }),
+  );
 
 export const invitationPreviewFn = createServerFn({ method: "GET" })
   .validator(invitationIdInput)

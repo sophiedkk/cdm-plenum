@@ -5,19 +5,20 @@
 // stakeholder group (PR7), whether the brainstorm starts private (EL13), and the group the
 // facilitator rates in (DE14).
 import { revalidateLogic } from "@tanstack/react-form";
-import { LogOutIcon, SaveIcon, UserPlusIcon } from "lucide-react";
+import { LogOutIcon, UserPlusIcon } from "lucide-react";
 import { useId, useState } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Switch } from "@/components/ui/switch";
 import { m } from "@/i18n/messages";
 import type { Outcome } from "@/lib/forms/outcome";
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
 import { expertTypeLabel } from "@/lib/i18n/labels";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import type { ExpertType } from "@/lib/project-roles";
+import { SaveStatus, useAutoSave } from "./auto-save";
 
 /** Runs `call` and shows a refusal or a failure at the top of the form. */
 async function submitCall<T>(
@@ -34,7 +35,55 @@ async function submitCall<T>(
   return false;
 }
 
-/** The PR7 setting: off by default, saved with its own button. */
+/** One switch that saves when you flip it; it goes back when the server refuses. */
+function SwitchSetting({
+  title,
+  label,
+  help,
+  checked,
+  save,
+  onSaved,
+}: Readonly<{
+  title: string;
+  label: string;
+  help: string;
+  checked: boolean;
+  save: (value: boolean) => Promise<Outcome<unknown>>;
+  onSaved: (value: boolean) => Promise<void> | void;
+}>) {
+  const id = useId();
+  const [value, setValue] = useState(checked);
+  const { state, run } = useAutoSave();
+
+  async function change(next: boolean) {
+    setValue(next);
+    if (await run(() => save(next))) await onSaved(next);
+    else setValue(!next);
+  }
+
+  return (
+    <section aria-labelledby={`${id}-title`} className="flex flex-col gap-4">
+      <h3 id={`${id}-title`} className="text-lg font-semibold">
+        {title}
+      </h3>
+      <Field orientation="horizontal">
+        <Switch
+          id={id}
+          checked={value}
+          aria-describedby={`${id}-description`}
+          onCheckedChange={(next) => void change(next)}
+        />
+        <FieldContent>
+          <FieldLabel htmlFor={id}>{label}</FieldLabel>
+          <FieldDescription id={`${id}-description`}>{help}</FieldDescription>
+        </FieldContent>
+      </Field>
+      <SaveStatus state={state} />
+    </section>
+  );
+}
+
+/** The PR7 setting: off by default, applied when you flip it. */
 export function GroupNamesForm({
   visible,
   save,
@@ -44,62 +93,21 @@ export function GroupNamesForm({
   save: (visible: boolean) => Promise<Outcome<unknown>>;
   onSaved: (visible: boolean) => Promise<void> | void;
 }>) {
-  const id = useId();
-  const form = useAppForm({
-    defaultValues: { visible },
-    onSubmit: async ({ value, formApi }) => {
-      if (await submitCall(formApi, () => save(value.visible))) await onSaved(value.visible);
-    },
-  });
   return (
-    <form
-      noValidate
-      aria-labelledby="group-names-title"
-      className="flex flex-col gap-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void form.handleSubmit();
-      }}
-    >
-      <h3 id="group-names-title" className="text-lg font-semibold">
-        {m.members_names_title()}
-      </h3>
-      <form.AppForm>
-        <form.FormErrors />
-      </form.AppForm>
-      <form.Field name="visible">
-        {(field) => (
-          <Field orientation="horizontal">
-            <Checkbox
-              id={id}
-              checked={field.state.value}
-              aria-describedby={`${id}-description`}
-              onCheckedChange={(checked) => field.handleChange(checked === true)}
-            />
-            <FieldContent>
-              <FieldLabel htmlFor={id}>{m.members_names_label()}</FieldLabel>
-              <FieldDescription id={`${id}-description`}>{m.members_names_help()}</FieldDescription>
-            </FieldContent>
-          </Field>
-        )}
-      </form.Field>
-      <div>
-        <form.AppForm>
-          <form.SubmitButton
-            variant="outline"
-            icon={<SaveIcon aria-hidden="true" data-icon="inline-start" />}
-          >
-            {m.members_names_save()}
-          </form.SubmitButton>
-        </form.AppForm>
-      </div>
-    </form>
+    <SwitchSetting
+      title={m.members_names_title()}
+      label={m.members_names_label()}
+      help={m.members_names_help()}
+      checked={visible}
+      save={save}
+      onSaved={onSaved}
+    />
   );
 }
 
 /**
- * The private-first brainstorm (EL13): on by default, saved with its own button. After the reveal
- * the server refuses a change (`board_already_revealed`), so the form gives way to a note.
+ * The private-first brainstorm (EL13): on by default, applied when you flip it. After the reveal
+ * the server refuses a change (`board_already_revealed`), so the switch gives way to a note.
  */
 export function PrivateBrainstormForm({
   enabled,
@@ -112,66 +120,27 @@ export function PrivateBrainstormForm({
   save: (enabled: boolean) => Promise<Outcome<unknown>>;
   onSaved: (enabled: boolean) => Promise<void> | void;
 }>) {
-  const id = useId();
-  const form = useAppForm({
-    defaultValues: { enabled },
-    onSubmit: async ({ value, formApi }) => {
-      if (await submitCall(formApi, () => save(value.enabled))) await onSaved(value.enabled);
-    },
-  });
-  return (
-    <form
-      noValidate
-      aria-labelledby="private-brainstorm-title"
-      className="flex flex-col gap-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void form.handleSubmit();
-      }}
-    >
-      <h3 id="private-brainstorm-title" className="text-lg font-semibold">
-        {m.members_private_title()}
-      </h3>
-      {revealed ? (
+  if (revealed) {
+    return (
+      <section aria-labelledby="private-brainstorm-title" className="flex flex-col gap-4">
+        <h3 id="private-brainstorm-title" className="text-lg font-semibold">
+          {m.members_private_title()}
+        </h3>
         <p className="text-muted-foreground" data-testid="private-brainstorm-revealed">
           {m.members_private_revealed()}
         </p>
-      ) : (
-        <>
-          <form.AppForm>
-            <form.FormErrors />
-          </form.AppForm>
-          <form.Field name="enabled">
-            {(field) => (
-              <Field orientation="horizontal">
-                <Checkbox
-                  id={id}
-                  checked={field.state.value}
-                  aria-describedby={`${id}-description`}
-                  onCheckedChange={(checked) => field.handleChange(checked === true)}
-                />
-                <FieldContent>
-                  <FieldLabel htmlFor={id}>{m.members_private_label()}</FieldLabel>
-                  <FieldDescription id={`${id}-description`}>
-                    {m.members_private_help()}
-                  </FieldDescription>
-                </FieldContent>
-              </Field>
-            )}
-          </form.Field>
-          <div>
-            <form.AppForm>
-              <form.SubmitButton
-                variant="outline"
-                icon={<SaveIcon aria-hidden="true" data-icon="inline-start" />}
-              >
-                {m.members_private_save()}
-              </form.SubmitButton>
-            </form.AppForm>
-          </div>
-        </>
-      )}
-    </form>
+      </section>
+    );
+  }
+  return (
+    <SwitchSetting
+      title={m.members_private_title()}
+      label={m.members_private_label()}
+      help={m.members_private_help()}
+      checked={enabled}
+      save={save}
+      onSaved={onSaved}
+    />
   );
 }
 

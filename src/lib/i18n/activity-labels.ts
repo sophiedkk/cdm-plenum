@@ -53,6 +53,7 @@ const ACTION_LABELS: Record<(typeof ACTIVITY_ACTIONS)[number], () => string> = {
   group_renamed: () => m.admin_action_group_renamed(),
   invitation_accepted: () => m.admin_action_invitation_accepted(),
   invitation_created: () => m.admin_action_invitation_created(),
+  invitation_restored: () => m.admin_action_invitation_restored(),
   invitation_revoked: () => m.admin_action_invitation_revoked(),
   member_left: () => m.admin_action_member_left(),
   panel_minimum_set: () => m.admin_action_panel_minimum_set(),

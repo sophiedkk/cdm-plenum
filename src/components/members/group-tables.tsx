@@ -57,32 +57,29 @@ export function GroupPeopleTable({
               <span className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold">{group.name}</span>
                 <ExpertTypeBadge expertType={group.expertType} />
+                {group.members.length === 0 && (
+                  <span className="font-normal text-muted-foreground">
+                    {m.members_no_participants()}
+                  </span>
+                )}
               </span>
             </TableHead>
             <TableCell className="py-1.5">
               <div className="flex flex-wrap justify-end gap-2">{actions(group)}</div>
             </TableCell>
           </TableRow>
-          {group.members.length === 0 ? (
-            <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={3} className="text-muted-foreground">
-                {m.members_no_participants()}
-              </TableCell>
+          {group.members.map((member) => (
+            <TableRow key={member.memberId}>
+              <TableHead scope="row" className="font-normal">
+                <span className="flex flex-wrap items-center gap-2">
+                  <PersonName name={member.name} />
+                  {member.role === "facilitator" && <RoleBadge projectRole="facilitator" />}
+                </span>
+              </TableHead>
+              <TableCell>{member.email}</TableCell>
+              <TableCell />
             </TableRow>
-          ) : (
-            group.members.map((member) => (
-              <TableRow key={member.memberId}>
-                <TableHead scope="row" className="font-normal">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <PersonName name={member.name} />
-                    {member.role === "facilitator" && <RoleBadge projectRole="facilitator" />}
-                  </span>
-                </TableHead>
-                <TableCell>{member.email}</TableCell>
-                <TableCell />
-              </TableRow>
-            ))
-          )}
+          ))}
         </TableBody>
       ))}
     </Table>

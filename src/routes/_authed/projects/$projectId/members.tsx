@@ -7,11 +7,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { PlusIcon, UserPlusIcon } from "lucide-react";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/members/form-dialog";
-import {
-  NewGroupForm,
-  RemoveGroupDialog,
-  RenameGroupDialog,
-} from "@/components/members/group-forms";
+import { GroupActions, NewGroupForm } from "@/components/members/group-forms";
 import { GroupPeopleTable } from "@/components/members/group-tables";
 import { InvitationTable } from "@/components/members/invitation-table";
 import { InviteForm } from "@/components/members/invite-form";
@@ -19,7 +15,7 @@ import { projectTitle } from "@/components/projects/project-title";
 import { NotFoundState, PageHeader } from "@/components/shell/route-states";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
-import { inviteFn, revokeInvitationFn } from "@/server/invitations/functions";
+import { inviteFn, restoreInvitationFn, revokeInvitationFn } from "@/server/invitations/functions";
 import { INVITATION_LIFETIME_SECONDS } from "@/server/invitations/lifetime";
 import { invitationKeys, invitationsQueryOptions } from "@/server/invitations/query-options";
 import { createGroupFn, removeGroupFn, renameGroupFn } from "@/server/projects/functions";
@@ -72,6 +68,7 @@ function FacilitatorMembers({ projectId }: Readonly<{ projectId: string }>) {
   const removeGroup = useServerFn(removeGroupFn);
   const invite = useServerFn(inviteFn);
   const revokeInvitation = useServerFn(revokeInvitationFn);
+  const restoreInvitation = useServerFn(restoreInvitationFn);
   if (!groups.ok || !invitations.ok) return <NotFoundState />;
 
   const refreshGroups = () =>
@@ -137,24 +134,21 @@ function FacilitatorMembers({ projectId }: Readonly<{ projectId: string }>) {
         <GroupPeopleTable
           groups={groups.value}
           actions={(group) => (
-            <>
-              <RenameGroupDialog
-                group={group}
-                rename={(name) => renameGroup({ data: { projectId, groupId: group.id, name } })}
-                onRenamed={async (name) => {
-                  toast.success(m.members_group_renamed({ group: name }));
-                  await Promise.all([refreshGroups(), refreshInvitations()]);
-                }}
-              />
-              <RemoveGroupDialog
-                group={group}
-                remove={() => removeGroup({ data: { projectId, groupId: group.id } })}
-                onRemoved={async () => {
-                  toast.success(m.members_group_removed({ group: group.name }));
-                  await refreshGroups();
-                }}
-              />
-            </>
+            <GroupActions
+              group={group}
+              rename={(name) => renameGroup({ data: { projectId, groupId: group.id, name } })}
+              onRenamed={async (name) => {
+                toast.success(m.members_group_renamed({ group: name }));
+                await Promise.all([refreshGroups(), refreshInvitations()]);
+              }}
+              remove={() => removeGroup({ data: { projectId, groupId: group.id } })}
+              restore={() =>
+                createGroup({
+                  data: { projectId, name: group.name, expertType: group.expertType },
+                })
+              }
+              onChanged={refreshGroups}
+            />
           )}
         />
       </section>
@@ -165,6 +159,7 @@ function FacilitatorMembers({ projectId }: Readonly<{ projectId: string }>) {
         <InvitationTable
           invitations={invitations.value}
           revoke={(invitationId) => revokeInvitation({ data: { projectId, invitationId } })}
+          restore={(invitationId) => restoreInvitation({ data: { projectId, invitationId } })}
           onRevoked={async () => {
             await Promise.all([refreshInvitations(), refreshGroups()]);
           }}

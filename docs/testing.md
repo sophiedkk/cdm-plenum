@@ -189,7 +189,10 @@ Then work through these steps:
    Nursing, Primary care, General medicine, Terminology and Architecture.
    Invite a new address and open the invitation from Mailpit in a private
    window; the sign-in link in the e-mail opens a page where you press
-   "Sign in".
+   "Sign in". Revoke that invitation, then press "Undo" in the message: the
+   invitation is back. Add an empty group and remove it from its "Actions for"
+   menu; "Undo" brings it back. Settings (Project menu) save when you change
+   them and show "Saved".
 5. **Detail:** open "Oxygen saturation (demo)". The Details tab is a list:
    the tree of the model first, then the three elements in the model, each
    with its status and what asks for you, and the settled ones in a folded

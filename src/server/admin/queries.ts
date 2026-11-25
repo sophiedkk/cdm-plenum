@@ -4,7 +4,7 @@
 // The administration page (AD1, AD2): application rights by e-mail address, accounts and their
 // deactivation, and the activity log. Every function checks that the actor holds the
 // administrator right; an administrator sees no project content (docs/architecture.md).
-import type { Kysely, Transaction } from "kysely";
+import { type Kysely, sql, type Transaction } from "kysely";
 import type { DB } from "../db/schema.gen.ts";
 import {
   APP_ROLES,
@@ -275,6 +275,11 @@ export interface ActivityEntry {
   projectName: string | null;
   targetType: string | null;
   targetId: string | null;
+  /**
+   * The name of the target for the types in `NAMED_SUBJECT_TYPES` (an element's name, a round's
+   * number, a group's name); null when the target no longer exists or has no name.
+   */
+  subject: string | null;
 }
 
 export interface ActivityLog {
@@ -318,6 +323,28 @@ export async function listActivity(
         "organization.name as projectName",
         "activity_log.target_type",
         "activity_log.target_id",
+        sql<string | null>`case activity_log.target_type
+          when 'element' then (select e.name from element e where e.id::text = activity_log.target_id)
+          when 'element_comment' then (
+            select e.name from element_comment c join element e on e.id = c.element_id
+            where c.id::text = activity_log.target_id)
+          when 'element_group' then (
+            select g.name from element_group g where g.id::text = activity_log.target_id)
+          when 'detail_proposal' then (
+            select e.name from detail_proposal p join element e on e.id = p.element_id
+            where p.id::text = activity_log.target_id)
+          when 'group' then (select t.name from team t where t.id = activity_log.target_id)
+          when 'invitation' then (
+            select t.name from invitation i join team t on t.id = i."teamId"
+            where i.id = activity_log.target_id)
+          when 'round' then (select r.number::text from round r where r.id::text = activity_log.target_id)
+          when 'scope_source' then (
+            select s.label from scope_source s where s.id::text = activity_log.target_id)
+          when 'source_model' then (
+            select s.title from source_model s where s.id::text = activity_log.target_id)
+          when 'source_element' then (
+            select s.name from source_element s where s.id::text = activity_log.target_id)
+        end`.as("subject"),
       ])
       .orderBy("activity_log.occurred_at", "desc")
       .orderBy("activity_log.id", "desc")
@@ -342,6 +369,7 @@ export async function listActivity(
         projectName: row.projectName ?? null,
         targetType: row.target_type,
         targetId: row.target_id,
+        subject: row.subject,
       })),
       actions: actions.map((row) => row.action),
       page,

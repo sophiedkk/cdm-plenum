@@ -51,6 +51,7 @@ export const ACTIVITY_ACTIONS = [
   "group_renamed",
   "invitation_accepted",
   "invitation_created",
+  "invitation_restored",
   "invitation_revoked",
   "member_left",
   "model_type_set",
