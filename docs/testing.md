@@ -153,8 +153,10 @@ Then work through these steps:
 1. **Scope, as facilitator:** open "Body temperature (demo)". It opens on
    the Overview, with the checklist for the scope phase; the Scope tab shows
    the concept, use cases and three comments. Under "Model type", choose
-   Observation and save; a participant sees the type and its one-line
-   explanation in the same place. Choose Evaluation instead and open the
+   Observation and save (the checklist item "Choose the model type" is then
+   done); a participant sees the type and its one-line explanation in the same
+   place. The use cases read as a list, "Add source" opens a dialog and
+   removing a source offers "Undo". Choose Evaluation instead and open the
    brainstorm board (Discover): the four columns now ask what is concluded,
    what it is based on, how certain it is and the situation. Move the project on to
    discover with "Go on to Discover" at the end of the checklist: while an item

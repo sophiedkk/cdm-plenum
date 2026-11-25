@@ -20,6 +20,7 @@ import type {
   AddScopeCommentInput,
   AddScopeSourceInput,
   ReorderScopeSourcesInput,
+  RestoreScopeSourceInput,
   ScopeSourceInput,
   SetModelTypeInput,
   UpdateScopeInput,
@@ -236,6 +237,35 @@ export async function removeScopeSource(
     await touchScope(trx, project.id);
     await log(trx, userId, project.id, "scope_source_removed", "scope_source", row.id);
     return done(null);
+  });
+}
+
+/**
+ * Undoes a removal (facilitator only): adds the source again at `position`, or at the end when
+ * the list has become shorter. It gets a new id, so the log shows the removal and the restore.
+ */
+export async function restoreScopeSource(
+  db: Kysely<DB>,
+  userId: string,
+  input: RestoreScopeSourceInput,
+): Promise<ProjectResult<{ sourceId: string }>> {
+  return withProject(db, userId, input.projectId, { scope: ["update"] }, async (trx, project) => {
+    const row = await trx
+      .insertInto("scope_source")
+      .values({
+        project_id: project.id,
+        label: input.label,
+        url: input.url,
+        position: sql<number>`(select coalesce(max(position), -1) + 1 from scope_source where project_id = ${project.id})`,
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const order = (await sourceIds(trx, project.id)).filter((id) => id !== row.id);
+    order.splice(Math.min(input.position, order.length), 0, row.id);
+    await writeOrder(trx, project.id, order);
+    await touchScope(trx, project.id);
+    await log(trx, userId, project.id, "scope_source_restored", "scope_source", row.id);
+    return done({ sourceId: row.id });
   });
 }
 

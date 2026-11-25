@@ -5,20 +5,9 @@
 // moves and removes them with buttons, so the order changes without a mouse (Q-ACC-1).
 import { revalidateLogic } from "@tanstack/react-form";
 import { ArrowDownIcon, ArrowUpIcon, ExternalLinkIcon, Trash2Icon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
@@ -134,27 +123,16 @@ function RemoveSourceButton({
 }: Readonly<{ source: ScopeSource; remove: (source: ScopeSource) => Promise<void> }>) {
   const label = m.scope_source_remove({ label: source.label });
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button type="button" variant="outline" size="icon-sm" aria-label={label} title={label}>
-          <Trash2Icon aria-hidden="true" />
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{m.scope_source_remove_title()}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {m.scope_source_remove_body({ label: source.label })}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{m.common_cancel()}</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={() => void remove(source)}>
-            {m.scope_source_remove_confirm()}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <Button
+      type="button"
+      variant="outline"
+      size="icon-sm"
+      aria-label={label}
+      title={label}
+      onClick={() => void remove(source)}
+    >
+      <Trash2Icon aria-hidden="true" />
+    </Button>
   );
 }
 
@@ -184,9 +162,14 @@ export function scopeSourceSchema() {
 export function AddSourceForm({
   add,
   onAdded,
+  close,
+  cancel,
 }: Readonly<{
   add: (source: { label: string; url: string | null }) => Promise<SourceOutcome>;
   onAdded: (label: string) => Promise<void> | void;
+  /** Closes the dialog the form sits in; without it the form stays and takes the focus back. */
+  close?: () => void;
+  cancel?: ReactNode;
 }>) {
   const formRef = useRef<HTMLFormElement>(null);
   const form = useAppForm({
@@ -208,8 +191,12 @@ export function AddSourceForm({
         return;
       }
       formApi.reset();
-      // The submit button was disabled while sending, which drops focus; the field takes it back.
-      formRef.current?.querySelector<HTMLElement>('input[name="label"]')?.focus();
+      if (close) {
+        close();
+      } else {
+        // The submit button was disabled while sending, which drops focus; the field takes it back.
+        formRef.current?.querySelector<HTMLElement>('input[name="label"]')?.focus();
+      }
       await onAdded(label);
     },
   });
@@ -248,10 +235,11 @@ export function AddSourceForm({
           )}
         </form.AppField>
       </div>
-      <div>
+      <div className="flex flex-wrap gap-2">
         <form.AppForm>
           <form.SubmitButton>{m.scope_source_add()}</form.SubmitButton>
         </form.AppForm>
+        {cancel}
       </div>
     </form>
   );

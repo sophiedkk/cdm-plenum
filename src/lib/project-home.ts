@@ -68,6 +68,8 @@ export interface ChecklistRound {
 export interface OverviewFacts {
   /** Whether the scope statement names the concept. */
   scopeWritten: boolean;
+  /** Whether the facilitator chose the model type (SC4). */
+  modelTypeSet: boolean;
   /** The comments on the scope. */
   scopeComments: number;
   /** People still to invite before joined and invited people reach the minimum panel (DE11). */
@@ -119,6 +121,7 @@ export interface OverviewFacts {
  */
 export type ChecklistItem =
   | { key: "scope_written"; done: boolean }
+  | { key: "model_type"; done: boolean }
   | { key: "panel"; done: boolean; missing: number }
   | { key: "scope_comments"; done: null; count: number }
   | {
@@ -153,6 +156,7 @@ export function checklist(phase: ProjectPhase, facts: OverviewFacts): ChecklistI
     case "scope":
       return [
         { key: "scope_written", done: facts.scopeWritten },
+        { key: "model_type", done: facts.modelTypeSet },
         { key: "panel", done: facts.panelMissing === 0, missing: facts.panelMissing },
         { key: "scope_comments", done: null, count: facts.scopeComments },
       ];

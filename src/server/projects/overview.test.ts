@@ -16,7 +16,7 @@ import { invite } from "../invitations/queries.ts";
 import type { Mailer } from "../mail.ts";
 import { saveRating } from "../rounds/ratings.ts";
 import { closedNow, ok, openedRound, panelProject } from "../rounds/test-round.ts";
-import { addScopeComment, updateScope } from "../scope/queries.ts";
+import { addScopeComment, setModelType, updateScope } from "../scope/queries.ts";
 import {
   emailOf,
   facilitatorWithProject,
@@ -167,6 +167,7 @@ describe("overviewFacts (PR4)", () => {
     const p = await projectWithMembers(db);
     const empty = value(await overviewFacts(db, p.facilitator, p.projectId, DEPS));
     expect(empty.scopeWritten).toBe(false);
+    expect(empty.modelTypeSet).toBe(false);
     expect(empty.scopeComments).toBe(0);
     // Class D asks 2 clinical, 1 terminology and 2 architecture raters; 2 nurses joined.
     expect(empty.panelMissing).toBe(3);
@@ -180,6 +181,9 @@ describe("overviewFacts (PR4)", () => {
       }),
     );
     value(await addScopeComment(db, p.participant, { projectId: p.projectId, body: "Children?" }));
+    value(
+      await setModelType(db, p.facilitator, { projectId: p.projectId, modelType: "observation" }),
+    );
     const invited = await invite(
       db,
       p.facilitator,
@@ -193,6 +197,7 @@ describe("overviewFacts (PR4)", () => {
     expect(invited.ok).toBe(true);
     const facts = value(await overviewFacts(db, p.facilitator, p.projectId, DEPS));
     expect(facts.scopeWritten).toBe(true);
+    expect(facts.modelTypeSet).toBe(true);
     expect(facts.scopeComments).toBe(1);
     // A pending invitation counts toward the panel.
     expect(facts.panelMissing).toBe(2);

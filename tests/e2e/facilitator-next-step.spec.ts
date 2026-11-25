@@ -34,9 +34,14 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
     }) => {
       const project = await seedProject(db, "scope");
       await signInTo(page, project.facilitator.email, locale, `/projects/${project.projectId}`);
-      const toScope = page.getByRole("link", { name: text.projects_check_scope_action });
+      // Two items lead to the scope page; the first open one is the filled button.
+      const toScope = page.getByRole("link", { name: text.projects_check_scope_action }).first();
       await expectHydrated(toScope);
       await expect(toScope).toHaveAttribute("data-variant", "default");
+      await expect(page.getByText(text.projects_check_model_type, { exact: true })).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: text.projects_check_scope_action }).nth(1),
+      ).toHaveAttribute("data-variant", "outline");
       await expect(page.getByRole("link", { name: text.projects_check_invite })).toHaveAttribute(
         "data-variant",
         "outline",
@@ -51,6 +56,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(confirm.getByRole("listitem").first()).toHaveText(
         text.projects_check_scope_write,
       );
+      await expect(confirm.getByRole("listitem").nth(1)).toHaveText(text.projects_check_model_type);
       await expectAxeClean(page);
 
       await toScope.click();
