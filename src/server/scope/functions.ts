@@ -15,6 +15,7 @@ import {
   listScopeCommentsWithAuthors,
   removeScopeSource,
   reorderScopeSources,
+  restoreScopeSource,
   setModelType,
   updateScope,
 } from "./queries.ts";
@@ -22,6 +23,7 @@ import {
   addScopeCommentInput,
   addScopeSourceInput,
   reorderScopeSourcesInput,
+  restoreScopeSourceInput,
   scopeSourceInput,
   setModelTypeInput,
   updateScopeInput,
@@ -56,6 +58,11 @@ export const removeScopeSourceFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(scopeSourceInput)
   .handler(({ data, context }) => removeScopeSource(getDb(), context.userId, data));
+
+export const restoreScopeSourceFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(restoreScopeSourceInput)
+  .handler(({ data, context }) => restoreScopeSource(getDb(), context.userId, data));
 
 export const addScopeCommentFn = createServerFn({ method: "POST" })
   .middleware([requireSession])

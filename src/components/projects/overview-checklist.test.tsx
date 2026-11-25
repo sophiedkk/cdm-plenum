@@ -54,6 +54,7 @@ afterEach(() => {
 function facts(changes: Partial<OverviewFacts> = {}): OverviewFacts {
   return {
     scopeWritten: true,
+    modelTypeSet: true,
     scopeComments: 0,
     panelMissing: 0,
     participants: 8,
@@ -125,8 +126,13 @@ function items() {
 }
 
 describe("the checklist per phase", () => {
-  it("lists the scope phase: scope written, panel invited, comments to read", () => {
-    renderOverview("scope", { scopeWritten: false, panelMissing: 2, scopeComments: 3 });
+  it("lists the scope phase: scope written, model type chosen, panel invited, comments to read", () => {
+    renderOverview("scope", {
+      scopeWritten: false,
+      modelTypeSet: false,
+      panelMissing: 2,
+      scopeComments: 3,
+    });
     expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(
       "Before you go on to Discover",
     );
@@ -134,6 +140,11 @@ describe("the checklist per phase", () => {
       {
         state: "To do",
         text: "To doWrite the scope statementGo to the scope",
+        actions: ["Go to the scope"],
+      },
+      {
+        state: "To do",
+        text: "To doChoose the model typeGo to the scope",
         actions: ["Go to the scope"],
       },
       {
@@ -154,10 +165,15 @@ describe("the checklist per phase", () => {
 
   it("marks done items with a check and its state in words, without an action", () => {
     renderOverview("scope");
-    const [scope, panel] = items();
+    const [scope, modelType, panel] = items();
     expect(scope).toEqual({
       state: "Done",
       text: "DoneThe scope statement is written",
+      actions: [],
+    });
+    expect(modelType).toEqual({
+      state: "Done",
+      text: "DoneThe model type is chosen",
       actions: [],
     });
     expect(panel?.state).toBe("Done");

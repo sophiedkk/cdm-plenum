@@ -4,10 +4,11 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { PencilIcon } from "lucide-react";
+import { PencilIcon, PlusIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { CommentThread } from "@/components/comments/comment-thread";
+import { FormDialog } from "@/components/members/form-dialog";
 import { projectTitle } from "@/components/projects/project-title";
 import { TaskBar } from "@/components/projects/task-bar";
 import { ModelTypeForm, ModelTypeView } from "@/components/scope/model-type";
@@ -20,12 +21,14 @@ import { m } from "@/i18n/messages";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import { modelTypeOpen } from "@/lib/model-types";
 import { writeOpen } from "@/lib/phase-access";
+import { UNDO_MS } from "@/lib/undo";
 import { projectKeys } from "@/server/projects/query-options";
 import {
   addScopeCommentFn,
   addScopeSourceFn,
   removeScopeSourceFn,
   reorderScopeSourcesFn,
+  restoreScopeSourceFn,
   setModelTypeFn,
   updateScopeFn,
 } from "@/server/scope/functions";
@@ -76,6 +79,7 @@ function Scope() {
   const addSource = useServerFn(addScopeSourceFn);
   const reorderSources = useServerFn(reorderScopeSourcesFn);
   const removeSource = useServerFn(removeScopeSourceFn);
+  const restoreSource = useServerFn(restoreScopeSourceFn);
   const addComment = useServerFn(addScopeCommentFn);
   const setModelType = useServerFn(setModelTypeFn);
 
@@ -127,11 +131,31 @@ function Scope() {
     await refreshScope();
   }
 
+  async function undoRemove(source: ScopeSource, position: number) {
+    try {
+      const result = await restoreSource({
+        data: { projectId, label: source.label, url: source.url, position },
+      });
+      if (result.ok) toast.success(m.scope_source_restored({ label: source.label }));
+      else toast.error(refusalMessage(result.error));
+    } catch {
+      toast.error(m.common_error_unexpected());
+    }
+    await refreshScope();
+  }
+
   async function remove(source: ScopeSource) {
+    const position = statement.sources.findIndex((candidate) => candidate.id === source.id);
     try {
       const result = await removeSource({ data: { projectId, sourceId: source.id } });
-      if (result.ok) toast.success(m.scope_source_removed({ label: source.label }));
-      else toast.error(refusalMessage(result.error));
+      if (result.ok) {
+        toast.success(m.scope_source_removed({ label: source.label }), {
+          duration: UNDO_MS,
+          action: { label: m.common_undo(), onClick: () => void undoRemove(source, position) },
+        });
+      } else {
+        toast.error(refusalMessage(result.error));
+      }
     } catch {
       toast.error(m.common_error_unexpected());
     }
@@ -234,13 +258,29 @@ function Scope() {
             remove={remove}
           />
           {canEdit && (
-            <AddSourceForm
-              add={(source) => addSource({ data: { projectId, ...source } })}
-              onAdded={async (label) => {
-                await refreshScope();
-                toast.success(m.scope_source_added({ label }));
-              }}
-            />
+            <div>
+              <FormDialog
+                title={m.scope_source_add_title()}
+                trigger={
+                  <Button type="button" variant="outline">
+                    <PlusIcon aria-hidden="true" data-icon="inline-start" />
+                    {m.scope_source_add()}
+                  </Button>
+                }
+              >
+                {({ close, cancel }) => (
+                  <AddSourceForm
+                    close={close}
+                    cancel={cancel}
+                    add={(source) => addSource({ data: { projectId, ...source } })}
+                    onAdded={async (label) => {
+                      await refreshScope();
+                      toast.success(m.scope_source_added({ label }));
+                    }}
+                  />
+                )}
+              </FormDialog>
+            </div>
           )}
         </section>
 

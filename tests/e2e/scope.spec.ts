@@ -4,7 +4,7 @@
 // The scope page (SC1, SC2, SC4): the facilitator edits the statement, orders the sources with
 // the keyboard only and chooses the model type; a participant reads it and comments without being
 // named to others (Q-ANON-1); axe-clean in English and Dutch (Q-ACC-1, Q-I18N-1).
-import { addScopeComment } from "../../src/server/scope/queries.ts";
+import { addScopeComment, addScopeSource } from "../../src/server/scope/queries.ts";
 import { seedScope, signInTo, userIdOf } from "./board-seed.ts";
 import {
   BROWSER_LOCALE,
@@ -64,14 +64,19 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         ["ESC guideline", "https://example.test/esc"],
         ["Ward form", ""],
       ] as const) {
-        const title = page.getByLabel(text.scope_source_label_label);
-        await tabTo(page, title, 40);
+        const open = sources.getByRole("button", { name: text.scope_source_add });
+        await tabTo(page, open, 40);
+        await page.keyboard.press("Enter");
+        const dialog = page.getByRole("dialog", { name: text.scope_source_add_title });
+        // The form opens in a dialog with the title field focused.
+        await expect(dialog.getByLabel(text.scope_source_label_label)).toBeFocused();
         await page.keyboard.type(label);
         if (url) {
           await page.keyboard.press("Tab");
           await page.keyboard.type(url);
         }
         await page.keyboard.press("Enter");
+        await expect(dialog).toBeHidden();
         await expect(sources.getByRole("listitem").filter({ hasText: label })).toBeVisible();
       }
       const link = page.getByRole("link", { name: /ESC guideline/ });
@@ -98,6 +103,59 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         }),
       ).toBeFocused();
       await expectAxeClean(page);
+    });
+
+    test("use cases read as a list and a removed source comes back with Undo", async ({
+      page,
+      db,
+    }) => {
+      const project = await seedProject(db);
+      await seedScope(db, project.facilitator.userId, project.projectId, {
+        concept: "Office blood pressure.",
+        useCases: "Hypertension follow-up; Screening; Research",
+        outOfScope: "",
+      });
+      for (const label of ["ESC guideline", "Ward form", "Local protocol"]) {
+        const added = await addScopeSource(db, project.facilitator.userId, {
+          projectId: project.projectId,
+          label,
+          url: null,
+        });
+        expect(added.ok).toBe(true);
+      }
+      await signInTo(
+        page,
+        project.facilitator.email,
+        locale,
+        `/projects/${project.projectId}/scope`,
+      );
+      const useCases = page.getByRole("region", { name: text.scope_use_cases });
+      await expectHydrated(useCases);
+      await expect(useCases.getByRole("listitem")).toHaveText([
+        "Hypertension follow-up",
+        "Screening",
+        "Research",
+      ]);
+      // One filled button on the page: the comment form's own submit.
+      await expect(page.locator('button[data-variant="default"]')).toHaveCount(1);
+      await page.getByRole("button", { name: text.scope_edit }).click();
+      await expect(page.getByLabel(text.scope_use_cases_edit_label)).toBeVisible();
+      await expectAxeClean(page);
+      await page.getByRole("button", { name: text.common_cancel }).click();
+
+      const sources = page.getByRole("region", { name: text.scope_sources_heading });
+      const items = sources.getByRole("listitem");
+      await sources
+        .getByRole("button", { name: fill(text.scope_source_remove, { label: "Ward form" }) })
+        .click();
+      // No confirmation: the source is gone at once and the toast offers Undo.
+      await expect(items).toHaveText([/ESC guideline/, /Local protocol/]);
+      await expectAxeClean(page);
+      await page.getByRole("button", { name: text.common_undo }).click();
+      await expect(items).toHaveText([/ESC guideline/, /Ward form/, /Local protocol/]);
+      await expect(
+        page.getByText(fill(text.scope_source_restored, { label: "Ward form" })),
+      ).toBeVisible();
     });
 
     test("the facilitator chooses the model type and a participant reads it (SC4)", async ({
