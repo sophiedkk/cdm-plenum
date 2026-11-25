@@ -207,6 +207,17 @@ function TaskLine({
         </p>
       );
     case "handoff":
-      return <p data-testid="task-line">{m.projects_task_handoff()}</p>;
+      return (
+        <p data-testid="task-line">
+          {m.projects_task_handoff()}{" "}
+          <Link
+            to="/projects/$projectId/handoff"
+            params={{ projectId }}
+            className="underline underline-offset-4"
+          >
+            {m.projects_task_handoff_action()}
+          </Link>
+        </p>
+      );
   }
 }

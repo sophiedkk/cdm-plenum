@@ -203,10 +203,15 @@ Then work through these steps:
    its date has passed. "Apply to the proposal" makes the kept values a new
    version that the group answers again.
 6. **Hand-off:** open "Respiratory rate (demo)". Two rounds are closed;
-   round 2 settled one of the two elements without consensus. Export the
-   elements as CSV and as a mind map from the Overview, and open the Export page for
-   the decision report: it lists the scope, the panel per group, the rule and
-   response of both rounds and the outcome per element, and names no one.
+   round 2 settled one of the two elements without consensus. The
+   Overview's one main button opens the hand-off page: below the downloads it
+   shows the tree and each element of the model with its structure and codes,
+   and marks what is not settled. Download the elements as CSV, as "CSV for
+   Excel with a semicolon" (open it in a Dutch Excel: it should show columns)
+   and as a mind map, and the decision report: it lists the scope, the panel
+   per group, the rule and response of both rounds and the outcome per
+   element, and names no one. As participant the same page shows the model
+   without any download.
 7. **As participant,** switch person to `nurse.a@example.test`.
    The project list shows what waits per project. Open Blood pressure: its
    home shows "Your turn: rate round 2" and what is decided so far. Rate the

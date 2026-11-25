@@ -30,7 +30,15 @@ export function csvCell(cell: CsvCell): string {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
-/** Writes a CSV document: a BOM, then each row as cells joined by commas, each row ended by CRLF. */
-export function writeCsv(rows: readonly (readonly CsvCell[])[]): string {
-  return BOM + rows.map((row) => `${row.map(csvCell).join(",")}\r\n`).join("");
+/** The separator between cells: a comma (RFC 4180), or a semicolon for spreadsheet programs set to Dutch. */
+export type CsvSeparator = "comma" | "semicolon";
+
+const SEPARATORS: Record<CsvSeparator, string> = { comma: ",", semicolon: ";" };
+
+/** Writes a CSV document: a BOM, then each row as cells joined by the separator, each ended by CRLF. */
+export function writeCsv(
+  rows: readonly (readonly CsvCell[])[],
+  separator: CsvSeparator = "comma",
+): string {
+  return BOM + rows.map((row) => `${row.map(csvCell).join(SEPARATORS[separator])}\r\n`).join("");
 }

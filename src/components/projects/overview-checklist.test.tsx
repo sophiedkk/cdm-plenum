@@ -259,11 +259,11 @@ describe("the checklist per phase", () => {
     );
   });
 
-  it("shows the export in hand-off as its one main button", () => {
+  it("leads to the hand-off page in hand-off as its one main button", () => {
     renderOverview("handoff");
     expect(screen.queryByRole("list")).toBeNull();
-    expect(screen.getByRole("link", { name: "Go to the export" }).getAttribute("href")).toBe(
-      "/projects/p1/export",
+    expect(screen.getByRole("link", { name: "Go to the hand-off" }).getAttribute("href")).toBe(
+      "/projects/p1/handoff",
     );
     expect(screen.queryByRole("button", { name: /Go on to/ })).toBeNull();
     expect(screen.getByRole("button", { name: "Move back to Detail" })).toBeTruthy();

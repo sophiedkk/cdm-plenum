@@ -543,7 +543,7 @@ export function PhaseMove({
   );
 }
 
-/** The Overview of the facilitator: the checklist of the phase, or the export in hand-off. */
+/** The Overview of the facilitator: the checklist of the phase, or the hand-off page in hand-off. */
 export function OverviewChecklist({
   projectId,
   phase,
@@ -575,7 +575,7 @@ export function OverviewChecklist({
       ) : (
         <div>
           <Button asChild size="lg">
-            <Link to="/projects/$projectId/export" params={{ projectId }}>
+            <Link to="/projects/$projectId/handoff" params={{ projectId }}>
               {m.projects_overview_export_action()}
             </Link>
           </Button>

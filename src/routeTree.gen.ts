@@ -29,6 +29,7 @@ import { Route as AuthedProjectsProjectIdDetailsRouteImport } from './routes/_au
 import { Route as AuthedProjectsProjectIdExportRouteImport } from './routes/_authed/projects/$projectId/export'
 import { Route as AuthedProjectsProjectIdFirstLookRouteImport } from './routes/_authed/projects/$projectId/first-look'
 import { Route as AuthedProjectsProjectIdGroupingRouteImport } from './routes/_authed/projects/$projectId/grouping'
+import { Route as AuthedProjectsProjectIdHandoffRouteImport } from './routes/_authed/projects/$projectId/handoff'
 import { Route as AuthedProjectsProjectIdMembersRouteImport } from './routes/_authed/projects/$projectId/members'
 import { Route as AuthedProjectsProjectIdModelsRouteImport } from './routes/_authed/projects/$projectId/models'
 import { Route as AuthedProjectsProjectIdRoundsRouteImport } from './routes/_authed/projects/$projectId/rounds'
@@ -148,6 +149,12 @@ const AuthedProjectsProjectIdGroupingRoute =
     path: '/grouping',
     getParentRoute: () => AuthedProjectsProjectIdRoute,
   } as any)
+const AuthedProjectsProjectIdHandoffRoute =
+  AuthedProjectsProjectIdHandoffRouteImport.update({
+    id: '/handoff',
+    path: '/handoff',
+    getParentRoute: () => AuthedProjectsProjectIdRoute,
+  } as any)
 const AuthedProjectsProjectIdMembersRoute =
   AuthedProjectsProjectIdMembersRouteImport.update({
     id: '/members',
@@ -234,6 +241,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
   '/projects/$projectId/first-look': typeof AuthedProjectsProjectIdFirstLookRoute
   '/projects/$projectId/grouping': typeof AuthedProjectsProjectIdGroupingRoute
+  '/projects/$projectId/handoff': typeof AuthedProjectsProjectIdHandoffRoute
   '/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
   '/projects/$projectId/models': typeof AuthedProjectsProjectIdModelsRoute
   '/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsRouteWithChildren
@@ -265,6 +273,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
   '/projects/$projectId/first-look': typeof AuthedProjectsProjectIdFirstLookRoute
   '/projects/$projectId/grouping': typeof AuthedProjectsProjectIdGroupingRoute
+  '/projects/$projectId/handoff': typeof AuthedProjectsProjectIdHandoffRoute
   '/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
   '/projects/$projectId/models': typeof AuthedProjectsProjectIdModelsRoute
   '/projects/$projectId/scope': typeof AuthedProjectsProjectIdScopeRoute
@@ -298,6 +307,7 @@ export interface FileRoutesById {
   '/_authed/projects/$projectId/export': typeof AuthedProjectsProjectIdExportRoute
   '/_authed/projects/$projectId/first-look': typeof AuthedProjectsProjectIdFirstLookRoute
   '/_authed/projects/$projectId/grouping': typeof AuthedProjectsProjectIdGroupingRoute
+  '/_authed/projects/$projectId/handoff': typeof AuthedProjectsProjectIdHandoffRoute
   '/_authed/projects/$projectId/members': typeof AuthedProjectsProjectIdMembersRoute
   '/_authed/projects/$projectId/models': typeof AuthedProjectsProjectIdModelsRoute
   '/_authed/projects/$projectId/rounds': typeof AuthedProjectsProjectIdRoundsRouteWithChildren
@@ -332,6 +342,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/export'
     | '/projects/$projectId/first-look'
     | '/projects/$projectId/grouping'
+    | '/projects/$projectId/handoff'
     | '/projects/$projectId/members'
     | '/projects/$projectId/models'
     | '/projects/$projectId/rounds'
@@ -363,6 +374,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/export'
     | '/projects/$projectId/first-look'
     | '/projects/$projectId/grouping'
+    | '/projects/$projectId/handoff'
     | '/projects/$projectId/members'
     | '/projects/$projectId/models'
     | '/projects/$projectId/scope'
@@ -395,6 +407,7 @@ export interface FileRouteTypes {
     | '/_authed/projects/$projectId/export'
     | '/_authed/projects/$projectId/first-look'
     | '/_authed/projects/$projectId/grouping'
+    | '/_authed/projects/$projectId/handoff'
     | '/_authed/projects/$projectId/members'
     | '/_authed/projects/$projectId/models'
     | '/_authed/projects/$projectId/rounds'
@@ -562,6 +575,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedProjectsProjectIdGroupingRouteImport
       parentRoute: typeof AuthedProjectsProjectIdRoute
     }
+    '/_authed/projects/$projectId/handoff': {
+      id: '/_authed/projects/$projectId/handoff'
+      path: '/handoff'
+      fullPath: '/projects/$projectId/handoff'
+      preLoaderRoute: typeof AuthedProjectsProjectIdHandoffRouteImport
+      parentRoute: typeof AuthedProjectsProjectIdRoute
+    }
     '/_authed/projects/$projectId/members': {
       id: '/_authed/projects/$projectId/members'
       path: '/members'
@@ -674,6 +694,7 @@ interface AuthedProjectsProjectIdRouteChildren {
   AuthedProjectsProjectIdExportRoute: typeof AuthedProjectsProjectIdExportRoute
   AuthedProjectsProjectIdFirstLookRoute: typeof AuthedProjectsProjectIdFirstLookRoute
   AuthedProjectsProjectIdGroupingRoute: typeof AuthedProjectsProjectIdGroupingRoute
+  AuthedProjectsProjectIdHandoffRoute: typeof AuthedProjectsProjectIdHandoffRoute
   AuthedProjectsProjectIdMembersRoute: typeof AuthedProjectsProjectIdMembersRoute
   AuthedProjectsProjectIdModelsRoute: typeof AuthedProjectsProjectIdModelsRoute
   AuthedProjectsProjectIdRoundsRoute: typeof AuthedProjectsProjectIdRoundsRouteWithChildren
@@ -695,6 +716,7 @@ const AuthedProjectsProjectIdRouteChildren: AuthedProjectsProjectIdRouteChildren
     AuthedProjectsProjectIdFirstLookRoute:
       AuthedProjectsProjectIdFirstLookRoute,
     AuthedProjectsProjectIdGroupingRoute: AuthedProjectsProjectIdGroupingRoute,
+    AuthedProjectsProjectIdHandoffRoute: AuthedProjectsProjectIdHandoffRoute,
     AuthedProjectsProjectIdMembersRoute: AuthedProjectsProjectIdMembersRoute,
     AuthedProjectsProjectIdModelsRoute: AuthedProjectsProjectIdModelsRoute,
     AuthedProjectsProjectIdRoundsRoute:
