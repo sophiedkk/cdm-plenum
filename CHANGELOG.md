@@ -11,6 +11,16 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Units: a structure proposal for a quantity or a quantity interval lists
+  one or more allowed units, typed as UCUM codes such as `mm[Hg]`, `kPa`,
+  `/min` or `%`, separated by spaces. The first unit is the preferred one.
+  The form accepts printable characters without spaces, up to 40 characters
+  per unit and 10 units, and does not look the codes up. Settling copies the
+  units onto the element. The board, the detail card, the recap, the elements
+  CSV (a new `units` column) and the decision report show them.
+- Decision report: each round lists the panel per expert type when it opened
+  and the minimum that applied. A count of 1 or 2 reads "fewer than 3". The
+  reason for opening below the minimum is not part of the report.
 - Brainstorm questions per model type: the four questions, their column
   labels and the names of the four starting groups follow the model type of
   the project. An evaluation asks what is concluded, what it is based on, how
@@ -165,6 +175,8 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The "Open round" dialog shows Cancel only, without the extra close button
+  in the corner, as the other form dialogs do.
 - The Overview in the Hand-off phase now leads to the hand-off page, and the
   export URL of a project in that phase leads there too. In the earlier phases
   the facilitator keeps the Export page.

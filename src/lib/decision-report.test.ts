@@ -20,6 +20,11 @@ const REPORT: DecisionReport = {
       closesAt: "2026-11-08T10:00:00.000Z",
       closedAt: "2026-11-08T10:00:00.000Z",
       groups: [{ name: "Nursing", expertType: "clinical", invited: 4, started: 4, completed: 4 }],
+      panel: [
+        { expertType: "clinical", raters: 4, minimum: 2 },
+        { expertType: "terminology", raters: 2, minimum: 1 },
+        { expertType: "architecture", raters: 0, minimum: 1 },
+      ],
       total: { invited: 4, started: 4, completed: 4 },
       items: [{ name: "Cuff size", outcome: "included", median: 8, rated: 4 }],
     },
@@ -32,6 +37,7 @@ const REPORT: DecisionReport = {
       closesAt: "2026-11-17T10:00:00.000Z",
       closedAt: null,
       groups: [{ name: null, expertType: null, invited: 2, started: 1, completed: 0 }],
+      panel: null,
       total: { invited: 6, started: 5, completed: 4 },
       items: [],
     },
@@ -67,6 +73,39 @@ describe("writeDecisionReport (EX3)", () => {
     const text = writeDecisionReport(REPORT);
     expect(text).toContain("**Use cases:** not stated");
     expect(text).toContain("| Other groups (a group of fewer than 3 is not named) | 2 | 1 | 0 |");
+  });
+
+  it("writes the panel per expert type at opening, a count of 1 or 2 as fewer than 3 (DE12)", () => {
+    const text = writeDecisionReport(REPORT);
+    expect(text).toContain("| clinical | 4 | 2 |");
+    expect(text).toContain("| terminology | fewer than 3 | 1 |");
+    expect(text).toContain("| architecture | 0 | 1 |");
+  });
+
+  it("leaves the panel table out of a round that stored none", () => {
+    const text = writeDecisionReport({ ...REPORT, rounds: REPORT.rounds.slice(1) });
+    expect(text).not.toContain("Expert type | Raters | Minimum");
+  });
+
+  it("writes the units of an element, joined with a semicolon", () => {
+    const text = writeDecisionReport({
+      ...REPORT,
+      elements: [
+        {
+          name: "Systolic",
+          outcome: "included",
+          detail: {
+            dataType: "quantity",
+            cardinality: "1..1",
+            units: ["mm[Hg]", "kPa"],
+            group: null,
+            code: null,
+            codesSettled: null,
+          },
+        },
+      ],
+    });
+    expect(text).toContain("| Systolic | included | quantity | 1..1 | mm[Hg]; kPa |");
   });
 
   it("describes the default rule in words", () => {

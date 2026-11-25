@@ -188,8 +188,48 @@ describe("exportDecisionReport (EX3)", () => {
     const { members } = await seeded();
     const file = value(await exportDecisionReport(db, members.facilitator, members.projectId, NOW));
     expect(file.content).toContain(
-      "| Systolic pressure | included | quantity | 1..1 |  | http://loinc.org\\|8480-6 (open) |",
+      "| Systolic pressure | included | quantity | 1..1 |  |  | http://loinc.org\\|8480-6 (open) |",
     );
+  });
+
+  it("writes the panel per expert type at opening: fewer than 3 for 1 or 2, never the reason (DE12, Q-PRIV-3)", async () => {
+    const members = await projectWithMembers(db, "decide");
+    const { projectId, facilitator } = members;
+    await joinedParticipant(db, facilitator, projectId, "Terminology", "term1");
+    await joinedParticipant(db, facilitator, projectId, "Terminology", "term2");
+    await insertElement(db, projectId, "Systolic pressure");
+    const { roundId } = ok(
+      await createRound(db, facilitator, { projectId, closesAt: inDays(1) }, { now: new Date() }),
+    );
+    ok(
+      await openRound(
+        db,
+        facilitator,
+        { projectId, roundId, belowMinimumReason: "Only two terminologists, zq7 reason" },
+        { now: new Date() },
+      ),
+    );
+    const round = await db
+      .selectFrom("round")
+      .select(["panel_terminology", "below_minimum_reason"])
+      .where("id", "=", roundId)
+      .executeTakeFirstOrThrow();
+    expect(round.panel_terminology).toBe(2);
+    expect(round.below_minimum_reason).toContain("zq7");
+
+    const file = value(await exportDecisionReport(db, facilitator, projectId, NOW));
+    expect(file.content).toContain("| Expert type | Raters | Minimum |");
+    expect(file.content).toContain("| terminology | fewer than 3 | 1 |");
+    expect(file.content).not.toContain("| terminology | 2 |");
+    expect(file.content).not.toContain("zq7");
+    expect(personLeaks(file.content, members)).toEqual([]);
+  });
+
+  it("writes a panel count of 3 or more, and 0, as a number", async () => {
+    const { members } = await seeded();
+    const file = value(await exportDecisionReport(db, members.facilitator, members.projectId, NOW));
+    expect(file.content).toContain("| terminology | 3 | 1 |");
+    expect(file.content).toContain("| architecture | 0 | 1 |");
   });
 
   it("names no person and holds no rating code (Q-PRIV-1)", async () => {

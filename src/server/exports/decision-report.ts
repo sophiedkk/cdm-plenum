@@ -15,6 +15,7 @@ import {
   writeDecisionReport,
 } from "@/lib/decision-report";
 import { ancestry } from "@/lib/model-tree";
+import { EXPERT_TYPES } from "@/lib/panel";
 import type { DB } from "../db/schema.gen.ts";
 import { projectGroups } from "../details/tree.ts";
 import { done, type ProjectResult, withProject } from "../projects/access.ts";
@@ -90,6 +91,18 @@ function namedRows(
   return anyRest ? [...shown, rest] : shown;
 }
 
+/** The panel and minimum the round stored when it opened (DE12); never its reason. */
+function panelAtOpening(round: RoundRow): ReportRound["panel"] {
+  const rows = EXPERT_TYPES.map((expertType) => ({
+    expertType,
+    raters: round[`panel_${expertType}`],
+    minimum: round[`minimum_${expertType}`],
+  }));
+  return rows.every((row) => row.raters !== null && row.minimum !== null)
+    ? rows.map((row) => ({ ...row, raters: row.raters ?? 0, minimum: row.minimum ?? 0 }))
+    : null;
+}
+
 async function reportRound(
   trx: Kysely<DB>,
   projectId: string,
@@ -122,6 +135,7 @@ async function reportRound(
     closesAt: summary.closesAt,
     closedAt: summary.closedAt,
     groups: namedRows(rate.groups, members),
+    panel: panelAtOpening(round),
     total: rate.total,
     items,
   };
@@ -196,6 +210,7 @@ export async function decisionReportOf(
           dataType:
             element.dataType !== null && isDataTypeKey(element.dataType) ? element.dataType : null,
           cardinality: cardinality(element),
+          units: element.units,
           group:
             path.length === 0
               ? null

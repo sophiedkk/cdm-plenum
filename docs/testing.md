@@ -196,6 +196,10 @@ Then work through these steps:
    tree of the model as the architect under "Tree of the model": add a group,
    put it inside another with "Part of", mark a sub-block and a registration
    element, then answer it as a nurse and settle it as the facilitator.
+   Propose a quantity for an element with the units `mm[Hg] kPa`: the
+   units field opens under the data type and cardinality, and the first unit
+   is the preferred one. Settling shows the units on the element and in the
+   elements CSV.
    To try a value round, give a structure proposal a coded list, then press
    "Rate the values in a round" on its card. Add a second element's list,
    open the round from the Rounds page (the round dates default to two
@@ -209,9 +213,10 @@ Then work through these steps:
    and marks what is not settled. Download the elements as CSV, as "CSV for
    Excel with a semicolon" (open it in a Dutch Excel: it should show columns)
    and as a mind map, and the decision report: it lists the scope, the panel
-   per group, the rule and response of both rounds and the outcome per
-   element, and names no one. As participant the same page shows the model
-   without any download.
+   per group, the rule and response of both rounds, the panel per expert
+   type when each round opened (a count of 1 or 2 reads "fewer than 3") and
+   the outcome per element, and names no one. As participant the same page
+   shows the model without any download.
 7. **As participant,** switch person to `nurse.a@example.test`.
    The project list shows what waits per project. Open Blood pressure: its
    home shows "Your turn: rate round 2" and what is decided so far. Rate the

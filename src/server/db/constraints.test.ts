@@ -153,6 +153,68 @@ describe("element", () => {
       /element_name_check/,
     );
   });
+
+  it("holds units only for a quantity or a quantity interval, as UCUM-shaped codes (DT1)", async () => {
+    const p = await project();
+    for (const dataType of ["quantity", "quantity_interval"] as const) {
+      await db
+        .insertInto("element")
+        .values({ project_id: p, name: dataType, data_type: dataType, units: ["mm[Hg]", "/min"] })
+        .execute();
+    }
+    const refused = [
+      { data_type: "count", units: ["kPa"] },
+      { data_type: null, units: ["kPa"] },
+      { data_type: "quantity", units: ["mm Hg"] },
+      { data_type: "quantity", units: [""] },
+      { data_type: "quantity", units: ["µg"] },
+      { data_type: "quantity", units: ["a".repeat(41)] },
+      { data_type: "quantity", units: Array.from({ length: 11 }, (_, index) => `u${index}`) },
+    ] as const;
+    for (const row of refused) {
+      await expectRefused(
+        (trx) =>
+          trx
+            .insertInto("element")
+            .values({ project_id: p, name: "X", data_type: row.data_type, units: [...row.units] })
+            .execute(),
+        /element_units_check/,
+      );
+    }
+  });
+});
+
+describe("detail_proposal units", () => {
+  it("holds units only for a quantity or a quantity interval (DT1)", async () => {
+    const p = await project();
+    const element = await db
+      .insertInto("element")
+      .values({ project_id: p, name: "Systolic" })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    await db
+      .insertInto("detail_proposal")
+      .values({ element_id: element.id, data_type: "quantity", units: ["kPa"] })
+      .execute();
+    await expectRefused(
+      (trx) =>
+        trx
+          .updateTable("detail_proposal")
+          .set({ data_type: "coded_text" })
+          .where("element_id", "=", element.id)
+          .execute(),
+      /detail_proposal_units_check/,
+    );
+    await expectRefused(
+      (trx) =>
+        trx
+          .updateTable("detail_proposal")
+          .set({ units: ["kPa", "bad unit"] })
+          .where("element_id", "=", element.id)
+          .execute(),
+      /detail_proposal_units_check/,
+    );
+  });
 });
 
 describe("round", () => {

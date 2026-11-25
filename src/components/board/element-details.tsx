@@ -27,6 +27,7 @@ import { CODED_DATA_TYPE_KEYS } from "@/lib/data-types";
 import { ELEMENT_COMMENT_MAX } from "@/lib/elements";
 import { promptLabel, promptQuestion } from "@/lib/i18n/labels";
 import { refusalMessage } from "@/lib/i18n/refusals";
+import { joinUnits } from "@/lib/units";
 import type { BoardElement, ElementSourceKind } from "@/server/elements/queries";
 import { elementCommentsQueryOptions } from "@/server/elements/query-options";
 import type { Author } from "@/server/projects/member";
@@ -153,6 +154,9 @@ export function ElementDetails({
             <Row term={m.board_field_ckm()}>
               <CkmLinks link={element.ckmLink} merged={element.mergedCkmLinks} />
             </Row>
+          )}
+          {detailFields && element.units.length > 0 && (
+            <Row term={m.board_field_units()}>{joinUnits(element.units)}</Row>
           )}
           {detailFields && (coded || element.values.length > 0) && (
             <Row term={m.board_field_values()}>

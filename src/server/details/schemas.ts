@@ -20,7 +20,12 @@ import {
   TREE_ELEMENTS_MAX,
   TREE_GROUPS_MAX,
 } from "@/lib/model-tree";
-import { cardinalitySchema, dataTypeSchema, elementValueSchema } from "../elements/schemas.ts";
+import {
+  cardinalitySchema,
+  dataTypeSchema,
+  elementValueSchema,
+  unitsSchema,
+} from "../elements/schemas.ts";
 import { idSchema } from "../projects/schemas.ts";
 
 const text = z.string().trim().min(1).max(DETAIL_TEXT_MAX);
@@ -36,6 +41,7 @@ export const proposeDetailInput = z.object({
   dataType: dataTypeSchema,
   cardinality: cardinalitySchema,
   values: z.array(elementValueSchema).max(ELEMENT_VALUES_MAX),
+  units: unitsSchema,
 });
 export type ProposeDetailInput = z.infer<typeof proposeDetailInput>;
 

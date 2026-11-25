@@ -33,6 +33,7 @@ import {
 } from "@/lib/details";
 import { type ElementReference, toReference } from "@/lib/elements";
 import { DETAIL_PHASE, preparesAhead, stepVisible, writeOpen } from "@/lib/phase-access";
+import { takesUnits } from "@/lib/units";
 import type { DB } from "../db/schema.gen.ts";
 import { valuesProblem, writeValues } from "../elements/queries.ts";
 import {
@@ -93,6 +94,7 @@ export async function modelElements(db: Db, projectId: string) {
       "data_type",
       "min_occurs",
       "max_occurs",
+      "units",
       "code_system",
       "code",
       "code_display",
@@ -403,6 +405,7 @@ export async function detailBoard(
           dataType: dataTypeOf(row.data_type),
           cardinality: cardinalityOf(row.min_occurs, row.max_occurs),
           values: plain(proposalValues.get(row.id) ?? []),
+          units: row.units,
         },
         proposedBy: row.proposer_expert_type === null ? "facilitator" : "architecture",
       };
@@ -441,6 +444,7 @@ export async function detailBoard(
           dataType: dataTypeOf(element.data_type),
           cardinality: cardinalityOf(element.min_occurs, element.max_occurs),
           values: plain(values),
+          units: element.units,
         },
         proposal: structureView(element.id),
         currentCodes: {
@@ -534,6 +538,7 @@ export async function proposeDetail(
     }
     const problem = valuesProblem(input.dataType, input.values);
     if (problem !== null) return refused(problem);
+    if (input.units.length > 0 && !takesUnits(input.dataType)) return refused("units_not_allowed");
 
     const existing = await trx
       .selectFrom("detail_proposal")
@@ -548,6 +553,7 @@ export async function proposeDetail(
       data_type: input.dataType,
       min_occurs: input.cardinality?.min ?? null,
       max_occurs: input.cardinality?.max ?? null,
+      units: input.units,
       proposer_member_id: await actorMemberId(trx, project.id, userId),
       proposer_expert_type: project.role === "facilitator" ? null : "architecture",
       values: input.values,
@@ -587,6 +593,7 @@ export async function writeStructure(
     data_type: string | null;
     min_occurs: number | null;
     max_occurs: number | null;
+    units: string[];
     proposer_member_id: string;
     proposer_expert_type: "architecture" | null;
     values: readonly DetailValue[];
@@ -777,6 +784,7 @@ export async function settleDetail(
           data_type: proposal.data_type,
           min_occurs: proposal.min_occurs,
           max_occurs: proposal.max_occurs,
+          units: proposal.units,
           updated_at: new Date(),
         })
         .where("id", "=", proposal.element_id)
@@ -1010,6 +1018,7 @@ export async function modelStructures(db: Db, projectId: string): Promise<ModelS
         dataType: dataTypeOf(element.data_type),
         cardinality: cardinalityOf(element.min_occurs, element.max_occurs),
         values: plain(list),
+        units: element.units,
       },
       codesSettled: settled(element.id, "terminology"),
       codes: {

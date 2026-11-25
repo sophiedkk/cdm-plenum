@@ -38,6 +38,7 @@ const SNOMED = "http://snomed.info/sct";
 const CODED: DetailStructure = {
   dataType: "coded_text",
   cardinality: { min: 0, max: 1 },
+  units: [],
   values: [
     { text: "Left arm", value: null },
     { text: "Right arm", value: null },

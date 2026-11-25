@@ -176,7 +176,7 @@ export function OpenRoundDialog({
       <DialogTrigger asChild>
         <Button type="button">{m.rounds_open_button()}</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>{m.rounds_open_title({ number })}</DialogTitle>
           <DialogDescription>{m.rounds_open_fixed()}</DialogDescription>

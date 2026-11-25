@@ -141,13 +141,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await openButton.click();
       const dialog = page.getByRole("dialog");
       await expect(dialog).toContainText(text.rounds_open_fixed);
-      // The dialog's own close button is translated (Q-I18N-1): no English "Close" in Dutch.
+      // The dialog shows its own Cancel only; the translated close button is tested in
+      // src/components/ui/dialog.test.tsx.
+      await expect(dialog.getByRole("button", { name: text.common_cancel })).toBeVisible();
       await expect(
         dialog.getByRole("button", { name: text.common_close, exact: true }),
-      ).toBeVisible();
-      if (locale === "nl") {
-        await expect(page.getByRole("button", { name: "Close", exact: true })).toHaveCount(0);
-      }
+      ).toHaveCount(0);
       await axeClean(page);
       await dialog.getByRole("button", { name: text.rounds_open_confirm }).click();
       const reason = dialog.getByLabel(text.rounds_open_reason_label);

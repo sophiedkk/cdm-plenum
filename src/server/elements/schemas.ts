@@ -21,12 +21,20 @@ import {
   REFERENCE_URL_MAX,
 } from "@/lib/elements";
 import { FIRST_LOOK_ANSWERS } from "@/lib/first-look";
+import { isUnitCode, UNITS_MAX } from "@/lib/units";
 import { idSchema } from "../projects/schemas.ts";
 
 const DATA_TYPE_KEYS = DATA_TYPES.map((type) => type.key) as [DataTypeKey, ...DataTypeKey[]];
 
 /** A key of the data type list, or null for "not decided" (EL1, ADR 0009). */
 export const dataTypeSchema = z.enum(DATA_TYPE_KEYS).nullable().default(null);
+
+/** The allowed units of a quantity (DT1): up to 10 codes, no repeats, the first preferred. */
+export const unitsSchema = z
+  .array(z.string().refine(isUnitCode, "not a unit code"))
+  .max(UNITS_MAX)
+  .refine((units) => new Set(units).size === units.length, "repeated unit")
+  .default([]);
 
 /** A minimum of 0 or 1 and a maximum of a positive number or null for many (EL1). */
 export const cardinalitySchema = z

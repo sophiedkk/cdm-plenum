@@ -46,6 +46,7 @@ const SYSTOLIC: CardElement = {
   description: "The peak arterial pressure.",
   dataType: "quantity",
   cardinality: { min: 1, max: 1 },
+  units: [],
   sources: [
     { kind: "brainstorm", label: "" },
     { kind: "ckm", label: LINK.archetypeId },
@@ -66,6 +67,7 @@ const POSITION: CardElement = {
   description: "",
   dataType: "coded_text",
   cardinality: null,
+  units: [],
   sources: [{ kind: "csv", label: "elements.csv" }],
   values: [{ text: "Sitting", value: null }],
   ckmLink: null,
