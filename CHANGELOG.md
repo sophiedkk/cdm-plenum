@@ -21,6 +21,15 @@ the project uses [Semantic Versioning](https://semver.org/).
 - Decision report: each round lists the panel per expert type when it opened
   and the minimum that applied. A count of 1 or 2 reads "fewer than 3". The
   reason for opening below the minimum is not part of the report.
+- Hand-off page: in the Hand-off phase every member opens a read-only page
+  with the agreed model: the tree, each element with its data type,
+  cardinality, values and codes, and the references to other models. Parts
+  that are not settled and open codes carry a label. The facilitator finds all
+  downloads on the same page; participants see no download.
+- CSV for Excel: the elements and the ratings can also be downloaded as "CSV
+  for Excel with a semicolon", for Excel in Dutch and other European
+  languages, which opens a comma file as one column. Both files keep the same
+  rows and the same encoding.
 - Decision report: the Export page offers "Decision report", a Markdown file
   with the scope statement, the panel per stakeholder group, the consensus
   rule and response rate of each round, the outcome per element and the
@@ -157,6 +166,9 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 - The "Open round" dialog shows Cancel only, without the extra close button
   in the corner, as the other form dialogs do.
+- The Overview in the Hand-off phase now leads to the hand-off page, and the
+  export URL of a project in that phase leads there too. In the earlier phases
+  the facilitator keeps the Export page.
 - A server function that fails now writes one line to the server log with
   the function name, the error class, the message and the stack, so a
   missing migration shows up in the log. The log never holds the input of

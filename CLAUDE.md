@@ -135,7 +135,10 @@ page from these patterns; each has a real use and a test you can copy.
   home. The facilitator gets
   `ProjectTabs`, fixed as Overview, Scope, Elements, Rounds, Details,
   People, Settings; a page without its own tab (export, brainstorm, import) marks
-  the tab it belongs to in `UNDER`. Overview is the index route for the
+  the tab it belongs to in `UNDER`. In hand-off the downloads sit on the
+  hand-off page (`handoff.tsx`, step `handoff`) with the model for every
+  member; `ExportList` is the one list, and the export URL leads there in
+  that phase. Overview is the index route for the
   facilitator: `checklist(phase, facts)` decides the items, with
   `done: null` for an item that only informs, and `PhaseMove` holds the
   phase move. A new checklist fact goes into `overviewFacts`

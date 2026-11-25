@@ -62,6 +62,21 @@ describe("writeCsv", () => {
     expect(new TextEncoder().encode(csv).slice(0, 3)).toEqual(new Uint8Array([0xef, 0xbb, 0xbf]));
   });
 
+  it("joins cells with semicolons for a spreadsheet set to Dutch, quoting like the comma file", () => {
+    const csv = writeCsv(
+      [
+        ["name", "note"],
+        ["a;b", "c,d"],
+        ['say "x"', "line 1\r\nline 2"],
+        ["=1+1", 3],
+      ],
+      "semicolon",
+    );
+    expect(csv).toBe(
+      `${BOM}"name";"note"\r\n"a;b";"c,d"\r\n"say ""x""";"line 1\r\nline 2"\r\n"'=1+1";3\r\n`,
+    );
+  });
+
   it("writes only the byte order mark for no rows", () => {
     expect(writeCsv([])).toBe(BOM);
   });

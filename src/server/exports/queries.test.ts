@@ -14,6 +14,7 @@ import {
   groupId,
   insertUser,
   joinedParticipant,
+  setPhase,
 } from "../test-fixtures.ts";
 import { type ExportFile, exportElementsCsv, exportMindMap, exportRatingsCsv } from "./queries.ts";
 
@@ -28,7 +29,7 @@ afterEach(async () => {
 });
 
 /** Reads an RFC 4180 document as written by src/lib/csv.ts: BOM, CRLF, quoted text. */
-function parseCsv(content: string): string[][] {
+function parseCsv(content: string, separator = ","): string[][] {
   expect(content.startsWith(BOM)).toBe(true);
   const text = content.slice(BOM.length);
   const rows: string[][] = [];
@@ -44,7 +45,7 @@ function parseCsv(content: string): string[][] {
       } else if (char === '"') quoted = false;
       else cell += char;
     } else if (char === '"') quoted = true;
-    else if (char === ",") {
+    else if (char === separator) {
       row.push(cell);
       cell = "";
     } else if (char === "\r" && text[i + 1] === "\n") {
@@ -308,7 +309,13 @@ describe("exportElementsCsv (EX1)", () => {
   it("writes one row per element that is not merged, with types, sources, CKM link and outcomes", async () => {
     const { facilitator, projectId } = await setup();
     const file = value(
-      await exportElementsCsv(db, facilitator, projectId, new Date("2026-11-19T12:00:00Z")),
+      await exportElementsCsv(
+        db,
+        facilitator,
+        projectId,
+        "comma",
+        new Date("2026-11-19T12:00:00Z"),
+      ),
     );
     expect(file.filename).toBe("elements-2026-11-19.csv");
     expect(file.mediaType).toBe("text/csv; charset=utf-8");
@@ -570,6 +577,25 @@ describe("exportElementsCsv (EX1)", () => {
     expect(rows.find((row) => row["name"] === "Systolic")?.["round_3_outcome"]).toBe("pending");
   });
 
+  it("writes the semicolon file with the same rows as the comma file (EX1, #68)", async () => {
+    const { facilitator, projectId } = await setup();
+    const comma = value(await exportElementsCsv(db, facilitator, projectId, "comma"));
+    const semicolon = value(
+      await exportElementsCsv(
+        db,
+        facilitator,
+        projectId,
+        "semicolon",
+        new Date("2026-11-19T12:00:00Z"),
+      ),
+    );
+    expect(semicolon.filename).toBe("elements-semicolon-2026-11-19.csv");
+    expect(semicolon.mediaType).toBe("text/csv; charset=utf-8");
+    expect(semicolon.content.startsWith(BOM)).toBe(true);
+    expect(parseCsv(semicolon.content, ";")).toEqual(parseCsv(comma.content));
+    expect(semicolon.content.slice(1).split("\r\n")[0]).toMatch(/^"name";"description";/);
+  });
+
   it("writes only the header for a project without elements or rounds", async () => {
     const { userId, projectId } = await facilitatorWithProject(db);
     const file = value(await exportElementsCsv(db, userId, projectId));
@@ -727,7 +753,7 @@ describe("exportRatingsCsv (EX4)", () => {
   it("writes one row per rating of a closed round with the code, the group if large enough, round, element, score and reason", async () => {
     const { facilitator, projectId, raters, codes } = await setup();
     const file = value(
-      await exportRatingsCsv(db, facilitator, projectId, new Date("2026-11-19T12:00:00Z")),
+      await exportRatingsCsv(db, facilitator, projectId, "comma", new Date("2026-11-19T12:00:00Z")),
     );
     expect(file.filename).toBe("ratings-2026-11-19.csv");
     expect(parseCsv(file.content)[0]).toEqual([
@@ -799,6 +825,22 @@ describe("exportRatingsCsv (EX4)", () => {
     expect(file.content).not.toContain("example.test");
   });
 
+  it("writes the semicolon file with the same rows as the comma file (EX4, #68)", async () => {
+    const { facilitator, projectId } = await setup();
+    const comma = value(await exportRatingsCsv(db, facilitator, projectId, "comma"));
+    const semicolon = value(
+      await exportRatingsCsv(
+        db,
+        facilitator,
+        projectId,
+        "semicolon",
+        new Date("2026-11-19T12:00:00Z"),
+      ),
+    );
+    expect(semicolon.filename).toBe("ratings-semicolon-2026-11-19.csv");
+    expect(parseCsv(semicolon.content, ";")).toEqual(parseCsv(comma.content));
+  });
+
   it("writes only the header while no round has closed", async () => {
     const { userId, projectId } = await facilitatorWithProject(db);
     const file = value(await exportRatingsCsv(db, userId, projectId));
@@ -806,10 +848,17 @@ describe("exportRatingsCsv (EX4)", () => {
   });
 });
 
+const semicolonElements = (db: Kysely<DB>, userId: string, projectId: string) =>
+  exportElementsCsv(db, userId, projectId, "semicolon");
+const semicolonRatings = (db: Kysely<DB>, userId: string, projectId: string) =>
+  exportRatingsCsv(db, userId, projectId, "semicolon");
+
 const EXPORTS = [
   ["exportElementsCsv", exportElementsCsv, "export_elements_csv"],
+  ["exportElementsCsv (semicolon)", semicolonElements, "export_elements_csv"],
   ["exportMindMap", exportMindMap, "export_mind_map"],
   ["exportRatingsCsv", exportRatingsCsv, "export_ratings_csv"],
+  ["exportRatingsCsv (semicolon)", semicolonRatings, "export_ratings_csv"],
 ] as const;
 
 describe.each(EXPORTS)("%s access and log (Q-SEC-1, AD2)", (_name, run, action) => {
@@ -839,6 +888,12 @@ describe.each(EXPORTS)("%s access and log (Q-SEC-1, AD2)", (_name, run, action) 
       .where("action", "=", action)
       .execute();
     expect(logged).toEqual([]);
+  });
+
+  it("still refuses a participant in the hand-off phase, where the page shows the model (PR4)", async () => {
+    const { participant, projectId } = await setup();
+    await setPhase(db, projectId, "handoff");
+    expect(await run(db, participant, projectId)).toEqual({ ok: false, error: "forbidden" });
   });
 
   it("answers not_found to a user outside the project and for an unknown project", async () => {

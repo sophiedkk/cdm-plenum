@@ -51,6 +51,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
       const button = page.getByRole("button", {
         name: text.export_download.replace("{name}", text.export_elements_title),
+        exact: true,
       });
       await expectHydrated(button);
       await tabTo(page, button, 30);
