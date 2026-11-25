@@ -32,6 +32,7 @@ export const PROJECT_ACTION_ERRORS = [
   "element_in_round",
   "element_has_values",
   "values_not_allowed",
+  "units_not_allowed",
   "value_number_required",
   "value_number_not_allowed",
   "value_number_not_integer",

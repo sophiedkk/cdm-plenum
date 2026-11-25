@@ -762,6 +762,7 @@ async function seedDetail(db: Kysely<DB>, facilitatorId: string, now: Date): Pro
       version: 0,
       dataType: "proportion",
       cardinality: { min: 1, max: 1 },
+      units: [],
       values: [],
     }),
   );
@@ -773,6 +774,7 @@ async function seedDetail(db: Kysely<DB>, facilitatorId: string, now: Date): Pro
       version: 0,
       dataType: "coded_text",
       cardinality: { min: 0, max: 1 },
+      units: [],
       values: [
         { text: "Room air", value: null },
         { text: "Supplemental oxygen", value: null },

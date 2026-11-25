@@ -97,6 +97,7 @@ describe("addElement (EL1)", () => {
         cardinality: null,
         sources: [{ kind: "brainstorm", label: "" }],
         values: [],
+        units: [],
         ckmLink: null,
         mergedCkmLinks: [],
         prompt: null,
@@ -447,6 +448,28 @@ describe("updateElement (EL5)", () => {
       dataType: "quantity",
       cardinality: { min: 0, max: 1 },
     });
+  });
+
+  it("shows the units of an element and drops them when its data type takes none", async () => {
+    const id = await add(m.participant, { name: "Systolic", dataType: "quantity" });
+    await db
+      .updateTable("element")
+      .set({ units: ["mm[Hg]", "kPa"] })
+      .where("id", "=", id)
+      .execute();
+    expect((await board())[0]?.units).toEqual(["mm[Hg]", "kPa"]);
+    const kept = { name: "Systolic", dataType: "quantity_interval" } as const;
+    expect(await updateElement(db, m.facilitator, update(id, kept))).toEqual({
+      ok: true,
+      value: null,
+    });
+    expect((await board())[0]?.units).toEqual(["mm[Hg]", "kPa"]);
+    const changed = { name: "Systolic", dataType: "count" } as const;
+    expect(await updateElement(db, m.facilitator, update(id, changed))).toEqual({
+      ok: true,
+      value: null,
+    });
+    expect((await board())[0]?.units).toEqual([]);
   });
 
   it("refuses a participant with forbidden and a non-member with not_found", async () => {

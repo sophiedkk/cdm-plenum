@@ -30,6 +30,7 @@ const ZIB = { title: "Zib Bloeddruk", url: "https://models.example.test/zib/bloe
 const CARDINALITY_ONLY: DetailStructure = {
   dataType: null,
   cardinality: { min: 0, max: null },
+  units: [],
   values: [],
 };
 

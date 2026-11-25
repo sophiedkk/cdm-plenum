@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The structure proposal of an element (DT1): data type, cardinality and, for a coded text,
-// ordinal or scale, the value list with its meanings and numbers. One save sends all three, so
+// ordinal or scale, the value list with its meanings and numbers, for a quantity its units. One
+// save sends them all, so
 // a revision is one new version for the group to answer. A reference to another model gets the
 // cardinality only (EL26).
 import { revalidateLogic } from "@tanstack/react-form";
@@ -31,10 +32,13 @@ import { ELEMENT_VALUES_MAX } from "@/lib/elements";
 import type { Outcome } from "@/lib/forms/outcome";
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
 import { refusalMessage } from "@/lib/i18n/refusals";
+import { isUnitCode, parseUnits, takesUnits, UNIT_MAX, UNITS_MAX } from "@/lib/units";
 
 interface FormValues extends CardinalityValues {
   dataType: string;
   values: { text: string; value: string }[];
+  /** The units in one field, separated by spaces. */
+  units: string;
 }
 
 function coded(dataType: string): boolean {
@@ -50,15 +54,29 @@ function proposalSchema() {
       maxKind: z.string(),
       maxNumber: z.string(),
       values: z.array(z.object({ text: z.string(), value: z.string() })),
+      units: z.string(),
     })
     .superRefine((value, ctx) => {
       checkCardinality(value, ctx);
+      if (takesUnits(value.dataType)) {
+        const problem = unitsProblem(parseUnits(value.units));
+        if (problem !== null) ctx.addIssue({ code: "custom", path: ["units"], message: problem });
+      }
       if (!isDataTypeKey(value.dataType) || !coded(value.dataType)) return;
       const result = valuesSchema(value.dataType).safeParse({ values: value.values });
       for (const issue of result.error?.issues ?? []) {
         ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
       }
     });
+}
+
+/** Why the typed units do not fit, in the user's language; the form needs at least one. */
+function unitsProblem(units: readonly string[]): string | null {
+  if (units.length === 0) return m.details_units_required();
+  if (units.length > UNITS_MAX) return m.details_units_too_many({ max: UNITS_MAX });
+  if (!units.every(isUnitCode)) return m.details_units_invalid({ max: UNIT_MAX });
+  if (new Set(units).size !== units.length) return m.details_units_repeated();
+  return null;
 }
 
 function toStructure(values: FormValues): DetailStructure {
@@ -73,6 +91,7 @@ function toStructure(values: FormValues): DetailStructure {
           value: needsNumber ? parseValueNumber(entry.value) : null,
         }))
       : [],
+    units: takesUnits(values.dataType) ? parseUnits(values.units) : [],
   };
 }
 
@@ -102,6 +121,7 @@ export function ProposalForm({
         text: value.text,
         value: value.value === null ? "" : String(value.value),
       })),
+      units: initial.units.join(" "),
     } satisfies FormValues as FormValues,
     validationLogic: revalidateLogic(),
     validators: { onDynamic: proposalSchema() },
@@ -173,6 +193,21 @@ export function ProposalForm({
           }
         </form.Subscribe>
       </fieldset>
+      <form.Subscribe selector={(state) => state.values.dataType}>
+        {(dataType) =>
+          takesUnits(dataType) && (
+            <form.AppField name="units">
+              {(field) => (
+                <field.TextField
+                  label={m.details_units_label()}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              )}
+            </form.AppField>
+          )
+        }
+      </form.Subscribe>
       <form.Subscribe selector={(state) => state.values.dataType}>
         {(dataType) =>
           coded(dataType) && (

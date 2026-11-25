@@ -86,11 +86,14 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await dialog.getByRole("radio", { name: new RegExp(text.board_type_quantity_name) }).check();
       await dialog.getByLabel(text.board_min_label).selectOption("1");
       await dialog.getByLabel(text.board_max_label).selectOption("1");
+      // The units field opens for a quantity; the first unit is the preferred one.
+      await dialog.getByLabel(text.details_units_label).fill("mm[Hg] kPa");
       await expectAxeCleanInBothThemes(page);
       await dialog.getByRole("button", { name: text.details_propose_submit }).click();
       await expect(dialog).toHaveCount(0);
       await expect(systolicCard).toContainText(fill(text.details_by_architecture, { version: 1 }));
       await expect(systolicCard).toContainText("1..1");
+      await expect(systolicCard).toContainText("mm[Hg]; kPa");
 
       // The participant's home asks them to answer; they object with a reason.
       await switchUser(page, participant, locale, `/projects/${project.projectId}`);
@@ -139,12 +142,17 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         .poll(async () => {
           const row = await db
             .selectFrom("element")
-            .select(["data_type", "min_occurs", "max_occurs"])
+            .select(["data_type", "min_occurs", "max_occurs", "units"])
             .where("id", "=", systolic)
             .executeTakeFirstOrThrow();
           return row;
         })
-        .toEqual({ data_type: "quantity", min_occurs: 1, max_occurs: 1 });
+        .toEqual({
+          data_type: "quantity",
+          min_occurs: 1,
+          max_occurs: 1,
+          units: ["mm[Hg]", "kPa"],
+        });
       await expectAxeCleanInBothThemes(page);
     });
 
@@ -174,6 +182,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         version: 0,
         dataType: "coded_text",
         cardinality: { min: 0, max: 1 },
+        units: [],
         values: [
           { text: "Left arm", value: null },
           { text: "Right arm", value: null },

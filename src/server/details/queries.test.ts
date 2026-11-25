@@ -27,6 +27,7 @@ import {
   proposeDetail,
   settleDetail,
 } from "./queries.ts";
+import { proposeDetailInput } from "./schemas.ts";
 
 let db: Kysely<DB>;
 let m: ProjectMembers;
@@ -63,12 +64,14 @@ afterEach(async () => {
 const QUANTITY: DetailStructure = {
   dataType: "quantity",
   cardinality: { min: 1, max: 1 },
+  units: [],
   values: [],
 };
 
 const CODED: DetailStructure = {
   dataType: "coded_text",
   cardinality: { min: 0, max: 1 },
+  units: [],
   values: [
     { text: "Left arm", value: null },
     { text: "Right arm", value: null },
@@ -416,5 +419,110 @@ describe("the counts of the detail phase", () => {
       answered: 0,
       toReview: 0,
     });
+  });
+});
+
+describe("the units of a quantity (DT1, issue #71)", () => {
+  const MM_HG: DetailStructure = { ...QUANTITY, units: ["mm[Hg]", "kPa"] };
+  const INTERVAL: DetailStructure = { ...QUANTITY, dataType: "quantity_interval", units: ["%"] };
+
+  it("saves the units of a quantity and a quantity interval, the first preferred", async () => {
+    await proposed(architect, systolic, 0, MM_HG);
+    await proposed(m.facilitator, diastolic, 0, INTERVAL);
+    expect((await elementOf(m.participant, systolic)).proposal?.structure.units).toEqual([
+      "mm[Hg]",
+      "kPa",
+    ]);
+    expect((await elementOf(m.participant, diastolic)).proposal?.structure.units).toEqual(["%"]);
+  });
+
+  it("refuses units on any other data type, for the facilitator and an architect", async () => {
+    const undecided = { ...QUANTITY, dataType: null, units: ["kPa"] };
+    for (const userId of [m.facilitator, architect]) {
+      expect(await propose(userId, systolic, 0, { ...CODED, units: ["kPa"] })).toEqual({
+        ok: false,
+        error: "units_not_allowed",
+      });
+      expect(await propose(userId, systolic, 0, undecided)).toEqual({
+        ok: false,
+        error: "units_not_allowed",
+      });
+    }
+    expect((await elementOf(m.facilitator, systolic)).proposal).toBeNull();
+  });
+
+  it("refuses a participant outside an architecture group and an outsider first", async () => {
+    const withUnits = { ...CODED, units: ["kPa"] };
+    expect(await propose(m.participant, systolic, 0, withUnits)).toEqual({
+      ok: false,
+      error: "detail_not_architect",
+    });
+    expect(await propose(m.outsider, systolic, 0, withUnits)).toEqual({
+      ok: false,
+      error: "not_found",
+    });
+  });
+
+  it("refuses units outside the detail phase with phase_closed", async () => {
+    await setPhase(db, m.projectId, "handoff");
+    expect(await propose(m.facilitator, systolic, 0, MM_HG)).toEqual({
+      ok: false,
+      error: "phase_closed",
+    });
+    expect(await propose(architect, systolic, 0, MM_HG)).toEqual({
+      ok: false,
+      error: "phase_closed",
+    });
+  });
+
+  it("copies the units onto the element when the proposal is settled", async () => {
+    const first = await proposed(architect, systolic, 0, MM_HG);
+    expect((await elementOf(m.participant, systolic)).current.units).toEqual([]);
+    expect(await settle(m.facilitator, first)).toEqual({ ok: true, value: null });
+    const row = await db
+      .selectFrom("element")
+      .select("units")
+      .where("id", "=", systolic)
+      .executeTakeFirstOrThrow();
+    expect(row.units).toEqual(["mm[Hg]", "kPa"]);
+    expect((await elementOf(m.participant, systolic)).current).toEqual(MM_HG);
+  });
+
+  it("makes a revision with other units a new version, and a new type drops the units", async () => {
+    const first = await proposed(architect, systolic, 0, MM_HG);
+    await settle(m.facilitator, first);
+    const second = await proposed(architect, systolic, 1, { ...MM_HG, units: ["kPa"] });
+    expect(second.version).toBe(2);
+    const view = await elementOf(m.facilitator, systolic);
+    expect(view.proposal).toMatchObject({
+      version: 2,
+      settledAt: null,
+      structure: { units: ["kPa"] },
+    });
+    expect(view.current.units).toEqual(["mm[Hg]", "kPa"]);
+    const third = await proposed(architect, systolic, 2, CODED);
+    await settle(m.facilitator, third);
+    expect((await elementOf(m.facilitator, systolic)).current.units).toEqual([]);
+  });
+
+  it("checks the form of a unit: printable ASCII without spaces, at most 40 characters", () => {
+    const accepts = (units: string[]) =>
+      proposeDetailInput.safeParse({
+        projectId: UNKNOWN_ID,
+        elementId: UNKNOWN_ID,
+        version: 0,
+        dataType: "quantity",
+        cardinality: null,
+        values: [],
+        units,
+      }).success;
+    for (const unit of ["mm[Hg]", "kPa", "/min", "%", "10*3/uL", "a".repeat(40)]) {
+      expect(accepts([unit])).toBe(true);
+    }
+    for (const unit of ["", "mm Hg", "µg", "kPa\n", "a".repeat(41)]) {
+      expect(accepts([unit])).toBe(false);
+    }
+    expect(accepts(["kPa", "kPa"])).toBe(false);
+    expect(accepts(Array.from({ length: 11 }, (_, index) => `u${index}`))).toBe(false);
   });
 });

@@ -88,6 +88,7 @@ export interface DetailProposal {
   reviewed_at: Timestamp | null;
   reviewer_member_id: string | null;
   settled_at: Timestamp | null;
+  units: Generated<string[]>;
   value_set_url: string | null;
   version: Generated<number>;
 }
@@ -123,6 +124,7 @@ export interface Element {
   reference_title: string | null;
   reference_url: string | null;
   registration: Generated<boolean>;
+  units: Generated<string[]>;
   updated_at: Generated<Timestamp>;
   value_set_url: string | null;
 }

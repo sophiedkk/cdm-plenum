@@ -155,6 +155,7 @@ async function setup() {
     data_type: "quantity",
     min_occurs: 1,
     max_occurs: 1,
+    units: ["mm[Hg]", "kPa"],
   });
   const duplicate = await addElement(projectId, {
     name: "Systolische druk",
@@ -335,6 +336,7 @@ describe("exportElementsCsv (EX1)", () => {
       "group_cardinality",
       "group_sub_block",
       "registration",
+      "units",
       "round_1_outcome",
       "round_2_outcome",
       "round_3_outcome",
@@ -365,6 +367,7 @@ describe("exportElementsCsv (EX1)", () => {
         group_cardinality: "",
         group_sub_block: "",
         registration: "",
+        units: "",
         round_1_outcome: "excluded",
         round_2_outcome: "",
         round_3_outcome: "",
@@ -392,6 +395,7 @@ describe("exportElementsCsv (EX1)", () => {
         group_cardinality: "",
         group_sub_block: "",
         registration: "",
+        units: "",
         round_1_outcome: "no_consensus",
         round_2_outcome: "included",
         round_3_outcome: "",
@@ -420,6 +424,7 @@ describe("exportElementsCsv (EX1)", () => {
         group_cardinality: "",
         group_sub_block: "",
         registration: "",
+        units: "mm[Hg]; kPa",
         round_1_outcome: "included",
         round_2_outcome: "",
         round_3_outcome: "",
@@ -569,7 +574,7 @@ describe("exportElementsCsv (EX1)", () => {
     const { userId, projectId } = await facilitatorWithProject(db);
     const file = value(await exportElementsCsv(db, userId, projectId));
     expect(parseCsv(file.content)).toHaveLength(1);
-    expect(parseCsv(file.content)[0]).toHaveLength(22);
+    expect(parseCsv(file.content)[0]).toHaveLength(23);
   });
 
   describe("merged_ckm_links (EL5, O-5)", () => {

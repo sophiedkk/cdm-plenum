@@ -11,6 +11,7 @@ import { type CsvCell, writeCsv } from "@/lib/csv";
 import { dataTypeByKey, fhirTypeForRmType, isDataTypeKey } from "@/lib/data-types";
 import { type MindMapNode, writeFreeMind } from "@/lib/freemind";
 import { ancestry, type TreeGroup } from "@/lib/model-tree";
+import { joinUnits } from "@/lib/units";
 import type { DB } from "../db/schema.gen.ts";
 import { projectGroups } from "../details/tree.ts";
 import { done, type ProjectResult, withProject } from "../projects/access.ts";
@@ -57,6 +58,7 @@ export interface ElementRow {
   referenceUrl: string | null;
   groupId: string | null;
   registration: boolean;
+  units: string[];
 }
 
 /** The English name of a group: its own, or the name of the brainstorm question it stands for. */
@@ -122,6 +124,7 @@ export async function elementRows(trx: Db, projectId: string): Promise<ElementRo
       "element.reference_url as referenceUrl",
       "element.group_id as groupId",
       "element.registration",
+      "element.units",
     ])
     .where("element.project_id", "=", projectId)
     .orderBy("element.name")
@@ -204,7 +207,7 @@ export async function codesStatuses(
  * `merged_ckm_links`, so the three `ckm_` columns stay the element's own link (EL5, O-5).
  * A reference element names the model it refers to in `refers_to` and `refers_to_url` (EL26).
  * The tree of the model (DT6) adds the group path, the group's cardinality, the sub-block and
- * the registration flag after them.
+ * the registration flag after them, then the units of a quantity, the preferred first (DT1).
  */
 export async function exportElementsCsv(
   db: Kysely<DB>,
@@ -329,6 +332,7 @@ export async function exportElementsCsv(
       "group_cardinality",
       "group_sub_block",
       "registration",
+      "units",
       ...rounds.map((round) => `round_${round.number}_outcome`),
     ];
     const rows: CsvCell[][] = elements
@@ -357,6 +361,7 @@ export async function exportElementsCsv(
           element.referenceTitle,
           element.referenceUrl,
           ...treeCells(groups, element),
+          element.units.length > 0 ? joinUnits(element.units) : null,
           ...rounds.map((round) => outcomes.get(`${round.id}/${element.id}`)),
         ];
       });

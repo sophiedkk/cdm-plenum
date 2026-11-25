@@ -29,6 +29,12 @@ export interface ReportRound {
   closesAt: string;
   closedAt: string | null;
   groups: ReportGroupRow[];
+  /**
+   * The panel per expert type when the round opened and the minimum that applied (DE12); null
+   * for a round opened before the round stored them. The reason for opening below it is never
+   * part of the report.
+   */
+  panel: { expertType: string; raters: number; minimum: number }[] | null;
   total: { invited: number; started: number; completed: number };
   /** The outcome per item; empty until the round has closed. */
   items: { name: string; outcome: Outcome; median: number | null; rated: number }[];
@@ -41,6 +47,8 @@ export interface ReportElement {
   detail: {
     dataType: string | null;
     cardinality: string | null;
+    /** The allowed units of a quantity, the preferred first (DT1); empty for other types. */
+    units: string[];
     group: string | null;
     code: string | null;
     /** Whether the proposed codes are settled; null when no code proposal exists (DT4). */
@@ -67,6 +75,16 @@ export const OUTCOME_TEXT: Record<Outcome, string> = {
 };
 
 export const SMALL_GROUPS_TEXT = "Other groups (a group of fewer than 3 is not named)";
+
+/** The smallest count the report writes as a number (Q-PRIV-3). */
+const SMALLEST_NAMED_COUNT = 3;
+
+/** A panel count for the report: 1 or 2 raters are "fewer than 3", so a group stays unnamed. */
+export function panelCountText(count: number): string {
+  return count > 0 && count < SMALLEST_NAMED_COUNT
+    ? `fewer than ${SMALLEST_NAMED_COUNT}`
+    : String(count);
+}
 
 /** One line of text for a table cell or list item: no line breaks, no pipe. */
 function cell(text: string): string {
@@ -157,6 +175,19 @@ export function writeDecisionReport(report: DecisionReport): string {
         `Of ${round.total.invited} invited, ${round.total.started} started and ` +
         `${round.total.completed} completed.`,
     );
+    if (round.panel !== null) {
+      out.push("Panel when the round opened, per expert type, and the minimum that applied:");
+      out.push(
+        table(
+          ["Expert type", "Raters", "Minimum"],
+          round.panel.map((row) => [
+            cell(row.expertType),
+            panelCountText(row.raters),
+            String(row.minimum),
+          ]),
+        ),
+      );
+    }
     out.push(
       table(
         ["Stakeholder group", "Invited", "Started", "Completed"],
@@ -190,12 +221,13 @@ export function writeDecisionReport(report: DecisionReport): string {
   out.push("### The model");
   out.push(
     table(
-      ["Element", "Outcome", "Data type", "Cardinality", "Group", "Code"],
+      ["Element", "Outcome", "Data type", "Cardinality", "Units", "Group", "Code"],
       report.elements.map((element) => [
         cell(element.name),
         element.outcome === null ? "not rated" : OUTCOME_TEXT[element.outcome],
         element.detail.dataType ?? "",
         element.detail.cardinality ?? "",
+        cell(element.detail.units.join("; ")),
         cell(element.detail.group ?? ""),
         element.detail.code === null
           ? ""

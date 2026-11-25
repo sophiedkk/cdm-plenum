@@ -73,6 +73,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
           version: 0,
           dataType: "coded_text",
           cardinality: { min: 0, max: 1 },
+          units: [],
           values: texts.map((value) => ({ text: value, value: null })),
         });
         if (!result.ok) throw new Error(result.error);

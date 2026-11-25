@@ -24,11 +24,13 @@ export interface DetailValue {
   value: number | null;
 }
 
-/** What a structure proposal sets: the data type, the cardinality and the value list (DT1). */
+/** What a structure proposal sets: the data type, cardinality, value list and units (DT1). */
 export interface DetailStructure {
   dataType: DataTypeKey | null;
   cardinality: Cardinality | null;
   values: DetailValue[];
+  /** The allowed UCUM units of a quantity, the first preferred (issue #71); empty for other types. */
+  units: string[];
 }
 
 /** An objection without its author (EL2): the reason and, once addressed, the facilitator's note. */

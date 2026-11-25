@@ -13,6 +13,7 @@ import type { Cardinality } from "@/lib/cardinality";
 import { CODED_DATA_TYPE_KEYS, type DataTypeKey, isDataTypeKey } from "@/lib/data-types";
 import { type ElementReference, toReference } from "@/lib/elements";
 import { stepVisible } from "@/lib/phase-access";
+import { takesUnits } from "@/lib/units";
 import type { DB } from "../db/schema.gen.ts";
 import {
   done,
@@ -74,6 +75,8 @@ export interface BoardElement {
   cardinality: Cardinality | null;
   sources: ElementSource[];
   values: ElementValue[];
+  /** The allowed UCUM units of a quantity, the first preferred (DT1); empty for other types. */
+  units: string[];
   ckmLink: ElementCkmLink | null;
   /**
    * The CKM links of the elements merged into this one, directly or through earlier merges, each
@@ -115,6 +118,7 @@ const PUBLIC_COLUMNS = [
   "element.data_type",
   "element.min_occurs",
   "element.max_occurs",
+  "element.units",
   "element.prompt",
   "element.kind",
   "element.reference_title",
@@ -350,6 +354,7 @@ async function boardElements(
       text: value.text,
       value: value.value === null ? null : Number(value.value),
     })),
+    units: row.units,
     ckmLink: linkOf.get(row.id) ?? null,
     mergedCkmLinks: mergedLinks.get(row.id) ?? [],
     prompt: isElementPrompt(row.prompt) ? row.prompt : null,
@@ -567,6 +572,9 @@ export async function updateElement(
         data_type: input.dataType,
         min_occurs: input.cardinality?.min ?? null,
         max_occurs: input.cardinality?.max ?? null,
+        // NOTE: no spec governs this, our own design: a data type without units drops the
+        // element's units, as the database requires.
+        ...(takesUnits(input.dataType) ? {} : { units: [] }),
         ...referenceColumns(input.reference),
         updated_at: new Date(),
       })

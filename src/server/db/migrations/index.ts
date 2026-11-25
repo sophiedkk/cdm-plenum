@@ -27,6 +27,7 @@ import * as m0021 from "./0021_model_tree.ts";
 import * as m0022 from "./0022_value_rounds.ts";
 import * as m0023 from "./0023_team_member_left.ts";
 import * as m0024 from "./0024_session_cap.ts";
+import * as m0025 from "./0025_units.ts";
 
 export const migrations: Record<string, Migration> = {
   "0001_auth": m0001,
@@ -52,6 +53,7 @@ export const migrations: Record<string, Migration> = {
   "0022_value_rounds": m0022,
   "0023_team_member_left": m0023,
   "0024_session_cap": m0024,
+  "0025_units": m0025,
 };
 
 export const migrationProvider: MigrationProvider = {

@@ -40,6 +40,7 @@ async function lockedStructure(trx: Transaction<DB>, projectId: string, proposal
       "detail_proposal.data_type",
       "detail_proposal.min_occurs",
       "detail_proposal.max_occurs",
+      "detail_proposal.units",
     ])
     .where("detail_proposal.id", "=", proposalId)
     .where("detail_proposal.kind", "=", "structure")
@@ -271,6 +272,7 @@ export async function applyValueList(
       data_type: proposal.data_type,
       min_occurs: proposal.min_occurs,
       max_occurs: proposal.max_occurs,
+      units: proposal.units,
       proposer_member_id: await actorMemberId(trx, project.id, userId),
       proposer_expert_type: null,
       values: kept,

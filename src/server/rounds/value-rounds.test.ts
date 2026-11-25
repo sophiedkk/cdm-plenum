@@ -43,6 +43,7 @@ const AFTER_CLOSING = inDays(15);
 const SEVERITY: DetailStructure = {
   dataType: "coded_text",
   cardinality: { min: 0, max: 1 },
+  units: [],
   values: [
     { text: "Mild", value: null },
     { text: "Moderate", value: null },
@@ -53,6 +54,7 @@ const SEVERITY: DetailStructure = {
 const SITE: DetailStructure = {
   dataType: "coded_text",
   cardinality: { min: 1, max: 1 },
+  units: [],
   values: [
     { text: "Left arm", value: null },
     { text: "Right arm", value: null },
@@ -226,6 +228,7 @@ describe("addValueList (DT3)", () => {
         version: 1,
         dataType: "quantity",
         cardinality: { min: 1, max: 1 },
+        units: [],
         values: [],
       }),
     );

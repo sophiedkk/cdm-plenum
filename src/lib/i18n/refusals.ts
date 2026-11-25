@@ -47,6 +47,7 @@ export const REFUSAL_MESSAGE_KEYS = {
   element_in_round: "common_refusal_element_in_round",
   element_has_values: "common_refusal_element_has_values",
   values_not_allowed: "common_refusal_values_not_allowed",
+  units_not_allowed: "common_refusal_units_not_allowed",
   value_number_required: "common_refusal_value_number_required",
   value_number_not_allowed: "common_refusal_value_number_not_allowed",
   value_number_not_integer: "common_refusal_value_number_not_integer",
