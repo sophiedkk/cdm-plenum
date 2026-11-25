@@ -12,9 +12,10 @@ import {
   LibraryIcon,
   PlusIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { AddElementPanel } from "@/components/board/add-element-panel";
 import { BoardDialog } from "@/components/board/board-dialog";
 import {
   PrivateStepNote,
@@ -25,7 +26,13 @@ import { CkmPanel } from "@/components/board/ckm-panel";
 import { DuplicateList, type DuplicatePair } from "@/components/board/duplicate-list";
 import type { CardElement } from "@/components/board/element-details";
 import { ElementForm } from "@/components/board/element-form";
-import { type BoardMarks, ElementTable, markTarget } from "@/components/board/element-table";
+import { ElementList } from "@/components/board/element-list";
+import {
+  type BoardMarks,
+  type ElementActions,
+  ElementTable,
+  markTarget,
+} from "@/components/board/element-table";
 import { MergeForm } from "@/components/board/merge-form";
 import { ValuesForm } from "@/components/board/values-form";
 import { projectTitle } from "@/components/projects/project-title";
@@ -147,6 +154,7 @@ function Board() {
   });
   const router = useRouter();
   const [dialog, setDialog] = useState<DialogState>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
 
   const addElement = useServerFn(addElementFn);
   const updateElement = useServerFn(updateElementFn);
@@ -168,7 +176,11 @@ function Board() {
         queryClient.invalidateQueries({ queryKey: key(projectId) }),
       ),
     );
-  const close = () => setDialog(null);
+  const close = () => {
+    // The inline add form has no dialog to return the focus; the button it opened from gets it.
+    if (dialog?.kind === "add") requestAnimationFrame(() => addButtonRef.current?.focus());
+    setDialog(null);
+  };
   const targets = elements.map((element, index) => markTarget(element, index + 1));
   const targetOf = new Map(targets.map((target) => [target.id, target]));
   const duplicates: DuplicatePair[] = [];
@@ -199,8 +211,34 @@ function Board() {
     </Button>
   );
 
+  const elementActions: ElementActions = {
+    canEdit,
+    addComment: canComment
+      ? (element, body) => addComment({ data: { projectId, elementId: element.id, body } })
+      : undefined,
+    onCommentAdded: async (element) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: elementKeys.comments(projectId, element.id),
+        }),
+        refreshBoard(),
+      ]);
+      toast.success(m.common_comment_added());
+    },
+    onEdit: (element) => setDialog({ kind: "edit", element }),
+    onValues: (element) => setDialog({ kind: "values", element }),
+    onLink: (element) => setDialog({ kind: "ckm", target: element }),
+    marks,
+  };
+
   const addButton = (
-    <Button type="button" onClick={() => setDialog({ kind: "add" })}>
+    <Button
+      ref={addButtonRef}
+      type="button"
+      variant={dialog?.kind === "add" ? "outline" : "default"}
+      aria-expanded={dialog?.kind === "add"}
+      onClick={() => (dialog?.kind === "add" ? close() : setDialog({ kind: "add" }))}
+    >
       <PlusIcon aria-hidden="true" data-icon="inline-start" />
       {m.board_add()}
     </Button>
@@ -283,6 +321,22 @@ function Board() {
         />
       )}
 
+      {dialog?.kind === "add" && (
+        <AddElementPanel>
+          <ElementForm
+            mode="add"
+            submitLabel={m.board_add_submit()}
+            submit={(fields) => addElement({ data: { projectId, ...fields } })}
+            onDone={async (fields) => {
+              await refreshBoard();
+              toast.success(m.board_added({ name: fields.name }));
+              close();
+            }}
+            actions={cancel}
+          />
+        </AddElementPanel>
+      )}
+
       {elements.length === 0 ? (
         <EmptyState
           icon={<LayoutGridIcon aria-hidden="true" />}
@@ -303,61 +357,33 @@ function Board() {
               }
             />
           )}
-          <ElementTable
-            projectId={projectId}
-            elements={elements}
-            isFacilitator={isFacilitator}
-            detailFields={detailFields}
-            ckmColumn={ckmColumn}
-            openElementId={openElementId}
-            supportCounts={isFacilitator && summary?.ok ? summary.value.support : undefined}
-            firstLookCounts={
-              isFacilitator && firstLook?.ok && firstLook.value.total > 0
-                ? firstLook.value.counts
-                : undefined
-            }
-            actions={{
-              canEdit,
-              addComment: canComment
-                ? (element, body) =>
-                    addComment({ data: { projectId, elementId: element.id, body } })
-                : undefined,
-              onCommentAdded: async (element) => {
-                await Promise.all([
-                  queryClient.invalidateQueries({
-                    queryKey: elementKeys.comments(projectId, element.id),
-                  }),
-                  refreshBoard(),
-                ]);
-                toast.success(m.common_comment_added());
-              },
-              onEdit: (element) => setDialog({ kind: "edit", element }),
-              onValues: (element) => setDialog({ kind: "values", element }),
-              onLink: (element) => setDialog({ kind: "ckm", target: element }),
-              marks,
-            }}
-          />
+          {isFacilitator ? (
+            <ElementTable
+              projectId={projectId}
+              elements={elements}
+              isFacilitator={isFacilitator}
+              detailFields={detailFields}
+              ckmColumn={ckmColumn}
+              openElementId={openElementId}
+              supportCounts={isFacilitator && summary?.ok ? summary.value.support : undefined}
+              firstLookCounts={
+                isFacilitator && firstLook?.ok && firstLook.value.total > 0
+                  ? firstLook.value.counts
+                  : undefined
+              }
+              actions={elementActions}
+            />
+          ) : (
+            <ElementList
+              projectId={projectId}
+              elements={elements}
+              detailFields={detailFields}
+              openElementId={openElementId}
+              actions={elementActions}
+            />
+          )}
         </>
       )}
-
-      <BoardDialog
-        open={dialog?.kind === "add"}
-        onOpenChange={(open) => !open && close()}
-        title={m.board_add_title()}
-        description={m.board_add_description()}
-      >
-        <ElementForm
-          mode="add"
-          submitLabel={m.board_add()}
-          submit={(fields) => addElement({ data: { projectId, ...fields } })}
-          onDone={async (fields) => {
-            await refreshBoard();
-            toast.success(m.board_added({ name: fields.name }));
-            close();
-          }}
-          actions={cancel}
-        />
-      </BoardDialog>
 
       <BoardDialog
         open={dialog?.kind === "edit"}

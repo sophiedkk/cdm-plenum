@@ -136,6 +136,7 @@ function Grouping() {
       {banner}
       <GroupingBoard
         board={board.value}
+        readOnly={!editable}
         actions={{
           move: (elementId, groupId) => move({ data: { projectId, elementId, groupId } }),
           rename: (groupId, name) => rename({ data: { projectId, groupId, name } }),

@@ -55,6 +55,15 @@ the project uses [Semantic Versioning](https://semver.org/).
   it back in the same place.
 - The facilitator's checklist for the scope phase has the item "Choose the
   model type", done once a type is chosen, with a link to the scope page.
+- The board is a list for participants: each element shows its name and its
+  whole description, and a note such as "2 sources", "Linked" or "3 comments"
+  appears only when it says something. The facilitator keeps the table.
+- "Add element" on the board opens its form in the page, below the button,
+  instead of a dialog. Ticking "Refers to another model" adds fields below and
+  moves nothing above. Cancel and Add close the form and return you to the
+  button.
+- The grouping page of a finished phase reads as lists: you cannot pick,
+  move or rename until you choose "Edit anyway".
 - The Overview names your next step: every item that asks for work has a
   button to the page where you do it, and the first open item's button is the
   one filled button. "Go on to" turns filled once nothing is open, and its
