@@ -165,7 +165,7 @@ function RatePage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold">
+        <h2 className="type-section">
           {isValues
             ? m.rounds_value_rate_title({ number: round.number })
             : m.rounds_rate_title({ number: round.number })}

@@ -20,7 +20,7 @@ export function ProjectPages({
   if (pages.length === 0) return null;
   return (
     <nav aria-labelledby="project-pages-heading" className="mt-12 flex flex-col gap-3">
-      <h2 id="project-pages-heading" className="text-lg font-semibold">
+      <h2 id="project-pages-heading" className="type-section">
         {m.projects_home_pages_title()}
       </h2>
       <ul className="flex flex-wrap gap-x-6 gap-y-2">

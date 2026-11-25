@@ -45,7 +45,7 @@ export function TaskBar({
         <div role="status" className="flex flex-col gap-1">
           {done && (
             <>
-              <h3 className="flex items-center gap-2 text-lg font-semibold">
+              <h3 className="flex items-center gap-2 type-section">
                 <CircleCheckIcon aria-hidden="true" className="size-5 shrink-0 text-success" />
                 {done.title ?? m.projects_bar_done_title()}
               </h3>

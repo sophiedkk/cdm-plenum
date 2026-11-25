@@ -16,7 +16,7 @@ afterEach(() => overwriteGetLocale(() => baseLocale));
 describe("round formats", () => {
   it("names the time zone of a moment", () => {
     expect(formatDateTime("2026-12-01T16:00:00Z", "Europe/Amsterdam")).toMatch(
-      /December 1?,? ?2026.*17:00.*(CET|GMT\+1)/,
+      /^1 December 2026.*17:00.*(CET|GMT\+1)/,
     );
   });
 
@@ -28,9 +28,9 @@ describe("round formats", () => {
   });
 
   it("writes a short day and date in the reader's zone, without commas", () => {
-    expect(formatShortDate("2026-11-26T22:05:00Z", "UTC")).toBe("Thu Nov 26");
+    expect(formatShortDate("2026-11-26T22:05:00Z", "UTC")).toBe("Thu 26 Nov");
     // 23:05 in Amsterdam is still Thursday; 01:05 the next morning is Friday.
-    expect(formatShortDate("2026-11-27T00:05:00Z", "Europe/Amsterdam")).toBe("Fri Nov 27");
+    expect(formatShortDate("2026-11-27T00:05:00Z", "Europe/Amsterdam")).toBe("Fri 27 Nov");
     overwriteGetLocale(() => "nl");
     expect(formatShortDate("2026-11-26T22:05:00Z", "UTC")).toMatch(/^do\.? 26 nov\.?$/);
   });
@@ -47,10 +47,10 @@ describe("moments in a fixed time zone", () => {
 
   it("writes English with the zone name and 24-hour time", () => {
     expect(formatDateTime(winter, "Europe/Amsterdam")).toMatch(
-      /November 25, 2026.*14:00.*(CET|GMT\+1)/,
+      /^25 November 2026.*14:00.*(CET|GMT\+1)/,
     );
     expect(formatDateTime(summer, "Europe/Amsterdam")).toMatch(
-      /July 25, 2026.*14:00.*(CEST|GMT\+2)/,
+      /^25 July 2026.*14:00.*(CEST|GMT\+2)/,
     );
     expect(formatDateTime(winter, "UTC")).toMatch(/13:00.*UTC/);
   });

@@ -52,7 +52,7 @@ export function DecidedSoFarSection({
   return (
     <section aria-labelledby="decided-heading" className="mt-12 flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-        <h2 id="decided-heading" className="text-lg font-semibold">
+        <h2 id="decided-heading" className="type-section">
           {m.projects_decided_title()}
         </h2>
         {closed && (

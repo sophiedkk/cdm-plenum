@@ -479,7 +479,7 @@ export function RatingElement({
             id={`${base}-heading`}
             ref={headingRef}
             tabIndex={-1}
-            className="min-w-0 text-2xl font-semibold break-words outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-w-0 type-page-title break-words outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {element.name}
           </h3>

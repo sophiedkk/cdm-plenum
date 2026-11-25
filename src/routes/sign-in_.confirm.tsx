@@ -29,7 +29,7 @@ function Confirm() {
   const search = Route.useSearch();
   return (
     <PublicLayout>
-      <h1 className="text-2xl font-semibold">{m.sign_in_title()}</h1>
+      <h1 className="type-page-title">{m.sign_in_title()}</h1>
       {search.token === undefined || search.token === "" ? (
         <Alert variant="destructive" className="mt-4" role="alert">
           <CircleAlertIcon aria-hidden="true" />

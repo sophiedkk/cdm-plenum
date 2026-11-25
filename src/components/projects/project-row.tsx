@@ -70,12 +70,7 @@ export function ProjectRow({
   const waiting = waitingText(project.waiting, timeZone);
   return link(
     <>
-      <span
-        className={cn(
-          "col-start-1 text-lg font-semibold",
-          waiting === null && "text-muted-foreground",
-        )}
-      >
+      <span className={cn("col-start-1 type-section", waiting === null && "text-muted-foreground")}>
         {project.name}
       </span>
       <span className="col-start-1 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">

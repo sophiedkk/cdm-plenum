@@ -22,7 +22,7 @@ function Invitation() {
   const preview = Route.useLoaderData();
   return (
     <PublicLayout>
-      <h1 className="text-2xl font-semibold">{m.invite_title()}</h1>
+      <h1 className="type-page-title">{m.invite_title()}</h1>
       {preview ? (
         <>
           <p className="mt-4">{m.invite_pending({ project: preview.projectName })}</p>

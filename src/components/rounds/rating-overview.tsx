@@ -44,7 +44,7 @@ export function RatingOverview({
           id="rating-overview-heading"
           ref={headingRef}
           tabIndex={-1}
-          className="text-lg font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="type-section outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {m.rounds_overview_heading()}
         </h3>

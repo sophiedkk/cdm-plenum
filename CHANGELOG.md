@@ -48,6 +48,11 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Text sizes follow a few named roles: page titles are 24 pixels (were 20),
+  section headings 18, and badges, small buttons, comment dates, coverage
+  tables and rating reasons are 14 (were 11 to 13). English dates now read day,
+  month, year ("25 November 2026 at 14:10 CET"), as Dutch already did. The
+  intro lines of New project and Models are one sentence.
 - The Overview names your next step: every item that asks for work has a
   button to the page where you do it, and the first open item's button is the
   one filled button. "Go on to" turns filled once nothing is open, and its

@@ -495,7 +495,7 @@ describe("ProjectRow (PR2, PR8)", () => {
     const row = screen.getByRole("link");
     expect(row.textContent).toContain("Blood pressure");
     expect(row.textContent).toContain("Phase: Decide");
-    expect(row.textContent).toContain("Rate round 2, 2 elements, closes Thu Nov 26");
+    expect(row.textContent).toContain("Rate round 2, 2 elements, closes Thu 26 Nov");
     // The phase shows once, in words: no "phase 3 of 4".
     expect(row.textContent).not.toMatch(/of 4/);
     expect(row.textContent).not.toContain("you facilitate");
@@ -590,7 +590,7 @@ describe("ProjectRow (PR2, PR8)", () => {
         },
         "UTC",
       ),
-    ).toBe("Round 2: 3 of 8 completed, closes Thu Nov 26");
+    ).toBe("Round 2: 3 of 8 completed, closes Thu 26 Nov");
   });
 
   it("names a value round of the detail phase as one (DT3)", () => {
@@ -612,6 +612,6 @@ describe("ProjectRow (PR2, PR8)", () => {
         },
         "UTC",
       ),
-    ).toBe("Value round 3: 1 of 4 completed, closes Thu Nov 26");
+    ).toBe("Value round 3: 1 of 4 completed, closes Thu 26 Nov");
   });
 });

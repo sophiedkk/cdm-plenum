@@ -91,7 +91,7 @@ export function FirstLookCard({
           id="first-look-element"
           ref={heading}
           tabIndex={-1}
-          className="mt-1 text-2xl font-semibold tracking-tight break-words outline-none sm:text-3xl"
+          className="mt-1 type-home-card break-words outline-none"
         >
           {element.name}
         </h3>
@@ -114,7 +114,7 @@ export function FirstLookCard({
         </div>
         <div className="mt-auto pt-8">
           <fieldset className="min-w-0">
-            <legend className="text-lg font-semibold">
+            <legend className="type-section">
               {m.board_first_look_question({ concept: look.concept })}
             </legend>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -176,7 +176,7 @@ export function FirstLookCard({
                   )}
                 >
                   <span className="min-w-0 break-words">{item.name}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
+                  <span className="shrink-0 type-meta text-muted-foreground">
                     {given === null ? "" : ANSWER_SHORT[given]()}
                   </span>
                 </button>

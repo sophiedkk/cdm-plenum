@@ -36,7 +36,7 @@ export function ModelCards({
         const identifier = modelIdentifier(model);
         return (
           <li key={model.id} className="flex flex-col rounded-lg border bg-card p-4">
-            <span className="mb-1.5 self-start rounded bg-muted px-1.5 text-xs font-semibold text-muted-foreground">
+            <span className="mb-1.5 self-start rounded bg-muted px-1.5 type-meta font-semibold text-muted-foreground">
               {KIND_LABELS[model.kind]()}
             </span>
             <h3 className="font-semibold break-words">{model.title}</h3>
@@ -127,7 +127,7 @@ export function Suggestions({
   if (suggestions.length === 0) return null;
   return (
     <section aria-labelledby="suggestions-heading" className="mt-10 flex flex-col gap-3">
-      <h2 id="suggestions-heading" className="text-lg font-semibold">
+      <h2 id="suggestions-heading" className="type-section">
         {m.board_models_suggestions_title()}
       </h2>
       <ul className="border-t">

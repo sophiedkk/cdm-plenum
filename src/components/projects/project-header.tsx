@@ -59,7 +59,7 @@ export function ProjectHeader({
     <div className="mb-6 flex flex-col gap-1">
       <BackLink projectId={projectId} to={back} />
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        <h1 className="text-2xl font-semibold tracking-tight break-words">{name}</h1>
+        <h1 className="type-page-title break-words">{name}</h1>
         <PhaseSteps projectId={projectId} phase={overview.phase} here={here} />
       </div>
     </div>

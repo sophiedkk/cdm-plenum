@@ -32,13 +32,7 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div className="flex flex-col gap-1">
-        <Heading
-          className={
-            level === 1 ? "text-2xl font-semibold tracking-tight" : "text-xl font-semibold"
-          }
-        >
-          {title}
-        </Heading>
+        <Heading className="type-page-title">{title}</Heading>
         {description && <p className="text-muted-foreground">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -97,7 +91,7 @@ export function StatusPage({
     <Empty>
       <EmptyHeader>
         <EmptyMedia variant="icon">{icon}</EmptyMedia>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="type-page-title">{title}</h1>
         <EmptyDescription>{body}</EmptyDescription>
       </EmptyHeader>
       {children && (

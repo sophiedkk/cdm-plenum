@@ -104,7 +104,7 @@ export function RatingsByParticipantTable({
                         ? m.rounds_rate_unable()
                         : rating.score}
                     {rating?.reason && (
-                      <span className="block text-xs text-muted-foreground">{rating.reason}</span>
+                      <span className="block type-meta text-muted-foreground">{rating.reason}</span>
                     )}
                   </TableCell>
                 );

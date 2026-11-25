@@ -57,7 +57,7 @@ function SignIn() {
   if (state.kind === "sent") {
     return (
       <PublicLayout>
-        <h1 className="text-2xl font-semibold">{m.sign_in_check_inbox_title()}</h1>
+        <h1 className="type-page-title">{m.sign_in_check_inbox_title()}</h1>
         <p className="mt-4" role="status">
           {m.sign_in_check_inbox({ email: state.email, minutes: SIGN_IN_LINK_MINUTES })}
         </p>
@@ -67,7 +67,7 @@ function SignIn() {
 
   return (
     <PublicLayout>
-      <h1 className="text-2xl font-semibold">{m.sign_in_title()}</h1>
+      <h1 className="type-page-title">{m.sign_in_title()}</h1>
       <p className="mt-2 text-muted-foreground">{m.sign_in_intro()}</p>
       {linkError && <ErrorAlert>{refusalMessage(linkError)}</ErrorAlert>}
       {state.kind === "failed" && <ErrorAlert>{m.sign_in_error_failed()}</ErrorAlert>}

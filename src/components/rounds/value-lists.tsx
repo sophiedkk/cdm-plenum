@@ -115,7 +115,7 @@ export function ValueLists({
 }>) {
   return (
     <section aria-labelledby="value-lists-heading" className="flex max-w-3xl flex-col gap-2">
-      <h3 id="value-lists-heading" className="text-lg font-semibold">
+      <h3 id="value-lists-heading" className="type-section">
         {m.rounds_value_lists_heading()}
       </h3>
       {rows.length === 0 ? (

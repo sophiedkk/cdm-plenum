@@ -156,3 +156,38 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+/* Type by role: a few styles named by purpose (GNOME HIG typography). Sizes 14, 16, 18, 24 and
+   30; weights 400 and 600. Components use these, never a pixel size. */
+@utility type-page-title {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+@utility type-section {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+@utility type-body {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 400;
+}
+@utility type-meta {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 400;
+}
+/* 24 on a phone, 30 from the small breakpoint up, as the task card did. */
+@utility type-home-card {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  @media (width >= 40rem) {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+}

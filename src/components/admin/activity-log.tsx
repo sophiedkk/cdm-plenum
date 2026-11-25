@@ -34,7 +34,7 @@ import type { ActivityEntry } from "@/server/admin/queries";
 export const ALL_ACTIONS = "_all";
 
 function Id({ value }: Readonly<{ value: string }>) {
-  return <code className="font-mono text-xs break-all">{value}</code>;
+  return <code className="font-mono type-meta break-all">{value}</code>;
 }
 
 function None() {

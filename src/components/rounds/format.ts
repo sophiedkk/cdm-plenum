@@ -5,6 +5,13 @@
 // zone (`useTimeZone`) with the zone named.
 import { getLocale } from "@/i18n/runtime";
 
+// NOTE: no spec governs this, our own design (owner decision 2026-11-25): English dates read day,
+// month, year, so a moment is formatted as "en-GB"; Dutch is already in that order.
+function dateLocale(): string {
+  const locale = getLocale();
+  return locale === "en" ? "en-GB" : locale;
+}
+
 /** A number with the locale's decimal sign: 7.5 is "7,5" in Dutch. */
 export function formatNumber(value: number): string {
   return new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 2 }).format(value);
@@ -18,9 +25,9 @@ export function formatPercent(value: number): string {
   }).format(value / 100);
 }
 
-/** A date and time with the zone name, such as "19 November 2026, 17:00 CET". */
+/** A date and time with the zone name, such as "19 November 2026 at 17:00 CET" (Dutch: "19 november 2026 om 17:00 CET"). */
 export function formatDateTime(iso: string, timeZone: string): string {
-  return new Intl.DateTimeFormat(getLocale(), {
+  return new Intl.DateTimeFormat(dateLocale(), {
     // dateStyle and timeStyle refuse timeZoneName, so the parts are named one by one.
     year: "numeric",
     month: "long",
@@ -35,7 +42,7 @@ export function formatDateTime(iso: string, timeZone: string): string {
 
 /** A short day and date, such as "Thu 26 Nov", for a deadline in a list line. */
 export function formatShortDate(iso: string, timeZone: string): string {
-  return new Intl.DateTimeFormat(getLocale(), {
+  return new Intl.DateTimeFormat(dateLocale(), {
     weekday: "short",
     day: "numeric",
     month: "short",

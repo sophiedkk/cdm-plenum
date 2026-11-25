@@ -161,7 +161,7 @@ function ExistingModels() {
       )}
       {coverage.value.rows.length > 0 && (
         <section aria-labelledby="coverage-heading" className="mt-10">
-          <h2 id="coverage-heading" className="text-lg font-semibold">
+          <h2 id="coverage-heading" className="type-section">
             {m.board_models_coverage_title()}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{m.board_models_coverage_intro()}</p>

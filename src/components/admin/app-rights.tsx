@@ -95,7 +95,7 @@ export function GrantRightForm({
         void form.handleSubmit();
       }}
     >
-      <h3 id="grant-title" className="text-lg font-semibold">
+      <h3 id="grant-title" className="type-section">
         {m.admin_grant_title()}
       </h3>
       <form.AppForm>
