@@ -16,6 +16,7 @@ import { m } from "@/i18n/messages";
 import { hasAppRole } from "@/lib/guards";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/server/session/queries";
+import { FocusOnNavigate } from "./focus-on-navigate";
 import { LanguageMenuGroup, LanguageSwitch } from "./language-switch";
 import { MAIN_CONTENT_ID, SkipLink } from "./skip-link";
 import { ThemeMenuGroup, ThemeSwitch } from "./theme-switch";
@@ -114,6 +115,7 @@ export function AppShell({ user, children }: Readonly<{ user: SessionUser; child
       >
         {children}
       </main>
+      <FocusOnNavigate />
     </div>
   );
 }
