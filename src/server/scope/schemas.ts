@@ -51,6 +51,12 @@ export const addScopeSourceInput = z.object({
 });
 export type AddScopeSourceInput = z.infer<typeof addScopeSourceInput>;
 
+/** A removed source comes back with its text at the place it had (the Undo of a removal). */
+export const restoreScopeSourceInput = addScopeSourceInput.extend({
+  position: z.number().int().min(0).max(SCOPE_SOURCES_MAX),
+});
+export type RestoreScopeSourceInput = z.infer<typeof restoreScopeSourceInput>;
+
 export const scopeSourceInput = z.object({ projectId: idSchema, sourceId: idSchema });
 export type ScopeSourceInput = z.infer<typeof scopeSourceInput>;
 

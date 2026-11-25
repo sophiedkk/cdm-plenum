@@ -82,6 +82,7 @@ const ACTION_LABELS: Record<(typeof ACTIVITY_ACTIONS)[number], () => string> = {
   source_suggestion_dismissed: () => m.admin_action_source_suggestion_dismissed(),
   scope_source_added: () => m.admin_action_scope_source_added(),
   scope_source_removed: () => m.admin_action_scope_source_removed(),
+  scope_source_restored: () => m.admin_action_scope_source_restored(),
   scope_sources_reordered: () => m.admin_action_scope_sources_reordered(),
   scope_updated: () => m.admin_action_scope_updated(),
   signed_in: () => m.admin_action_signed_in(),

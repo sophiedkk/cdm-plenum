@@ -48,6 +48,13 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The scope page lists the use cases as bullets, one per use case, and the
+  edit form says that each use case goes on its own line. "Add source" opens
+  a dialog instead of an always open form. Removing a source no longer asks
+  for confirmation: it goes at once and the message offers "Undo", which puts
+  it back in the same place.
+- The facilitator's checklist for the scope phase has the item "Choose the
+  model type", done once a type is chosen, with a link to the scope page.
 - Text sizes follow a few named roles: page titles are 24 pixels (were 20),
   section headings 18, and badges, small buttons, comment dates, coverage
   tables and rating reasons are 14 (were 11 to 13). English dates now read day,
