@@ -316,12 +316,27 @@ describe("the checklist per phase", () => {
     );
   });
 
-  it("leads to the hand-off page in hand-off as its one main button", () => {
-    renderOverview("handoff");
-    expect(screen.queryByRole("list")).toBeNull();
-    expect(screen.getByRole("link", { name: "Go to the hand-off" }).getAttribute("href")).toBe(
-      "/projects/p1/handoff",
+  it("shows the hand-off in hand-off: a status line, the next step and the downloads (F4)", () => {
+    renderOverview("handoff", {
+      detail: {
+        inModel: 5,
+        proposed: 5,
+        settled: 4,
+        codable: 4,
+        codesSettled: 1,
+        openObjections: 0,
+      },
+    });
+    expect(screen.queryByRole("link", { name: "Go to the hand-off" })).toBeNull();
+    expect(screen.getByText("4 of 5 structures settled, 3 codes open")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open details" }).getAttribute("href")).toBe(
+      "/projects/p1/details",
     );
+    // The decision report is the one filled button; the other downloads are outline.
+    const filled = [...document.querySelectorAll("a, button")].filter((node) =>
+      node.className.includes("bg-primary"),
+    );
+    expect(filled.map((node) => node.textContent)).toEqual(["Download Decision report"]);
     expect(screen.queryByRole("button", { name: /Go on to/ })).toBeNull();
     expect(screen.getByRole("button", { name: "Move back to Detail" })).toBeTruthy();
   });

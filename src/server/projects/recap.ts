@@ -11,7 +11,7 @@ import type { ModelTree } from "@/lib/model-tree";
 import { isModelType, type ModelType } from "@/lib/model-types";
 import { adjacentPhase, type ProjectPhase, phaseDone } from "@/lib/project-phases";
 import type { DB } from "../db/schema.gen.ts";
-import { type ModelStructure, modelStructures } from "../details/queries.ts";
+import { inExpertGroup, type ModelStructure, modelStructures } from "../details/queries.ts";
 import { treeRecap } from "../details/tree.ts";
 import { type ElementGroup, groupingOf } from "../elements/groups.ts";
 import { visibleAuthor } from "../elements/queries.ts";
@@ -69,6 +69,8 @@ export interface DecideRecap {
 export interface DetailRecap {
   phase: "detail";
   closedAt: string | null;
+  /** Whether the member reads the technical form of the structure (P4); see `DetailBoard`. */
+  modeller: boolean;
   /** The elements in the model with their structure (DT1, DT2). */
   elements: ModelStructure[];
   /** The tree of the model (DT6) and whether a tree proposal is settled. */
@@ -289,6 +291,10 @@ export async function phaseRecap(
         return done({
           phase: "detail",
           closedAt: await closedAt(reader, project.id, "detail"),
+          modeller:
+            project.role === "facilitator" ||
+            (await inExpertGroup(reader, project.id, userId, "architecture")) ||
+            (await inExpertGroup(reader, project.id, userId, "terminology")),
           elements: await modelStructures(reader, project.id),
           tree,
           treeSettled: settled,

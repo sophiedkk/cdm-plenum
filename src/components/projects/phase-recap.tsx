@@ -239,16 +239,35 @@ function DecideView({ projectId, recap }: Readonly<{ projectId: string; recap: D
  * The model as the detail phase settled it: the tree, then each element with its structure,
  * reference and codes, unsettled parts marked. The recap of Detail and the hand-off page share it.
  */
-export function ModelSummary({ recap }: Readonly<{ recap: DetailRecap }>) {
+export function ModelSummary({
+  recap,
+  handoff = false,
+}: Readonly<{
+  recap: DetailRecap;
+  /** On the hand-off page one line says what stays open, instead of a badge per element. */
+  handoff?: boolean;
+}>) {
   if (recap.elements.length === 0) {
     return <p className="text-muted-foreground">{m.projects_recap_empty()}</p>;
   }
+  const codable = recap.elements.filter((element) => element.reference === null);
+  const open = {
+    structures: recap.elements.filter((element) => !element.settled).length,
+    total: recap.elements.length,
+    codes: codable.filter((element) => !element.codesSettled).length,
+    codable: codable.length,
+  };
   return (
     <>
+      {handoff && (open.structures > 0 || open.codes > 0) && (
+        <p className="mb-6 max-w-3xl">{m.projects_handoff_left_open(open)}</p>
+      )}
       <section className="mb-12 flex max-w-3xl flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-lg font-semibold">{m.details_tree()}</h3>
-          {!recap.treeSettled && <StatusBadge label={m.projects_recap_detail_not_settled()} />}
+          {!handoff && !recap.treeSettled && (
+            <StatusBadge label={m.projects_recap_detail_not_settled()} />
+          )}
         </div>
         <ModelTreeView tree={recap.tree} label={m.details_tree()} />
       </section>
@@ -257,15 +276,25 @@ export function ModelSummary({ recap }: Readonly<{ recap: DetailRecap }>) {
           <li key={element.id} className="flex flex-col gap-2 py-4">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-semibold">{element.name}</h3>
-              {!element.settled && <StatusBadge label={m.projects_recap_detail_not_settled()} />}
-              {!element.codesSettled && element.reference === null && (
+              {!handoff && !element.settled && (
+                <StatusBadge label={m.projects_recap_detail_not_settled()} />
+              )}
+              {!handoff && !element.codesSettled && element.reference === null && (
                 <StatusBadge label={m.projects_recap_detail_codes_open()} />
               )}
             </div>
             {element.reference && <ReferenceText reference={element.reference} />}
-            <StructureFacts structure={element.structure} reference={element.reference !== null} />
+            <StructureFacts
+              structure={element.structure}
+              reference={element.reference !== null}
+              modeller={recap.modeller}
+            />
             {element.codesSettled && (
-              <CodeFacts codes={element.codes} values={element.structure.values} />
+              <CodeFacts
+                codes={element.codes}
+                values={element.structure.values}
+                modeller={recap.modeller}
+              />
             )}
           </li>
         ))}

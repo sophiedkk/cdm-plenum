@@ -29,6 +29,7 @@ import * as m0023 from "./0023_team_member_left.ts";
 import * as m0024 from "./0024_session_cap.ts";
 import * as m0025 from "./0025_units.ts";
 import * as m0026 from "./0026_tree_element_order.ts";
+import * as m0027 from "./0027_detail_answer_leave.ts";
 
 export const migrations: Record<string, Migration> = {
   "0001_auth": m0001,
@@ -56,6 +57,7 @@ export const migrations: Record<string, Migration> = {
   "0024_session_cap": m0024,
   "0025_units": m0025,
   "0026_tree_element_order": m0026,
+  "0027_detail_answer_leave": m0027,
 };
 
 export const migrationProvider: MigrationProvider = {

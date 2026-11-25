@@ -78,12 +78,24 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         [cuffSize, "included"],
         [author, "included"],
       ]);
-      const detailsUrl = `/projects/${project.projectId}/details`;
+      const listUrl = `/projects/${project.projectId}/details`;
+      const detailsUrl = `${listUrl}/tree`;
       const measurement = text.board_group_recorded;
       const treeOf = (page: Page) => page.getByRole("region", { name: text.details_tree });
 
+      // The list has the tree as its first row, to propose; the row opens the tree's own view.
+      await signInTo(page, architect, locale, listUrl);
+      const treeRow = page
+        .getByRole("list", { name: text.details_list_label })
+        .getByRole("listitem")
+        .first();
+      await expect(treeRow.getByRole("link", { name: text.details_tree })).toBeVisible();
+      await expect(treeRow).toContainText(text.details_state_to_propose);
+      await expectAxeCleanInBothThemes(page);
+      await page.getByRole("link", { name: text.details_tree, exact: true }).click();
+      await expect(page).toHaveURL((url) => url.pathname === detailsUrl);
+
       // The architect opens the editor below its button and builds the tree.
-      await signInTo(page, architect, locale, detailsUrl);
       await expect(treeOf(page)).toContainText(text.details_no_proposal);
       await expectAxeCleanInBothThemes(page);
       const proposeButton = treeOf(page).getByRole("button", { name: text.details_tree_propose });
@@ -139,7 +151,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       // The facilitator settles; the tree is now on the groups and elements.
       await switchUser(page, project.facilitator.email, locale, detailsUrl);
       await expect(treeOf(page)).toContainText(
-        fill(text.details_answers_count, { agreed: 1, objections: 0 }),
+        fill(text.details_answers_count, { agreed: 1, objections: 0, left: 0 }),
       );
       const settle = treeOf(page).getByRole("button", { name: new RegExp(text.details_settle) });
       await expectHydrated(settle);
