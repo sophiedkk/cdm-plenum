@@ -21,13 +21,13 @@ import {
 import { roundPhaseOf } from "@/lib/phase-access";
 import { RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
+import { modeOf } from "../projects/member.ts";
 import { log } from "../projects/queries.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
 import { answersOf } from "./consent.ts";
 import {
   findRound,
   kindOf,
-  modeOf,
   type PanelSnapshot,
   type RoundElementRow,
   type RoundRow,

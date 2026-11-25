@@ -379,6 +379,7 @@ function Board() {
               elements={elements}
               detailFields={detailFields}
               openElementId={openElementId}
+              named={project.mode === "team"}
               actions={elementActions}
             />
           )}

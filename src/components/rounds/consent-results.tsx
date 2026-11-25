@@ -192,9 +192,11 @@ function ConsentLine({
           <p className="mt-2 text-muted-foreground">{m.rounds_consent_answers_none()}</p>
         ) : (
           <ul className="mt-2 flex flex-col gap-1">
-            {consent.answers.map((row) => (
-              <li key={row.name} className="break-words">
-                <span className="font-semibold">{row.name}</span>: {consentLabel(row.answer)}
+            {consent.answers.map((row, index) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: a fixed list without state; two members without a name share their text.
+              <li key={index} className="break-words">
+                <span className="font-semibold">{row.name || m.common_author_unnamed()}</span>:{" "}
+                {consentLabel(row.answer)}
                 {row.reason && <span className="text-muted-foreground"> ({row.reason})</span>}
               </li>
             ))}

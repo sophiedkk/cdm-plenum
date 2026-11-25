@@ -64,6 +64,7 @@ const ACTION_LABELS: Record<(typeof ACTIVITY_ACTIONS)[number], () => string> = {
   private_brainstorm_on: () => m.admin_action_private_brainstorm_on(),
   model_type_set: () => m.admin_action_model_type_set(),
   project_created: () => m.admin_action_project_created(),
+  project_mode_set: () => m.admin_action_project_mode_set(),
   proposal_added: () => m.admin_action_proposal_added(),
   proposal_added_to_board: () => m.admin_action_proposal_added_to_board(),
   proposal_deleted: () => m.admin_action_proposal_deleted(),

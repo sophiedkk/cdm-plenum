@@ -39,7 +39,7 @@ afterEach(async () => {
 
 async function makeTeam() {
   await db.updateTable("project").set({ mode: "team" }).where("id", "=", p.projectId).execute();
-  // Names the members see; an account without one shows its address.
+  // Names the members see.
   const names: Record<string, string> = {
     n1: "Ann",
     n2: "Bo",
@@ -449,6 +449,23 @@ describe("results by name (ADR 0023)", () => {
       expect(json).not.toContain(id);
     }
     expect(json).not.toContain("@example.test");
+  });
+
+  it("gives a member without a name an empty name, never the address", async () => {
+    const roundId = await teamRound();
+    await answerAll(roundId);
+    await db.updateTable("user").set({ name: " " }).where("id", "=", p.raters.n2).execute();
+    await closedNow(db, p.facilitator, p.projectId, roundId);
+    const results = ok(
+      await roundResults(db, p.raters.n1, { projectId: p.projectId, roundId }, now()),
+    );
+    const mixed = results.elements.find((e) => e.id === p.elements[2]);
+    expect(mixed?.consent?.answers).toContainEqual({
+      name: "",
+      answer: "leave_out",
+      reason: "Too detailed",
+    });
+    expect(JSON.stringify(results)).not.toContain("@");
   });
 
   it("shows the previous round's answers by name on the next round's cards", async () => {

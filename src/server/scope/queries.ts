@@ -14,7 +14,13 @@ import {
   refused,
   withProject,
 } from "../projects/access.ts";
-import { type Author, actorMemberId } from "../projects/member.ts";
+import {
+  type Author,
+  actorMemberId,
+  isTeamProject,
+  type TeamAuthor,
+  teamAuthors,
+} from "../projects/member.ts";
 import { log } from "../projects/queries.ts";
 import type {
   AddScopeCommentInput,
@@ -297,8 +303,10 @@ export interface ScopeComment {
   id: string;
   body: string;
   createdAt: string;
-  /** Whether the requester wrote it; the only thing a participant learns about an author. */
+  /** Whether the requester wrote it; all a participant learns about an author in a Delphi project. */
   mine: boolean;
+  /** Present in a Team project only (PR14, ADR 0023). */
+  author?: TeamAuthor | null;
 }
 
 export interface ScopeCommentWithAuthor extends Omit<ScopeComment, "mine"> {
@@ -324,12 +332,23 @@ export async function listScopeComments(
       .orderBy("created_at")
       .orderBy("id")
       .execute();
+    const named = await isTeamProject(db, project.id);
+    const authors = named
+      ? await teamAuthors(
+          db,
+          rows.map((row) => row.author_member_id),
+        )
+      : null;
     return done(
       rows.map((row) => ({
         id: row.id,
         body: row.body,
         createdAt: iso(row.created_at),
         mine: row.author_member_id === self,
+        ...(authors && {
+          author:
+            row.author_member_id === null ? null : (authors.get(row.author_member_id) ?? null),
+        }),
       })),
     );
   });

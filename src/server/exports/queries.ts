@@ -15,8 +15,8 @@ import { joinUnits } from "@/lib/units";
 import type { DB } from "../db/schema.gen.ts";
 import { projectGroups } from "../details/tree.ts";
 import { done, type ProjectResult, withProject } from "../projects/access.ts";
+import { modeOf } from "../projects/member.ts";
 import { log } from "../projects/queries.ts";
-import { modeOf } from "../rounds/round.ts";
 import { modelTypeOf } from "../scope/queries.ts";
 import { shownGroups } from "./rating-groups.ts";
 

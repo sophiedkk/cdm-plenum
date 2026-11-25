@@ -11,6 +11,7 @@ import { valueOrNotFound } from "@/components/rounds/result-value";
 import {
   GroupNamesForm,
   PrivateBrainstormForm,
+  ProjectModeForm,
   RaterGroupForm,
 } from "@/components/settings/facilitator-settings";
 import { NotFoundState, PageHeader } from "@/components/shell/route-states";
@@ -19,7 +20,11 @@ import { m } from "@/i18n/messages";
 import { requireStep } from "@/lib/guards";
 import { setPrivateBrainstormFn } from "@/server/elements/functions";
 import { elementKeys } from "@/server/elements/query-options";
-import { setGroupNamesVisibleFn, setRaterGroupFn } from "@/server/projects/functions";
+import {
+  setGroupNamesVisibleFn,
+  setProjectModeFn,
+  setRaterGroupFn,
+} from "@/server/projects/functions";
 import {
   groupMembersQueryOptions,
   projectKeys,
@@ -34,7 +39,7 @@ import {
 
 /**
  * The facilitator's project settings (PR12, ADR 0018): the change class and the minimum panel
- * (DE11, DE13), the private brainstorm (EL13), whether participants see group names (PR7), and
+ * (DE11, DE13), how the project runs (PR14), the private brainstorm (EL13), whether participants see group names (PR7), and
  * the group the facilitator rates in (DE14). The server functions check the role again.
  */
 export const Route = createFileRoute("/_authed/projects/$projectId/settings")({
@@ -66,6 +71,7 @@ function Settings() {
   const setPrivateBrainstorm = useServerFn(setPrivateBrainstormFn);
   const setGroupNamesVisible = useServerFn(setGroupNamesVisibleFn);
   const setRaterGroup = useServerFn(setRaterGroupFn);
+  const setProjectMode = useServerFn(setProjectModeFn);
   if (!detail.ok || !groups.ok || !rounds.ok) return <NotFoundState />;
   const panel = valueOrNotFound(panelResult);
   const project = detail.value;
@@ -103,6 +109,12 @@ function Settings() {
       />
       <Separator />
       <div className="grid gap-10 lg:grid-cols-2">
+        <ProjectModeForm
+          mode={project.mode}
+          locked={project.modeLocked}
+          save={(mode) => setProjectMode({ data: { projectId, mode } })}
+          onSaved={() => refreshProject()}
+        />
         <PrivateBrainstormForm
           enabled={project.privateBrainstorm}
           revealed={project.boardRevealed}

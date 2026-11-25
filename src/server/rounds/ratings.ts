@@ -9,6 +9,7 @@ import type { ConsentAnswer } from "@/lib/consent";
 import { groupOrder } from "@/lib/element-groups";
 import type { ElementReference } from "@/lib/elements";
 import type { DB } from "../db/schema.gen.ts";
+import { modeOf } from "../projects/member.ts";
 import { log } from "../projects/queries.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
 import { type PreviousConsent, teamRatings } from "./consent.ts";
@@ -21,7 +22,6 @@ import {
   emptyOutcome,
   findRound,
   kindOf,
-  modeOf,
   outcomesOf,
   type RoundRow,
   type RoundSummary,

@@ -6,7 +6,7 @@
 // settled, a terminologist or the facilitator proposes its codes (terminology.ts). Participants
 // answer both kinds by consent; the facilitator addresses objections and settles, which copies
 // the proposal onto the element (owner decision 2026-11-23). No query hands a member id to the
-// screens: an objection reaches the facilitator without its author (EL2).
+// screens: an objection reaches its readers without its author (EL2), named in a Team (PR14).
 import type { Kysely, Transaction } from "kysely";
 import type { Cardinality } from "@/lib/cardinality";
 import type { Outcome } from "@/lib/consensus";
@@ -45,7 +45,7 @@ import {
   readProject,
   refused,
 } from "../projects/access.ts";
-import { actorMemberId } from "../projects/member.ts";
+import { actorMemberId, isTeamProject, teamAuthors } from "../projects/member.ts";
 import { log } from "../projects/queries.ts";
 import { statusOf } from "../rounds/round.ts";
 import type {
@@ -367,12 +367,19 @@ export async function detailBoard(
     // NOTE: DT4. The facilitator may skip the review only when no terminologist but the proposer
     // could do it.
     const reviewers = facilitator ? await terminologists(reader, project.id) : [];
+    const authors = (await isTeamProject(reader, project.id))
+      ? await teamAuthors(
+          reader,
+          answers.map((answer) => answer.member_id),
+        )
+      : null;
     const consent = (row: (typeof proposals)[number], readsAnswers: boolean): ConsentState => {
       const objection = (answer: (typeof answers)[number]): DetailObjection => ({
         id: answer.id,
         version: answer.version,
         reason: answer.reason ?? "",
         addressedNote: answer.addressed_note,
+        ...(authors && { author: authors.get(answer.member_id) ?? null }),
       });
       const ofProposal = answers.filter((answer) => answer.proposal_id === row.id);
       const current = ofProposal.filter((answer) => answer.version === row.version);

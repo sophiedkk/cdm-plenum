@@ -3,24 +3,29 @@
 
 // The brainstorm board (EL23, ADR 0020): one column per brainstorm question (EL14), with the
 // elements from existing models, the member's own elements and, before the reveal (EL13), only
-// the number of other people's elements. No author leaves this query (EL2); before the reveal a
-// participant gets no word of another participant's elements.
+// the number of other people's elements. No author leaves this query in a Delphi project (EL2);
+// a Team project names the author of the other cards (PR14). Before the reveal a participant
+// gets no word of another participant's elements.
 import type { Kysely } from "kysely";
 import { ELEMENT_PROMPTS, type ElementPrompt, isElementPrompt } from "@/lib/brainstorm";
 import { type ElementReference, toReference } from "@/lib/elements";
 import { stepVisible } from "@/lib/phase-access";
 import type { DB } from "../db/schema.gen.ts";
 import { done, type ProjectResult, readProject, refused } from "../projects/access.ts";
-import { actorMemberId } from "../projects/member.ts";
+import { actorMemberId, isTeamProject, type TeamAuthor, teamAuthors } from "../projects/member.ts";
 import { inPrivateStep } from "./queries.ts";
 
-/** An element as a card on the brainstorm board: its name and a line, nothing about its author. */
+/**
+ * An element as a card on the brainstorm board: its name and a line. The `author` key exists
+ * only on the other people's cards of a Team project (PR14, ADR 0023).
+ */
 export interface BoardCard {
   id: string;
   name: string;
   description: string;
   /** The model a reference element refers to (EL26); null for a data element. */
   reference: ElementReference | null;
+  author?: TeamAuthor | null;
 }
 
 export interface BoardColumn {
@@ -101,6 +106,13 @@ export async function brainstormBoard(
       others: [],
       hidden: 0,
     }));
+    const named = await isTeamProject(reader, project.id);
+    const authors = named
+      ? await teamAuthors(
+          reader,
+          rows.map((row) => row.author_member_id),
+        )
+      : null;
     const hints: BoardCard[] = [];
     const contributors = new Set<string>();
     let added = 0;
@@ -127,7 +139,10 @@ export async function brainstormBoard(
       if (row.imported) column.fromModels.push(card);
       else if (mine) column.own.push(card);
       else if (privateStep) column.hidden += 1;
-      else column.others.push(card);
+      else if (authors) {
+        const author = row.author_member_id && authors.get(row.author_member_id);
+        column.others.push({ ...card, author: author || null });
+      } else column.others.push(card);
     }
     const participants = await reader
       .selectFrom("member")

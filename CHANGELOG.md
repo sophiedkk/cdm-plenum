@@ -11,6 +11,16 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- You choose how a project runs when you create it: a "Delphi study"
+  (anonymous ratings on a scale of 1 to 9 against a consensus rule, the
+  default) or a "Team" (named participants decide by consent). You can change
+  it under Settings until the first round opens; after that the page says it is
+  fixed. In a Team project participants see by name who added an element, who
+  wrote a comment on the scope or an element, and who added a card on the
+  brainstorm board once it is revealed, who raised a detail objection and who
+  suggested a source model. Participants never see an e-mail address, only a
+  name. A Delphi project keeps hiding authors.
+  Participants read how the project runs under "About this project".
 - Rounds of a Team project decide by consent. Each member answers Include,
   Leave out or Discuss per element, or "Unable to judge", and a reason is
   required for Leave out and Discuss. The round setup has no scale and no

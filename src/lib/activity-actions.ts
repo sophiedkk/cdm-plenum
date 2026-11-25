@@ -62,6 +62,7 @@ export const ACTIVITY_ACTIONS = [
   "private_brainstorm_off",
   "private_brainstorm_on",
   "project_created",
+  "project_mode_set",
   "proposal_added",
   "proposal_added_to_board",
   "proposal_deleted",

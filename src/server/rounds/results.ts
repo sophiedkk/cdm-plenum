@@ -10,6 +10,7 @@ import type { ElementReference } from "@/lib/elements";
 import type { ExpertType } from "@/lib/panel";
 import { RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
+import { modeOf } from "../projects/member.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
 import { answeredCounts, type ConsentResult, consentResultsOf, emptyConsent } from "./consent.ts";
 import { inGroupOrder, itemGroupsOf, type RoundGroup } from "./groups.ts";
@@ -18,7 +19,6 @@ import {
   emptyOutcome,
   findRound,
   kindOf,
-  modeOf,
   outcomesOf,
   type RoundRow,
   type RoundSummary,

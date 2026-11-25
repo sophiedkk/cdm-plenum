@@ -14,8 +14,9 @@ import { lookElements } from "../elements/first-look.ts";
 import { checkProgress } from "../elements/groups.ts";
 import { completedMemberCount, ownAnswerCount } from "../rounds/consent.ts";
 import { ownRatingCode } from "../rounds/rater-link.ts";
-import { kindOf, modeOf, type RoundKind, statusOf } from "../rounds/round.ts";
+import { kindOf, type RoundKind, statusOf } from "../rounds/round.ts";
 import { done, type ProjectResult, readProject, refused, withProject } from "./access.ts";
+import { modeOf } from "./member.ts";
 import { log, ownGroupId } from "./queries.ts";
 import type { MovePhaseInput } from "./schemas.ts";
 

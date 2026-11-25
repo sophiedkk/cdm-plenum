@@ -9,6 +9,7 @@ import { ModelTreeView } from "@/components/details/model-tree";
 import { StructureFacts } from "@/components/details/structure-facts";
 // The recap of a done phase (PR13, ADR 0020): read only, one view per phase, each fact once.
 import { useModelType } from "@/components/projects/model-type-context";
+import { useProjectMode } from "@/components/projects/project-mode-context";
 import { DateTime } from "@/components/status/date-time";
 import { StatusBadge } from "@/components/status/status-badge";
 import { m } from "@/i18n/messages";
@@ -185,6 +186,7 @@ function DiscoverView({ projectId, recap }: Readonly<{ projectId: string; recap:
 }
 
 function DecideView({ projectId, recap }: Readonly<{ projectId: string; recap: DecideRecap }>) {
+  const team = useProjectMode() === "team";
   return (
     <>
       <Heading title={m.projects_recap_decide_title()} closedAt={recap.closedAt} />
@@ -206,7 +208,7 @@ function DecideView({ projectId, recap }: Readonly<{ projectId: string; recap: D
                 {m.projects_decided_excluded()}
               </th>
               <th scope="col" className="px-3 py-2 text-right font-semibold">
-                {m.projects_decided_open()}
+                {team ? m.projects_decided_open_team() : m.projects_decided_open()}
               </th>
             </tr>
           </thead>

@@ -194,7 +194,12 @@ Then work through these steps:
    "Sign in". Revoke that invitation, then press "Undo" in the message: the
    invitation is back. Add an empty group and remove it from its "Actions for"
    menu; "Undo" brings it back. Settings (Project menu) save when you change
-   them and show "Saved".
+   them and show "Saved". The first setting is how the project runs: the demo
+   projects are Delphi studies. Switch "Heart rate (demo)", which has no round, to
+   "Team", then sign in as a
+   participant: the board and the comments name who wrote them, and "About this
+   project" on the home says so. Once a round has opened, the setting reads as
+   text.
 5. **Detail:** open "Oxygen saturation (demo)". The Details tab is a list:
    the tree of the model first, then the three elements in the model, each
    with its status and what asks for you, and the settled ones in a folded

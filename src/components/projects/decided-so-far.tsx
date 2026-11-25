@@ -7,6 +7,7 @@
 // closed round that rated it.
 import { Link } from "@tanstack/react-router";
 import { CheckIcon, CircleDashedIcon, CircleIcon, type LucideIcon, XIcon } from "lucide-react";
+import { useProjectMode } from "@/components/projects/project-mode-context";
 import { m } from "@/i18n/messages";
 import { type DecidedSoFar, type DecidedStatus, decidedGroups } from "@/lib/project-home";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,15 @@ export function DecidedSoFarSection({
   const count = (status: DecidedStatus) =>
     groups.find((group) => group.status === status)?.elements.length ?? 0;
   const closed = decided.lastClosedRound;
+  // NOTE: DE20, ADR 0023. A Team decides by consent, so an open element is "To discuss".
+  const team = useProjectMode() === "team";
+  const label = (status: DecidedStatus) =>
+    team && status === "no_consensus"
+      ? m.projects_decided_open_team()
+      : team && status === "not_rated"
+        ? m.projects_decided_not_rated_team()
+        : STATUS[status].label();
+  const bar = team ? m.projects_decided_bar_team : m.projects_decided_bar;
   return (
     <section aria-labelledby="decided-heading" className="mt-12 flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
@@ -71,7 +81,7 @@ export function DecidedSoFarSection({
         <>
           <div
             role="img"
-            aria-label={m.projects_decided_bar({
+            aria-label={bar({
               included: count("included"),
               excluded: count("excluded"),
               open: count("no_consensus"),
@@ -109,7 +119,8 @@ export function DecidedSoFarSection({
                     )}
                   >
                     <Icon aria-hidden="true" className="size-4" />
-                    {status.label()} <span className="tabular-nums">{group.elements.length}</span>
+                    {label(group.status)}{" "}
+                    <span className="tabular-nums">{group.elements.length}</span>
                   </h3>
                   <ul className="flex flex-wrap gap-1.5">
                     {group.elements.map((element) => (

@@ -13,7 +13,7 @@ import {
 } from "@/lib/consensus";
 import { type ElementReference, toReference } from "@/lib/elements";
 import { EXPERT_TYPES, type PanelCounts } from "@/lib/panel";
-import { isProjectMode, type ProjectMode } from "@/lib/project-mode";
+import type { ProjectMode } from "@/lib/project-mode";
 import type { DB, Round } from "../db/schema.gen.ts";
 
 export type RoundRow = Selectable<Round>;
@@ -47,16 +47,6 @@ export function ruleOf(round: RoundRow): ConsensusRule {
     agreementPct: Number(round.agreement_pct),
     oppositionPct: Number(round.opposition_pct),
   };
-}
-
-/** How the project of a round runs (PR14): a Team round decides by consent (DE20). */
-export async function modeOf(db: Kysely<DB>, projectId: string): Promise<ProjectMode> {
-  const row = await db
-    .selectFrom("project")
-    .select("mode")
-    .where("id", "=", projectId)
-    .executeTakeFirstOrThrow();
-  return isProjectMode(row.mode) ? row.mode : "delphi";
 }
 
 /** What every member may know about a round, and what participants see before they rate (DE4). */

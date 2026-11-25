@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The comments under the scope (SC2) and under an element (EL6): the list, oldest first, and a
-// form to add one. The author's name shows only when the list carries one, which only the
-// facilitator's queries do (EL2, ADR 0005); a participant's list says only which comments are
-// their own. Without `add` the step is closed (PR9): a note takes the form's place.
+// form to add one. The author's name shows only when the list carries one: the facilitator's
+// queries do (EL2, ADR 0005) and every query of a Team project (PR14); a Delphi participant's
+// list says only which comments are their own. Without `add` the step is closed (PR9): a note takes the form's place.
 import { revalidateLogic } from "@tanstack/react-form";
 import { useRef } from "react";
 import { z } from "zod";
@@ -19,10 +19,21 @@ export interface ThreadComment {
   id: string;
   body: string;
   createdAt: string;
-  /** Set in the facilitator's list only; null there when the author left the project. */
-  author?: { name: string; email: string } | null;
+  /**
+   * Set in the facilitator's list and in a Team project (PR14); null there when the author left
+   * the project. Only the facilitator's list carries the address.
+   */
+  author?: { name: string; email?: string } | null;
   /** Set in a participant's list only: whether the reader wrote it. */
   mine?: boolean;
+}
+
+/**
+ * The name of a person as the screens show it. Only the facilitator's lists carry an address, as
+ * the fallback; anyone else gets a neutral label for a person without a name.
+ */
+export function authorName(author: { name: string; email?: string }): string {
+  return author.name.trim() || author.email || m.common_author_unnamed();
 }
 
 export type CommentOutcome = { ok: true } | { ok: false; error: RefusalCode };
@@ -40,8 +51,7 @@ export function commentSchema(max: number) {
 
 function authorText({ author, mine }: ThreadComment): string | null {
   if (author === null) return m.common_comment_author_left();
-  if (author !== undefined)
-    return m.common_comment_author({ name: author.name.trim() || author.email });
+  if (author !== undefined) return m.common_comment_author({ name: authorName(author) });
   if (mine === undefined) return null;
   return mine ? m.common_comment_author_you() : m.common_comment_author_participant();
 }

@@ -20,12 +20,12 @@ import { EXPERT_TYPES } from "@/lib/panel";
 import type { DB } from "../db/schema.gen.ts";
 import { projectGroups } from "../details/tree.ts";
 import { done, type ProjectResult, withProject } from "../projects/access.ts";
+import { modeOf } from "../projects/member.ts";
 import { log } from "../projects/queries.ts";
 import { namedAnswersOf } from "../rounds/consent.ts";
 import { invitedBy, responseRateOf } from "../rounds/results.ts";
 import {
   kindOf,
-  modeOf,
   outcomesOf,
   type RoundRow,
   roundItems,

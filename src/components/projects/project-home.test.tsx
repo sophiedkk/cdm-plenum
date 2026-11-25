@@ -16,6 +16,7 @@ import { AboutProject } from "./about-project";
 import { DecidedSoFarSection } from "./decided-so-far";
 import { PhaseSteps } from "./phase-steps";
 import { ProjectHeader } from "./project-header";
+import { ProjectModeProvider } from "./project-mode-context";
 import { ProjectPages } from "./project-pages";
 import { ProjectRow, waitingText } from "./project-row";
 import { TaskCard } from "./task-card";
@@ -390,6 +391,20 @@ describe("DecidedSoFarSection (PR8)", () => {
     expect(document.body.textContent).not.toMatch(/of 5 elements/);
   });
 
+  it("says To discuss and not answered yet in a Team project (DE20)", () => {
+    render(
+      <ProjectModeProvider value="team">
+        <DecidedSoFarSection projectId="p1" decided={DECIDED} />
+      </ProjectModeProvider>,
+    );
+    expect(screen.getByRole("img").getAttribute("aria-label")).toBe(
+      "2 in the model, 1 not in the model, 1 to discuss, 1 not answered yet",
+    );
+    expect(screen.getByRole("region", { name: "To discuss 1" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Not answered yet 1" })).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/consensus/i);
+  });
+
   it("links to the newest closed round's results", () => {
     render(<DecidedSoFarSection projectId="p1" decided={DECIDED} />);
     expect(screen.getByRole("link", { name: "Round 1 results" }).getAttribute("href")).toBe(
@@ -425,6 +440,7 @@ describe("AboutProject (PR5, PR7)", () => {
     render(
       <AboutProject
         projectName="Blood pressure"
+        mode="delphi"
         groups={GROUPS}
         leave={vi.fn()}
         onLeft={vi.fn()}
@@ -445,10 +461,36 @@ describe("AboutProject (PR5, PR7)", () => {
     ).toBeTruthy();
   });
 
+  it("says in one line how the project runs (PR14)", () => {
+    const { rerender } = render(
+      <AboutProject
+        projectName="Blood pressure"
+        mode="team"
+        groups={GROUPS}
+        leave={vi.fn()}
+        onLeft={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("about-mode").textContent).toBe(
+      "This project runs as a team: everyone sees who wrote what.",
+    );
+    rerender(
+      <AboutProject
+        projectName="Blood pressure"
+        mode="delphi"
+        groups={GROUPS}
+        leave={vi.fn()}
+        onLeft={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("about-mode").textContent).toContain("Delphi study");
+  });
+
   it("shows names only when the server sent them (PR7)", () => {
     render(
       <AboutProject
         projectName="Blood pressure"
+        mode="delphi"
         groups={[{ ...NURSING, names: ["Nurse A", ""] }]}
         leave={vi.fn()}
         onLeft={vi.fn()}

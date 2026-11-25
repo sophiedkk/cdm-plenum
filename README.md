@@ -11,13 +11,21 @@ cdm-plenum guides a group of clinicians, information modellers and
 terminologists from the scope of a clinical concept to an agreed list of data
 elements, before anyone writes it down in a standard such as an openEHR
 archetype or a FHIR profile. The group starts from existing models (openEHR
-archetypes from the Clinical Knowledge Manager,
-FHIR profiles from a package), adds what is missing on a shared board, and
-rates the elements in e-Delphi rounds against a consensus rule fixed in
-advance. The elements in the model then get their structure and codes by
-consent. The agreed model goes to the existing authoring tools and to CKM
-review as CSV and as a FreeMind mind map, with a decision report for the
-study.
+archetypes from the Clinical Knowledge Manager, FHIR profiles from a package
+such as the Nictiz zibs), adds what is missing on a shared board, and decides
+in rounds which elements belong in the model. The elements in the model then
+get their structure and codes by consent. The agreed model goes to the
+existing authoring tools and to CKM review as CSV and as a FreeMind mind map,
+with a decision report for the study.
+
+A project runs in one of two ways, chosen when it is created:
+
+- **Delphi study:** participants rate each element anonymously on a scale of
+  1 to 9 against a consensus rule fixed in advance, as a reportable e-Delphi
+  study.
+- **Team:** participants work under their own names and decide by consent:
+  each element is included, left out, or discussed until the facilitator
+  settles it.
 
 What each release holds is in [CHANGELOG.md](CHANGELOG.md). The requirements
 draft is in [docs/requirements.md](docs/requirements.md) and the design in
@@ -27,37 +35,41 @@ draft is in [docs/requirements.md](docs/requirements.md) and the design in
 ## How it works
 
 A project moves through five phases. The facilitator moves it on from the
-project's Overview; participants see their task on the project home.
+project's Overview, whose checklist leads to the next open piece of work.
+Participants see their task on the project home, and the page they work on
+says what to do and how far they are.
 
 ```mermaid
 flowchart LR
     scope[Scope] --> discover[Discover] --> decide[Decide] --> detail[Detail] --> handoff[Hand-off]
-    decide -- "no consensus: next round" --> decide
+    decide -- "not decided: next round" --> decide
 ```
 
 | Phase | What happens |
 | --- | --- |
 | Scope | The facilitator writes the concept, use cases and sources, and picks the model type (observation, evaluation, instruction, action or sub-block), which sets the questions of the brainstorm. Participants comment. |
 | Discover | The facilitator puts elements from existing models (CKM archetypes, FHIR profiles, forms) on the list and participants take a first look at them. Each participant then adds what is missing, alone, until the facilitator reveals the board, merges duplicates and groups the elements for the participants to check. |
-| Decide | Participants rate each element anonymously in e-Delphi rounds against a consensus rule fixed in advance. Elements without consensus go to a next round with the group's scores. |
-| Detail | The facilitator or an architect proposes the tree of the model and, per element, the data type, cardinality, values and units, or a reference to another model. A terminologist proposes the codes, which a second terminologist reviews. Participants agree or object, a value list can go to a rating round of its own, and the facilitator settles. |
-| Hand-off | Everyone sees the agreed model on one page. The facilitator downloads it as CSV (also with semicolons for Excel) and as a mind map, the ratings for the study report and a decision report. |
+| Decide | In a Delphi study, participants rate each element anonymously against a consensus rule fixed in advance; elements without consensus go to a next round with the group's scores. In a team, members answer include, leave out or discuss by name, and the facilitator settles what is left to discuss. |
+| Detail | The facilitator or an architect proposes the tree of the model and, per element, the data type, cardinality, values and units, or a reference to another model. A terminologist proposes the codes, which a second terminologist reviews. Participants go through a list of the elements, one at a time, in plain words: they agree, object, or leave a technical point to the experts. A value list can go to a rating round of its own, and the facilitator settles. |
+| Hand-off | Participants read the agreed model in plain words. The facilitator's Overview shows what is still open and holds the downloads: the decision report, the elements as CSV (also with semicolons for Excel) and as a mind map, and the ratings for the study report. |
 
 ## Screenshots
 
 The screenshots show the demo projects; their people are invented.
 
-A participant's project home shows one "Your turn" card and what the group
-has decided so far.
+A participant's project home shows one "Your turn" card with what to do and
+by when, and what the group has decided so far.
 
 ![The home page of Blood pressure in the decide phase, with the card to rate round 2](docs/screenshots/home.png)
 
-The rating card asks one question per element on a scale of 1 to 9.
+In a Delphi study the rating card asks one question per element on a scale
+of 1 to 9; the bar above it counts how far you are.
 
 ![The rating card of round 2 for the element Mean arterial pressure](docs/screenshots/rating.png)
 
 The facilitator opens a project on its Overview: a checklist for the current
-phase that ends in the move to the next phase.
+phase in which the first open item is the next step, and the move to the next
+phase once everything is done.
 
 ![The Overview of Heart rate in the discover phase, with its checklist](docs/screenshots/overview.png)
 
@@ -83,9 +95,9 @@ scripts/dev/compose.sh exec dev pnpm db:migrate
 scripts/dev/compose.sh exec dev pnpm admin:grant you@example.test --facilitator
 ```
 
-To try every phase at once, load the demo projects. Each has the same eight
-invented participants in five stakeholder groups and stands in another
-phase:
+To try every phase at once, load the demo projects. Each is a Delphi study
+with the same eight invented participants in five stakeholder groups, and
+stands in another phase:
 
 | Project | Phase | What it shows |
 | --- | --- | --- |
@@ -93,7 +105,7 @@ phase:
 | Heart rate (demo) | Discover | A private brainstorm by five participants, board not revealed yet |
 | Blood pressure (demo) | Decide | A closed first round with results and an open second round |
 | Oxygen saturation (demo) | Detail | One settled structure with codes to answer, and one structure with an open objection |
-| Respiratory rate (demo) | Hand-off | Two closed rounds; the hand-off page with the model and the downloads |
+| Respiratory rate (demo) | Hand-off | Two closed rounds; the Overview with the downloads, and the agreed model for participants |
 
 Your address becomes facilitator of every project and administrator of the
 app. A second run adds only the projects that are missing.

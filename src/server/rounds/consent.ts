@@ -16,23 +16,18 @@ import {
 } from "@/lib/consent";
 import { groupOrder } from "@/lib/element-groups";
 import type { DB } from "../db/schema.gen.ts";
+import { modeOf } from "../projects/member.ts";
 import { log } from "../projects/queries.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
 import { inGroupOrder, itemGroupsOf } from "./groups.ts";
 import { raterContext } from "./rater-context.ts";
 import type { MyRatings, OwnRating, PreviousRound } from "./ratings.ts";
-import {
-  findRound,
-  modeOf,
-  type RoundRow,
-  type RoundSummary,
-  roundElements,
-  roundItems,
-} from "./round.ts";
+import { findRound, type RoundRow, type RoundSummary, roundElements, roundItems } from "./round.ts";
 import type { ConsentInput, SaveConsentInput, SettleInput } from "./schemas.ts";
 
 /** One member's answer, with the name every member sees once the round has closed (ADR 0023). */
 export interface NamedAnswer {
+  /** Empty for a member without a name; never the address (sign-in security review 2026-11-25). */
   name: string;
   answer: ConsentAnswer;
   /** Null for "Unable to judge", and for an Include without a reason. */
@@ -215,12 +210,11 @@ export async function namedAnswersOf(
       "consent_answer.answer",
       "consent_answer.reason",
       "user.name",
-      "user.email",
     ])
     .where("consent_answer.round_id", "=", roundId)
     .execute();
   const sorted = rows
-    .map((row) => ({ ...row, shown: row.name.trim() || row.email }))
+    .map((row) => ({ ...row, shown: row.name.trim() }))
     .sort((a, b) => a.shown.localeCompare(b.shown) || a.member_id.localeCompare(b.member_id));
   const answers = new Map<string, NamedAnswer[]>();
   for (const row of sorted) {

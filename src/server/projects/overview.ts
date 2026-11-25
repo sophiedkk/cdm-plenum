@@ -25,8 +25,9 @@ import { checkProgress } from "../elements/groups.ts";
 import { markSummary } from "../elements/marks.ts";
 import { completedMemberCount } from "../rounds/consent.ts";
 import { joinedPanel, projectPanel } from "../rounds/queries.ts";
-import { modeOf, type RoundKind, statusOf } from "../rounds/round.ts";
+import { type RoundKind, statusOf } from "../rounds/round.ts";
 import { done, type LockedProject, type ProjectResult, readProject } from "./access.ts";
+import { modeOf } from "./member.ts";
 import { projectOverview } from "./phase.ts";
 import { listProjects } from "./queries.ts";
 
