@@ -1,12 +1,17 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
+import { proposeDetail, settleDetail } from "../../src/server/details/queries.ts";
 // Phase recaps in English and Dutch (PR13, ADR 0020): in decide a participant opens the recap of
 // the scope and of discover from the steps in the header; the current step is no link and a later
 // recap's URL leads home. Axe-clean in both themes and at phone width (Q-ACC-1, Q-I18N-1).
 import { addElement } from "../../src/server/elements/queries.ts";
 import { addElementInput } from "../../src/server/elements/schemas.ts";
-import { insertImportedElement } from "../../src/server/test-fixtures.ts";
+import {
+  closedRoundWithOutcomes,
+  insertElement,
+  insertImportedElement,
+} from "../../src/server/test-fixtures.ts";
 import { seedScope, signInTo, userIdOf } from "./board-seed.ts";
 import {
   BROWSER_LOCALE,
@@ -96,6 +101,48 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       // The current phase has no recap: its URL leads to the project's first page.
       await page.goto(`/projects/${project.projectId}/recap/decide`);
       await expect(page).toHaveURL((url) => url.pathname === `/projects/${project.projectId}`);
+    });
+
+    test("the recap of Detail reads in plain words, with the technical form folded for a clinician", async ({
+      page,
+      db,
+    }) => {
+      const project = await seedProject(db, "detail");
+      const participant = await seedParticipant(db, project);
+      const systolic = await insertElement(db, project.projectId, "Systolic");
+      await closedRoundWithOutcomes(db, project.projectId, [[systolic, "included"]]);
+      const proposed = await proposeDetail(db, project.facilitator.userId, {
+        projectId: project.projectId,
+        elementId: systolic,
+        version: 0,
+        dataType: "quantity",
+        cardinality: { min: 0, max: null },
+        units: ["mm[Hg]"],
+        values: [],
+      });
+      if (!proposed.ok) throw new Error(proposed.error);
+      const settled = await settleDetail(db, project.facilitator.userId, {
+        projectId: project.projectId,
+        ...proposed.value,
+      });
+      if (!settled.ok) throw new Error(settled.error);
+      await db
+        .updateTable("project")
+        .set({ phase: "handoff" })
+        .where("id", "=", project.projectId)
+        .execute();
+      const recap = `/projects/${project.projectId}/recap/detail`;
+
+      await signInTo(page, participant, locale, recap);
+      await expect(page.getByText(text.details_card_optional_many)).toBeVisible();
+      await expect(page.getByText("DV_QUANTITY / Quantity")).toBeHidden();
+      await expectAxeCleanInBothThemes(page);
+
+      await page.context().clearCookies();
+      await signInTo(page, project.facilitator.email, locale, recap);
+      await expect(page.getByText("DV_QUANTITY / Quantity")).toBeVisible();
+      await expect(page.getByText("0..*")).toBeVisible();
+      await expectAxeCleanInBothThemes(page);
     });
 
     test("a recap page marks the phase step, not a tab, as current for the facilitator", async ({

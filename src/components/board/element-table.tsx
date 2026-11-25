@@ -31,6 +31,13 @@ import { type CardElement, ElementDetails } from "./element-details";
 import type { ElementMarkProps, MarkTarget } from "./element-marks";
 import { ReferenceText } from "./reference-text";
 
+// Below sm a row is a block: number and name on one line, then each figure with its column
+// header (data-label), so no column sits past the edge of a phone.
+const ROW_STACK =
+  "max-sm:flex max-sm:flex-wrap max-sm:items-center max-sm:gap-x-3 max-sm:gap-y-1 max-sm:py-2";
+const CELL_LABEL =
+  "max-sm:p-0 max-sm:before:mr-1 max-sm:before:text-muted-foreground max-sm:before:content-[attr(data-label)]";
+
 /** The column headers of the first look's counts (EL22): one column per answer. */
 const FIRST_LOOK_HEADERS: Record<FirstLookAnswer, () => string> = {
   belongs: () => m.board_column_first_look_belongs(),
@@ -150,9 +157,14 @@ function ElementRows({
 
   return (
     <>
-      <TableRow>
-        <TableCell className="text-muted-foreground tabular-nums">{position}</TableCell>
-        <TableHead scope="row" className="h-auto min-w-40 py-1 whitespace-normal md:min-w-56">
+      <TableRow className={ROW_STACK}>
+        <TableCell className="text-muted-foreground tabular-nums max-sm:w-6 max-sm:p-0">
+          {position}
+        </TableCell>
+        <TableHead
+          scope="row"
+          className="h-auto min-w-40 py-1 whitespace-normal max-sm:min-w-0 max-sm:basis-[calc(100%-2.25rem)] max-sm:p-0 md:min-w-56"
+        >
           <Button
             ref={toggle}
             type="button"
@@ -179,39 +191,66 @@ function ElementRows({
         </TableCell>
         {detailFields ? (
           <>
-            <TableCell>
+            <TableCell data-label={m.board_field_data_type()} className={CELL_LABEL}>
               {element.reference !== null
                 ? null
                 : element.dataType === null && element.ckmLink === null
                   ? notDecided
                   : shortDataType(element)}
             </TableCell>
-            <TableCell className="tabular-nums">
+            <TableCell
+              data-label={m.board_field_cardinality()}
+              className={cn("tabular-nums", CELL_LABEL)}
+            >
               {element.cardinality === null ? notDecided : formatCardinality(element.cardinality)}
             </TableCell>
           </>
         ) : (
-          <TableCell>{promptLabel(element.prompt, modelType)}</TableCell>
+          <TableCell data-label={m.board_column_question()} className={CELL_LABEL}>
+            {promptLabel(element.prompt, modelType)}
+          </TableCell>
         )}
-        <TableCell className="text-right tabular-nums">{element.sources.length}</TableCell>
+        <TableCell
+          data-label={m.board_field_sources()}
+          className={cn("text-right tabular-nums", CELL_LABEL)}
+        >
+          {element.sources.length}
+        </TableCell>
         {ckmColumn && (
-          <TableCell>
+          <TableCell data-label={m.board_field_ckm()} className={CELL_LABEL}>
             <CkmStatus element={element} />
           </TableCell>
         )}
-        <TableCell className="text-right tabular-nums">{element.commentCount}</TableCell>
+        <TableCell
+          data-label={m.board_column_comments()}
+          className={cn("text-right tabular-nums", CELL_LABEL)}
+        >
+          {element.commentCount}
+        </TableCell>
         {supportCount !== undefined && (
-          <TableCell className="text-right tabular-nums">{supportCount}</TableCell>
+          <TableCell
+            data-label={m.board_column_support()}
+            className={cn("text-right tabular-nums", CELL_LABEL)}
+          >
+            {supportCount}
+          </TableCell>
         )}
         {firstLook !== undefined &&
           FIRST_LOOK_ANSWERS.map((answer) => (
-            <TableCell key={answer} className="text-right tabular-nums">
+            <TableCell
+              key={answer}
+              data-label={FIRST_LOOK_HEADERS[answer]()}
+              className={cn("text-right tabular-nums", CELL_LABEL)}
+            >
               {firstLook === null ? "" : firstLook[answer]}
             </TableCell>
           ))}
       </TableRow>
-      <TableRow id={detailsId} hidden={!expanded} className="hover:bg-transparent">
-        <TableCell colSpan={columnCount} className="px-4 pt-2 pb-6 whitespace-normal">
+      <TableRow id={detailsId} hidden={!expanded} className="hover:bg-transparent max-sm:block">
+        <TableCell
+          colSpan={columnCount}
+          className="px-4 pt-2 pb-6 whitespace-normal max-sm:block max-sm:px-0"
+        >
           {expanded && (
             // On a narrow screen the table scrolls sideways; the details stay within the screen.
             <section
@@ -273,8 +312,8 @@ export function ElementTable({
     (supportCounts === undefined ? 0 : 1) +
     (firstLookCounts === undefined ? 0 : FIRST_LOOK_ANSWERS.length);
   return (
-    <Table aria-label={m.board_list_label()}>
-      <TableHeader>
+    <Table aria-label={m.board_list_label()} className="max-sm:block">
+      <TableHeader className="max-sm:sr-only">
         <TableRow className="hover:bg-transparent">
           <TableHead scope="col">{m.board_column_number()}</TableHead>
           <TableHead scope="col">{m.board_name_label()}</TableHead>
@@ -309,7 +348,7 @@ export function ElementTable({
             ))}
         </TableRow>
       </TableHeader>
-      <TableBody>
+      <TableBody className="max-sm:block">
         {elements.map((element, index) => (
           <ElementRows
             key={element.id}

@@ -27,7 +27,7 @@ import {
   proposeDetail,
   settleDetail,
 } from "./queries.ts";
-import { proposeDetailInput } from "./schemas.ts";
+import { answerDetailInput, proposeDetailInput } from "./schemas.ts";
 
 let db: Kysely<DB>;
 let m: ProjectMembers;
@@ -94,7 +94,7 @@ async function proposed(userId: string, elementId: string, version = 0, structur
 const answer = (
   userId: string,
   proposal: { proposalId: string; version: number },
-  value: "agree" | "objection" = "agree",
+  value: "agree" | "objection" | "leave" = "agree",
   reason: string | null = value === "objection" ? "The unit is missing." : null,
 ) =>
   answerDetail(db, userId, {
@@ -130,6 +130,12 @@ async function objectionIds(): Promise<string[]> {
 }
 
 describe("the detail board (DT1)", () => {
+  it("tells who reads the technical form of the facts (P4): the facilitator and the experts", async () => {
+    expect(await boardOf(m.facilitator)).toMatchObject({ modeller: true });
+    expect(await boardOf(architect)).toMatchObject({ modeller: true });
+    expect(await boardOf(m.participant)).toMatchObject({ modeller: false });
+  });
+
   it("lists the elements in the model only, in the order they were added", async () => {
     const board = await boardOf(m.participant);
     expect(board.elements.map((element) => element.name)).toEqual(["Systolic", "Diastolic"]);
@@ -320,6 +326,59 @@ describe("answerDetail (DT2)", () => {
       ok: false,
       error: "detail_proposal_not_found",
     });
+  });
+});
+
+describe("leaving a proposal to the experts (DT2, owner decision 2026-11-25)", () => {
+  it("counts as answered, is no objection and no agreement, and still lets the facilitator settle", async () => {
+    const first = await proposed(m.facilitator, systolic);
+    expect(await answer(m.participant, first, "leave")).toEqual({ ok: true, value: null });
+    expect((await elementOf(m.participant, systolic)).proposal?.own).toEqual({
+      answer: "leave",
+      reason: null,
+    });
+    const view = await elementOf(m.facilitator, systolic);
+    expect(view.proposal?.answers).toEqual({ agreed: 0, left: 1, objections: [] });
+    expect(await ownDetailProgress(db, m.projectId, m.participant)).toMatchObject({
+      open: 1,
+      answered: 1,
+    });
+    expect(await detailProgress(db, m.projectId)).toMatchObject({ openObjections: 0 });
+    expect(await settle(m.facilitator, first)).toEqual({ ok: true, value: null });
+    for (const reader of [m.facilitator, m.participant, architect]) {
+      expect(personLeaks(await boardOf(reader), m)).toEqual([]);
+    }
+  });
+
+  it("replaces an objection, so it no longer holds up settling", async () => {
+    const first = await proposed(m.facilitator, systolic);
+    await answer(m.participant, first, "objection");
+    expect(await settle(m.facilitator, first)).toEqual({
+      ok: false,
+      error: "detail_objections_open",
+    });
+    await answer(m.participant, first, "leave");
+    expect(await objectionIds()).toEqual([]);
+    expect(await settle(m.facilitator, first)).toEqual({ ok: true, value: null });
+  });
+
+  it("refuses the facilitator, an outsider and a participant outside the detail phase", async () => {
+    const first = await proposed(m.facilitator, systolic);
+    expect(await answer(m.facilitator, first, "leave")).toEqual({ ok: false, error: "forbidden" });
+    expect(await answer(m.outsider, first, "leave")).toEqual({ ok: false, error: "not_found" });
+    for (const phase of ["decide", "handoff"] as const satisfies ProjectPhase[]) {
+      await setPhase(db, m.projectId, phase);
+      expect(await answer(m.participant, first, "leave")).toEqual({
+        ok: false,
+        error: "phase_closed",
+      });
+    }
+  });
+
+  it("takes no reason, as agree takes none", () => {
+    const input = { projectId: m.projectId, proposalId: UNKNOWN_ID, version: 1, answer: "leave" };
+    expect(answerDetailInput.safeParse(input).success).toBe(true);
+    expect(answerDetailInput.safeParse({ ...input, reason: "Not sure." }).success).toBe(false);
   });
 });
 

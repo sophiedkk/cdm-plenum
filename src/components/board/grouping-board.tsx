@@ -54,7 +54,7 @@ function ElementCard({
         onClick={onPick}
         onPointerDown={onPointerDown}
         className={cn(
-          "inline-flex min-h-8 cursor-grab touch-none items-center gap-1.5 rounded-md border bg-card px-2.5 py-1 text-left text-sm shadow-xs select-none hover:border-foreground",
+          "inline-flex min-h-8 cursor-grab touch-pan-y items-center gap-1.5 rounded-md border bg-card px-2.5 py-1 text-left text-sm shadow-xs select-none hover:border-foreground",
           held && "border-foreground bg-muted font-semibold",
         )}
       >
@@ -75,7 +75,7 @@ function MoveHere({ name, onMove }: Readonly<{ name: string; onMove: () => void 
     <button
       type="button"
       onClick={onMove}
-      className="m-2 block w-[calc(100%-1rem)] rounded-md border border-dashed border-foreground bg-muted p-2 text-sm font-semibold"
+      className="mx-3 mt-0 mb-3 block w-[calc(100%-1.5rem)] rounded-md border border-dashed border-foreground bg-muted p-2 text-sm font-semibold"
     >
       {m.board_grouping_move_here({ name })}
     </button>
@@ -218,6 +218,16 @@ export function GroupingBoard({
       const zone = under?.closest<HTMLElement>("[data-zone]")?.dataset["zone"] ?? null;
       setOver(zone);
     }
+    function onCancel() {
+      const current = drag.current;
+      drag.current = null;
+      if (!current?.ghost) return;
+      current.ghost.remove();
+      setOver(null);
+      setTimeout(() => {
+        dragged.current = false;
+      }, 0);
+    }
     function onUp(event: PointerEvent) {
       const current = drag.current;
       drag.current = null;
@@ -237,12 +247,12 @@ export function GroupingBoard({
     }
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
+    window.addEventListener("pointercancel", onCancel);
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("pointercancel", onCancel);
       window.removeEventListener("keydown", onKey);
     };
   }, []);
@@ -291,12 +301,12 @@ export function GroupingBoard({
         <h3 id="pool-heading" className="text-[0.9375rem] font-semibold">
           {m.board_grouping_pool({ count: pool.length })}
         </h3>
-        {moveHere(POOL)}
         {pool.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">{m.board_grouping_pool_empty()}</p>
         ) : (
           <ul className="mt-2 flex flex-wrap gap-1.5">{pool.map(card)}</ul>
         )}
+        {moveHere(POOL)}
       </section>
       <p aria-live="polite" className="sr-only">
         {said}
@@ -333,7 +343,6 @@ export function GroupingBoard({
                   }}
                 />
               </div>
-              {moveHere(group.id)}
               <ul className="flex min-h-24 flex-wrap content-start gap-1.5 px-3 pt-2 pb-3">
                 {items.map(card)}
                 {items.length === 0 && (
@@ -342,6 +351,7 @@ export function GroupingBoard({
                   </li>
                 )}
               </ul>
+              {moveHere(group.id)}
               {missing.length > 0 && (
                 <div className="border-t px-3 py-2 text-sm">
                   <h4 className="font-semibold">{m.board_grouping_missing_title()}</h4>
