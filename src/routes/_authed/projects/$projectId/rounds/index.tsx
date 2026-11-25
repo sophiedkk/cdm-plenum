@@ -10,16 +10,8 @@ import { RoundStatusBadge } from "@/components/rounds/round-badges";
 import { roundName } from "@/components/rounds/round-kind";
 import { EmptyState, PageHeader } from "@/components/shell/route-states";
 import { DateTime } from "@/components/status/date-time";
+import { usePhaseEdit } from "@/components/status/phase-banner";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { m } from "@/i18n/messages";
 import { mayRate } from "@/lib/project-roles";
 import { projectQueryOptions } from "@/server/projects/query-options";
@@ -55,13 +47,6 @@ function RoundAction({
       </Link>
     );
   }
-  if (round.status === "closed") {
-    return (
-      <Link to="/projects/$projectId/rounds/$roundId" params={params} className={LINK}>
-        {m.rounds_view_results({ number: round.number })}
-      </Link>
-    );
-  }
   return null;
 }
 
@@ -69,6 +54,7 @@ function Rounds() {
   const { projectId } = Route.useParams();
   const { project } = Route.useRouteContext();
   const isFacilitator = project.role === "facilitator";
+  const { editable, banner } = usePhaseEdit(project.role, project.phase, "rounds");
   const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
   // DE14: a facilitator rates once they joined a stakeholder group on the members page.
   const canRate = detail.ok && mayRate(detail.value.role, detail.value.ownGroupId);
@@ -76,7 +62,8 @@ function Rounds() {
   const rounds = valueOrNotFound(data);
   // NOTE: DT3. A value round starts from the Details page; this button starts element rounds.
   const elementRounds = rounds.filter((round) => round.kind === "elements");
-  const mayStart = isFacilitator && elementRounds.every((round) => round.status === "closed");
+  const mayStart =
+    isFacilitator && editable && elementRounds.every((round) => round.status === "closed");
   const unfinished = elementRounds.find((round) => round.status !== "closed");
   const running = rounds.find((round) => round.status === "open");
 
@@ -98,6 +85,7 @@ function Rounds() {
           description={m.rounds_purpose()}
           actions={rounds.length > 0 && newRound}
         />
+        {banner}
         {isFacilitator && unfinished && (
           <p className="text-sm text-muted-foreground">
             {m.rounds_one_at_a_time({ number: unfinished.number })}
@@ -126,43 +114,29 @@ function Rounds() {
             {newRound}
           </EmptyState>
         ) : (
-          <Table aria-label={m.rounds_table_caption()}>
-            <TableCaption className="sr-only">{m.rounds_table_caption()}</TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead scope="col">{m.rounds_column_round()}</TableHead>
-                <TableHead scope="col">{m.rounds_column_status()}</TableHead>
-                <TableHead scope="col">{m.rounds_column_closes()}</TableHead>
-                <TableHead scope="col">
-                  <span className="sr-only">{m.rounds_column_action()}</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rounds.map((round) => (
-                <TableRow key={round.id}>
-                  <TableCell>
-                    <Link
-                      to="/projects/$projectId/rounds/$roundId"
-                      params={{ projectId, roundId: round.id }}
-                      className={LINK}
-                    >
-                      {roundName(round)}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <RoundStatusBadge status={round.status} />
-                  </TableCell>
-                  <TableCell>
-                    <DateTime value={round.closesAt} />
-                  </TableCell>
-                  <TableCell>
-                    <RoundAction round={round} projectId={projectId} canRate={canRate} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <ul aria-label={m.rounds_table_caption()} className="border-t">
+            {rounds.map((round) => (
+              <li
+                key={round.id}
+                className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b py-3"
+              >
+                <Link
+                  to="/projects/$projectId/rounds/$roundId"
+                  params={{ projectId, roundId: round.id }}
+                  className={LINK}
+                >
+                  {roundName(round)}
+                </Link>
+                <RoundStatusBadge status={round.status} />
+                <span className="text-sm text-muted-foreground">
+                  {m.rounds_column_closes()} <DateTime value={round.closesAt} />
+                </span>
+                <span className="sm:ml-auto">
+                  <RoundAction round={round} projectId={projectId} canRate={canRate} />
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
     </div>

@@ -58,6 +58,8 @@ export interface ElementActions {
   /** Left out when the phase closed comments on the board (PR9). */
   addComment?: ((element: CardElement, body: string) => Promise<CommentOutcome>) | undefined;
   onCommentAdded: (element: CardElement) => Promise<void> | void;
+  /** False in the read view of a finished phase: the edit, values and link buttons stay out. */
+  canEdit?: boolean;
   onEdit: (element: CardElement) => void;
   onValues: (element: CardElement) => void;
   onLink: (element: CardElement) => void;
@@ -220,6 +222,7 @@ function ElementRows({
                 projectId={projectId}
                 element={element}
                 isFacilitator={isFacilitator}
+                canEdit={actions.canEdit !== false}
                 detailFields={detailFields}
                 addComment={addComment && ((body: string) => addComment(element, body))}
                 onCommentAdded={() => actions.onCommentAdded(element)}

@@ -44,6 +44,17 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The Overview names your next step: every item that asks for work has a
+  button to the page where you do it, and the first open item's button is the
+  one filled button. "Go on to" turns filled once nothing is open, and its
+  confirmation lists what stays open. Counts now read right for one element or
+  one participant.
+- Finished phases read as a recap for the facilitator. Scope, Existing models,
+  Elements, Grouping and Rounds show "This phase is finished" with an "Edit
+  anyway" button, and hide their forms and create buttons until you press it.
+  The server still accepts corrections.
+- The Rounds page is a list with one link per round instead of a table. The new
+  round page no longer says elements are selected when none is carried over.
 - Participants who are not architects or terminologists read the data type by
   its plain name and the cardinality in words, such as "Required, once" or
   "Optional, any number". The openEHR and FHIR types, the `0..1` form and the

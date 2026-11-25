@@ -25,6 +25,7 @@ function ItemLink({
   search,
   roundId,
   hash,
+  primary = false,
   children,
 }: Readonly<{
   to:
@@ -41,10 +42,12 @@ function ItemLink({
   search?: { duplicates?: true; ckm?: true };
   roundId?: string;
   hash?: string;
+  /** The suggested action: the first open item's link is the page's one filled button. */
+  primary?: boolean;
   children: ReactNode;
 }>) {
   return (
-    <Button asChild variant="outline" size="sm">
+    <Button asChild variant={primary ? "default" : "outline"} size={primary ? "default" : "sm"}>
       <Link
         to={to}
         params={roundId === undefined ? { projectId } : { projectId, roundId }}
@@ -58,7 +61,10 @@ function ItemLink({
 }
 
 /** A reminder to every participant who has not added an element yet (EL13). */
-function RemindButton({ remind }: Readonly<{ remind: () => Promise<Outcome<{ sent: number }>> }>) {
+function RemindButton({
+  remind,
+  primary,
+}: Readonly<{ remind: () => Promise<Outcome<{ sent: number }>>; primary: boolean }>) {
   const [pending, setPending] = useState(false);
   async function send() {
     setPending(true);
@@ -82,8 +88,8 @@ function RemindButton({ remind }: Readonly<{ remind: () => Promise<Outcome<{ sen
   return (
     <Button
       type="button"
-      variant="outline"
-      size="sm"
+      variant={primary ? "default" : "outline"}
+      size={primary ? "default" : "sm"}
       disabled={pending}
       aria-busy={pending}
       onClick={() => void send()}
@@ -115,14 +121,25 @@ function part(title: string, detail: ReactNode): ReactNode {
 function itemView(
   item: ChecklistItem,
   projectId: string,
+  primary: boolean,
   slots: {
-    reveal?: ReactNode | undefined;
+    reveal?: ((primary: boolean) => ReactNode) | undefined;
     remind?: (() => Promise<Outcome<{ sent: number }>>) | undefined;
   },
 ): ItemView {
   const invite = (
-    <ItemLink to="/projects/$projectId/members" projectId={projectId}>
+    <ItemLink to="/projects/$projectId/members" projectId={projectId} primary={primary}>
       {m.projects_check_invite()}
+    </ItemLink>
+  );
+  const openBoard = (
+    <ItemLink to="/projects/$projectId/board" projectId={projectId} primary={primary}>
+      {m.projects_check_board_action()}
+    </ItemLink>
+  );
+  const openDetails = (label: string) => (
+    <ItemLink to="/projects/$projectId/details" projectId={projectId} primary={primary}>
+      {label}
     </ItemLink>
   );
   switch (item.key) {
@@ -132,7 +149,7 @@ function itemView(
         : {
             text: m.projects_check_scope_write(),
             action: (
-              <ItemLink to="/projects/$projectId/scope" projectId={projectId}>
+              <ItemLink to="/projects/$projectId/scope" projectId={projectId} primary={primary}>
                 {m.projects_check_scope_action()}
               </ItemLink>
             ),
@@ -166,7 +183,7 @@ function itemView(
             : m.projects_check_models_none(),
         ),
         action: (
-          <ItemLink to="/projects/$projectId/models" projectId={projectId}>
+          <ItemLink to="/projects/$projectId/models" projectId={projectId} primary={primary}>
             {item.done ? m.projects_check_models_review() : m.projects_check_models_start()}
           </ItemLink>
         ),
@@ -187,19 +204,24 @@ function itemView(
                 participants: item.participants,
               }),
         ),
-        action: item.remind && slots.remind ? <RemindButton remind={slots.remind} /> : undefined,
+        action:
+          item.remind && slots.remind ? (
+            <RemindButton remind={slots.remind} primary={primary} />
+          ) : undefined,
       };
     case "contributions":
       return {
         text: part(
           m.projects_check_add_title(),
-          m.projects_check_contributions({
-            contributors: item.contributors,
-            participants: item.participants,
-          }),
+          item.participants === 1
+            ? m.projects_check_contributions_one({ contributors: item.contributors })
+            : m.projects_check_contributions({
+                contributors: item.contributors,
+                participants: item.participants,
+              }),
         ),
         action: (
-          <ItemLink to="/projects/$projectId/brainstorm" projectId={projectId}>
+          <ItemLink to="/projects/$projectId/brainstorm" projectId={projectId} primary={primary}>
             {m.projects_check_add_action()}
           </ItemLink>
         ),
@@ -208,7 +230,7 @@ function itemView(
       if (item.revealed === false)
         return {
           text: part(m.projects_check_cleanup_title(), m.projects_check_reveal()),
-          action: slots.reveal,
+          action: slots.reveal?.(primary),
         };
       return item.duplicates === 0
         ? { text: part(m.projects_check_cleanup_title(), m.projects_check_duplicates_none()) }
@@ -226,6 +248,7 @@ function itemView(
                 to="/projects/$projectId/board"
                 projectId={projectId}
                 search={{ duplicates: true }}
+                primary={primary}
               >
                 {m.projects_check_duplicates_action()}
               </ItemLink>
@@ -243,28 +266,29 @@ function itemView(
             : m.projects_check_group_todo(),
         ),
         action: (
-          <ItemLink to="/projects/$projectId/grouping" projectId={projectId}>
+          <ItemLink to="/projects/$projectId/grouping" projectId={projectId} primary={primary}>
             {m.projects_check_group_action()}
           </ItemLink>
         ),
       };
     case "round":
-      return roundView(item, projectId);
+      return roundView(item, projectId, primary);
     case "value_round":
       // NOTE: DT3. Value rounds share the round numbers, so the round texts name them as well.
-      return roundView({ key: "round", done: false, round: item.round, closed: null }, projectId);
+      return roundView(
+        { key: "round", done: false, round: item.round, closed: null },
+        projectId,
+        primary,
+      );
     case "detail_proposed":
       return {
         text:
           item.inModel === 0
             ? m.projects_check_detail_none_in_model()
-            : m.projects_check_detail_proposed({ proposed: item.proposed, total: item.inModel }),
-        action:
-          item.inModel === 0 ? undefined : (
-            <ItemLink to="/projects/$projectId/details" projectId={projectId}>
-              {m.projects_check_detail_action()}
-            </ItemLink>
-          ),
+            : item.inModel === 1
+              ? m.projects_check_detail_proposed_one({ proposed: item.proposed })
+              : m.projects_check_detail_proposed({ proposed: item.proposed, total: item.inModel }),
+        action: item.inModel === 0 ? openBoard : openDetails(m.projects_check_detail_action()),
       };
     case "detail_objections":
       return {
@@ -276,44 +300,62 @@ function itemView(
                 m.projects_check_detail_objections_many,
                 item.count,
               ),
+        action:
+          item.count === 0 ? undefined : openDetails(m.projects_check_detail_objections_action()),
       };
     case "detail_settled":
       return {
-        text: m.projects_check_detail_settled({ settled: item.settled, total: item.inModel }),
+        text:
+          item.inModel === 1
+            ? m.projects_check_detail_settled_one({ settled: item.settled })
+            : m.projects_check_detail_settled({ settled: item.settled, total: item.inModel }),
       };
     case "detail_codes":
       return {
-        text: m.projects_check_detail_codes({ settled: item.settled, total: item.inModel }),
+        text:
+          item.inModel === 1
+            ? m.projects_check_detail_codes_one({ settled: item.settled })
+            : m.projects_check_detail_codes({ settled: item.settled, total: item.inModel }),
       };
     case "undecided":
       if (item.done) return { text: m.projects_check_undecided_none() };
       return item.count === 0
-        ? { text: m.projects_check_no_elements() }
+        ? { text: m.projects_check_no_elements(), action: openBoard }
         : {
             text: count(
               m.projects_check_undecided_one,
               m.projects_check_undecided_many,
               item.count,
             ),
+            action: openBoard,
           };
   }
 }
 
-function roundView(item: Extract<ChecklistItem, { key: "round" }>, projectId: string): ItemView {
+function roundView(
+  item: Extract<ChecklistItem, { key: "round" }>,
+  projectId: string,
+  primary: boolean,
+): ItemView {
   const round = item.round;
   if (round === null) {
     const number = (item.closed?.number ?? 0) + 1;
     return {
       text: m.projects_check_round_set_up({ number }),
       action: (
-        <ItemLink to="/projects/$projectId/rounds/new" projectId={projectId}>
+        <ItemLink to="/projects/$projectId/rounds/new" projectId={projectId} primary={primary}>
           {m.rounds_new()}
         </ItemLink>
       ),
     };
   }
   const go = (label: string) => (
-    <ItemLink to="/projects/$projectId/rounds/$roundId" projectId={projectId} roundId={round.id}>
+    <ItemLink
+      to="/projects/$projectId/rounds/$roundId"
+      projectId={projectId}
+      roundId={round.id}
+      primary={primary}
+    >
       {label}
     </ItemLink>
   );
@@ -363,35 +405,46 @@ function ItemState({ done }: Readonly<{ done: boolean | null }>) {
   );
 }
 
-export function Checklist({
-  projectId,
-  items,
-  reveal,
-  remind,
-}: Readonly<{
-  projectId: string;
-  items: readonly ChecklistItem[];
-  reveal?: ReactNode | undefined;
-  remind?: (() => Promise<Outcome<{ sent: number }>>) | undefined;
-}>) {
+interface ChecklistRow {
+  item: ChecklistItem;
+  view: ItemView;
+}
+
+/**
+ * The rows of the checklist. The first open item that has an action gets it as the suggested
+ * (filled) action, the one main button of the page while something is open.
+ */
+export function checklistRows(
+  projectId: string,
+  items: readonly ChecklistItem[],
+  slots: {
+    reveal?: ((primary: boolean) => ReactNode) | undefined;
+    remind?: (() => Promise<Outcome<{ sent: number }>>) | undefined;
+  },
+): ChecklistRow[] {
+  const plain = items.map((item) => ({ item, view: itemView(item, projectId, false, slots) }));
+  const first = plain.findIndex(({ item, view }) => item.done === false && view.action);
+  return plain.map((row, index) =>
+    index === first ? { item: row.item, view: itemView(row.item, projectId, true, slots) } : row,
+  );
+}
+
+export function Checklist({ rows }: Readonly<{ rows: readonly ChecklistRow[] }>) {
   return (
     <ul className="border-t">
-      {items.map((item) => {
-        const view = itemView(item, projectId, { reveal, remind });
-        return (
-          <li
-            key={item.key}
-            data-item={item.key}
-            className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 border-b py-4 sm:grid-cols-[auto_1fr_auto]"
-          >
-            <ItemState done={item.done} />
-            <span className={item.done ? "text-muted-foreground" : undefined}>{view.text}</span>
-            {view.action && (
-              <span className="col-start-2 justify-self-start sm:col-start-3">{view.action}</span>
-            )}
-          </li>
-        );
-      })}
+      {rows.map(({ item, view }) => (
+        <li
+          key={item.key}
+          data-item={item.key}
+          className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 border-b py-4 sm:grid-cols-[auto_1fr_auto]"
+        >
+          <ItemState done={item.done} />
+          <span className={item.done ? "text-muted-foreground" : undefined}>{view.text}</span>
+          {view.action && (
+            <span className="col-start-2 justify-self-start sm:col-start-3">{view.action}</span>
+          )}
+        </li>
+      ))}
     </ul>
   );
 }
@@ -401,6 +454,7 @@ function MoveConfirm({
   direction,
   target,
   pending,
+  open,
   questionRef,
   onConfirm,
   onCancel,
@@ -408,6 +462,7 @@ function MoveConfirm({
   direction: PhaseDirection;
   target: ProjectPhase;
   pending: boolean;
+  open: readonly ReactNode[];
   questionRef: Ref<HTMLParagraphElement>;
   onConfirm: () => void;
   onCancel: () => void;
@@ -424,6 +479,17 @@ function MoveConfirm({
           ? m.projects_phase_confirm_next({ phase })
           : m.projects_phase_confirm_previous({ phase })}
       </p>
+      {direction === "next" && open.length > 0 && (
+        <div>
+          <p>{m.projects_phase_confirm_open()}</p>
+          <ul className="mt-2 list-disc pl-6">
+            {open.map((text, index) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: the list is static while the confirmation is open
+              <li key={index}>{text}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
@@ -443,15 +509,18 @@ function MoveConfirm({
 }
 
 /**
- * The phase move (PR4): one main button on to the next phase and a text link back, each with
+ * The phase move (PR4): one button on to the next phase, filled once nothing is open and a text link back, each with
  * its own confirmation. A refusal, such as a round still open (PR10), shows as a toast.
  */
 export function PhaseMove({
   phase,
+  open = [],
   move,
   onMoved,
 }: Readonly<{
   phase: ProjectPhase;
+  /** The texts of the checklist items still open: the main button turns outline, the confirmation lists them. */
+  open?: readonly ReactNode[];
   move: (direction: PhaseDirection) => Promise<Outcome<{ phase: ProjectPhase }>>;
   onMoved: () => Promise<void> | void;
 }>) {
@@ -509,6 +578,7 @@ export function PhaseMove({
             }}
             type="button"
             size="lg"
+            variant={open.length > 0 ? "outline" : "default"}
             aria-expanded={asking === "next"}
             onClick={() => ask("next")}
           >
@@ -535,6 +605,7 @@ export function PhaseMove({
           direction={asking}
           target={target}
           pending={pending}
+          open={open}
           questionRef={question}
           onConfirm={() => void confirm(asking)}
           onCancel={cancel}
@@ -587,13 +658,14 @@ export function OverviewChecklist({
   projectId: string;
   phase: ProjectPhase;
   facts: OverviewFacts;
-  reveal?: ReactNode | undefined;
+  reveal?: ((primary: boolean) => ReactNode) | undefined;
   remind?: (() => Promise<Outcome<{ sent: number }>>) | undefined;
   move: (direction: PhaseDirection) => Promise<Outcome<{ phase: ProjectPhase }>>;
   onMoved: () => Promise<void> | void;
 }>) {
   const next = adjacentPhase(phase, "next");
-  const items = checklist(phase, facts);
+  const rows = checklistRows(projectId, checklist(phase, facts), { reveal, remind });
+  const open = rows.filter(({ item }) => item.done === false).map(({ view }) => view.text);
   return (
     <section aria-labelledby="overview-heading" className="flex flex-col gap-4">
       <h2 id="overview-heading" className="text-lg font-semibold">
@@ -602,11 +674,11 @@ export function OverviewChecklist({
           : m.projects_overview_export()}
       </h2>
       {next ? (
-        <Checklist projectId={projectId} items={items} reveal={reveal} remind={remind} />
+        <Checklist rows={rows} />
       ) : (
         <HandoffOverview projectId={projectId} facts={facts} />
       )}
-      <PhaseMove phase={phase} move={move} onMoved={onMoved} />
+      <PhaseMove phase={phase} open={open} move={move} onMoved={onMoved} />
     </section>
   );
 }

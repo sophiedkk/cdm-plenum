@@ -77,7 +77,7 @@ function NewRound() {
         level={2}
         title={m.rounds_new_title()}
         description={
-          latest
+          latest && defaultIds.length > 0
             ? m.rounds_new_description_next({ number: latest.number })
             : m.rounds_new_description()
         }

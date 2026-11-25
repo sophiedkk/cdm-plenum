@@ -29,7 +29,7 @@ function modelIdentifier(model: SourceModelWithAuthor): string | null {
 export function ModelCards({
   models,
   add,
-}: Readonly<{ models: readonly SourceModelWithAuthor[]; add: ReactNode }>) {
+}: Readonly<{ models: readonly SourceModelWithAuthor[]; add?: ReactNode }>) {
   return (
     <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,16rem),1fr))] gap-3">
       {models.map((model) => {
@@ -53,7 +53,7 @@ export function ModelCards({
           </li>
         );
       })}
-      <li className="flex">{add}</li>
+      {add && <li className="flex">{add}</li>}
     </ul>
   );
 }
