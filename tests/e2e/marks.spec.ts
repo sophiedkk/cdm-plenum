@@ -194,7 +194,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await axeBothThemes(b.page);
       await b.page.goto(board);
       await expect(
-        b.page.getByRole("table", { name: text.board_list_label }).getByRole("rowheader"),
+        b.page.getByRole("list", { name: text.board_list_label }).getByRole("button", {
+          expanded: false,
+        }),
       ).toHaveCount(ELEMENTS.length);
       const rhythm = await openMarks(b.page, text, "Rhythm");
       await expect(rhythm.getByRole("button", { name: text.board_support_toggle })).toHaveAttribute(

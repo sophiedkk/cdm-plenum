@@ -90,7 +90,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       // The board names the model once, under the element's name.
       await page.goto(`/projects/${projectId}/board`);
       const row = page
-        .getByRole("row")
+        .getByRole("list", { name: text.board_list_label })
+        .getByRole("listitem")
         .filter({ has: page.getByRole("button", { name: "Blood pressure", exact: true }) });
       await expect(row).toContainText(text.board_reference_refers_to);
       await expect(modelLink(row)).toHaveAttribute("href", URL);
@@ -134,21 +135,23 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const add = page.getByRole("button", { name: text.board_add });
       await expectHydrated(add);
       await add.click();
-      const dialog = page.getByRole("dialog", { name: text.board_add_title });
+      const dialog = page.getByRole("region", { name: text.board_add_title });
       await dialog.getByLabel(text.board_name_label, { exact: true }).fill("Body weight");
       await expect(dialog.getByLabel(text.board_reference_title_label)).toHaveCount(0);
       const choice = dialog.getByRole("checkbox", { name: text.board_reference_choice });
       const title = dialog.getByRole("heading");
-      const titleBefore = await settledY(title);
-      const choiceBefore = await settledY(choice);
+      const addBefore = await pageY(add);
+      const titleBefore = await pageY(title);
+      const choiceBefore = await pageY(choice);
       await choice.click();
-      // The dialog is anchored to the top and grows downward: nothing above the new fields moves.
+      // The form opens below the button and grows downward: nothing above the new fields moves.
       await expect(dialog.getByLabel(text.board_reference_title_label)).toBeVisible();
+      expect(await pageY(add)).toBe(addBefore);
       expect(await pageY(title)).toBe(titleBefore);
       expect(await pageY(choice)).toBe(choiceBefore);
       await dialog.getByLabel(text.board_reference_title_label).fill("Archetype for body weight");
       await expectAxeClean(page);
-      await dialog.getByRole("button", { name: text.board_add }).click();
+      await dialog.getByRole("button", { name: text.board_add_submit }).click();
       await expect(dialog).toHaveCount(0);
       const row = page
         .getByRole("row")

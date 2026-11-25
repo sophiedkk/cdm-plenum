@@ -96,6 +96,13 @@ function boardRows(page: Page, text: Text) {
   return page.getByRole("table", { name: text.board_list_label }).getByRole("rowheader");
 }
 
+/** The names of the participant's board list, each with its number before the name. */
+function participantRows(page: Page, text: Text) {
+  return page.getByRole("list", { name: text.board_list_label }).getByRole("button", {
+    expanded: false,
+  });
+}
+
 for (const locale of ["en", "nl"] as const satisfies Locale[]) {
   test.describe(`brainstorm in ${locale}`, () => {
     test.use({ locale: BROWSER_LOCALE[locale], reducedMotion: "reduce" });
@@ -179,14 +186,14 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await bName.fill("");
       await b.page.goto(board);
       await expect(b.page.getByText(text.board_private_participant_note)).toBeVisible();
-      await expect(boardRows(b.page, text)).toHaveText(["Diastolic pressure"]);
+      await expect(participantRows(b.page, text)).toHaveText([/Diastolic pressure$/]);
       await axeClean(b.page);
       for (const body of [...b.bodies, await b.page.content()]) {
         expect(body).not.toContain("Systolic pressure");
         expect(body).not.toContain("Cuff size");
       }
       await a.page.goto(board);
-      await expect(boardRows(a.page, text)).toHaveText(["Systolic pressure", "Cuff size"]);
+      await expect(participantRows(a.page, text)).toHaveText([/Systolic pressure$/, /Cuff size$/]);
 
       // The facilitator sees both participants' elements and reveals the board.
       const facilitator = await pageFor(browser, locale, project.facilitator.email);
@@ -215,7 +222,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       // After the reveal both participants see every element, without an author.
       for (const participant of [a, b]) {
         await participant.page.goto(board);
-        await expect(boardRows(participant.page, text)).toHaveCount(3);
+        await expect(participantRows(participant.page, text)).toHaveCount(3);
         await expect(participant.page.getByText(text.board_private_participant_note)).toHaveCount(
           0,
         );
