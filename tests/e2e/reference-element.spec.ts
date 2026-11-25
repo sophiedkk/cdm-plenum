@@ -177,6 +177,10 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         locale,
         `/projects/${project.projectId}/board`,
       );
+      // The board is past its editing phases in detail, so it reads as a recap until "Edit anyway".
+      const editAnyway = page.getByRole("button", { name: text.common_phase_edit_anyway });
+      await expectHydrated(editAnyway);
+      await editAnyway.click();
       await page.getByRole("button", { name: "Heart rate", exact: true }).click();
       await page
         .getByRole("button", { name: new RegExp(`^${text.board_edit}`) })

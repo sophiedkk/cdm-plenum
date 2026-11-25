@@ -157,7 +157,11 @@ Then work through these steps:
    explanation in the same place. Choose Evaluation instead and open the
    brainstorm board (Discover): the four columns now ask what is concluded,
    what it is based on, how certain it is and the situation. Move the project on to
-   discover with "Go on to Discover" at the end of the checklist.
+   discover with "Go on to Discover" at the end of the checklist: while an item
+   is open, its button is the one filled button and "Go on to Discover" is an
+   outline button that lists what stays open when you press it. Later, open the
+   Scope tab of a project past scope: it shows "This phase is finished" and no
+   forms until you press "Edit anyway".
 2. **Discover:** open "Heart rate (demo)". The Overview lists the parts of
    discover. "Review" on the first item opens Existing models: the pulse
    archetype from openEHR CKM (stored in `tests/fixtures/ckm`, no network)

@@ -46,7 +46,10 @@ export function CoverageTable({
   unmatch,
   setBase,
   onListed,
+  readOnly = false,
 }: Readonly<{
+  /** The read view of a finished phase: no choosing, no base buttons, no put-on-list bar. */
+  readOnly?: boolean;
   coverage: Coverage;
   putOnList: (rowIds: string[]) => Promise<Outcome<{ createdElementIds: string[] }>>;
   unmatch: (rowId: string) => Promise<Outcome<null>>;
@@ -59,7 +62,7 @@ export function CoverageTable({
   // With one model nothing is matched, so the column would say "only one model" on every row.
   const showBasis = coverage.models.length > 1;
   // A base needs another model to compare with.
-  const showBase = coverage.models.length > 1;
+  const showBase = coverage.models.length > 1 && !readOnly;
   const base = coverage.models.find((model) => model.base) ?? null;
   // NOTE: ADR 0020 prototype: every row starts checked; the facilitator unchecks what is out.
   const [unchecked, setUnchecked] = useState<ReadonlySet<string>>(new Set());
@@ -142,9 +145,11 @@ export function CoverageTable({
           <caption className="sr-only">{m.board_models_coverage_title()}</caption>
           <thead>
             <tr className="bg-muted">
-              <th scope="col" className="px-3 py-2.5 text-left font-semibold">
-                <span className="sr-only">{m.board_models_column_pick()}</span>
-              </th>
+              {!readOnly && (
+                <th scope="col" className="px-3 py-2.5 text-left font-semibold">
+                  <span className="sr-only">{m.board_models_column_pick()}</span>
+                </th>
+              )}
               <th scope="col" className="px-3 py-2.5 text-left font-semibold">
                 {m.board_models_column_element()}
               </th>
@@ -187,16 +192,18 @@ export function CoverageTable({
               const models = Object.keys(row.cells).length;
               return (
                 <tr key={row.id} className="border-t">
-                  <td className="px-3 py-2.5">
-                    <Checkbox
-                      id={boxId}
-                      checked={row.onList || !unchecked.has(row.id)}
-                      disabled={row.onList || pending}
-                      onCheckedChange={(value) => toggle(row.id, value === true)}
-                    />
-                  </td>
+                  {!readOnly && (
+                    <td className="px-3 py-2.5">
+                      <Checkbox
+                        id={boxId}
+                        checked={row.onList || !unchecked.has(row.id)}
+                        disabled={row.onList || pending}
+                        onCheckedChange={(value) => toggle(row.id, value === true)}
+                      />
+                    </td>
+                  )}
                   <th scope="row" className="px-3 py-2.5 text-left font-normal">
-                    <label htmlFor={boxId} className="flex flex-col">
+                    <label htmlFor={readOnly ? undefined : boxId} className="flex flex-col">
                       <span>{name}</span>
                       {base !== null && row.cells[base.id] === undefined && (
                         <span className="text-xs text-muted-foreground">
@@ -242,7 +249,7 @@ export function CoverageTable({
                     <td className="px-3 py-2.5 text-xs whitespace-nowrap text-muted-foreground">
                       <span className="flex flex-col items-start">
                         <span>{models > 1 ? BASIS_LABELS[row.basis]() : BASIS_LABELS.none()}</span>
-                        {suggested(row) && (
+                        {!readOnly && suggested(row) && (
                           <Button
                             type="button"
                             variant="link"
@@ -264,22 +271,24 @@ export function CoverageTable({
           </tbody>
         </table>
       </div>
-      <div className="sticky bottom-0 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-4 py-3 shadow-lg">
-        <span id={countId} aria-live="polite" className="text-sm">
-          {open.length === 0
-            ? m.board_models_all_listed()
-            : m.board_models_chosen({ chosen: chosen.length, total: open.length })}
-        </span>
-        <Button
-          type="button"
-          disabled={pending || chosen.length === 0}
-          aria-busy={pending}
-          aria-describedby={countId}
-          onClick={() => void submit()}
-        >
-          {m.board_models_put_on_list()}
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="sticky bottom-0 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-4 py-3 shadow-lg">
+          <span id={countId} aria-live="polite" className="text-sm">
+            {open.length === 0
+              ? m.board_models_all_listed()
+              : m.board_models_chosen({ chosen: chosen.length, total: open.length })}
+          </span>
+          <Button
+            type="button"
+            disabled={pending || chosen.length === 0}
+            aria-busy={pending}
+            aria-describedby={countId}
+            onClick={() => void submit()}
+          >
+            {m.board_models_put_on_list()}
+          </Button>
+        </div>
+      )}
     </>
   );
 }

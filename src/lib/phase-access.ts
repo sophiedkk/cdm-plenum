@@ -170,6 +170,36 @@ export function writeOpen(
   return participantAccess(phase, step) === access;
 }
 
+/** What the facilitator's page offers in a step: its editing controls, or a read view. */
+export type FacilitatorAccess = "edit" | "read";
+
+// NOTE: no spec governs this, our own design (owner decision 2026-11-25, F3 of the UI/UX
+// analysis). A step is edited in the phases listed; a step not listed is edited in every phase.
+const FACILITATOR_EDIT_PHASES: Partial<Record<ProjectStep, readonly ProjectPhase[]>> = {
+  scope: ["scope"],
+  brainstorm: ["discover"],
+  models: ["discover"],
+  grouping: ["discover"],
+  first_look: ["discover"],
+  group_check: ["discover"],
+  board: ["discover", "decide"],
+  rounds: ["decide"],
+  details: ["detail"],
+};
+
+/**
+ * Whether the facilitator's page of `step` offers editing during `phase` or reads as a recap:
+ * a step reads once the project is past its last editing phase. Ahead of its phase it stays
+ * editable, as the facilitator prepares ahead (PR10). This steers the UI only; the server still
+ * accepts the facilitator's corrections, and "Edit anyway" opens the controls.
+ */
+export function facilitatorAccess(phase: ProjectPhase, step: ProjectStep): FacilitatorAccess {
+  const phases = FACILITATOR_EDIT_PHASES[step];
+  if (!phases) return "edit";
+  const last = Math.max(...phases.map((editing) => PROJECT_PHASES.indexOf(editing)));
+  return PROJECT_PHASES.indexOf(phase) > last ? "read" : "edit";
+}
+
 // NOTE: EL21, owner decision 2026-11-20. Data type, cardinality and values show from the detail
 // phase on, where the group settles them (DT1, DT2).
 export const DETAIL_FIELDS_PHASE: ProjectPhase | null = "detail";

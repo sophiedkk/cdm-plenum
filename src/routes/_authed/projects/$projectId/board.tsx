@@ -30,6 +30,7 @@ import { MergeForm } from "@/components/board/merge-form";
 import { ValuesForm } from "@/components/board/values-form";
 import { projectTitle } from "@/components/projects/project-title";
 import { EmptyState, PageHeader } from "@/components/shell/route-states";
+import { usePhaseEdit } from "@/components/status/phase-banner";
 import { StepClosedNote } from "@/components/status/step-closed-note";
 import { Button } from "@/components/ui/button";
 import {
@@ -113,6 +114,8 @@ function Board() {
   const { projectId } = Route.useParams();
   const { project } = Route.useRouteContext();
   const isFacilitator = project.role === "facilitator";
+  const { editable, banner } = usePhaseEdit(project.role, project.phase, "board");
+  const canEdit = isFacilitator && editable;
   // The phase opens or closes the participant's forms; the server checks it again (PR9).
   const canAdd = writeOpen(project.role, project.phase, "element_add");
   const canComment = writeOpen(project.role, project.phase, "element_comment");
@@ -211,7 +214,7 @@ function Board() {
         description={m.board_purpose()}
         actions={
           <>
-            {isFacilitator && addButton}
+            {canEdit && addButton}
             {isFacilitator && (
               <>
                 {/* NOTE: ADR 0020. Models are imported on Existing models, where their elements
@@ -222,35 +225,38 @@ function Board() {
                     {m.board_models_title()}
                   </Link>
                 </Button>
-                <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="outline">
-                      {m.board_more_actions()}
-                      <ChevronDownIcon aria-hidden="true" data-icon="inline-end" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-auto">
-                    <DropdownMenuItem
-                      disabled={elements.length < 2}
-                      onSelect={() => setDialog({ kind: "merge" })}
-                    >
-                      <CombineIcon aria-hidden="true" />
-                      {m.board_merge()}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/projects/$projectId/board/import" params={{ projectId }}>
-                        <FileUpIcon aria-hidden="true" />
-                        {m.board_import_link()}
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {canEdit && (
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <Button type="button" variant="outline">
+                        {m.board_more_actions()}
+                        <ChevronDownIcon aria-hidden="true" data-icon="inline-end" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-auto">
+                      <DropdownMenuItem
+                        disabled={elements.length < 2}
+                        onSelect={() => setDialog({ kind: "merge" })}
+                      >
+                        <CombineIcon aria-hidden="true" />
+                        {m.board_merge()}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/projects/$projectId/board/import" params={{ projectId }}>
+                          <FileUpIcon aria-hidden="true" />
+                          {m.board_import_link()}
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </>
             )}
           </>
         }
       />
 
+      {banner}
       {!canAdd && !canComment && <StepClosedNote className="-mt-3 mb-4" />}
       {privateStep && !isFacilitator && <PrivateStepNote />}
       {privateStep && isFacilitator && status?.ok && (
@@ -285,7 +291,7 @@ function Board() {
         />
       ) : (
         <>
-          {isFacilitator && (
+          {canEdit && (
             <DuplicateList
               pairs={duplicates}
               defaultExpanded={showDuplicates === true}
@@ -311,6 +317,7 @@ function Board() {
                 : undefined
             }
             actions={{
+              canEdit,
               addComment: canComment
                 ? (element, body) =>
                     addComment({ data: { projectId, elementId: element.id, body } })

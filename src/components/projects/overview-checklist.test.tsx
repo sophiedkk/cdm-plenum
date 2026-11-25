@@ -84,7 +84,7 @@ function renderOverview(
   props: {
     move?: ReturnType<typeof vi.fn>;
     remind?: ReturnType<typeof vi.fn>;
-    reveal?: ReactNode;
+    reveal?: (primary: boolean) => ReactNode;
   } = {},
 ) {
   const move = props.move ?? vi.fn(async () => ({ ok: true, value: { phase: "decide" } }));
@@ -101,6 +101,13 @@ function renderOverview(
     />,
   );
   return { move, onMoved };
+}
+
+/** The text of every filled (suggested) button or link on the page. */
+function filledButtons() {
+  return [...document.querySelectorAll("a, button")]
+    .filter((node) => node.className.includes("bg-primary"))
+    .map((node) => node.textContent);
 }
 
 /** Each item's state in words, its text and its actions. */
@@ -157,7 +164,7 @@ describe("the checklist per phase", () => {
   });
 
   it("lists the discover phase in its parts: models, what is missing, reveal and clean up", () => {
-    const reveal = <button type="button">Reveal the board</button>;
+    const reveal = () => <button type="button">Reveal the board</button>;
     renderOverview("discover", {}, { reveal, remind: vi.fn() });
     expect(items().map((item) => [item.state, item.text, item.actions])).toEqual([
       [
@@ -271,6 +278,36 @@ describe("the checklist per phase", () => {
     }
   });
 
+  it("words one element and one participant in the singular", () => {
+    renderOverview("detail", {
+      detail: {
+        inModel: 1,
+        proposed: 0,
+        settled: 0,
+        codable: 1,
+        codesSettled: 0,
+        openObjections: 0,
+      },
+    });
+    const text = items().map((item) => item.text);
+    expect(text.some((t) => t?.includes("0 of 1 element has a structure proposal"))).toBe(true);
+    expect(text.some((t) => t?.includes("Settled: 0 of 1 element"))).toBe(true);
+    expect(text.some((t) => t?.includes("Settled codes: 0 of 1 element;"))).toBe(true);
+    cleanup();
+    renderOverview("discover", { participants: 1, contributors: 0 });
+    expect(items().some((item) => item.text?.includes("0 of 1 participant added elements"))).toBe(
+      true,
+    );
+  });
+
+  it("links the open decide work: the round, and the board for the elements", () => {
+    renderOverview("decide", { undecided: 2 });
+    expect(screen.getByRole("link", { name: "Open the board" }).getAttribute("href")).toBe(
+      "/projects/p1/board",
+    );
+    expect(filledButtons()).toEqual(["New round"]);
+  });
+
   it("asks to set up the next round while elements wait for a decision", () => {
     renderOverview("decide", { undecided: 4, lastClosedRound: { id: "round-1", number: 1 } });
     expect(screen.getByText("Set up round 2")).toBeTruthy();
@@ -291,12 +328,47 @@ describe("the checklist per phase", () => {
 });
 
 describe("the phase move (PR4)", () => {
-  it("has one filled button, on to the next phase; every other action is outline or text", () => {
+  it("fills the first open item's link, and outlines the phase move while an item is open", () => {
     renderOverview("discover", {}, { remind: vi.fn() });
-    const filled = [...document.querySelectorAll("a, button")].filter((node) =>
-      node.className.includes("bg-primary"),
-    );
-    expect(filled.map((node) => node.textContent)).toEqual(["Go on to Decide"]);
+    expect(filledButtons()).toEqual(["Add models"]);
+    expect(
+      screen.getByRole("button", { name: "Go on to Decide" }).getAttribute("data-variant"),
+    ).toBe("outline");
+  });
+
+  it("fills the next open item when the first is done", () => {
+    renderOverview("discover", { importedModels: 2, listedFromModels: 9 }, { remind: vi.fn() });
+    expect(filledButtons()).toEqual(["Send a reminder"]);
+  });
+
+  it("fills the phase move once every item is done, and no item action", () => {
+    renderOverview("scope");
+    expect(filledButtons()).toEqual(["Go on to Discover"]);
+  });
+
+  it("does not fill an item that only informs", () => {
+    renderOverview("scope", { scopeComments: 3 });
+    expect(filledButtons()).toEqual(["Go on to Discover"]);
+  });
+
+  it("lists what stays open in the confirmation of the move on", () => {
+    renderOverview("scope", { scopeWritten: false, panelMissing: 1 });
+    fireEvent.click(screen.getByRole("button", { name: "Go on to Discover" }));
+    const open = within(screen.getByRole("group")).getAllByRole("listitem");
+    expect(open.map((item) => item.textContent)).toEqual([
+      "Write the scope statement",
+      "Invite 1 more person for the minimum panel",
+    ]);
+  });
+
+  it("lists nothing in the confirmation when every item is done, nor when moving back", () => {
+    renderOverview("scope");
+    fireEvent.click(screen.getByRole("button", { name: "Go on to Discover" }));
+    expect(within(screen.getByRole("group")).queryByRole("list")).toBeNull();
+    cleanup();
+    renderOverview("discover");
+    fireEvent.click(screen.getByRole("button", { name: "Move back to Scope" }));
+    expect(within(screen.getByRole("group")).queryByRole("list")).toBeNull();
   });
 
   it("asks before moving on, below the buttons, and moves after the confirmation", async () => {
