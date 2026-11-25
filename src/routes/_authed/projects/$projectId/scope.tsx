@@ -14,6 +14,7 @@ import { ModelTypeForm, ModelTypeView } from "@/components/scope/model-type";
 import { AddSourceForm, ScopeSourceList } from "@/components/scope/scope-sources";
 import { ScopeStatementForm, ScopeStatementView } from "@/components/scope/scope-statement";
 import { PageHeader } from "@/components/shell/route-states";
+import { usePhaseEdit } from "@/components/status/phase-banner";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import { refusalMessage } from "@/lib/i18n/refusals";
@@ -61,7 +62,9 @@ function Scope() {
   // A participant comments in the scope phase only; the server checks it again (PR9).
   const canComment = writeOpen(project.role, project.phase, "scope_comment");
   // The facilitator chooses the type until discover ends; the server checks it again (SC4).
+  const { editable, banner } = usePhaseEdit(project.role, project.phase, "scope");
   const canSetType = isFacilitator && modelTypeOpen(project.phase);
+  const canEdit = isFacilitator && editable;
   const queryClient = useQueryClient();
   const { data: scope } = useSuspenseQuery(scopeQueryOptions(projectId));
   const { data: comments } = useSuspenseQuery(scopeCommentsQueryOptions(projectId, isFacilitator));
@@ -147,6 +150,7 @@ function Scope() {
         title={m.scope_title()}
         description={bar ? undefined : m.scope_purpose()}
       />
+      {banner}
       {bar && <TaskBar projectId={projectId} sentence={m.projects_task_scope()} />}
       <div className="flex max-w-3xl flex-col gap-10">
         <section aria-labelledby="scope-statement" className="flex flex-col gap-4">
@@ -154,7 +158,7 @@ function Scope() {
             <h3 id="scope-statement" className={SECTION_HEADING}>
               {m.scope_statement_heading()}
             </h3>
-            {isFacilitator && !editing && (
+            {canEdit && !editing && (
               <Button
                 ref={editButton}
                 type="button"
@@ -225,11 +229,11 @@ function Scope() {
           </h3>
           <ScopeSourceList
             sources={statement.sources}
-            editable={isFacilitator}
+            editable={canEdit}
             move={move}
             remove={remove}
           />
-          {isFacilitator && (
+          {canEdit && (
             <AddSourceForm
               add={(source) => addSource({ data: { projectId, ...source } })}
               onAdded={async (label) => {

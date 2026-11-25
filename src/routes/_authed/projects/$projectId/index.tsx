@@ -145,13 +145,16 @@ function Overview() {
       phase={overview.value.phase}
       facts={facts.value}
       reveal={
-        revealDue && status?.ok ? (
-          <RevealButton
-            participants={status.value.participants}
-            reveal={() => revealBoard({ data: { projectId } })}
-            onRevealed={refresh}
-          />
-        ) : undefined
+        revealDue && status?.ok
+          ? (primary) => (
+              <RevealButton
+                participants={status.value.participants}
+                reveal={() => revealBoard({ data: { projectId } })}
+                onRevealed={refresh}
+                primary={primary}
+              />
+            )
+          : undefined
       }
       remind={() => remind({ data: { projectId } })}
       move={(direction) =>

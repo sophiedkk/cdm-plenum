@@ -88,6 +88,7 @@ export function ElementDetails({
   projectId,
   element,
   isFacilitator,
+  canEdit = true,
   detailFields,
   addComment,
   onCommentAdded,
@@ -99,6 +100,8 @@ export function ElementDetails({
   projectId: string;
   element: CardElement;
   isFacilitator: boolean;
+  /** Whether the facilitator's edit, values and link buttons show. */
+  canEdit?: boolean;
   /** Whether the phase shows data type, cardinality and values (EL21). */
   detailFields: boolean;
   /** Left out when the phase closed comments on the board (PR9). */
@@ -185,7 +188,7 @@ export function ElementDetails({
             </Row>
           )}
         </dl>
-        {isFacilitator && (
+        {isFacilitator && canEdit && (
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" size="sm" onClick={onEdit}>
               <PencilIcon aria-hidden="true" data-icon="inline-start" />

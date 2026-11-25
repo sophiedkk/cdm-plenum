@@ -12,6 +12,7 @@ import { GroupingBoard } from "@/components/board/grouping-board";
 import { FormDialog } from "@/components/members/form-dialog";
 import { projectTitle } from "@/components/projects/project-title";
 import { NotFoundState, PageHeader } from "@/components/shell/route-states";
+import { usePhaseEdit } from "@/components/status/phase-banner";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import { requireStep } from "@/lib/guards";
@@ -81,6 +82,8 @@ function AskCheck({
 function Grouping() {
   const { projectId } = Route.useParams();
   const queryClient = useQueryClient();
+  const { project } = Route.useRouteContext();
+  const { editable, banner } = usePhaseEdit(project.role, project.phase, "grouping");
   const { data: board } = useSuspenseQuery(groupingBoardQueryOptions(projectId));
   const move = useServerFn(moveElementFn);
   const rename = useServerFn(renameElementGroupFn);
@@ -102,32 +105,35 @@ function Grouping() {
         title={m.board_grouping_title()}
         description={m.board_grouping_purpose()}
         actions={
-          <FormDialog
-            title={m.board_grouping_add()}
-            description={m.board_grouping_add_description()}
-            trigger={
-              <Button type="button" variant="outline">
-                <PlusIcon aria-hidden="true" data-icon="inline-start" />
-                {m.board_grouping_add()}
-              </Button>
-            }
-          >
-            {({ close, cancel }) => (
-              <GroupNameForm
-                initial=""
-                submitLabel={m.board_grouping_add()}
-                save={(name) => add({ data: { projectId, name } })}
-                cancel={cancel}
-                onSaved={async (name) => {
-                  close();
-                  toast.success(m.board_grouping_added({ name }));
-                  await refresh();
-                }}
-              />
-            )}
-          </FormDialog>
+          editable && (
+            <FormDialog
+              title={m.board_grouping_add()}
+              description={m.board_grouping_add_description()}
+              trigger={
+                <Button type="button" variant="outline">
+                  <PlusIcon aria-hidden="true" data-icon="inline-start" />
+                  {m.board_grouping_add()}
+                </Button>
+              }
+            >
+              {({ close, cancel }) => (
+                <GroupNameForm
+                  initial=""
+                  submitLabel={m.board_grouping_add()}
+                  save={(name) => add({ data: { projectId, name } })}
+                  cancel={cancel}
+                  onSaved={async (name) => {
+                    close();
+                    toast.success(m.board_grouping_added({ name }));
+                    await refresh();
+                  }}
+                />
+              )}
+            </FormDialog>
+          )
         }
       />
+      {banner}
       <GroupingBoard
         board={board.value}
         actions={{
@@ -145,7 +151,7 @@ function Grouping() {
                 participants: board.value.participants,
               })}
         </span>
-        {board.value.checkAskedAt === null && (
+        {editable && board.value.checkAskedAt === null && (
           <AskCheck ask={() => ask({ data: { projectId } })} onAsked={refresh} />
         )}
       </div>
