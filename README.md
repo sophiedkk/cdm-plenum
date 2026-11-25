@@ -3,6 +3,26 @@
 
 # cdm-plenum
 
+[![CI](https://github.com/sophiedkk/cdm-plenum/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sophiedkk/cdm-plenum/actions/workflows/ci.yml)
+[![CKM contract](https://github.com/sophiedkk/cdm-plenum/actions/workflows/ckm-contract.yml/badge.svg)](https://github.com/sophiedkk/cdm-plenum/actions/workflows/ckm-contract.yml)
+[![FHIR contract](https://github.com/sophiedkk/cdm-plenum/actions/workflows/fhir-contract.yml/badge.svg)](https://github.com/sophiedkk/cdm-plenum/actions/workflows/fhir-contract.yml)
+[![Latest release](https://img.shields.io/github/v/release/sophiedkk/cdm-plenum)](https://github.com/sophiedkk/cdm-plenum/releases/latest)
+[![License](https://img.shields.io/github/license/sophiedkk/cdm-plenum)](LICENSE)
+[![Last commit](https://img.shields.io/github/last-commit/sophiedkk/cdm-plenum)](https://github.com/sophiedkk/cdm-plenum/commits/main)
+
+[![Node.js](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fsophiedkk%2Fcdm-plenum%2Fmain%2Fpackage.json&query=%24.engines.node&label=node&logo=nodedotjs)](package.json)
+[![TypeScript](https://img.shields.io/github/package-json/dependency-version/sophiedkk/cdm-plenum/dev/typescript?logo=typescript)](package.json)
+[![React](https://img.shields.io/github/package-json/dependency-version/sophiedkk/cdm-plenum/react?logo=react)](package.json)
+[![TanStack Start](https://img.shields.io/github/package-json/dependency-version/sophiedkk/cdm-plenum/@tanstack/react-start?logo=react&label=TanStack%20Start)](package.json)
+[![Tailwind CSS](https://img.shields.io/github/package-json/dependency-version/sophiedkk/cdm-plenum/dev/tailwindcss?logo=tailwindcss)](package.json)
+[![PostgreSQL](https://img.shields.io/badge/database-PostgreSQL-4169E1?logo=postgresql&logoColor=white)](compose.yaml)
+[![Podman](https://img.shields.io/badge/runs%20in-Podman-892CA0?logo=podman&logoColor=white)](compose.yaml)
+
+[![openEHR CKM](https://img.shields.io/badge/reuse%20check-openEHR%20CKM-0A5A9C)](https://ckm.openehr.org/ckm/)
+[![FHIR R4](https://img.shields.io/badge/FHIR-R4-E34F26)](https://hl7.org/fhir/R4/)
+[![WCAG 2.1 AA](https://img.shields.io/badge/WCAG%202.1-AA-2E7D32)](docs/requirements.md)
+[![Languages](https://img.shields.io/badge/languages-English%20%7C%20Nederlands-555555)](messages/)
+
 A common data model (CDM) describes the data of one clinical concept
 independent of any standard, and a plenum is a meeting of all members: in
 cdm-plenum the whole group agrees on that model together.
