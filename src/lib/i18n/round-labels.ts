@@ -6,6 +6,7 @@
 // has a label.
 import { m } from "@/i18n/messages";
 import type { Outcome, RuleError } from "@/lib/consensus";
+import type { ConsentAnswer } from "@/lib/consent";
 import type { ChangeClass, ExpertType } from "@/lib/panel";
 import type { RoundStatus } from "@/server/rounds/round";
 
@@ -20,6 +21,20 @@ const OUTCOME_LABELS: Record<Outcome, () => string> = {
   included: () => m.rounds_outcome_included(),
   excluded: () => m.rounds_outcome_excluded(),
   no_consensus: () => m.rounds_outcome_no_consensus(),
+};
+
+const CONSENT_LABELS: Record<ConsentAnswer, () => string> = {
+  include: () => m.rounds_consent_include(),
+  leave_out: () => m.rounds_consent_leave_out(),
+  discuss: () => m.rounds_consent_discuss(),
+  abstain: () => m.rounds_consent_abstain(),
+};
+
+/** The outcome of a Team round (DE20): an unsettled no_consensus reads "To discuss". */
+const CONSENT_OUTCOME_LABELS: Record<Outcome, () => string> = {
+  included: () => m.rounds_consent_outcome_included(),
+  excluded: () => m.rounds_consent_outcome_excluded(),
+  no_consensus: () => m.rounds_consent_outcome_no_consensus(),
 };
 
 const EXPERT_TYPE_LABELS: Record<ExpertType, () => string> = {
@@ -57,6 +72,14 @@ export function roundStatusLabel(status: RoundStatus): string {
 
 export function outcomeLabel(outcome: Outcome): string {
   return OUTCOME_LABELS[outcome]();
+}
+
+export function consentLabel(answer: ConsentAnswer): string {
+  return CONSENT_LABELS[answer]();
+}
+
+export function consentOutcomeLabel(outcome: Outcome): string {
+  return CONSENT_OUTCOME_LABELS[outcome]();
 }
 
 export function expertTypeLabel(type: ExpertType): string {

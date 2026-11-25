@@ -9,6 +9,7 @@ import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { projectTitle } from "@/components/projects/project-title";
+import { ConsentResults } from "@/components/rounds/consent-results";
 import { DetailFlagList } from "@/components/rounds/detail-flags";
 import { ResultsTable } from "@/components/rounds/element-result";
 import { toLocalInput } from "@/components/rounds/format";
@@ -50,6 +51,7 @@ import {
   closeRoundFn,
   openRoundFn,
   removeValueListFn,
+  settleElementFn,
   updateRoundFn,
 } from "@/server/rounds/functions";
 import type { RoundDetail } from "@/server/rounds/queries";
@@ -116,6 +118,11 @@ export const Route = createFileRoute("/_authed/projects/$projectId/rounds/$round
   notFoundComponent: () => <NotFoundState title={m.rounds_not_found_title()} />,
 });
 
+/** A Team round decides by consent (DE20); a value round keeps the scale in every project. */
+function isTeamRound(round: Pick<RoundDetail, "mode" | "kind">): boolean {
+  return round.mode === "team" && round.kind === "elements";
+}
+
 const DISCLOSURE =
   "flex cursor-pointer list-none items-center gap-1 font-medium [&::-webkit-details-marker]:hidden";
 
@@ -152,6 +159,7 @@ function AnonymityLine({ round }: Readonly<{ round: RoundDetail }>) {
  */
 function RoundFacts({ round }: Readonly<{ round: RoundDetail }>) {
   const running = round.status === "open" || round.status === "awaiting_close";
+  const team = isTeamRound(round);
   return (
     <div className="flex flex-col gap-1.5">
       <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
@@ -165,7 +173,16 @@ function RoundFacts({ round }: Readonly<{ round: RoundDetail }>) {
             : m.rounds_summary_element_count({ count: round.elements.length })}
         </span>
       </p>
-      {running && (
+      {running && team && (
+        <>
+          <p className="text-sm">
+            <span className="text-muted-foreground">{m.rounds_summary_rule_short()}</span>{" "}
+            {m.rounds_consent_rule_short()}
+          </p>
+          <p className="text-sm">{m.rounds_consent_named_statement()}</p>
+        </>
+      )}
+      {running && !team && (
         <>
           <p className="text-sm">
             <span className="text-muted-foreground">{m.rounds_summary_rule_short()}</span>{" "}
@@ -182,23 +199,42 @@ function RoundFacts({ round }: Readonly<{ round: RoundDetail }>) {
 function RoundSetupDetails({ round }: Readonly<{ round: RoundDetail }>) {
   return (
     <details className="rounded-lg border px-4 py-3">
-      <DisclosureSummary>{m.rounds_setup_details()}</DisclosureSummary>
+      <DisclosureSummary>
+        {isTeamRound(round) ? m.rounds_consent_setup_details() : m.rounds_setup_details()}
+      </DisclosureSummary>
       <div className="mt-4 flex flex-col gap-6">
         <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-[auto_1fr]">
-          <dt className="text-muted-foreground">{m.rounds_summary_scale()}</dt>
-          <dd>{m.rounds_band_range({ from: round.rule.scaleMin, to: round.rule.scaleMax })}</dd>
-          <dt className="text-muted-foreground">{m.rounds_summary_rule()}</dt>
-          <dd>
-            <ul className="flex list-disc flex-col gap-1 pl-5">
-              {ruleSentences(round.rule, round.kind).map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          </dd>
-          <dt className="text-muted-foreground">{m.rounds_summary_raters()}</dt>
-          <dd>
-            {round.facilitatorSeesRaters ? m.rounds_raters_visible() : m.rounds_raters_hidden()}
-          </dd>
+          {isTeamRound(round) ? (
+            <>
+              <dt className="text-muted-foreground">{m.rounds_consent_summary_rule()}</dt>
+              <dd>
+                <ul className="flex list-disc flex-col gap-1 pl-5">
+                  <li>{m.rounds_consent_rule_included()}</li>
+                  <li>{m.rounds_consent_rule_excluded()}</li>
+                  <li>{m.rounds_consent_rule_otherwise()}</li>
+                </ul>
+              </dd>
+              <dt className="text-muted-foreground">{m.rounds_consent_summary_answers()}</dt>
+              <dd>{m.rounds_consent_named_statement()}</dd>
+            </>
+          ) : (
+            <>
+              <dt className="text-muted-foreground">{m.rounds_summary_scale()}</dt>
+              <dd>{m.rounds_band_range({ from: round.rule.scaleMin, to: round.rule.scaleMax })}</dd>
+              <dt className="text-muted-foreground">{m.rounds_summary_rule()}</dt>
+              <dd>
+                <ul className="flex list-disc flex-col gap-1 pl-5">
+                  {ruleSentences(round.rule, round.kind).map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </dd>
+              <dt className="text-muted-foreground">{m.rounds_summary_raters()}</dt>
+              <dd>
+                {round.facilitatorSeesRaters ? m.rounds_raters_visible() : m.rounds_raters_hidden()}
+              </dd>
+            </>
+          )}
           {round.proposalRule !== null && (
             <>
               <dt className="text-muted-foreground">{m.rounds_summary_proposal_rule()}</dt>
@@ -230,7 +266,9 @@ function RateCall({ round }: Readonly<{ round: RoundDetail }>) {
         <p className="text-sm">
           {round.kind === "values"
             ? m.rounds_value_rate_progress({ rated, total: mine.elements.length })
-            : m.rounds_rate_progress({ rated, total: mine.elements.length })}
+            : isTeamRound(round)
+              ? m.rounds_consent_progress({ rated, total: mine.elements.length })
+              : m.rounds_rate_progress({ rated, total: mine.elements.length })}
         </p>
       </div>
       <Button asChild>
@@ -354,6 +392,7 @@ function DraftSetup({ round }: Readonly<{ round: RoundDetail }>) {
         </h3>
         <RoundForm
           kind={round.kind}
+          mode={isTeamRound(round) ? "team" : "delphi"}
           key={`${timeZone}-${round.closesAt}-${round.elements.length}-${JSON.stringify(round.rule)}-${round.facilitatorSeesRaters}-${round.proposalRule}`}
           elements={board}
           initial={{
@@ -414,6 +453,7 @@ function DraftSetup({ round }: Readonly<{ round: RoundDetail }>) {
         ) : (
           <div>
             <OpenRoundDialog
+              team={isTeamRound(round)}
               number={round.number}
               revealsBoard={revealsBoard}
               open={(reason) =>
@@ -471,7 +511,9 @@ function CloseRound({ round }: Readonly<{ round: RoundDetail }>) {
             <AlertDialogDescription>
               {round.kind === "values"
                 ? m.rounds_value_close_explained()
-                : m.rounds_close_explained()}
+                : isTeamRound(round)
+                  ? m.rounds_consent_close_explained()
+                  : m.rounds_close_explained()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -557,20 +599,58 @@ function Results({
   const { data } = useSuspenseQuery(roundResultsQueryOptions(projectId, roundId));
   const results = valueOrNotFound(data);
   const applyValueList = useServerFn(applyValueListFn);
+  const settleElement = useServerFn(settleElementFn);
   const queryClient = useQueryClient();
   const isValues = results.round.kind === "values";
+  const team = isTeamRound(results.round);
   const names = new Map(results.lists.map((list) => [list.proposalId, list.elementName]));
+  const toDiscuss = results.elements.some(
+    (element) => element.outcome === "no_consensus" && element.consent?.settled === null,
+  );
   return (
     <>
       <section aria-labelledby="results-heading" className="flex flex-col gap-2">
         <h3 id="results-heading" className="type-section">
           {m.rounds_results_heading()}
         </h3>
-        <ResultsTable
-          kind={results.round.kind}
-          elements={isValues ? withShownNames(results.elements) : results.elements}
-        />
-        <p className="text-sm text-muted-foreground">{m.rounds_results_intro()}</p>
+        {team ? (
+          <>
+            {facilitator && toDiscuss && (
+              <p className="text-sm">{m.rounds_consent_discuss_hint()}</p>
+            )}
+            <ConsentResults
+              elements={results.elements}
+              settle={
+                facilitator
+                  ? async (elementId, outcome, note) => {
+                      const result = await settleElement({
+                        data: { projectId, roundId, elementId, outcome, note },
+                      });
+                      if (!result.ok) return result;
+                      // Settling changes an outcome the home and the Overview count.
+                      await Promise.all([
+                        queryClient.invalidateQueries({ queryKey: roundKeys.project(projectId) }),
+                        queryClient.invalidateQueries({
+                          queryKey: projectKeys.overview(projectId),
+                        }),
+                      ]);
+                      return { ok: true };
+                    }
+                  : null
+              }
+              afterSettle={(name) => toast.success(m.rounds_consent_settled({ name }))}
+            />
+            <p className="text-sm text-muted-foreground">{m.rounds_consent_results_intro()}</p>
+          </>
+        ) : (
+          <>
+            <ResultsTable
+              kind={results.round.kind}
+              elements={isValues ? withShownNames(results.elements) : results.elements}
+            />
+            <p className="text-sm text-muted-foreground">{m.rounds_results_intro()}</p>
+          </>
+        )}
       </section>
       {isValues && (
         <ValueLists

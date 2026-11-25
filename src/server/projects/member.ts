@@ -4,6 +4,7 @@
 // The membership of the acting user, for the author columns of elements and comments. Call it
 // only after `withProject` or `readProject` has checked the membership.
 import type { Kysely } from "kysely";
+import { isProjectMode, type ProjectMode } from "@/lib/project-mode";
 import type { DB } from "../db/schema.gen.ts";
 
 /** The member id of `userId` in the project; throws when there is none. */
@@ -28,14 +29,19 @@ export interface Author {
   email: string;
 }
 
-/** Whether the project runs as a Team, where people are named (PR14, ADR 0023). */
-export async function isTeamProject(db: Kysely<DB>, projectId: string): Promise<boolean> {
+/** How the project runs (PR14): a Team names people and decides by consent (ADR 0023, DE20). */
+export async function modeOf(db: Kysely<DB>, projectId: string): Promise<ProjectMode> {
   const row = await db
     .selectFrom("project")
     .select("mode")
     .where("id", "=", projectId)
     .executeTakeFirstOrThrow();
-  return row.mode === "team";
+  return isProjectMode(row.mode) ? row.mode : "delphi";
+}
+
+/** Whether the project runs as a Team, where people are named (PR14, ADR 0023). */
+export async function isTeamProject(db: Kysely<DB>, projectId: string): Promise<boolean> {
+  return (await modeOf(db, projectId)) === "team";
 }
 
 /**

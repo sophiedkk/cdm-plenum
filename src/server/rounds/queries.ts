@@ -5,6 +5,7 @@
 // class and minimum panel of a project. Ratings are in ratings.ts, results in results.ts.
 import type { Kysely, Transaction } from "kysely";
 import { DEFAULT_RULE, elementResult, type Outcome, ruleError } from "@/lib/consensus";
+import { type ConsentAnswer, consentOutcome } from "@/lib/consent";
 import {
   CHANGE_CLASSES,
   type ChangeClass,
@@ -20,8 +21,10 @@ import {
 import { roundPhaseOf } from "@/lib/phase-access";
 import { RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
+import { modeOf } from "../projects/member.ts";
 import { log } from "../projects/queries.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
+import { answersOf } from "./consent.ts";
 import {
   findRound,
   kindOf,
@@ -311,6 +314,14 @@ export async function createRound(
       .limit(1)
       .executeTakeFirst();
     if (previous && previous.closed_at === null) return refused("previous_round_not_closed");
+    // NOTE: DE20. A Team round has no scale, rule or rater setting: it decides by consent and
+    // names its members, so input for them is refused. The stored rule stays the default.
+    if ((await modeOf(trx, project.id)) === "team" && input.rule !== undefined) {
+      return refused("delphi_round_only");
+    }
+    if ((await modeOf(trx, project.id)) === "team" && input.facilitatorSeesRaters === true) {
+      return refused("delphi_round_only");
+    }
     const { rule, problem } = ruleWith(DEFAULT_RULE, input.rule);
     if (problem) return { ok: false, error: "rule_invalid", rule: problem };
     if (input.closesAt <= deps.now) return refused("closes_at_past");
@@ -361,6 +372,12 @@ export async function updateRound(
     const round = await findRound(trx, project.id, input.roundId, "update");
     if (!round) return refused("round_not_found");
     if (round.opened_at !== null) return refused("round_not_draft");
+    if (
+      (await modeOf(trx, project.id)) === "team" &&
+      (input.rule !== undefined || input.facilitatorSeesRaters === true)
+    ) {
+      return refused("delphi_round_only");
+    }
     const { rule, problem } = ruleWith(ruleOf(round), input.rule);
     if (problem) return { ok: false, error: "rule_invalid", rule: problem };
     if (input.closesAt !== undefined && input.closesAt <= deps.now) {
@@ -491,10 +508,16 @@ export async function closeRound(
     if (round.opened_at === null || round.closed_at !== null) return refused("round_not_open");
     if (deps.now < round.closes_at) return refused("round_not_due");
     const rule = ruleOf(round);
-    const scores = await scoresOf(trx, round);
+    // NOTE: DE20. A Team round counts consent answers, not scores; "To discuss" is stored as
+    // no_consensus until the facilitator settles it, so every reader of outcomes keeps working.
+    const team = (await modeOf(trx, project.id)) === "team" && kindOf(round) === "elements";
+    const scores = team ? new Map<string, never>() : await scoresOf(trx, round);
+    const answers = team ? await answersOf(trx, round.id) : new Map<string, ConsentAnswer[]>();
     const counts: OutcomeCounts = { included: 0, excluded: 0, no_consensus: 0 };
     for (const item of await roundItems(trx, round)) {
-      const { outcome } = elementResult(scores.get(item.id)?.all ?? [], rule);
+      const outcome = team
+        ? consentOutcome(answers.get(item.id) ?? [])
+        : elementResult(scores.get(item.id)?.all ?? [], rule).outcome;
       counts[outcome] += 1;
       if (item.value) {
         await trx
@@ -537,7 +560,8 @@ export async function listRounds(
     let query = trx.selectFrom("round").selectAll().where("project_id", "=", projectId);
     if (role !== "facilitator") query = query.where("opened_at", "is not", null);
     const rows = await query.orderBy("number", "desc").execute();
-    return done(rows.map((row) => summaryOf(row, deps.now)));
+    const mode = await modeOf(trx, projectId);
+    return done(rows.map((row) => summaryOf(row, deps.now, mode)));
   });
 }
 
@@ -564,7 +588,7 @@ export async function getRound(
       return refused("round_not_found");
     }
     return done({
-      ...summaryOf(round, deps.now),
+      ...summaryOf(round, deps.now, await modeOf(trx, input.projectId)),
       elements: await roundItems(trx, round),
       snapshot: snapshotOf(round),
     });

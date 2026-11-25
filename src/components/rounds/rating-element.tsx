@@ -88,11 +88,11 @@ function digitRange(rule: ConsensusRule): { first: number; last: number } | null
   return first <= last ? { first, last } : null;
 }
 
-const OPTION =
+export const OPTION =
   "relative flex h-10 items-center justify-center rounded-md border border-input bg-background font-medium outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-background data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground";
 
 /** The check that shows a chosen option by more than its colour (Q-ACC-2). */
-function Chosen() {
+export function Chosen() {
   return (
     <RadioGroupPrimitive.Indicator className="absolute top-0.5 right-0.5">
       <CheckIcon aria-hidden="true" className="size-3.5" strokeWidth={3} />

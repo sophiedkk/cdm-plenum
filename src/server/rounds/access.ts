@@ -49,6 +49,11 @@ export const ROUND_ACTION_ERRORS = [
   "value_list_changed",
   "value_list_applied",
   "value_list_unchanged",
+  "team_round_only",
+  "delphi_round_only",
+  "consent_reason_required",
+  "settle_note_required",
+  "element_not_to_discuss",
 ] as const;
 export type RoundActionError = (typeof ROUND_ACTION_ERRORS)[number];
 

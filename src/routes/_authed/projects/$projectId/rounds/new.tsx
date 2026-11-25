@@ -50,6 +50,7 @@ export const Route = createFileRoute("/_authed/projects/$projectId/rounds/new")(
 
 function NewRound() {
   const { projectId } = Route.useParams();
+  const { project } = Route.useRouteContext();
   const { data: roundsResult } = useSuspenseQuery(roundsQueryOptions(projectId));
   const { data: boardResult } = useSuspenseQuery(roundBoardQueryOptions(projectId));
   const latest = valueOrNotFound(roundsResult)[0];
@@ -83,6 +84,7 @@ function NewRound() {
         }
       />
       <RoundForm
+        mode={project.mode}
         elements={board}
         initial={{
           elementIds: defaultIds,

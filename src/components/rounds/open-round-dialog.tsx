@@ -127,9 +127,12 @@ function ReasonForm({
 export function OpenRoundDialog({
   number,
   revealsBoard = false,
+  team = false,
   open,
   onOpened,
 }: Readonly<{
+  /** A Team round (DE20) has no rule or rater setting to fix. */
+  team?: boolean;
   number: number;
   /** The project is still in the brainstorm's private step; opening ends it (ADR 0012). */
   revealsBoard?: boolean;
@@ -179,7 +182,9 @@ export function OpenRoundDialog({
       <DialogContent showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>{m.rounds_open_title({ number })}</DialogTitle>
-          <DialogDescription>{m.rounds_open_fixed()}</DialogDescription>
+          <DialogDescription>
+            {team ? m.rounds_consent_open_fixed() : m.rounds_open_fixed()}
+          </DialogDescription>
         </DialogHeader>
         {shortfall === null ? (
           <>

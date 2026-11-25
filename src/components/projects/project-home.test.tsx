@@ -16,6 +16,7 @@ import { AboutProject } from "./about-project";
 import { DecidedSoFarSection } from "./decided-so-far";
 import { PhaseSteps } from "./phase-steps";
 import { ProjectHeader } from "./project-header";
+import { ProjectModeProvider } from "./project-mode-context";
 import { ProjectPages } from "./project-pages";
 import { ProjectRow, waitingText } from "./project-row";
 import { TaskCard } from "./task-card";
@@ -388,6 +389,20 @@ describe("DecidedSoFarSection (PR8)", () => {
     );
     // No count line repeats the rows.
     expect(document.body.textContent).not.toMatch(/of 5 elements/);
+  });
+
+  it("says To discuss and not answered yet in a Team project (DE20)", () => {
+    render(
+      <ProjectModeProvider value="team">
+        <DecidedSoFarSection projectId="p1" decided={DECIDED} />
+      </ProjectModeProvider>,
+    );
+    expect(screen.getByRole("img").getAttribute("aria-label")).toBe(
+      "2 in the model, 1 not in the model, 1 to discuss, 1 not answered yet",
+    );
+    expect(screen.getByRole("region", { name: "To discuss 1" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Not answered yet 1" })).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/consensus/i);
   });
 
   it("links to the newest closed round's results", () => {

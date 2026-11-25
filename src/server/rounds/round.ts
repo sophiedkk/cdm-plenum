@@ -13,6 +13,7 @@ import {
 } from "@/lib/consensus";
 import { type ElementReference, toReference } from "@/lib/elements";
 import { EXPERT_TYPES, type PanelCounts } from "@/lib/panel";
+import type { ProjectMode } from "@/lib/project-mode";
 import type { DB, Round } from "../db/schema.gen.ts";
 
 export type RoundRow = Selectable<Round>;
@@ -51,6 +52,8 @@ export function ruleOf(round: RoundRow): ConsensusRule {
 /** What every member may know about a round, and what participants see before they rate (DE4). */
 export interface RoundSummary {
   id: string;
+  /** Delphi: scores under the rule. Team: consent answers, and the rule below is unused. */
+  mode: ProjectMode;
   /** What the round rates; both kinds share the project's round numbers (DT3). */
   kind: RoundKind;
   number: number;
@@ -69,9 +72,10 @@ export function takesProposals(round: Pick<RoundRow, "number" | "kind">): boolea
   return round.number === 1 && kindOf(round) === "elements";
 }
 
-export function summaryOf(round: RoundRow, now: Date): RoundSummary {
+export function summaryOf(round: RoundRow, now: Date, mode: ProjectMode): RoundSummary {
   return {
     id: round.id,
+    mode,
     kind: kindOf(round),
     number: round.number,
     status: statusOf(round, now),

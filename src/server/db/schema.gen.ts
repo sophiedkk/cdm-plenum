@@ -46,6 +46,16 @@ export interface AppRole {
   role: string;
 }
 
+export interface ConsentAnswer {
+  answer: string;
+  element_id: string;
+  member_id: string;
+  reason: string | null;
+  round_id: string;
+  team_id: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface DetailAnswer {
   addressed_at: Timestamp | null;
   addressed_note: string | null;
@@ -324,6 +334,8 @@ export interface RoundElement {
   element_id: string;
   outcome: string | null;
   round_id: string;
+  settled_at: Timestamp | null;
+  settled_note: string | null;
 }
 
 export interface RoundProposal {
@@ -514,6 +526,7 @@ export interface DB {
   account: Account;
   activity_log: ActivityLog;
   app_role: AppRole;
+  consent_answer: ConsentAnswer;
   detail_answer: DetailAnswer;
   detail_flag: DetailFlag;
   detail_proposal: DetailProposal;

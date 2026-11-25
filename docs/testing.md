@@ -247,7 +247,18 @@ Then work through these steps:
    decided so far. Rate the two elements; the task bar on the rating page counts them and ends in "You are done". You should see no other participant's ratings, and no
    names unless the facilitator turns that setting on. "About this project"
    at the bottom shows the groups and "Leave project".
-8. Switch the language to Dutch and repeat a few steps.
+8. **A Team round:** create a project in the Team mode, add two participants
+   and three elements, and move it to Decide. "New round" shows the elements and
+   the closing date and no scale, rule or setting for who rated what. Open the round (below the
+   minimum panel it asks for a reason). As a participant, "Your turn" opens
+   cards with four answers; Leave out and Discuss show an error at the reason
+   field until it has text, and the task bar counts the answered elements.
+   When the closing date has passed (set `closes_at` in the database), the
+   facilitator closes the round: every member sees each answer and reason by
+   name, and the facilitator's "Settle" button on a "To discuss" element asks
+   for in or out and a note. A settled element shows its note; the answers CSV
+   names the members and the decision report lists the settled elements.
+9. Switch the language to Dutch and repeat a few steps.
 
 To start over, drop the development database and run the commands again:
 

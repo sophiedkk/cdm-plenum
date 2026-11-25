@@ -9,6 +9,7 @@ import { z } from "zod";
 import { dataTypeText } from "@/components/board/element-details";
 import { projectTitle } from "@/components/projects/project-title";
 import { TaskBar } from "@/components/projects/task-bar";
+import { ConsentElement } from "@/components/rounds/consent-element";
 import type { ElementDetails } from "@/components/rounds/detail-flags";
 import { ProposeSection } from "@/components/rounds/proposals";
 import { RatingCards, shownCard } from "@/components/rounds/rating-cards";
@@ -28,10 +29,12 @@ import { projectKeys, projectQueryOptions } from "@/server/projects/query-option
 import type { OwnFlag } from "@/server/rounds/flags";
 import {
   addProposalFn,
+  clearConsentFn,
   clearRatingFn,
   clearValueRatingFn,
   deleteProposalFn,
   removeDetailFlagFn,
+  saveConsentFn,
   saveDetailFlagFn,
   saveRatingFn,
   saveValueRatingFn,
@@ -121,6 +124,8 @@ function RatePage() {
   const canRate = detail.ok && mayRate(detail.value.role, detail.value.ownGroupId);
   const mine = valueOrNotFound(data);
   const board = valueOrNotFound(boardResult);
+  const saveConsent = useServerFn(saveConsentFn);
+  const clearConsent = useServerFn(clearConsentFn);
   const saveRating = useServerFn(saveRatingFn);
   const clearRating = useServerFn(clearRatingFn);
   const saveValueRating = useServerFn(saveValueRatingFn);
@@ -132,6 +137,9 @@ function RatePage() {
   // NOTE: DT3. A value round rates values: no details to flag, no proposals, and each card
   // names its value with its number, under its element.
   const isValues = round.kind === "values";
+  // NOTE: DE20. A Team round shows the four consent answers instead of the scale; the card has no
+  // details to flag, and the answers are named, so no anonymity note.
+  const isTeam = round.mode === "team" && !isValues;
   const elements = isValues ? withShownNames(mine.elements) : mine.elements;
   const editable = round.status === "open" && canRate;
   const rated = elements.filter((element) => element.own.rated).length;
@@ -142,7 +150,9 @@ function RatePage() {
   const bar = editable ? ratingProgress(rated, total) : null;
   const progress = isValues
     ? m.rounds_value_rate_progress({ rated, total })
-    : m.rounds_rate_progress({ rated, total });
+    : isTeam
+      ? m.rounds_consent_progress({ rated, total })
+      : m.rounds_rate_progress({ rated, total });
   const shown = shownCard(card, total);
   const navigate = useNavigate({ from: Route.fullPath });
 
@@ -175,26 +185,38 @@ function RatePage() {
             {m.rounds_closes_at_short()} <DateTime value={round.closesAt} />
           </span>
           {!bar && <span>{progress}</span>}
-          <span className="flex items-center gap-2">
-            {round.facilitatorSeesRaters ? (
-              <EyeIcon aria-hidden="true" className="size-4 shrink-0" />
-            ) : (
-              <EyeOffIcon aria-hidden="true" className="size-4 shrink-0" />
-            )}
-            {round.facilitatorSeesRaters
-              ? m.rounds_rate_visible_title()
-              : m.rounds_rate_hidden_title()}
-          </span>
+          {isTeam ? (
+            <span>{m.rounds_consent_named()}</span>
+          ) : (
+            <span className="flex items-center gap-2">
+              {round.facilitatorSeesRaters ? (
+                <EyeIcon aria-hidden="true" className="size-4 shrink-0" />
+              ) : (
+                <EyeOffIcon aria-hidden="true" className="size-4 shrink-0" />
+              )}
+              {round.facilitatorSeesRaters
+                ? m.rounds_rate_visible_title()
+                : m.rounds_rate_hidden_title()}
+            </span>
+          )}
         </p>
       </div>
       {bar && (
         <TaskBar
           projectId={projectId}
           sentence={
-            isValues ? m.projects_bar_rate_values() : m.projects_task_rate({ number: round.number })
+            isValues
+              ? m.projects_bar_rate_values()
+              : isTeam
+                ? m.projects_task_consent({ number: round.number })
+                : m.projects_task_rate({ number: round.number })
           }
           progress={bar.progress ? [progress] : []}
-          done={bar.done ? { next: m.projects_bar_rate_done() } : null}
+          done={
+            bar.done
+              ? { next: isTeam ? m.projects_bar_consent_done() : m.projects_bar_rate_done() }
+              : null
+          }
         />
       )}
       {!canRate && (
@@ -221,6 +243,7 @@ function RatePage() {
       )}
       <RatingCards
         kind={round.kind}
+        consent={isTeam}
         number={round.number}
         elements={elements}
         shown={shown}
@@ -239,66 +262,105 @@ function RatePage() {
         go={(index) => {
           void navigate({ search: { card: index } });
         }}
-        renderCard={(element, position, headingRef) => (
-          <RatingElement
-            key={element.id}
-            kind={round.kind}
-            element={element}
-            details={detailFields && !isValues ? detailsOf(boardElements.get(element.id)) : null}
-            position={position}
-            headingRef={headingRef}
-            rule={round.rule}
-            editable={editable}
-            save={async (score, reason) => {
-              const result = isValues
-                ? await saveValueRating({
-                    data: { projectId, roundId, valueId: element.id, score, reason },
-                  })
-                : await saveRating({
-                    data: { projectId, roundId, elementId: element.id, score, reason },
-                  });
-              if (result.ok) {
-                const trimmed = reason.trim();
-                rememberOwn(element.id, {
-                  rated: true,
-                  score,
-                  reason: trimmed === "" ? null : trimmed,
+        renderCard={(element, position, headingRef) =>
+          isTeam ? (
+            <ConsentElement
+              key={element.id}
+              element={element}
+              position={position}
+              headingRef={headingRef}
+              editable={editable}
+              save={async (answer, reason) => {
+                const result = await saveConsent({
+                  data: { projectId, roundId, elementId: element.id, answer, reason },
                 });
-              }
-              return result.ok ? { ok: true } : result;
-            }}
-            clear={async () => {
-              const result = isValues
-                ? await clearValueRating({ data: { projectId, roundId, valueId: element.id } })
-                : await clearRating({ data: { projectId, roundId, elementId: element.id } });
-              if (result.ok) rememberOwn(element.id, { rated: false, score: null, reason: null });
-              return result.ok ? { ok: true } : result;
-            }}
-            saveFlag={async (kind, reason) => {
-              const result = await saveFlag({
-                data: { projectId, roundId, elementId: element.id, kind, reason },
-              });
-              if (!result.ok) return result;
-              remember(element.id, (item) => ({
-                ...item,
-                flags: withFlag(item.flags, kind, reason),
-              }));
-              return { ok: true };
-            }}
-            removeFlag={async (kind) => {
-              const result = await removeFlag({
-                data: { projectId, roundId, elementId: element.id, kind },
-              });
-              if (!result.ok) return result;
-              remember(element.id, (item) => ({
-                ...item,
-                flags: withFlag(item.flags, kind, null),
-              }));
-              return { ok: true };
-            }}
-          />
-        )}
-        flags={detailFields && !isValues}
+                if (result.ok) {
+                  const trimmed = reason.trim();
+                  rememberOwn(element.id, {
+                    rated: true,
+                    score: null,
+                    reason: trimmed === "" ? null : trimmed,
+                    answer,
+                  });
+                }
+                return result.ok ? { ok: true } : result;
+              }}
+              clear={async () => {
+                const result = await clearConsent({
+                  data: { projectId, roundId, elementId: element.id },
+                });
+                if (result.ok) {
+                  rememberOwn(element.id, {
+                    rated: false,
+                    score: null,
+                    reason: null,
+                    answer: null,
+                  });
+                }
+                return result.ok ? { ok: true } : result;
+              }}
+            />
+          ) : (
+            <RatingElement
+              key={element.id}
+              kind={round.kind}
+              element={element}
+              details={detailFields && !isValues ? detailsOf(boardElements.get(element.id)) : null}
+              position={position}
+              headingRef={headingRef}
+              rule={round.rule}
+              editable={editable}
+              save={async (score, reason) => {
+                const result = isValues
+                  ? await saveValueRating({
+                      data: { projectId, roundId, valueId: element.id, score, reason },
+                    })
+                  : await saveRating({
+                      data: { projectId, roundId, elementId: element.id, score, reason },
+                    });
+                if (result.ok) {
+                  const trimmed = reason.trim();
+                  rememberOwn(element.id, {
+                    rated: true,
+                    score,
+                    reason: trimmed === "" ? null : trimmed,
+                  });
+                }
+                return result.ok ? { ok: true } : result;
+              }}
+              clear={async () => {
+                const result = isValues
+                  ? await clearValueRating({ data: { projectId, roundId, valueId: element.id } })
+                  : await clearRating({ data: { projectId, roundId, elementId: element.id } });
+                if (result.ok) rememberOwn(element.id, { rated: false, score: null, reason: null });
+                return result.ok ? { ok: true } : result;
+              }}
+              saveFlag={async (kind, reason) => {
+                const result = await saveFlag({
+                  data: { projectId, roundId, elementId: element.id, kind, reason },
+                });
+                if (!result.ok) return result;
+                remember(element.id, (item) => ({
+                  ...item,
+                  flags: withFlag(item.flags, kind, reason),
+                }));
+                return { ok: true };
+              }}
+              removeFlag={async (kind) => {
+                const result = await removeFlag({
+                  data: { projectId, roundId, elementId: element.id, kind },
+                });
+                if (!result.ok) return result;
+                remember(element.id, (item) => ({
+                  ...item,
+                  flags: withFlag(item.flags, kind, null),
+                }));
+                return { ok: true };
+              }}
+            />
+          )
+        }
+        flags={detailFields && !isValues && !isTeam}
         afterOverview={
           round.number === 1 &&
           !isValues && <Proposals editable={editable} rule={round.proposalRule} />
