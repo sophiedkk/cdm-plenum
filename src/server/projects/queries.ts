@@ -367,9 +367,20 @@ export async function leaveProject(
       .where("teamId", "in", (eb) =>
         eb.selectFrom("team").select("id").where("organizationId", "=", project.id),
       )
-      .returning("teamId")
+      .returning(["teamId", "createdAt"])
       .execute();
-    for (const { teamId } of left) {
+    const now = new Date();
+    for (const { teamId, createdAt } of left) {
+      // The response rate of a round that closed before now keeps counting them (DE6).
+      await trx
+        .insertInto("team_member_left")
+        .values({
+          team_id: teamId,
+          user_id: userId,
+          joined_at: createdAt ?? now,
+          left_at: now,
+        })
+        .execute();
       await trx
         .updateTable("team")
         .set((eb) => ({ memberCount: eb("memberCount", "-", 1) }))
@@ -445,9 +456,20 @@ export async function setRaterGroup(
       .where("teamId", "in", (eb) =>
         eb.selectFrom("team").select("id").where("organizationId", "=", project.id),
       )
-      .returning("teamId")
+      .returning(["teamId", "createdAt"])
       .execute();
-    for (const { teamId } of left) {
+    const now = new Date();
+    for (const { teamId, createdAt } of left) {
+      // The response rate of a round that closed before now keeps counting them (DE6).
+      await trx
+        .insertInto("team_member_left")
+        .values({
+          team_id: teamId,
+          user_id: userId,
+          joined_at: createdAt ?? now,
+          left_at: now,
+        })
+        .execute();
       await trx
         .updateTable("team")
         .set((eb) => ({ memberCount: eb("memberCount", "-", 1) }))

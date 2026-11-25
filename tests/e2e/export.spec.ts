@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The export page (EX1, EX2, EX4) in English and Dutch: accessible, keyboard operable, and the
-// elements CSV downloads with the server's file name.
+// The export page (EX1, EX2, EX3, EX4) in English and Dutch: accessible, keyboard operable, and the
+// elements CSV and the decision report download with the server's file name.
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { insertElement } from "../../src/server/test-fixtures.ts";
@@ -65,6 +65,26 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         page.getByRole("status").filter({ hasText: download.suggestedFilename() }),
       ).toBeVisible();
       await expectAxeClean(page);
+    });
+
+    test("downloads the decision report", async ({ page, db }) => {
+      const project = await seedProject(db);
+      await signInAs(page, project.facilitator.email, locale);
+      await page.goto(`/projects/${project.projectId}/export`);
+      const button = page.getByRole("button", {
+        name: text.export_download.replace("{name}", text.export_decision_report_title),
+      });
+      await expect(button).toBeVisible();
+      await expectAxeClean(page);
+      await expectHydrated(button);
+      const downloading = page.waitForEvent("download");
+      await button.click();
+      const download = await downloading;
+      expect(download.suggestedFilename()).toMatch(/^decision-report-\d{4}-\d{2}-\d{2}\.md$/);
+      const content = await readFile(await download.path(), "utf8");
+      expect(content).toMatch(/^# Decision report: /);
+      expect(content).toContain("## Aim and scope");
+      expect(content).not.toContain(project.facilitator.email);
     });
   });
 }

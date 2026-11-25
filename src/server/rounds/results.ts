@@ -18,6 +18,7 @@ import {
   findRound,
   kindOf,
   outcomesOf,
+  type RoundRow,
   type RoundSummary,
   type RoundValueOf,
   roundItems,
@@ -92,8 +93,8 @@ export interface GroupResponse {
   groupName: string;
   expertType: ExpertType;
   /**
-   * Raters of the group who had joined by the time the round closed, or by now: participants
-   * and a facilitator who joined the group (DE14).
+   * Raters in the group when the round closed, or now for an open round: participants and a
+   * facilitator who joined the group (DE14). A participant who left later still counts.
    */
   invited: number;
   /** Raters with at least one answer in the round. */
@@ -106,6 +107,64 @@ export interface ResponseRate {
   groups: GroupResponse[];
   /** All groups together, also raters whose stakeholder group was removed since. */
   total: { invited: number; started: number; completed: number };
+}
+
+/**
+ * The user ids of the raters in each group at `cutoff`, for counting and for the group-size rule
+ * of the decision report; they never leave the server.
+ */
+export async function invitedBy(
+  trx: Kysely<DB>,
+  projectId: string,
+  cutoff: Date,
+): Promise<Map<string, Set<string>>> {
+  // NOTE: DE6, our own design. Invited is who was in the group at the cutoff: the close time of a
+  // closed round, now for an open one. Someone who left later still counts for a closed round.
+  const invitedUsers = new Map<string, Set<string>>();
+  const addInvited = (rows: { teamId: string; userId: string }[]) => {
+    for (const row of rows) {
+      const users = invitedUsers.get(row.teamId) ?? new Set<string>();
+      users.add(row.userId);
+      invitedUsers.set(row.teamId, users);
+    }
+  };
+  addInvited(
+    await trx
+      .selectFrom("member")
+      .innerJoin("teamMember", "teamMember.userId", "member.userId")
+      .innerJoin("team", "team.id", "teamMember.teamId")
+      .select(["team.id as teamId", "member.userId"])
+      .where("member.organizationId", "=", projectId)
+      .where("team.organizationId", "=", projectId)
+      .where("member.role", "in", RATER_ROLES)
+      // A facilitator's member row is as old as the project; their group membership is not.
+      .where(
+        (eb) => eb.fn<Date>("greatest", ["member.createdAt", "teamMember.createdAt"]),
+        "<=",
+        cutoff,
+      )
+      .execute(),
+  );
+  addInvited(
+    await trx
+      .selectFrom("team_member_left")
+      .innerJoin("team", "team.id", "team_member_left.team_id")
+      .innerJoin("member", (join) =>
+        join
+          .onRef("member.userId", "=", "team_member_left.user_id")
+          .onRef("member.organizationId", "=", "team.organizationId"),
+      )
+      .select(["team.id as teamId", "team_member_left.user_id as userId"])
+      .where("team.organizationId", "=", projectId)
+      .where("team_member_left.left_at", ">", cutoff)
+      .where(
+        (eb) => eb.fn<Date>("greatest", ["member.createdAt", "team_member_left.joined_at"]),
+        "<=",
+        cutoff,
+      )
+      .execute(),
+  );
+  return invitedUsers;
 }
 
 /**
@@ -122,79 +181,73 @@ export async function responseRate(
     const round = await findRound(trx, project.id, input.roundId);
     if (!round) return refused("round_not_found");
     if (round.opened_at === null) return refused("round_not_open");
-    const cutoff = round.closed_at ?? deps.now;
-    const elementCount = (await roundItems(trx, round)).length;
-    const groups = await trx
-      .selectFrom("team")
-      .select(["id", "name", "expert_type"])
-      .where("organizationId", "=", project.id)
-      .orderBy("name")
-      .orderBy("id")
-      .execute();
-    const invitedRows = await trx
-      .selectFrom("member")
-      .innerJoin("teamMember", "teamMember.userId", "member.userId")
-      .innerJoin("team", "team.id", "teamMember.teamId")
-      .select("team.id")
-      .select((eb) => eb.fn.count<string>("member.id").distinct().as("count"))
-      .where("member.organizationId", "=", project.id)
-      .where("team.organizationId", "=", project.id)
-      .where("member.role", "in", RATER_ROLES)
-      // A facilitator's member row is as old as the project; their group membership is not.
-      .where(
-        (eb) => eb.fn<Date>("greatest", ["member.createdAt", "teamMember.createdAt"]),
-        "<=",
-        cutoff,
-      )
-      .groupBy("team.id")
-      .execute();
-    const invited = new Map(invitedRows.map((row) => [row.id, Number(row.count)]));
-    // One row per rater code: its group and how many elements it answered. The code itself
-    // is only a grouping key here and never leaves this function.
-    // A participant who changed group during the round still counts once.
-    const raters =
-      kindOf(round) === "values"
-        ? await trx
-            .selectFrom("value_rating")
-            .select((eb) => [
-              eb.fn.max("team_id").as("team_id"),
-              eb.fn.count<string>("value_id").as("answered"),
-            ])
-            .where("round_id", "=", round.id)
-            .groupBy("rating_code_id")
-            .execute()
-        : await trx
-            .selectFrom("rating")
-            .select((eb) => [
-              eb.fn.max("team_id").as("team_id"),
-              eb.fn.count<string>("element_id").as("answered"),
-            ])
-            .where("round_id", "=", round.id)
-            .groupBy("rating_code_id")
-            .execute();
-    const started = new Map<string | null, number>();
-    const completed = new Map<string | null, number>();
-    const total = { invited: 0, started: 0, completed: 0 };
-    for (const rater of raters) {
-      started.set(rater.team_id, (started.get(rater.team_id) ?? 0) + 1);
-      total.started += 1;
-      if (Number(rater.answered) >= elementCount) {
-        completed.set(rater.team_id, (completed.get(rater.team_id) ?? 0) + 1);
-        total.completed += 1;
-      }
-    }
-    const rows = groups.map((group) => {
-      const count = invited.get(group.id) ?? 0;
-      total.invited += count;
-      return {
-        groupId: group.id,
-        groupName: group.name,
-        expertType: group.expert_type as ExpertType,
-        invited: count,
-        started: started.get(group.id) ?? 0,
-        completed: completed.get(group.id) ?? 0,
-      };
-    });
-    return done({ groups: rows, total });
+    return done(await responseRateOf(trx, project.id, round, deps.now));
   });
+}
+
+/** The response rate of an opened round; the caller has checked the facilitator's role. */
+export async function responseRateOf(
+  trx: Kysely<DB>,
+  projectId: string,
+  round: RoundRow,
+  now: Date,
+): Promise<ResponseRate> {
+  const cutoff = round.closed_at ?? now;
+  const elementCount = (await roundItems(trx, round)).length;
+  const groups = await trx
+    .selectFrom("team")
+    .select(["id", "name", "expert_type"])
+    .where("organizationId", "=", projectId)
+    .orderBy("name")
+    .orderBy("id")
+    .execute();
+  const invitedUsers = await invitedBy(trx, projectId, cutoff);
+  const invited = new Map([...invitedUsers].map(([teamId, users]) => [teamId, users.size]));
+  // One row per rater code: its group and how many elements it answered. The code itself
+  // is only a grouping key here and never leaves this function.
+  // A participant who changed group during the round still counts once.
+  const raters =
+    kindOf(round) === "values"
+      ? await trx
+          .selectFrom("value_rating")
+          .select((eb) => [
+            eb.fn.max("team_id").as("team_id"),
+            eb.fn.count<string>("value_id").as("answered"),
+          ])
+          .where("round_id", "=", round.id)
+          .groupBy("rating_code_id")
+          .execute()
+      : await trx
+          .selectFrom("rating")
+          .select((eb) => [
+            eb.fn.max("team_id").as("team_id"),
+            eb.fn.count<string>("element_id").as("answered"),
+          ])
+          .where("round_id", "=", round.id)
+          .groupBy("rating_code_id")
+          .execute();
+  const started = new Map<string | null, number>();
+  const completed = new Map<string | null, number>();
+  const total = { invited: 0, started: 0, completed: 0 };
+  for (const rater of raters) {
+    started.set(rater.team_id, (started.get(rater.team_id) ?? 0) + 1);
+    total.started += 1;
+    if (Number(rater.answered) >= elementCount) {
+      completed.set(rater.team_id, (completed.get(rater.team_id) ?? 0) + 1);
+      total.completed += 1;
+    }
+  }
+  const rows = groups.map((group) => {
+    const count = invited.get(group.id) ?? 0;
+    total.invited += count;
+    return {
+      groupId: group.id,
+      groupName: group.name,
+      expertType: group.expert_type as ExpertType,
+      invited: count,
+      started: started.get(group.id) ?? 0,
+      completed: completed.get(group.id) ?? 0,
+    };
+  });
+  return { groups: rows, total };
 }

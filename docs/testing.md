@@ -201,7 +201,9 @@ Then work through these steps:
    version that the group answers again.
 6. **Hand-off:** open "Respiratory rate (demo)". Two rounds are closed;
    round 2 settled one of the two elements without consensus. Export the
-   elements as CSV and as a mind map from the Overview.
+   elements as CSV and as a mind map from the Overview, and open the Export page for
+   the decision report: it lists the scope, the panel per group, the rule and
+   response of both rounds and the outcome per element, and names no one.
 7. **As participant,** switch person to `nurse.a@example.test`.
    The project list shows what waits per project. Open Blood pressure: its
    home shows "Your turn: rate round 2" and what is decided so far. Rate the
