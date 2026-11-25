@@ -1,13 +1,14 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
+import { ChevronDownIcon } from "lucide-react";
+import { useId, useState } from "react";
+import { ReferenceText } from "@/components/board/reference-text";
 // The results of a closed round (DE5, Q-USE-1): one row per element with its outcome, median,
 // a small distribution and the answers; "Details" opens the full distribution as a table and
 // the result per stakeholder group (Q-PRIV-3). No chart library: the numbers are text, the bars
 // only repeat them.
-import { ChevronDownIcon } from "lucide-react";
-import { useId, useState } from "react";
-import { ReferenceText } from "@/components/board/reference-text";
+import { useModelType } from "@/components/projects/model-type-context";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -273,6 +274,7 @@ export function ResultsTable({
   /** A value round lists values under their element (DT3). */
   kind?: "elements" | "values";
 }>) {
+  const modelType = useModelType();
   return (
     <Table>
       <TableCaption className="sr-only">
@@ -294,7 +296,11 @@ export function ResultsTable({
       </TableHeader>
       <TableBody>
         {elements.map((element, index) => (
-          <GroupRows key={element.id} columns={COLUMNS} heading={headingBefore(elements, index)}>
+          <GroupRows
+            key={element.id}
+            columns={COLUMNS}
+            heading={headingBefore(elements, index, modelType)}
+          >
             <ResultRow element={element} kind={kind} />
           </GroupRows>
         ))}

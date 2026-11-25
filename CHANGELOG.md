@@ -11,6 +11,17 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Brainstorm questions per model type: the four questions, their column
+  labels and the names of the four starting groups follow the model type of
+  the project. An evaluation asks what is concluded, what it is based on, how
+  certain it is and the situation; an instruction asks what is asked, when,
+  why and the situation; an action asks what was done, which step, how and
+  the situation; a sub-block asks which parts it has, what to know about each
+  part, how it was determined and where it is reused. An observation and a
+  project without a type keep the questions as before. Changing the type
+  moves no element, and a group you renamed keeps its name. The element
+  export names the groups the same way.
+
 - Decision report: the Export page offers "Decision report", a Markdown file
   with the scope statement, the panel per stakeholder group, the consensus
   rule and response rate of each round, the outcome per element and the

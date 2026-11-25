@@ -303,6 +303,7 @@ describe("getProject", () => {
         ownGroupId: null,
         privateBrainstorm: true,
         boardRevealed: false,
+        modelType: null,
       },
     });
     const seen = await getProject(db, participant, projectId);

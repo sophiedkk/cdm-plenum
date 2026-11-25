@@ -8,6 +8,7 @@ import { type Kysely, sql, type Transaction } from "kysely";
 import { m } from "@/i18n/messages";
 import type { Locale } from "@/i18n/runtime";
 import type { ActivityAction } from "@/lib/activity-actions";
+import { isModelType, type ModelType } from "@/lib/model-types";
 import { isProjectPhase, type ProjectPhase } from "@/lib/project-phases";
 import {
   DEFAULT_GROUPS,
@@ -142,6 +143,8 @@ export interface ProjectDetail extends ProjectSummary {
   privateBrainstorm: boolean;
   /** Whether the facilitator has revealed the board (EL13). */
   boardRevealed: boolean;
+  /** The model type (SC4); the brainstorm questions and starting groups follow it (EL14). */
+  modelType: ModelType | null;
 }
 
 /** The stakeholder group of `userId` in the project, or null when they are in none. */
@@ -170,7 +173,13 @@ export async function getProject(
   return readProject(db, userId, projectId, null, async (reader, project) => {
     const row = await reader
       .selectFrom("project")
-      .select(["phase", "group_names_visible", "private_brainstorm", "board_revealed_at"])
+      .select([
+        "phase",
+        "group_names_visible",
+        "private_brainstorm",
+        "board_revealed_at",
+        "model_type",
+      ])
       .where("id", "=", project.id)
       .executeTakeFirstOrThrow();
     if (!isProjectPhase(row.phase)) return refused("not_found");
@@ -183,6 +192,7 @@ export async function getProject(
       ownGroupId: await ownGroupId(reader, project.id, userId),
       privateBrainstorm: row.private_brainstorm,
       boardRevealed: row.board_revealed_at !== null,
+      modelType: isModelType(row.model_type) ? row.model_type : null,
     });
   });
 }

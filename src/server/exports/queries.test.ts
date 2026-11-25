@@ -549,6 +549,27 @@ describe("exportElementsCsv (EX1)", () => {
     ]);
   });
 
+  it("names the starting groups after the project's model type (EL18, SC4)", async () => {
+    const { userId, projectId } = await facilitatorWithProject(db);
+    await db
+      .updateTable("project")
+      .set({ model_type: "evaluation" })
+      .where("id", "=", projectId)
+      .execute();
+    const recorded = await db
+      .selectFrom("element_group")
+      .select("id")
+      .where("project_id", "=", projectId)
+      .where("prompt", "=", "recorded")
+      .executeTakeFirstOrThrow();
+    await db
+      .insertInto("element")
+      .values({ project_id: projectId, name: "Diagnosis", group_id: recorded.id })
+      .execute();
+    const rows = records(value(await exportElementsCsv(db, userId, projectId)));
+    expect(rows).toEqual([expect.objectContaining({ group_path: "The conclusion" })]);
+  });
+
   it("marks an element in a round without an outcome as pending", async () => {
     const { facilitator, projectId, elements } = await setup();
     const round3 = await db

@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { m } from "@/i18n/messages";
 import type { GroupLabel } from "@/lib/element-groups";
 import { groupName } from "@/lib/i18n/labels";
+import type { ModelType } from "@/lib/model-types";
 
 interface Grouped {
   group: (GroupLabel & { id: string }) | null;
@@ -15,7 +16,11 @@ interface Grouped {
  * The heading of the group that starts at `index`, or null when the element before is in the
  * same group. Elements without a group come last, under "Not grouped".
  */
-export function headingBefore(elements: readonly Grouped[], index: number): string | null {
+export function headingBefore(
+  elements: readonly Grouped[],
+  index: number,
+  type: ModelType | null,
+): string | null {
   const element = elements[index];
   if (!element) return null;
   const before = elements[index - 1];
@@ -23,7 +28,7 @@ export function headingBefore(elements: readonly Grouped[], index: number): stri
   if (before !== undefined && (before.group?.id ?? null) === id) return null;
   if (element.group === null)
     return elements.some((other) => other.group !== null) ? m.board_check_ungrouped() : null;
-  return groupName(element.group);
+  return groupName(element.group, type);
 }
 
 export function GroupRows({

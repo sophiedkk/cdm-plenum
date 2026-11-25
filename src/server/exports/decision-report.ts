@@ -28,6 +28,7 @@ import {
   statusOf,
   summaryOf,
 } from "../rounds/round.ts";
+import { modelTypeOf } from "../scope/queries.ts";
 import {
   cardinality,
   codesStatuses,
@@ -182,6 +183,7 @@ export async function decisionReportOf(
   const latest = new Map(latestRows.map((row) => [row.elementId, row.outcome as Outcome]));
   const statuses = await codesStatuses(db, project.id);
   const groups = await projectGroups(db, project.id);
+  const modelType = await modelTypeOf(db, project.id);
   const elements: ReportElement[] = all
     .filter((element) => element.mergedInto === null)
     .map((element) => {
@@ -194,7 +196,10 @@ export async function decisionReportOf(
           dataType:
             element.dataType !== null && isDataTypeKey(element.dataType) ? element.dataType : null,
           cardinality: cardinality(element),
-          group: path.length === 0 ? null : path.map(exportGroupName).join(" > "),
+          group:
+            path.length === 0
+              ? null
+              : path.map((group) => exportGroupName(group, modelType)).join(" > "),
           code: token(element.codeSystem, element.code),
           codesSettled: status === undefined ? null : status === "settled",
         },

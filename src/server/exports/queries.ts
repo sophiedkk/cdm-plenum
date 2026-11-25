@@ -4,17 +4,18 @@
 // The exports of docs/architecture.md, "Exports": built from the database on request, never
 // stored, for the project's facilitator only, and logged with ids only (AD2, Q-PRIV-2).
 import type { Kysely, Transaction } from "kysely";
-import { m } from "@/i18n/messages";
-import type { ElementPrompt } from "@/lib/brainstorm";
 import { formatCardinality } from "@/lib/cardinality";
 import { type CsvCell, writeCsv } from "@/lib/csv";
 import { dataTypeByKey, fhirTypeForRmType, isDataTypeKey } from "@/lib/data-types";
 import { type MindMapNode, writeFreeMind } from "@/lib/freemind";
+import { groupName } from "@/lib/i18n/labels";
 import { ancestry, type TreeGroup } from "@/lib/model-tree";
+import type { ModelType } from "@/lib/model-types";
 import type { DB } from "../db/schema.gen.ts";
 import { projectGroups } from "../details/tree.ts";
 import { done, type ProjectResult, withProject } from "../projects/access.ts";
 import { log } from "../projects/queries.ts";
+import { modelTypeOf } from "../scope/queries.ts";
 import { shownGroups } from "./rating-groups.ts";
 
 /** A generated export: the file name to offer, its media type and its text. */
@@ -59,20 +60,12 @@ export interface ElementRow {
   registration: boolean;
 }
 
-/** The English name of a group: its own, or the name of the brainstorm question it stands for. */
-export function exportGroupName(group: TreeGroup): string {
-  if (group.name !== null) return group.name;
-  return group.prompt === null ? "" : GROUP_NAMES_EN[group.prompt]();
-}
-
 // NOTE: no spec governs this, our own design: the export's columns and texts are English, as the
 // header row is, so a file reads the same whoever downloads it.
-const GROUP_NAMES_EN: Record<ElementPrompt, () => string> = {
-  recorded: () => m.board_group_recorded({}, { locale: "en" }),
-  patient_state: () => m.board_group_patient_state({}, { locale: "en" }),
-  method: () => m.board_group_method({}, { locale: "en" }),
-  context: () => m.board_group_context({}, { locale: "en" }),
-};
+/** The English name of a group: its own, or the name of the starting question for the model type. */
+export function exportGroupName(group: TreeGroup, type: ModelType | null): string {
+  return groupName(group, type, { locale: "en" });
+}
 
 /**
  * The tree columns of an element (DT6): the path of its group from the top of the model, as
@@ -80,19 +73,23 @@ const GROUP_NAMES_EN: Record<ElementPrompt, () => string> = {
  * `title <link>` or the group name for a sub-block without a link; and `yes` for a registration
  * element.
  */
-function treeCells(groups: readonly TreeGroup[], element: ElementRow): CsvCell[] {
+function treeCells(
+  groups: readonly TreeGroup[],
+  element: ElementRow,
+  type: ModelType | null,
+): CsvCell[] {
   const path = element.groupId === null ? [] : ancestry(groups, element.groupId);
   const own = path.at(-1);
   const subBlock = [...path].reverse().find((group) => group.subBlock);
   const link = subBlock?.subBlockLink;
   return [
-    path.length === 0 ? null : path.map(exportGroupName).join(" > "),
+    path.length === 0 ? null : path.map((group) => exportGroupName(group, type)).join(" > "),
     own?.cardinality ? formatCardinality(own.cardinality) : null,
     subBlock === undefined
       ? null
       : link
         ? [link.title, link.url && `<${link.url}>`].filter(Boolean).join(" ")
-        : exportGroupName(subBlock),
+        : exportGroupName(subBlock, type),
     element.registration ? "yes" : null,
   ];
 }
@@ -305,6 +302,7 @@ export async function exportElementsCsv(
     );
 
     const groups = await projectGroups(trx, project.id);
+    const modelType = await modelTypeOf(trx, project.id);
 
     const header: CsvCell[] = [
       "name",
@@ -356,7 +354,7 @@ export async function exportElementsCsv(
           codesStatus.get(element.id),
           element.referenceTitle,
           element.referenceUrl,
-          ...treeCells(groups, element),
+          ...treeCells(groups, element, modelType),
           ...rounds.map((round) => outcomes.get(`${round.id}/${element.id}`)),
         ];
       });

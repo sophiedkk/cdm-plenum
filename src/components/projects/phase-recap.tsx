@@ -1,13 +1,14 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The recap of a done phase (PR13, ADR 0020): read only, one view per phase, each fact once.
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { ReferenceText } from "@/components/board/reference-text";
 import { CodeFacts } from "@/components/details/code-facts";
 import { ModelTreeView } from "@/components/details/model-tree";
 import { StructureFacts } from "@/components/details/structure-facts";
+// The recap of a done phase (PR13, ADR 0020): read only, one view per phase, each fact once.
+import { useModelType } from "@/components/projects/model-type-context";
 import { DateTime } from "@/components/status/date-time";
 import { StatusBadge } from "@/components/status/status-badge";
 import { m } from "@/i18n/messages";
@@ -110,6 +111,7 @@ function ScopeView({ recap }: Readonly<{ recap: ScopeRecap }>) {
 }
 
 function DiscoverView({ projectId, recap }: Readonly<{ projectId: string; recap: DiscoverRecap }>) {
+  const modelType = useModelType();
   return (
     <>
       <Heading title={m.projects_recap_discover_title()} closedAt={recap.closedAt} />
@@ -140,7 +142,7 @@ function DiscoverView({ projectId, recap }: Readonly<{ projectId: string; recap:
           {recap.groups.map((group) => (
             <div key={group.id} className="flex flex-col gap-1.5">
               <h4 className="text-sm font-semibold text-muted-foreground">
-                {groupName(group)} · {group.elements.length}
+                {groupName(group, modelType)} · {group.elements.length}
               </h4>
               <ul className="flex flex-wrap gap-1.5">
                 {group.elements.map((element) => (

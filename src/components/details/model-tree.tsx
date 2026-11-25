@@ -5,6 +5,7 @@
 // sub-block, the existing sub-block it is; under each group its elements, a registration element
 // marked as one. The Details page and the recap of the detail phase show it. A value shows only
 // when it says something: no cardinality until one is set.
+import { useModelType } from "@/components/projects/model-type-context";
 import { m } from "@/i18n/messages";
 import { formatCardinality } from "@/lib/cardinality";
 import { isReferenceUrl } from "@/lib/elements";
@@ -54,11 +55,12 @@ function GroupItem({
   node,
   elementsOf,
 }: Readonly<{ node: TreeNode; elementsOf: (groupId: string) => TreeElement[] }>) {
+  const modelType = useModelType();
   const { group } = node;
   return (
     <li className="flex flex-col gap-1">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-semibold">{groupName(group)}</span>
+        <span className="font-semibold">{groupName(group, modelType)}</span>
         {group.cardinality !== null && (
           <span className="text-muted-foreground tabular-nums">
             {formatCardinality(group.cardinality)}
