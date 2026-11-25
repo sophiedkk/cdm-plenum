@@ -60,7 +60,7 @@ function ElementCard({
       >
         {element.name}
         {elsewhere > 0 && (
-          <span className="rounded-full bg-muted px-1.5 text-xs font-normal text-muted-foreground">
+          <span className="rounded-full bg-muted px-1.5 type-meta text-muted-foreground">
             <span aria-hidden="true">{elsewhere}</span>
             <span className="sr-only">, {m.board_grouping_elsewhere({ count: elsewhere })}</span>
           </span>
@@ -333,7 +333,7 @@ export function GroupingBoard({
           over === POOL && "outline-2 outline-offset-2 outline-foreground outline-dashed",
         )}
       >
-        <h3 id="pool-heading" className="text-[0.9375rem] font-semibold">
+        <h3 id="pool-heading" className="type-body font-semibold">
           {m.board_grouping_pool({ count: pool.length })}
         </h3>
         {pool.length === 0 ? (
@@ -362,7 +362,7 @@ export function GroupingBoard({
               )}
             >
               <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-                <h3 id={`group-${group.id}`} className="text-[0.9375rem] font-semibold">
+                <h3 id={`group-${group.id}`} className="type-body font-semibold">
                   {name}
                   <span className="ml-2 text-sm font-normal text-muted-foreground">
                     {items.length}

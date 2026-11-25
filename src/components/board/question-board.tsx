@@ -97,10 +97,7 @@ function Group({
   if (cards.length === 0) return null;
   return (
     <div className="flex flex-col gap-1.5">
-      <h4
-        id={id}
-        className="px-0.5 pt-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
-      >
+      <h4 id={id} className="px-0.5 pt-1.5 type-meta font-semibold text-muted-foreground">
         {title}
       </h4>
       <ul aria-labelledby={id} className="flex flex-col gap-1.5">
@@ -263,7 +260,7 @@ function ColumnAddForm({
           )
         }
       </form.Subscribe>
-      <div role="status" className="text-xs">
+      <div role="status" className="type-meta">
         {hints.length > 0 && (
           <>
             <p className="font-medium">{m.board_hints_title({ count: hints.length })}</p>
@@ -317,7 +314,7 @@ function Column({
   return (
     <section aria-labelledby={id} className="flex flex-col rounded-lg border bg-card">
       <div className="border-b px-3 pt-3 pb-2">
-        <h3 id={id} className="text-[0.9375rem] leading-[1.375rem] font-semibold">
+        <h3 id={id} className="type-body font-semibold">
           {promptQuestion(column.prompt, modelType)}
         </h3>
         <p className="mt-0.5 text-sm text-muted-foreground">
@@ -329,7 +326,7 @@ function Column({
         <Group title={m.board_column_from_models()} cards={column.fromModels} kind="model" />
         <Group title={m.board_column_from_others()} cards={column.others} kind="other" />
         {column.hidden > 0 && (
-          <p className="mt-1 rounded-md bg-muted p-2 text-center text-xs text-muted-foreground">
+          <p className="mt-1 rounded-md bg-muted p-2 text-center type-meta text-muted-foreground">
             {m.board_column_hidden({ count: column.hidden })}
           </p>
         )}
