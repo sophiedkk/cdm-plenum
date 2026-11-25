@@ -58,7 +58,11 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
       await signInTo(page, participant, locale, `/projects/${project.projectId}`);
       const steps = page.getByRole("list", { name: text.projects_steps_label });
-      await expect(steps.locator('[aria-current="step"]').getByRole("link")).toHaveCount(0);
+      // The current phase links to the phase home, the participant's project home.
+      await expect(steps.locator('[aria-current="step"]').getByRole("link")).toHaveAttribute(
+        "href",
+        `/projects/${project.projectId}`,
+      );
       await steps.getByRole("link", { name: new RegExp(text.projects_phase_scope) }).click();
       await expect(page).toHaveURL((url) => url.pathname.endsWith("/recap/scope"));
       await expect(

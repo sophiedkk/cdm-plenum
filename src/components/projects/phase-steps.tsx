@@ -3,9 +3,9 @@
 
 // The phases of a project as one row of steps (PR4, PR11, PR13): a check on a finished phase, the
 // current one marked, later ones dashed. The state is in the text for a screen reader; the
-// icon and the border only show it. NOTE: owner decision 2026-11-20 (ADR 0020). A done phase
-// links to its recap; the current phase is no link, its work starts on the home or the Overview;
-// later phases are no links.
+// icon and the border only show it. NOTE: owner decisions 2026-11-20 and 2026-11-25 (ADR 0022).
+// A done phase links to its recap, the current phase to the phase home (the project index: the
+// Overview or the participant's home); later phases are no links.
 import { Link } from "@tanstack/react-router";
 import { CheckIcon } from "lucide-react";
 import { m } from "@/i18n/messages";
@@ -68,6 +68,15 @@ export function PhaseSteps({
                   STATE_CLASS.done,
                   "hover:bg-muted aria-[current=page]:border-foreground aria-[current=page]:font-semibold",
                 )}
+              >
+                {content}
+              </Link>
+            ) : step.state === "current" ? (
+              <Link
+                to="/projects/$projectId"
+                params={{ projectId }}
+                activeOptions={{ exact: true }}
+                className={cn(STEP, STATE_CLASS.current, "hover:bg-accent")}
               >
                 {content}
               </Link>
