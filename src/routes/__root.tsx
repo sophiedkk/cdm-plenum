@@ -10,8 +10,11 @@ import {
   Outlet,
   Scripts,
   useRouteContext,
+  useRouter,
 } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { createIsomorphicFn } from "@tanstack/react-start";
+import { getRequestHeader } from "@tanstack/react-start/server";
+import { type ReactNode, useEffect } from "react";
 import { AppShell, PublicLayout } from "@/components/shell/app-shell";
 import { NotFoundState, RouteErrorState } from "@/components/shell/route-states";
 import { Toaster } from "@/components/ui/sonner";
@@ -19,6 +22,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { m } from "@/i18n/messages";
 import { getLocale } from "@/i18n/runtime";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import {
+  DEFAULT_TIME_ZONE,
+  TimeZoneProvider,
+  timeZoneCookie,
+  timeZoneFromCookies,
+} from "@/lib/time-zone";
 import { devSignInEnabledQueryOptions } from "@/server/dev-sign-in/query-options";
 import { sessionQueryOptions } from "@/server/session/query-options";
 import appCss from "@/styles/app.css?url";
@@ -26,6 +35,12 @@ import appCss from "@/styles/app.css?url";
 export interface RouterContext {
   queryClient: QueryClient;
 }
+
+// NOTE: no spec governs this, our own design: the reader's zone travels in a cookie the browser
+// sets, so the server renders moments in that zone and hydration finds the same text.
+const readTimeZone = createIsomorphicFn()
+  .server(() => timeZoneFromCookies(getRequestHeader("cookie")))
+  .client(() => timeZoneFromCookies(document.cookie));
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   // NOTE: our own design after eduLIMS (ADR 0002). The session query is always stale, so every
@@ -36,7 +51,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       // Only whether the development sign-in page is on, for "Switch person" in the shell.
       context.queryClient.ensureQueryData(devSignInEnabledQueryOptions()),
     ]);
-    return { user, devSignIn };
+    return { user, devSignIn, timeZone: readTimeZone() };
   },
   head: () => ({
     meta: [
@@ -53,7 +68,23 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   errorComponent: RouteError,
 });
 
+/** Stores the browser's time zone in the cookie and renders again when the page used another. */
+function TimeZoneSync({ used }: Readonly<{ used: string }>) {
+  const router = useRouter();
+  useEffect(() => {
+    const actual = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (actual === used) return;
+    // biome-ignore lint/suspicious/noDocumentCookie: the Cookie Store API is missing in Firefox
+    document.cookie = timeZoneCookie(actual);
+    void router.invalidate();
+  }, [used, router]);
+  return null;
+}
+
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
+  const timeZone =
+    useRouteContext({ from: "__root__", select: (context) => context.timeZone }) ??
+    DEFAULT_TIME_ZONE;
   return (
     // The theme script sets data-theme on <html> before React hydrates, so the server's markup
     // differs from the browser's on that one attribute.
@@ -64,7 +95,10 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <HeadContent />
       </head>
       <body>
-        <TooltipProvider>{children}</TooltipProvider>
+        <TimeZoneProvider value={timeZone}>
+          <TimeZoneSync used={timeZone} />
+          <TooltipProvider>{children}</TooltipProvider>
+        </TimeZoneProvider>
         <Toaster />
         <Scripts />
       </body>
