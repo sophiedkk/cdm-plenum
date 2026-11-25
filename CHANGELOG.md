@@ -137,6 +137,12 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The link in the sign-in e-mail opens a page with one "Sign in" button.
+  Pressing it signs you in. A mail scanner or link preview that opens the
+  link no longer uses it up before you do.
+- A session ends after 7 days without use, and at the latest 30 days after
+  you signed in, however often you use the app. After that you sign in
+  again with a new link.
 - The brainstorm is a board with one column per question. Elements from
   existing models show dashed in their column, your own elements are
   marked, and before the reveal other people's elements show only as a

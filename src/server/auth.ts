@@ -13,7 +13,13 @@ import type { Kysely } from "kysely";
 import { m } from "@/i18n/messages";
 import type { ActivityAction } from "@/lib/activity-actions";
 import { projectAccessControl, projectRoles } from "@/lib/project-roles";
-import { SIGN_IN_LINK_MINUTES, SIGN_UP_REFUSED } from "@/lib/sign-in";
+import {
+  confirmLinkUrl,
+  SESSION_EXTEND_DAYS,
+  SESSION_IDLE_DAYS,
+  SIGN_IN_LINK_MINUTES,
+  SIGN_UP_REFUSED,
+} from "@/lib/sign-in";
 import { isDeactivated, isDeactivatedEmail } from "./admin/queries.ts";
 import { getDb } from "./db/index.ts";
 import type { DB } from "./db/schema.gen.ts";
@@ -117,6 +123,12 @@ export function createAuth(env: Env, db: Kysely<DB>, deps: AuthDeps) {
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
     disabledPaths: [...ORGANIZATION_PATHS],
+    session: {
+      // NOTE: owner decision 2026-11-25 (PR1). better-auth ends a session `expiresIn` seconds after
+      // its last extension and extends it at most every `updateAge` seconds while it is read.
+      expiresIn: SESSION_IDLE_DAYS * 86_400,
+      updateAge: SESSION_EXTEND_DAYS * 86_400,
+    },
     rateLimit: {
       // better-auth's own default: on in production only.
       enabled: deps.production,
@@ -182,13 +194,16 @@ export function createAuth(env: Env, db: Kysely<DB>, deps: AuthDeps) {
             if (devSignInEnabled(env)) delivery(url);
             return;
           }
+          // A mail scanner that opens the link must not use it up: the e-mail links to our
+          // confirmation page, and only its button opens the verification URL.
+          const confirmUrl = confirmLinkUrl(url);
           await deliverSignInLink(
             deps.mailer,
             {
               to: email,
-              url,
+              url: confirmUrl,
               subject: m.mail_sign_in_subject(),
-              text: m.mail_sign_in_body({ url, minutes: SIGN_IN_LINK_MINUTES }),
+              text: m.mail_sign_in_body({ url: confirmUrl, minutes: SIGN_IN_LINK_MINUTES }),
             },
             deps,
           );

@@ -181,7 +181,8 @@ Then work through these steps:
 4. Open the People tab. Eight participants sit in five stakeholder groups:
    Nursing, Primary care, General medicine, Terminology and Architecture.
    Invite a new address and open the invitation from Mailpit in a private
-   window.
+   window; the sign-in link in the e-mail opens a page where you press
+   "Sign in".
 5. **Detail:** open "Oxygen saturation (demo)". The Details tab lists the
    three elements in the model. SpO2 is settled, and its LOINC code waits
    for the group: the demo has one terminologist, so the review was

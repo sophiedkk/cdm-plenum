@@ -8,9 +8,10 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { getAuth } from "../auth.ts";
 import { getDb } from "../db/index.ts";
 import { sessionUser } from "./queries.ts";
+import { readSession } from "./read.ts";
 
 export const getSessionFn = createServerFn({ method: "GET" }).handler(async () => {
-  const session = await getAuth().api.getSession({ headers: getRequestHeaders() });
+  const session = await readSession(getAuth(), getDb(), getRequestHeaders());
   if (!session) return null;
   return sessionUser(getDb(), session.user.id);
 });

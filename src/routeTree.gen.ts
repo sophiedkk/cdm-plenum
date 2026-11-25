@@ -16,6 +16,7 @@ import { Route as AuthedAdminRouteImport } from './routes/_authed/admin'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as DevSignInRouteImport } from './routes/dev/sign-in'
 import { Route as InviteInvitationIdRouteImport } from './routes/invite/$invitationId'
+import { Route as SignInConfirmRouteImport } from './routes/sign-in_.confirm'
 import { Route as AuthedProjectsIndexRouteImport } from './routes/_authed/projects/index'
 import { Route as AuthedProjectsProjectIdRouteImport } from './routes/_authed/projects/$projectId'
 import { Route as AuthedProjectsNewRouteImport } from './routes/_authed/projects/new'
@@ -72,6 +73,11 @@ const DevSignInRoute = DevSignInRouteImport.update({
 const InviteInvitationIdRoute = InviteInvitationIdRouteImport.update({
   id: '/invite/$invitationId',
   path: '/invite/$invitationId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignInConfirmRoute = SignInConfirmRouteImport.update({
+  id: '/sign-in_/confirm',
+  path: '/sign-in/confirm',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedProjectsIndexRoute = AuthedProjectsIndexRouteImport.update({
@@ -216,6 +222,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/dev/sign-in': typeof DevSignInRoute
   '/invite/$invitationId': typeof InviteInvitationIdRoute
+  '/sign-in/confirm': typeof SignInConfirmRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRouteWithChildren
   '/projects/new': typeof AuthedProjectsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -247,6 +254,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/dev/sign-in': typeof DevSignInRoute
   '/invite/$invitationId': typeof InviteInvitationIdRoute
+  '/sign-in/confirm': typeof SignInConfirmRoute
   '/projects/new': typeof AuthedProjectsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/projects': typeof AuthedProjectsIndexRoute
@@ -278,6 +286,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/dev/sign-in': typeof DevSignInRoute
   '/invite/$invitationId': typeof InviteInvitationIdRoute
+  '/sign-in_/confirm': typeof SignInConfirmRoute
   '/_authed/projects/$projectId': typeof AuthedProjectsProjectIdRouteWithChildren
   '/_authed/projects/new': typeof AuthedProjectsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -311,6 +320,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/dev/sign-in'
     | '/invite/$invitationId'
+    | '/sign-in/confirm'
     | '/projects/$projectId'
     | '/projects/new'
     | '/api/auth/$'
@@ -342,6 +352,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/dev/sign-in'
     | '/invite/$invitationId'
+    | '/sign-in/confirm'
     | '/projects/new'
     | '/api/auth/$'
     | '/projects'
@@ -372,6 +383,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/dev/sign-in'
     | '/invite/$invitationId'
+    | '/sign-in_/confirm'
     | '/_authed/projects/$projectId'
     | '/_authed/projects/new'
     | '/api/auth/$'
@@ -404,6 +416,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   DevSignInRoute: typeof DevSignInRoute
   InviteInvitationIdRoute: typeof InviteInvitationIdRoute
+  SignInConfirmRoute: typeof SignInConfirmRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -456,6 +469,13 @@ declare module '@tanstack/react-router' {
       path: '/invite/$invitationId'
       fullPath: '/invite/$invitationId'
       preLoaderRoute: typeof InviteInvitationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-in_/confirm': {
+      id: '/sign-in_/confirm'
+      path: '/sign-in/confirm'
+      fullPath: '/sign-in/confirm'
+      preLoaderRoute: typeof SignInConfirmRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/projects/': {
@@ -717,6 +737,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   DevSignInRoute: DevSignInRoute,
   InviteInvitationIdRoute: InviteInvitationIdRoute,
+  SignInConfirmRoute: SignInConfirmRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

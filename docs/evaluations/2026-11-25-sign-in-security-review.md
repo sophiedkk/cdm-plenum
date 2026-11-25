@@ -80,7 +80,7 @@ Status: **met**, **gap** (with the issue or change that closes it), or
 | --- | --- | --- | --- | --- |
 | 7.1.1 | L2 | Inactivity timeout and absolute lifetime are documented. | Documented here and in PR1. | met with #65 |
 | 7.3.1 | L2 | An inactivity timeout enforces re-authentication. | A session ends after 7 days without use; used, it is extended once a day (better-auth `expiresIn` 7 days, `updateAge` 1 day). | met |
-| 7.3.2 | L2 | An absolute maximum lifetime enforces re-authentication. | None: a session used daily never ends. | gap: #65 ends every session 30 days after sign-in (owner decision 2026-11-25) |
+| 7.3.2 | L2 | An absolute maximum lifetime enforces re-authentication. | None: a session used daily never ends. | gap: #65 ends every session 30 days after sign-in (owner decision 2026-11-25); a database trigger keeps `expiresAt` within the cap, so better-auth ends the session on every path, its own endpoints included |
 | 7.2.1 | L1 | Session tokens are verified on the server. | better-auth checks every request against the session table. | met |
 | 7.2.2, 7.2.3 | L1 | Dynamically generated reference tokens from a CSPRNG, at least 128 bits. | better-auth reference tokens of 32 random characters. | met |
 | 7.2.4 | L1 | A new session token on sign-in. | Each verified link creates a new session. | met |
@@ -107,7 +107,8 @@ Status: **met**, **gap** (with the issue or change that closes it), or
    scanner or a link preview leaves the link usable (6.6.2, partly).
 2. **Session lifetime.** 7 days without use, and at most 30 days after
    sign-in, then a new link (7.3.1, 7.3.2; owner decisions 2026-11-25).
-   Recorded in PR1.
+   The database keeps every session within the 30 days (migration 0024), so
+   no path can extend it further. Recorded in PR1.
 
 ## Accepted risks and later work
 
