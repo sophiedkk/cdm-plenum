@@ -27,7 +27,7 @@ import {
   proposeDetail,
   settleDetail,
 } from "./queries.ts";
-import { proposeTree, treeBoard } from "./tree.ts";
+import { proposeTree, treeBoard, treeRecap } from "./tree.ts";
 
 let db: Kysely<DB>;
 let m: ProjectMembers;
@@ -468,5 +468,61 @@ describe("round headings of nested groups (DE19)", () => {
     expect(placed.get(systolic)).toMatchObject({ id: groups.recorded, prompt: "recorded" });
     expect(placed.get(author)).toMatchObject({ id: groups.context, prompt: "context" });
     expect(placed.has(excluded)).toBe(false);
+  });
+});
+
+describe("the order of the elements within a group (DT6, #99)", () => {
+  // Created as Systolic, Author: the tree puts Author first, which neither name nor age gives.
+  const ordered = (): TreeInput => ({
+    groups: TREE().groups,
+    elements: [
+      { id: author, groupId: groups.context, registration: false },
+      { id: systolic, groupId: groups.context, registration: false },
+    ],
+  });
+  const names = (rows: { name: string }[]) => rows.map((row) => row.name);
+
+  it("keeps the proposed order, and settling copies it onto the elements", async () => {
+    await proposed(m.facilitator, 0, ordered());
+    const first = (await boardOf(m.facilitator)).proposal;
+    expect(names(first?.tree.elements ?? [])).toEqual(["Author", "Systolic"]);
+    const stored = await db
+      .selectFrom("tree_proposal_element")
+      .select(["element_id", "position"])
+      .orderBy("position")
+      .execute();
+    expect(stored).toEqual([
+      { element_id: author, position: 0 },
+      { element_id: systolic, position: 1 },
+    ]);
+    // Before settling, the current tree has no order of its own: the creation order holds.
+    expect(names((await boardOf(m.facilitator)).current.elements)).toEqual(["Systolic", "Author"]);
+
+    await settle(m.facilitator, { proposalId: first?.id ?? "", version: 1 });
+    const settled = await db
+      .selectFrom("element")
+      .select(["id", "tree_position"])
+      .where("id", "in", [systolic, author, excluded])
+      .execute();
+    expect(new Map(settled.map((row) => [row.id, row.tree_position]))).toEqual(
+      new Map([
+        [author, 0],
+        [systolic, 1],
+        [excluded, null],
+      ]),
+    );
+    expect(names((await boardOf(m.participant)).current.elements)).toEqual(["Author", "Systolic"]);
+    expect(names((await treeRecap(db, m.projectId)).tree.elements)).toEqual(["Author", "Systolic"]);
+  });
+
+  it("replaces the earlier positions when a revised tree settles", async () => {
+    await proposed(m.facilitator, 0, ordered());
+    const first = (await boardOf(m.facilitator)).proposal;
+    await settle(m.facilitator, { proposalId: first?.id ?? "", version: 1 });
+    const reversed = { ...ordered(), elements: [...ordered().elements].reverse() };
+    await proposed(m.facilitator, 1, reversed);
+    const second = (await boardOf(m.facilitator)).proposal;
+    await settle(m.facilitator, { proposalId: second?.id ?? "", version: 2 });
+    expect(names((await boardOf(m.participant)).current.elements)).toEqual(["Systolic", "Author"]);
   });
 });

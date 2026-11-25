@@ -65,6 +65,8 @@ export interface ElementRow {
   groupId: string | null;
   registration: boolean;
   units: string[];
+  /** The place within its group in the settled tree; null outside one. */
+  treePosition: number | null;
 }
 
 // NOTE: no spec governs this, our own design: the export's columns and texts are English, as the
@@ -103,7 +105,7 @@ function treeCells(
 
 /** Every element of the project, merged ones included, ordered by name. Never the author. */
 export async function elementRows(trx: Db, projectId: string): Promise<ElementRow[]> {
-  return trx
+  const rows = await trx
     .selectFrom("element")
     .leftJoin("element_ckm_link as link", "link.element_id", "element.id")
     .select([
@@ -127,11 +129,33 @@ export async function elementRows(trx: Db, projectId: string): Promise<ElementRo
       "element.group_id as groupId",
       "element.registration",
       "element.units",
+      "element.tree_position as treePosition",
     ])
     .where("element.project_id", "=", projectId)
     .orderBy("element.name")
     .orderBy("element.id")
     .execute();
+  // The tree's order within a group (DT6, issue #99). Each group keeps the places its elements
+  // had in the name order and fills them by position, so the file order only changes inside a
+  // group; an element without a position keeps the name order after those with one.
+  const places = new Map<string | null, number[]>();
+  rows.forEach((row, index) => {
+    places.set(row.groupId, [...(places.get(row.groupId) ?? []), index]);
+  });
+  const position = (row: { treePosition: number | null }) =>
+    row.treePosition ?? Number.POSITIVE_INFINITY;
+  const ordered = [...rows];
+  for (const slots of places.values()) {
+    const inGroup = slots
+      .map((slot) => rows[slot])
+      .filter((row) => row !== undefined)
+      .sort((a, b) => (position(a) === position(b) ? 0 : position(a) < position(b) ? -1 : 1));
+    slots.forEach((slot, i) => {
+      const row = inGroup[i];
+      if (row) ordered[slot] = row;
+    });
+  }
+  return ordered;
 }
 
 /** The element a merged element ended up in, or null when the chain loops. */
