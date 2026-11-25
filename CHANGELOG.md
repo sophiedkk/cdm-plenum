@@ -9,6 +9,8 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-25
+
 ### Added
 
 - Units: a structure proposal for a quantity or a quantity interval lists
@@ -18,9 +20,6 @@ the project uses [Semantic Versioning](https://semver.org/).
   per unit and 10 units, and does not look the codes up. Settling copies the
   units onto the element. The board, the detail card, the recap, the elements
   CSV (a new `units` column) and the decision report show them.
-- Decision report: each round lists the panel per expert type when it opened
-  and the minimum that applied. A count of 1 or 2 reads "fewer than 3". The
-  reason for opening below the minimum is not part of the report.
 - Brainstorm questions per model type: the four questions, their column
   labels and the names of the four starting groups follow the model type of
   the project. An evaluation asks what is concluded, what it is based on, how
@@ -31,7 +30,6 @@ the project uses [Semantic Versioning](https://semver.org/).
   project without a type keep the questions as before. Changing the type
   moves no element, and a group you renamed keeps its name. The element
   export names the groups the same way.
-
 - Hand-off page: in the Hand-off phase every member opens a read-only page
   with the agreed model: the tree, each element with its data type,
   cardinality, values and codes, and the references to other models. Parts
@@ -47,8 +45,10 @@ the project uses [Semantic Versioning](https://semver.org/).
   items that were excluded or merged. It follows the order of the ACCORD
   reporting guideline, includes the detail of each element and marks open
   codes, and shows value rounds as rounds of their own kind. A group of
-  fewer than 3 is not named: it is merged into "Other groups". The report
-  names no person.
+  fewer than 3 is not named: it is merged into "Other groups". Each round
+  also lists the panel per expert type when it opened and the minimum that
+  applied, with a count of 1 or 2 as "fewer than 3"; the reason for opening
+  below the minimum is not in the report. The report names no person.
 - Value rounds: in the Detail phase the facilitator can put the value list of
   a structure proposal to a rating round. "Rate the values in a round" on an
   element's card adds its values to a draft value round; the values of
@@ -166,13 +166,6 @@ the project uses [Semantic Versioning](https://semver.org/).
   duplicates and the groups; Decide shows the rounds and their outcomes. The
   current phase and later phases stay plain steps.
 
-### Removed
-
-- The element board's own "Search openEHR CKM" import of a whole archetype.
-  Its button now opens Existing models, where an imported archetype's
-  elements get a first look and a group. Linking one element to a CKM
-  archetype element stays on the board.
-
 ### Changed
 
 - The "Open round" dialog shows Cancel only, without the extra close button
@@ -220,6 +213,13 @@ the project uses [Semantic Versioning](https://semver.org/).
 - The element board shows each element's CKM link from the discover phase
   on, when the group links elements to existing models, instead of from
   decide.
+
+### Removed
+
+- The element board's own "Search openEHR CKM" import of a whole archetype.
+  Its button now opens Existing models, where an imported archetype's
+  elements get a first look and a group. Linking one element to a CKM
+  archetype element stays on the board.
 
 ### Fixed
 
@@ -570,6 +570,7 @@ rating rounds and the CSV and mind map exports.
   network address, so a class behind one address can sign in together.
 - A deactivated account cannot sign in, and its open sessions end at once.
 
-[Unreleased]: https://github.com/sophiedkk/cdm-plenum/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/sophiedkk/cdm-plenum/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/sophiedkk/cdm-plenum/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sophiedkk/cdm-plenum/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sophiedkk/cdm-plenum/releases/tag/v0.1.0

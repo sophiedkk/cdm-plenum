@@ -1,6 +1,6 @@
 {
   "name": "cdm-plenum",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Guides a group from the scope of a clinical concept to an agreed set of data elements, with brainstorming and Delphi-style rating rounds before CKM review",
   "license": "Apache-2.0",
