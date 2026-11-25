@@ -9,7 +9,8 @@ import type { ProjectRole } from "./project-roles.ts";
 
 /**
  * The steps of a project, one per page. The export and the settings are the facilitator's, so
- * the table hides them from a participant in every phase (PR12).
+ * the table hides them from a participant in every phase (PR12). The hand-off page is for
+ * everyone, but only once the project is in the hand-off phase (PR4).
  */
 export const PROJECT_STEPS = [
   "scope",
@@ -24,6 +25,7 @@ export const PROJECT_STEPS = [
   "grouping",
   "group_check",
   "details",
+  "handoff",
 ] as const;
 export type ProjectStep = (typeof PROJECT_STEPS)[number];
 
@@ -51,6 +53,7 @@ export const PARTICIPANT_ACCESS = {
     grouping: "hidden",
     group_check: "hidden",
     details: "hidden",
+    handoff: "hidden",
   },
   discover: {
     scope: "read",
@@ -65,6 +68,7 @@ export const PARTICIPANT_ACCESS = {
     grouping: "hidden",
     group_check: "answer",
     details: "hidden",
+    handoff: "hidden",
   },
   decide: {
     scope: "read",
@@ -79,6 +83,7 @@ export const PARTICIPANT_ACCESS = {
     grouping: "hidden",
     group_check: "hidden",
     details: "hidden",
+    handoff: "hidden",
   },
   detail: {
     scope: "read",
@@ -93,6 +98,7 @@ export const PARTICIPANT_ACCESS = {
     grouping: "hidden",
     group_check: "hidden",
     details: "answer",
+    handoff: "hidden",
   },
   handoff: {
     scope: "read",
@@ -107,6 +113,7 @@ export const PARTICIPANT_ACCESS = {
     grouping: "hidden",
     group_check: "hidden",
     details: "read",
+    handoff: "read",
   },
 } as const satisfies Record<ProjectPhase, Record<ProjectStep, StepAccess>>;
 

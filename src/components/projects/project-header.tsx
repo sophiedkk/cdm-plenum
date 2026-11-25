@@ -68,6 +68,7 @@ type TabKey = (typeof TABS)[number]["key"];
 /** The pages that sit under a tab without a tab of their own. */
 const UNDER = [
   { to: "/projects/$projectId/export", tab: "overview" },
+  { to: "/projects/$projectId/handoff", tab: "overview" },
   { to: "/projects/$projectId/models", tab: "overview" },
   { to: "/projects/$projectId/grouping", tab: "overview" },
   { to: "/projects/$projectId/brainstorm", tab: "elements" },

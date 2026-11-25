@@ -7,7 +7,7 @@ import type { Kysely, Transaction } from "kysely";
 import { m } from "@/i18n/messages";
 import type { ElementPrompt } from "@/lib/brainstorm";
 import { formatCardinality } from "@/lib/cardinality";
-import { type CsvCell, writeCsv } from "@/lib/csv";
+import { type CsvCell, type CsvSeparator, writeCsv } from "@/lib/csv";
 import { dataTypeByKey, fhirTypeForRmType, isDataTypeKey } from "@/lib/data-types";
 import { type MindMapNode, writeFreeMind } from "@/lib/freemind";
 import { ancestry, type TreeGroup } from "@/lib/model-tree";
@@ -32,6 +32,11 @@ const FREEMIND_MEDIA_TYPE = "application/x-freemind";
 export const EXPORT = { export: ["download"] } as const;
 
 export type Db = Kysely<DB> | Transaction<DB>;
+
+/** The semicolon file carries its separator in its name, so it never overwrites the comma file. */
+function csvFileSuffix(separator: CsvSeparator): string {
+  return separator === "semicolon" ? "-semicolon" : "";
+}
 
 export function fileDate(now: Date): string {
   return now.toISOString().slice(0, 10);
@@ -210,6 +215,7 @@ export async function exportElementsCsv(
   db: Kysely<DB>,
   userId: string,
   projectId: string,
+  separator: CsvSeparator = "comma",
   now = new Date(),
 ): Promise<ProjectResult<ExportFile>> {
   return withProject(db, userId, projectId, EXPORT, async (trx, project) => {
@@ -363,9 +369,9 @@ export async function exportElementsCsv(
 
     await log(trx, userId, project.id, "export_elements_csv", "project", project.id);
     return done({
-      filename: `elements-${fileDate(now)}.csv`,
+      filename: `elements${csvFileSuffix(separator)}-${fileDate(now)}.csv`,
       mediaType: CSV_MEDIA_TYPE,
-      content: writeCsv([header, ...rows]),
+      content: writeCsv([header, ...rows], separator),
     });
   });
 }
@@ -447,6 +453,7 @@ export async function exportRatingsCsv(
   db: Kysely<DB>,
   userId: string,
   projectId: string,
+  separator: CsvSeparator = "comma",
   now = new Date(),
 ): Promise<ProjectResult<ExportFile>> {
   return withProject(db, userId, projectId, EXPORT, async (trx, project) => {
@@ -491,9 +498,9 @@ export async function exportRatingsCsv(
 
     await log(trx, userId, project.id, "export_ratings_csv", "project", project.id);
     return done({
-      filename: `ratings-${fileDate(now)}.csv`,
+      filename: `ratings${csvFileSuffix(separator)}-${fileDate(now)}.csv`,
       mediaType: CSV_MEDIA_TYPE,
-      content: writeCsv(rows),
+      content: writeCsv(rows, separator),
     });
   });
 }

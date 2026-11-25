@@ -16,6 +16,12 @@ export type CreateProjectInput = z.infer<typeof createProjectInput>;
 
 export const projectInput = z.object({ projectId: idSchema });
 
+/** A CSV export: the project and the separator, a comma unless the caller asks for a semicolon (EX1). */
+export const csvExportInput = z.object({
+  projectId: idSchema,
+  separator: z.enum(["comma", "semicolon"]).default("comma"),
+});
+
 export const createGroupInput = z.object({
   projectId: idSchema,
   name: name(GROUP_NAME_MAX),
