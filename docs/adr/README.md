@@ -29,6 +29,8 @@ Each significant architecture or technology decision is recorded here in the
 | [0018](0018-simpler-pages.md) | Simpler pages: where you are, one task, fields in their phase | Proposed |
 | [0019](0019-task-centred-navigation.md) | Task-centred navigation: a project home and a facilitator Overview | Proposed |
 | [0020](0020-discover-first-look-board-and-grouping.md) | Discover: a first look at existing models, a question board, grouping by the facilitator | Proposed |
+| [0021](0021-model-structure-after-zib-2.md) | The model gets explicit structure, after zib 2.0 | Accepted |
+| [0022](0022-five-tabs-and-linked-phase-step.md) | Five facilitator tabs, a linked current phase step and back links that name their target | Proposed |
 
 ## Adding a record
 

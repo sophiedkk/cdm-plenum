@@ -3,7 +3,7 @@
 
 # 0019. Task-centred navigation: a project home and a facilitator Overview
 
-- Status: Proposed
+- Status: Proposed; partly superseded by [ADR 0022](0022-five-tabs-and-linked-phase-step.md) (the fixed tab list and the status-only current step)
 - Date: 2026-11-20
 - Deciders: owner (U1 to U4 of the UI/UX analysis, approved on the clickable
   prototype on 2026-11-20), maintainer (design)

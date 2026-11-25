@@ -45,11 +45,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         locale,
         `/projects/${project.projectId}/members`,
       );
-      const tab = page
+      const menu = page
         .getByRole("navigation", { name: text.projects_tabs_label })
-        .getByRole("link", { name: text.projects_tab_settings, exact: true });
-      await expectHydrated(tab);
-      await tab.click();
+        .getByRole("button", { name: text.projects_tab_project });
+      await expectHydrated(menu);
+      await menu.click();
+      await page.getByRole("menuitem", { name: text.projects_tab_settings, exact: true }).click();
       await expect(page).toHaveURL(
         (url) => url.pathname === `/projects/${project.projectId}/settings`,
       );

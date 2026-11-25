@@ -24,4 +24,9 @@ describe("currentTab", () => {
     expect(currentTab(on(`${ROOT}/rounds`))).toBe("rounds");
     expect(currentTab(on(`${ROOT}/brainstorm`))).toBe("elements");
   });
+
+  it("marks the Project menu on People and Settings, which have no tab (ADR 0022)", () => {
+    expect(currentTab(on(`${ROOT}/members`))).toBe("project");
+    expect(currentTab(on(`${ROOT}/settings`))).toBe("project");
+  });
 });

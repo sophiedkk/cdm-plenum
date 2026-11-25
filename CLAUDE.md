@@ -125,17 +125,21 @@ page from these patterns; each has a real use and a test you can copy.
   in the one column `PAGE_COLUMN` of the app shell, so the left edge never
   moves; a page narrows only its reading text, on that same left edge,
   and never centres itself.
-- **Project navigation (ADR 0019):** the header
-  (`src/components/projects/project-header.tsx`) shows a back link, the
-  name and the phase steps, which show the status only and link nowhere
-  (owner decision 2026-11-20). A participant has no tabs: the project index
+- **Project navigation (ADR 0019, ADR 0022):** the header
+  (`src/components/projects/project-header.tsx`) shows a back link that names
+  its target ("Back to your task" on a participant's step page), the
+  name and the phase steps: a done step links to its recap, the current step
+  to the phase home (the project index), later steps are plain text (owner
+  decision 2026-11-25). A participant has no tabs: the project index
   route is their home (`TaskCard`, `DecidedSoFarSection`, `ProjectPages`,
   `AboutProject`); `homePages` in `src/lib/project-home.ts` decides which
   earlier pages the home links, and every other page links back to the
   home. The facilitator gets
-  `ProjectTabs`, fixed as Overview, Scope, Elements, Rounds, Details,
-  People, Settings; a page without its own tab (export, brainstorm, import) marks
-  the tab it belongs to in `UNDER`. In hand-off the downloads sit on the
+  `ProjectTabs`, fixed as Overview, Scope, Elements, Rounds, Details and a
+  Project menu with People and Settings (at most five tabs; the trigger is
+  current on those pages and the current tab scrolls into view); a page
+  without its own tab (export, brainstorm, import) marks the tab it belongs
+  to in `UNDER`. In hand-off the downloads sit on the
   hand-off page (`handoff.tsx`, step `handoff`) with the model for every
   member; `ExportList` is the one list, and the export URL leads there in
   that phase. Overview is the index route for the
