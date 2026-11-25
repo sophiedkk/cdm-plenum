@@ -11,6 +11,7 @@ import pg from "pg";
 import en from "../../messages/en.json" with { type: "json" };
 import nl from "../../messages/nl.json" with { type: "json" };
 import type { ProjectPhase } from "../../src/lib/project-phases.ts";
+import { verifyPath } from "../../src/lib/sign-in.ts";
 import type { DB } from "../../src/server/db/schema.gen.ts";
 import { invite } from "../../src/server/invitations/queries.ts";
 import {
@@ -124,8 +125,11 @@ export async function expectHydrated(element: Locator): Promise<void> {
     .toBe(true);
 }
 
-/** Asks for a sign-in link on /sign-in and returns the link from the e-mail in Mailpit. */
-export async function requestSignInLink(
+/**
+ * Asks for a sign-in link and returns the link in the e-mail: the confirmation page (PR1).
+ * Opening it signs nobody in; the button on it does.
+ */
+export async function requestConfirmLink(
   page: Page,
   email: string,
   locale: Locale = "en",
@@ -141,11 +145,28 @@ export async function requestSignInLink(
 }
 
 /**
- * Signs in with the e-mail link and returns once the app has landed on its start page. Pass the
- * locale of the browser, so the sign-in form is found by its text in that language.
+ * Asks for a sign-in link and returns the verification URL the confirmation button opens, for
+ * specs that sign in by `page.goto`. The specs of the sign-in page itself click the button.
+ */
+export async function requestSignInLink(
+  page: Page,
+  email: string,
+  locale: Locale = "en",
+): Promise<string> {
+  const confirm = new URL(await requestConfirmLink(page, email, locale));
+  return `${confirm.origin}${verifyPath(Object.fromEntries(confirm.searchParams))}`;
+}
+
+/**
+ * Signs in through the e-mail link and its confirmation button, and returns once the app has
+ * landed on its start page. Pass the locale of the browser, so the sign-in form is found by its
+ * text in that language.
  */
 export async function signIn(page: Page, email: string, locale: Locale = "en"): Promise<void> {
-  await page.goto(await requestSignInLink(page, email, locale));
+  await page.goto(await requestConfirmLink(page, email, locale));
+  const button = page.getByRole("button", { name: MESSAGES[locale].sign_in_confirm_button });
+  await expectHydrated(button);
+  await button.click();
   // A signed-in user is sent from / to their projects.
   await expect(page).toHaveURL((url) => url.pathname === "/projects");
   expect(await sessionEmail(page)).toBe(email);

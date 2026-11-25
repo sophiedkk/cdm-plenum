@@ -7,6 +7,8 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { getAuth } from "./auth.ts";
+import { getDb } from "./db/index.ts";
+import { readSession } from "./session/read.ts";
 
 export class AuthError extends Error {
   readonly status = 401;
@@ -41,7 +43,7 @@ export const logFailures = createMiddleware({ type: "function" }).server(
 export const requireSession = createMiddleware({ type: "function" })
   .middleware([logFailures])
   .server(async ({ next }) => {
-    const session = await getAuth().api.getSession({ headers: getRequestHeaders() });
+    const session = await readSession(getAuth(), getDb(), getRequestHeaders());
     if (!session) throw new AuthError();
     return next({ context: { userId: session.user.id } });
   });

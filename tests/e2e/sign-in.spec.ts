@@ -11,7 +11,7 @@ import {
   expectHydrated,
   type Locale,
   MESSAGES,
-  requestSignInLink,
+  requestConfirmLink,
   seedParticipant,
   seedProject,
   sessionEmail,
@@ -47,6 +47,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expectAxeClean(page);
     });
 
+    test("the confirmation page is axe-clean and names no account", async ({ page, db }) => {
+      const project = await seedProject(db);
+      await page.goto(await requestConfirmLink(page, project.facilitator.email, locale));
+      await expect(page.getByRole("heading", { level: 1, name: text.sign_in_title })).toBeVisible();
+      await expect(page.getByRole("button", { name: text.sign_in_confirm_button })).toBeVisible();
+      await expect(page.locator("body")).not.toContainText(project.facilitator.email);
+      await expectAxeClean(page);
+    });
+
     test("shows a refused link accessibly", async ({ page }) => {
       await page.goto("/sign-in?error=INVALID_TOKEN");
       await expect(page.getByRole("alert")).toHaveText(text.sign_in_error_invalid_link);
@@ -65,15 +74,44 @@ test("a participant who joined through an invitation signs in", async ({ page, d
   await signIn(page, participant);
 });
 
+test("a scanner that opens the link leaves it usable until the button is pressed", async ({
+  page,
+  db,
+}) => {
+  const project = await seedProject(db);
+  const link = await requestConfirmLink(page, project.facilitator.email);
+  // A mail scanner fetches the link without a browser, more than once.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    expect((await page.request.get(link)).ok()).toBe(true);
+  }
+  expect(await sessionEmail(page)).toBeNull();
+
+  await page.goto(link);
+  const button = page.getByRole("button", { name: MESSAGES.en.sign_in_confirm_button });
+  await expectHydrated(button);
+  await button.click();
+  await expect(page).toHaveURL((url) => url.pathname === "/projects");
+  expect(await sessionEmail(page)).toBe(project.facilitator.email);
+});
+
 test("a used sign-in link is refused", async ({ page, db }) => {
   const project = await seedProject(db);
-  const link = await requestSignInLink(page, project.facilitator.email);
+  const link = await requestConfirmLink(page, project.facilitator.email);
   await page.goto(link);
+  await page.getByRole("button", { name: MESSAGES.en.sign_in_confirm_button }).click();
+  await expect(page).toHaveURL((url) => url.pathname === "/projects");
   expect(await sessionEmail(page)).toBe(project.facilitator.email);
 
   await page.context().clearCookies();
   await page.goto(link);
+  await page.getByRole("button", { name: MESSAGES.en.sign_in_confirm_button }).click();
   await expect(page).toHaveURL((url) => url.pathname === "/sign-in");
   await expect(page.getByRole("alert")).toHaveText(MESSAGES.en.sign_in_error_invalid_link);
   expect(await sessionEmail(page)).toBeNull();
+});
+
+test("a confirmation page without a token shows the refused-link message", async ({ page }) => {
+  await page.goto("/sign-in/confirm");
+  await expect(page.getByRole("alert")).toHaveText(MESSAGES.en.sign_in_error_invalid_link);
+  await expectAxeClean(page);
 });

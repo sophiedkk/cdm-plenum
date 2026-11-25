@@ -6,7 +6,7 @@
 import { randomBytes } from "node:crypto";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { SIGN_UP_REFUSED } from "@/lib/sign-in";
+import { SIGN_UP_REFUSED, verifyPath } from "@/lib/sign-in";
 import { grantAppRole } from "./admin/app-roles.ts";
 import {
   createAuth,
@@ -60,12 +60,18 @@ async function requestLink(email: string): Promise<number> {
   return response.status;
 }
 
-/** The sign-in link in the last e-mail to `email`. */
-function linkFor(email: string): string {
+/** The link in the last e-mail to `email`: our confirmation page. */
+function confirmLinkFor(email: string): string {
   const message = sent.findLast((m) => m.to === email);
   const url = message?.text.match(/https?:\/\/\S+/)?.[0];
   if (!url) throw new Error(`no sign-in link for ${email}`);
   return url;
+}
+
+/** What the confirmation button opens for the link in the last e-mail to `email`. */
+function linkFor(email: string): string {
+  const search = Object.fromEntries(new URL(confirmLinkFor(email)).searchParams);
+  return `${BASE}${verifyPath(search)}`;
 }
 
 /** Opens a sign-in link; returns where it redirects and whether it set a session cookie. */
@@ -172,6 +178,32 @@ describe("sign-in by e-mail link", () => {
     expect((await openLink(linkFor("new@example.test"))).session).toBe(true);
   });
 
+  it("e-mails our confirmation page, and opening it leaves the link usable", async () => {
+    await invited("new@example.test");
+    await requestLink("new@example.test");
+    const confirm = new URL(confirmLinkFor("new@example.test"));
+    expect(confirm.origin + confirm.pathname).toBe(`${BASE}/sign-in/confirm`);
+    expect(confirm.searchParams.get("callbackURL")).toBe("/");
+    expect(confirm.searchParams.get("errorCallbackURL")).toBe("/sign-in");
+    const tokens = () =>
+      db
+        .selectFrom("verification")
+        .select("id")
+        .where("identifier", "like", "magic-link:%")
+        .execute();
+    expect(await tokens()).toHaveLength(1);
+    // The page is ours, not better-auth's: a scanner opening it does not reach the verification.
+    expect(await tokens()).toHaveLength(1);
+    // Only the button's verification signs in, and only once.
+    const link = linkFor("new@example.test");
+    expect(link).toMatch(/^http:\/\/localhost:3000\/api\/auth\/magic-link\/verify\?token=/);
+    expect((await openLink(link)).session).toBe(true);
+    expect(await tokens()).toHaveLength(0);
+    const again = await openLink(link);
+    expect(again.session).toBe(false);
+    expect(new URL(again.location).searchParams.get("error")).toBe("INVALID_TOKEN");
+  });
+
   it("writes the link to the log without SMTP in development", async () => {
     auth = createAuth(ENV, db, {
       mailer: null,
@@ -181,7 +213,7 @@ describe("sign-in by e-mail link", () => {
     await invited("new@example.test");
     await requestLink("new@example.test");
     expect(logged).toHaveLength(1);
-    expect(logged[0]).toContain(`${BASE}/api/auth/magic-link/verify?token=`);
+    expect(logged[0]).toContain(`${BASE}/sign-in/confirm?token=`);
     expect(logged[0]).not.toContain("new@example.test");
   });
 });
