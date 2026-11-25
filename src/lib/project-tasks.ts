@@ -26,6 +26,17 @@ export interface OverviewRound {
   raters: number | null;
 }
 
+/** What waits for a participant in the detail phase. */
+export interface DetailCounts {
+  open: number;
+  answered: number;
+  toReview: number;
+  /** An architect's structures and tree still to propose. */
+  toPropose: number;
+  /** A terminologist's code proposals still to make. */
+  toProposeCodes: number;
+}
+
 /** The counts the overview needs. Nothing in it names a person (Q-ANON-1). */
 export interface ProjectOverview {
   phase: ProjectPhase;
@@ -39,8 +50,8 @@ export interface ProjectOverview {
   /** The check of the groups (EL24): whether the facilitator asked, and the member is done. */
   groupCheck: { asked: boolean; done: boolean };
   round: OverviewRound | null;
-  /** The open structure proposals and how many the member answered in their current version (DT2). */
-  detail: { open: number; answered: number; toReview: number };
+  /** The open proposals, how many the member answered in their current version (DT2), and what an expert has to review or propose (DT1, DT4). */
+  detail: DetailCounts;
   /** The newest closed round, whose results every member may read (DE5). */
   lastClosedRoundId: string | null;
 }
@@ -67,7 +78,7 @@ export type ParticipantTask =
   | { kind: "rated_all"; roundId: string; number: number; total: number; closesAt: string }
   | { kind: "round_closing"; number: number }
   | { kind: "wait" }
-  | { kind: "detail"; open: number; answered: number; toReview: number }
+  | ({ kind: "detail" } & DetailCounts)
   | { kind: "detail_answered" }
   | { kind: "handoff"; resultsRoundId: string | null };
 
@@ -118,12 +129,13 @@ export function participantTask(overview: ProjectOverview): ParticipantTask {
         };
       }
       // NOTE: DT2. Only a participant answers; the facilitator settles.
-      const { open, answered, toReview } = overview.detail;
-      if (overview.role !== "participant" || (open === 0 && toReview === 0)) {
+      const { open, answered, toReview, toPropose, toProposeCodes } = overview.detail;
+      const proposing = toPropose + toProposeCodes;
+      if (overview.role !== "participant" || (open === 0 && toReview === 0 && proposing === 0)) {
         return { kind: "wait" };
       }
       // NOTE: DT4. A terminologist's review comes before the group's answers, so it is a task.
-      return answered >= open && toReview === 0
+      return answered >= open && toReview === 0 && proposing === 0
         ? { kind: "detail_answered" }
         : { kind: "detail", ...overview.detail };
     }

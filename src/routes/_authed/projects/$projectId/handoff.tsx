@@ -6,6 +6,7 @@ import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { ExportList } from "@/components/export/export-list";
 import { ModelSummary } from "@/components/projects/phase-recap";
 import { projectTitle } from "@/components/projects/project-title";
+import { TaskBar } from "@/components/projects/task-bar";
 import { NotFoundState, PageHeader } from "@/components/shell/route-states";
 import { m } from "@/i18n/messages";
 import { requireStep } from "@/lib/guards";
@@ -42,6 +43,16 @@ function Handoff() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader level={2} title={m.projects_phase_handoff()} />
+      {project.role !== "facilitator" && (
+        <TaskBar
+          projectId={projectId}
+          done={{
+            title: m.projects_bar_handoff_title(),
+            next: m.projects_bar_handoff_done(),
+          }}
+          filledBack
+        />
+      )}
       {project.role === "facilitator" && (
         <section aria-labelledby="handoff-downloads" className="flex max-w-3xl flex-col gap-3">
           <h3 id="handoff-downloads" className="text-lg font-semibold">

@@ -15,7 +15,7 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
     firstLook: { total: 0, answered: 0 },
     groupCheck: { asked: false, done: false },
     round: null,
-    detail: { open: 0, answered: 0, toReview: 0 },
+    detail: { open: 0, answered: 0, toReview: 0, toPropose: 0, toProposeCodes: 0 },
     lastClosedRoundId: null,
     ...changes,
   };
@@ -93,8 +93,20 @@ describe("participantTask (PR8)", () => {
 
   it("asks a participant to answer the open structure proposals in the detail phase (DT2)", () => {
     const detail = (open: number, answered: number) =>
-      participantTask(overview({ phase: "detail", detail: { open, answered, toReview: 0 } }));
-    expect(detail(3, 1)).toEqual({ kind: "detail", open: 3, answered: 1, toReview: 0 });
+      participantTask(
+        overview({
+          phase: "detail",
+          detail: { open, answered, toReview: 0, toPropose: 0, toProposeCodes: 0 },
+        }),
+      );
+    expect(detail(3, 1)).toEqual({
+      kind: "detail",
+      open: 3,
+      answered: 1,
+      toReview: 0,
+      toPropose: 0,
+      toProposeCodes: 0,
+    });
     expect(detail(3, 3)).toEqual({ kind: "detail_answered" });
     expect(detail(0, 0)).toEqual({ kind: "wait" });
   });
@@ -105,7 +117,7 @@ describe("participantTask (PR8)", () => {
       overview({
         phase: "detail",
         round: valueRound,
-        detail: { open: 3, answered: 0, toReview: 0 },
+        detail: { open: 3, answered: 0, toReview: 0, toPropose: 0, toProposeCodes: 0 },
       }),
     );
     expect(task).toEqual({
@@ -120,7 +132,7 @@ describe("participantTask (PR8)", () => {
   });
 
   it("goes back to the answers once every value is rated, or the round waits to close (DT3)", () => {
-    const detail = { open: 3, answered: 0, toReview: 0 };
+    const detail = { open: 3, answered: 0, toReview: 0, toPropose: 0, toProposeCodes: 0 };
     const rated = round({ kind: "values", elements: 6, rated: 6 });
     expect(participantTask(overview({ phase: "detail", round: rated, detail }))).toMatchObject({
       kind: "detail",
@@ -140,9 +152,28 @@ describe("participantTask (PR8)", () => {
 
   it("keeps a terminologist's task open while codes wait for their review (DT4)", () => {
     const task = participantTask(
-      overview({ phase: "detail", detail: { open: 2, answered: 2, toReview: 1 } }),
+      overview({
+        phase: "detail",
+        detail: { open: 2, answered: 2, toReview: 1, toPropose: 0, toProposeCodes: 0 },
+      }),
     );
-    expect(task).toEqual({ kind: "detail", open: 2, answered: 2, toReview: 1 });
+    expect(task).toEqual({
+      kind: "detail",
+      open: 2,
+      answered: 2,
+      toReview: 1,
+      toPropose: 0,
+      toProposeCodes: 0,
+    });
+  });
+
+  it("keeps an expert's task open while proposals wait to be made (DT1, DT4)", () => {
+    const base = { open: 0, answered: 0, toReview: 0, toPropose: 0, toProposeCodes: 0 };
+    const task = (detail: typeof base) => participantTask(overview({ phase: "detail", detail }));
+    expect(task({ ...base, toPropose: 2 })).toEqual({ kind: "detail", ...base, toPropose: 2 });
+    expect(task({ ...base, open: 1, answered: 1, toProposeCodes: 1 })).toMatchObject({
+      kind: "detail",
+    });
   });
 
   it("gives the facilitator no answer task in the detail phase: they settle (DT2)", () => {
@@ -150,7 +181,7 @@ describe("participantTask (PR8)", () => {
       overview({
         phase: "detail",
         role: "facilitator",
-        detail: { open: 3, answered: 0, toReview: 0 },
+        detail: { open: 3, answered: 0, toReview: 0, toPropose: 0, toProposeCodes: 0 },
       }),
     );
     expect(task).toEqual({ kind: "wait" });

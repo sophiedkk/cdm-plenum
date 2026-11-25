@@ -76,6 +76,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(page.getByRole("heading", { level: 3, name: "Cuff size" })).toHaveCount(0);
       const systolicCard = card(page, "Systolic");
       await expect(systolicCard).toContainText(text.details_no_proposal);
+      // The task bar counts what the architect still proposes: the structure and the tree (P1).
+      const architectBar = page.getByTestId("task-bar");
+      await expect(architectBar).toContainText(text.projects_bar_detail);
+      await expect(architectBar.getByRole("status")).toHaveText(
+        fill(text.projects_bar_to_propose, { count: 2 }),
+      );
       await expectAxeCleanInBothThemes(page);
       const proposeButton = systolicCard.getByRole("button", { name: text.details_propose });
       await expectHydrated(proposeButton);
@@ -94,6 +100,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(systolicCard).toContainText(fill(text.details_by_architecture, { version: 1 }));
       await expect(systolicCard).toContainText("1..1");
       await expect(systolicCard).toContainText("mm[Hg]; kPa");
+      await expect(architectBar.getByRole("status")).toHaveText(
+        [
+          fill(text.projects_bar_answered, { done: 0, total: 1 }),
+          fill(text.projects_bar_to_propose, { count: 1 }),
+        ].join(""),
+      );
 
       // The participant's home asks them to answer; they object with a reason.
       await switchUser(page, participant, locale, `/projects/${project.projectId}`);
@@ -102,6 +114,10 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       ).toBeVisible();
       await page.getByRole("link", { name: text.projects_task_detail_action }).click();
       await expect(page).toHaveURL((url) => url.pathname === detailsUrl);
+      const bar = page.getByTestId("task-bar");
+      await expect(bar.getByRole("status")).toHaveText(
+        fill(text.projects_bar_answered, { done: 0, total: 1 }),
+      );
       const object = card(page, "Systolic").getByRole("button", {
         name: new RegExp(`^${text.details_object}`),
       });
@@ -115,6 +131,10 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         .click();
       await expect(card(page, "Systolic")).toContainText(text.details_own_objected);
       await expect(card(page, "Systolic")).not.toContainText(text.details_address);
+      // Nothing is left: the bar is the done state, and the proposal stays open to change.
+      await expect(bar.getByRole("heading", { name: text.projects_bar_done_title })).toBeVisible();
+      await expect(bar.getByText(text.projects_bar_detail_done)).toBeVisible();
+      await expect(bar.getByRole("link", { name: text.projects_bar_back })).toBeVisible();
       await expectAxeCleanInBothThemes(page);
 
       // The facilitator reads the objection without a name, addresses it and settles.
@@ -135,6 +155,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         .fill("The unit belongs to the quantity type; terminology adds it.");
       await facilitatorCard.getByRole("button", { name: text.details_address_submit }).click();
       await expect(facilitatorCard).toContainText(text.details_addressed);
+      // The facilitator settles and has no task bar.
+      await expect(page.getByTestId("task-bar")).toHaveCount(0);
       await expectAxeCleanInBothThemes(page);
       await facilitatorCard.getByRole("button", { name: new RegExp(text.details_settle) }).click();
       await expect(facilitatorCard).toContainText(text.details_status_settled);
@@ -199,6 +221,10 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
       // The first terminologist proposes the codes.
       await signInTo(page, proposer, locale, detailsUrl);
+      // The bar counts the codes still to propose for the element with a settled structure (P1).
+      await expect(page.getByTestId("task-bar").getByRole("status")).toHaveText(
+        fill(text.projects_bar_to_propose_codes, { count: 1 }),
+      );
       const proposeButton = card(page, "Measurement site").getByRole("button", {
         name: new RegExp(`^${text.details_propose_codes}`),
       });
@@ -229,6 +255,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
       // The second terminologist approves.
       await switchUser(page, reviewer, locale, detailsUrl);
+      await expect(page.getByTestId("task-bar").getByRole("status")).toHaveText(
+        fill(text.projects_bar_to_review, { count: 1 }),
+      );
       const approve = card(page, "Measurement site").getByRole("button", {
         name: new RegExp(`^${text.details_review_approve}`),
       });

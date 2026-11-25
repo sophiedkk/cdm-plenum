@@ -74,7 +74,7 @@ function overview(changes: Partial<ProjectOverview> = {}): ProjectOverview {
     firstLook: { total: 0, answered: 0 },
     groupCheck: { asked: false, done: false },
     round: ROUND,
-    detail: { open: 0, answered: 0, toReview: 0 },
+    detail: { open: 0, answered: 0, toReview: 0, toPropose: 0, toProposeCodes: 0 },
     lastClosedRoundId: "round-1",
     ...changes,
   };
@@ -220,6 +220,85 @@ describe("TaskCard (PR8)", () => {
     const card = screen.getByRole("region", { name: "Your turn: add elements" });
     expect(card.querySelector("dd")?.textContent).toBe("3");
     expect(within(card).getByRole("link").getAttribute("href")).toBe("/projects/p1/brainstorm");
+  });
+
+  it("says in one sentence what to do, under each heading (PR8)", () => {
+    const { unmount } = render(<TaskCard projectId="p1" overview={overview()} />);
+    expect(
+      screen.getByText("Rate whether each element of round 2 belongs in the data model."),
+    ).toBeTruthy();
+    unmount();
+    render(<TaskCard projectId="p1" overview={overview({ phase: "scope", round: null })} />);
+    expect(screen.getByText("Read the scope and comment where you miss something.")).toBeTruthy();
+    expect(screen.getByText("Nothing else is needed until the next phase starts.")).toBeTruthy();
+  });
+
+  it("adds a done line to discover once a step is finished, not before (PR8)", () => {
+    const line = "You are up to date.";
+    const { unmount } = render(
+      <TaskCard projectId="p1" overview={overview({ phase: "discover", round: null })} />,
+    );
+    expect(screen.queryByText(new RegExp(line))).toBeNull();
+    unmount();
+    render(
+      <TaskCard
+        projectId="p1"
+        overview={overview({
+          phase: "discover",
+          round: null,
+          firstLook: { total: 2, answered: 2 },
+        })}
+      />,
+    );
+    expect(screen.getByText(new RegExp(line))).toBeTruthy();
+  });
+
+  it("counts what an architect or terminologist still has to propose, next to the answers (DT1, DT4)", () => {
+    render(
+      <TaskCard
+        projectId="p1"
+        overview={overview({
+          phase: "detail",
+          round: null,
+          detail: { open: 3, answered: 1, toReview: 2, toPropose: 4, toProposeCodes: 5 },
+        })}
+      />,
+    );
+    const card = screen.getByRole("region", {
+      name: "Your turn: check the structure of the elements",
+    });
+    const facts = new Map(
+      [...card.querySelectorAll("dt")].map((term) => [
+        term.textContent,
+        term.nextElementSibling?.textContent,
+      ]),
+    );
+    expect(Object.fromEntries(facts)).toEqual({
+      Proposals: "3",
+      Answered: "1",
+      "To propose": "4",
+      "Codes to propose": "5",
+      "Codes to review": "2",
+    });
+  });
+
+  it("keeps an expert's card when only proposals are left, without answer counts (DT1)", () => {
+    render(
+      <TaskCard
+        projectId="p1"
+        overview={overview({
+          phase: "detail",
+          round: null,
+          detail: { open: 0, answered: 0, toReview: 0, toPropose: 2, toProposeCodes: 0 },
+        })}
+      />,
+    );
+    const card = screen.getByRole("region", {
+      name: "Your turn: check the structure of the elements",
+    });
+    expect([...card.querySelectorAll("dt")].map((term) => term.textContent)).toEqual([
+      "To propose",
+    ]);
   });
 
   it("asks whether elements belong, not how important they are", () => {

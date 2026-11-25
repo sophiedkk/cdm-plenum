@@ -413,11 +413,15 @@ describe("the counts of the detail phase", () => {
       open: 1,
       answered: 1,
       toReview: 0,
+      toPropose: 0,
+      toProposeCodes: 0,
     });
     expect(await ownDetailProgress(db, m.projectId, m.otherParticipant)).toEqual({
       open: 1,
       answered: 0,
       toReview: 0,
+      toPropose: 0,
+      toProposeCodes: 0,
     });
   });
 });

@@ -8,6 +8,7 @@ import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { z } from "zod";
 import { dataTypeText } from "@/components/board/element-details";
 import { projectTitle } from "@/components/projects/project-title";
+import { TaskBar } from "@/components/projects/task-bar";
 import type { ElementDetails } from "@/components/rounds/detail-flags";
 import { ProposeSection } from "@/components/rounds/proposals";
 import { RatingCards, shownCard } from "@/components/rounds/rating-cards";
@@ -21,6 +22,7 @@ import { m } from "@/i18n/messages";
 import { formatCardinality } from "@/lib/cardinality";
 import { detailFieldsShown } from "@/lib/phase-access";
 import { mayRate } from "@/lib/project-roles";
+import { ratingProgress } from "@/lib/task-progress";
 import type { BoardElement } from "@/server/elements/queries";
 import { projectKeys, projectQueryOptions } from "@/server/projects/query-options";
 import type { OwnFlag } from "@/server/rounds/flags";
@@ -136,6 +138,11 @@ function RatePage() {
   const boardElements = new Map(board.map((element) => [element.id, element]));
   const queryKey = myRatingsQueryOptions(projectId, roundId).queryKey;
   const total = elements.length;
+  // The count lives in the bar while the member can rate; a closed round keeps it in the header.
+  const bar = editable ? ratingProgress(rated, total) : null;
+  const progress = isValues
+    ? m.rounds_value_rate_progress({ rated, total })
+    : m.rounds_rate_progress({ rated, total });
   const shown = shownCard(card, total);
   const navigate = useNavigate({ from: Route.fullPath });
 
@@ -167,11 +174,7 @@ function RatePage() {
           <span>
             {m.rounds_closes_at_short()} <DateTime value={round.closesAt} />
           </span>
-          <span>
-            {isValues
-              ? m.rounds_value_rate_progress({ rated, total })
-              : m.rounds_rate_progress({ rated, total })}
-          </span>
+          {!bar && <span>{progress}</span>}
           <span className="flex items-center gap-2">
             {round.facilitatorSeesRaters ? (
               <EyeIcon aria-hidden="true" className="size-4 shrink-0" />
@@ -184,6 +187,16 @@ function RatePage() {
           </span>
         </p>
       </div>
+      {bar && (
+        <TaskBar
+          projectId={projectId}
+          sentence={
+            isValues ? m.projects_bar_rate_values() : m.projects_task_rate({ number: round.number })
+          }
+          progress={bar.progress ? [progress] : []}
+          done={bar.done ? { next: m.projects_bar_rate_done() } : null}
+        />
+      )}
       {!canRate && (
         <Alert>
           <AlertTitle>{m.rounds_rate_no_group_title()}</AlertTitle>

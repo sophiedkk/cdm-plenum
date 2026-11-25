@@ -135,10 +135,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       );
       await expect(a.page.getByText(text.board_brainstorm_purpose_private)).toBeVisible();
       await expect(a.page.getByText(fill(text.board_strip_own, { count: 0 }))).toBeVisible();
+      // The task bar counts what A added and never says they are done: adding is open-ended (P1).
+      const bar = a.page.getByTestId("task-bar");
+      await expect(bar.getByRole("status")).toHaveText(fill(text.projects_bar_added, { count: 0 }));
       await expectAxeCleanInBothThemes(a.page);
       await quickAdd(a.page, text, recorded, "Systolic pressure");
       await quickAdd(a.page, text, method, "Cuff size");
       await expect(a.page.getByText(fill(text.board_strip_own, { count: 2 }))).toBeVisible();
+      await expect(bar.getByRole("status")).toHaveText(fill(text.projects_bar_added, { count: 2 }));
+      await expect(bar.getByRole("heading")).toHaveCount(0);
       // The task card on the home counts the participant's own elements.
       await a.page.getByRole("link", { name: text.projects_back_home }).click();
       await expect(

@@ -197,6 +197,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         name: fill(text.projects_home_turn_rate, { number: 2 }),
       });
       await expect(card.locator("time")).toHaveCount(1);
+      // The card says in one sentence what to do (PR8).
+      await expect(card).toContainText(fill(text.projects_task_rate, { number: 2 }));
       const start = card.getByRole("link", { name: text.projects_home_rate_start });
       await expect(start).toBeInViewport();
 

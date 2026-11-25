@@ -164,7 +164,8 @@ Then work through these steps:
    with its elements on the list. Three participants took the first look, so
    the Elements tab shows their answers counted per element; five of eight
    brainstormed privately, with "Heart rate" twice. Switch person to
-   `gp.a@example.test`, who has not taken the first look yet. "Your turn" starts the first look; answer a few, then
+   `gp.a@example.test`, who has not taken the first look yet. "Your turn" starts the first look; the task bar
+   under the title counts the answers ("1 of 3 looked at") and turns into "You are done" after the last one. Answer a few, then
    "Add what is missing" opens the board with one column per question, the
    archetype's elements dashed and the others' elements as a count. Add one
    in a column with Enter. Tick "Refers to another model" under a column's
@@ -219,8 +220,8 @@ Then work through these steps:
    shows the model without any download.
 7. **As participant,** switch person to `nurse.a@example.test`.
    The project list shows what waits per project. Open Blood pressure: its
-   home shows "Your turn: rate round 2" and what is decided so far. Rate the
-   two elements. You should see no other participant's ratings, and no
+   home shows "Your turn: rate round 2" with its sentence and closing date, and what is
+   decided so far. Rate the two elements; the task bar on the rating page counts them and ends in "You are done". You should see no other participant's ratings, and no
    names unless the facilitator turns that setting on. "About this project"
    at the bottom shows the groups and "Leave project".
 8. Switch the language to Dutch and repeat a few steps.
