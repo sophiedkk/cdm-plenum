@@ -227,6 +227,13 @@ describe("TaskCard (PR8)", () => {
     expect(document.body.textContent).not.toMatch(/important/);
   });
 
+  it("links the hand-off page from the one line in hand-off (PR4)", () => {
+    render(<TaskCard projectId="p1" overview={overview({ phase: "handoff" })} />);
+    expect(screen.getByRole("link", { name: "View the agreed model" }).getAttribute("href")).toBe(
+      "/projects/p1/handoff",
+    );
+  });
+
   it("shows one line and no card or button when nothing waits", () => {
     render(<TaskCard projectId="p1" overview={overview({ round: null })} />);
     expect(screen.queryByRole("region")).toBeNull();

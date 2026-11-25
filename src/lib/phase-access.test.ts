@@ -32,14 +32,14 @@ describe("the phase table (PR9)", () => {
       PROJECT_STEPS.map((step) => participantAccess(phase, step)),
     ]);
     // Steps in order: scope, brainstorm, board, rounds, export, members, settings, models,
-    // first_look, grouping, group_check, details.
+    // first_look, grouping, group_check, details, handoff.
     const H = "hidden";
     expect(table).toEqual([
-      ["scope", ["comment", H, H, H, H, "read", H, H, H, H, H, H]],
-      ["discover", ["read", "add", "comment", H, H, "read", H, H, "answer", H, "answer", H]],
-      ["decide", ["read", H, "read", "rate", H, "read", H, H, H, H, H, H]],
-      ["detail", ["read", H, "read", "read", H, "read", H, H, H, H, H, "answer"]],
-      ["handoff", ["read", H, "read", "read", H, "read", H, H, H, H, H, "read"]],
+      ["scope", ["comment", H, H, H, H, "read", H, H, H, H, H, H, H]],
+      ["discover", ["read", "add", "comment", H, H, "read", H, H, "answer", H, "answer", H, H]],
+      ["decide", ["read", H, "read", "rate", H, "read", H, H, H, H, H, H, H]],
+      ["detail", ["read", H, "read", "read", H, "read", H, H, H, H, H, "answer", H]],
+      ["handoff", ["read", H, "read", "read", H, "read", H, H, H, H, H, "read", "read"]],
     ]);
   });
 
@@ -48,6 +48,13 @@ describe("the phase table (PR9)", () => {
       for (const step of ["scope", "members"] as const) {
         expect(stepVisible("participant", phase, step)).toBe(true);
       }
+    }
+  });
+
+  it("shows the hand-off page to a participant in hand-off only, to the facilitator always (PR4)", () => {
+    for (const phase of PROJECT_PHASES) {
+      expect(stepVisible("participant", phase, "handoff")).toBe(phase === "handoff");
+      expect(stepVisible("facilitator", phase, "handoff")).toBe(true);
     }
   });
 
