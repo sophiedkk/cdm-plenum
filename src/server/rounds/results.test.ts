@@ -7,6 +7,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
+import { leaveProject } from "../projects/queries.ts";
 import {
   facilitatorWithProject,
   insertElement,
@@ -165,6 +166,57 @@ describe("closing a realistic round (DE5)", () => {
       .execute();
     rate = ok(await responseRate(db, facilitator, { projectId, roundId }, { now: new Date() }));
     expect(rate.total.invited).toBe(10);
+  });
+});
+
+describe("a participant who leaves (PR5, DE6, R-04)", () => {
+  // The clock of the closing is a test date two days ahead, so the leave is dated after it.
+  async function leaves(user: string, projectId: string, after: Date) {
+    expect((await leaveProject(db, user, projectId)).ok).toBe(true);
+    await db
+      .updateTable("team_member_left")
+      .set({ left_at: after })
+      .where("user_id", "=", user)
+      .execute();
+  }
+
+  it("keeps the rate of a closed round the same after a participant leaves", async () => {
+    const { facilitator, projectId, roundId, raters } = await realisticRound();
+    const closedAt = new Date(Date.now() + 2 * 86_400_000);
+    ok(await closeRound(db, facilitator, { projectId, roundId }, { now: closedAt }));
+    const before = ok(
+      await responseRate(db, facilitator, { projectId, roundId }, { now: closedAt }),
+    );
+    // g3 stopped halfway and n1 finished; both leave after the close.
+    await leaves(raters[0] ?? "", projectId, new Date(closedAt.getTime() + 1000));
+    await leaves(raters[6] ?? "", projectId, new Date(closedAt.getTime() + 1000));
+    const after = ok(
+      await responseRate(
+        db,
+        facilitator,
+        { projectId, roundId },
+        { now: new Date(closedAt.getTime() + 5000) },
+      ),
+    );
+    expect(after).toEqual(before);
+    expect(after.total).toEqual({ invited: 10, started: 10, completed: 9 });
+  });
+
+  it("counts only current participants in an open round", async () => {
+    const { facilitator, projectId, roundId, raters } = await realisticRound();
+    const now = new Date(Date.now() + 1000);
+    await leaves(raters[0] ?? "", projectId, new Date(now.getTime() - 500));
+    const rate = ok(await responseRate(db, facilitator, { projectId, roundId }, { now }));
+    expect(rate.total.invited).toBe(9);
+  });
+
+  it("does not count someone who left before the round closed", async () => {
+    const { facilitator, projectId, roundId, raters } = await realisticRound();
+    const closedAt = new Date(Date.now() + 2 * 86_400_000);
+    await leaves(raters[7] ?? "", projectId, new Date(closedAt.getTime() - 1000));
+    ok(await closeRound(db, facilitator, { projectId, roundId }, { now: closedAt }));
+    const rate = ok(await responseRate(db, facilitator, { projectId, roundId }, { now: closedAt }));
+    expect(rate.total.invited).toBe(9);
   });
 });
 

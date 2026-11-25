@@ -14,12 +14,13 @@ import { m } from "@/i18n/messages";
 import { requireStep } from "@/lib/guards";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import {
+  exportDecisionReportFn,
   exportElementsCsvFn,
   exportMindMapFn,
   exportRatingsCsvFn,
 } from "@/server/exports/functions";
 
-/** The exports of the project (EX1, EX2, EX4), for its facilitator only. */
+/** The exports of the project (EX1, EX2, EX3, EX4), for its facilitator only. */
 export const Route = createFileRoute("/_authed/projects/$projectId/export")({
   beforeLoad: requireStep("export"),
   head: ({ match }) => ({ meta: [{ title: projectTitle(match.context, m.export_title()) }] }),
@@ -106,6 +107,7 @@ function Export() {
   const exportElements = useServerFn(exportElementsCsvFn);
   const exportMindMap = useServerFn(exportMindMapFn);
   const exportRatings = useServerFn(exportRatingsCsvFn);
+  const exportReport = useServerFn(exportDecisionReportFn);
   const data = { projectId };
 
   return (
@@ -129,6 +131,12 @@ function Export() {
           title={m.export_ratings_title()}
           description={m.export_ratings_description()}
           run={() => exportRatings({ data })}
+        />
+        <ExportItem
+          id="export-decision-report"
+          title={m.export_decision_report_title()}
+          description={m.export_decision_report_description()}
+          run={() => exportReport({ data })}
         />
       </ul>
       <details className="text-sm">

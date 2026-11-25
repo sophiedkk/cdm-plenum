@@ -11,6 +11,14 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Decision report: the Export page offers "Decision report", a Markdown file
+  with the scope statement, the panel per stakeholder group, the consensus
+  rule and response rate of each round, the outcome per element and the
+  items that were excluded or merged. It follows the order of the ACCORD
+  reporting guideline, includes the detail of each element and marks open
+  codes, and shows value rounds as rounds of their own kind. A group of
+  fewer than 3 is not named: it is merged into "Other groups". The report
+  names no person.
 - Value rounds: in the Detail phase the facilitator can put the value list of
   a structure proposal to a rating round. "Rate the values in a round" on an
   element's card adds its values to a draft value round; the values of
@@ -179,6 +187,10 @@ the project uses [Semantic Versioning](https://semver.org/).
   your time zone in a cookie, so pages load with the right time. Only the
   first page in a new browser shows UTC for a moment.
 - The close button of a window reads "Sluiten" in Dutch instead of "Close".
+- The response rate of a closed round no longer changes when a participant
+  leaves the project later. A closed round counts the participants who were
+  in each group when it closed; an open round counts the current ones.
+  Participants who left before this fix are not restored.
 
 ## [0.2.0] - 2026-11-20
 

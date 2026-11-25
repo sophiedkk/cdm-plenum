@@ -7,6 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getDb } from "../db/index.ts";
 import { requireSession } from "../middleware.ts";
 import { projectInput } from "../projects/schemas.ts";
+import { exportDecisionReport } from "./decision-report.ts";
 import { exportElementsCsv, exportMindMap, exportRatingsCsv } from "./queries.ts";
 
 export const exportElementsCsvFn = createServerFn({ method: "POST" })
@@ -23,3 +24,8 @@ export const exportRatingsCsvFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(projectInput)
   .handler(({ data, context }) => exportRatingsCsv(getDb(), context.userId, data.projectId));
+
+export const exportDecisionReportFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(projectInput)
+  .handler(({ data, context }) => exportDecisionReport(getDb(), context.userId, data.projectId));

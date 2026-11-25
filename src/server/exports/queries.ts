@@ -29,15 +29,15 @@ const CSV_MEDIA_TYPE = "text/csv; charset=utf-8";
 // No media type is registered for FreeMind; this is the one FreeMind and Freeplane use.
 const FREEMIND_MEDIA_TYPE = "application/x-freemind";
 
-const EXPORT = { export: ["download"] } as const;
+export const EXPORT = { export: ["download"] } as const;
 
-type Db = Kysely<DB> | Transaction<DB>;
+export type Db = Kysely<DB> | Transaction<DB>;
 
-function fileDate(now: Date): string {
+export function fileDate(now: Date): string {
   return now.toISOString().slice(0, 10);
 }
 
-interface ElementRow {
+export interface ElementRow {
   id: string;
   name: string;
   description: string;
@@ -60,7 +60,7 @@ interface ElementRow {
 }
 
 /** The English name of a group: its own, or the name of the brainstorm question it stands for. */
-function exportGroupName(group: TreeGroup): string {
+export function exportGroupName(group: TreeGroup): string {
   if (group.name !== null) return group.name;
   return group.prompt === null ? "" : GROUP_NAMES_EN[group.prompt]();
 }
@@ -98,7 +98,7 @@ function treeCells(groups: readonly TreeGroup[], element: ElementRow): CsvCell[]
 }
 
 /** Every element of the project, merged ones included, ordered by name. Never the author. */
-async function elementRows(trx: Db, projectId: string): Promise<ElementRow[]> {
+export async function elementRows(trx: Db, projectId: string): Promise<ElementRow[]> {
   return trx
     .selectFrom("element")
     .leftJoin("element_ckm_link as link", "link.element_id", "element.id")
@@ -130,7 +130,7 @@ async function elementRows(trx: Db, projectId: string): Promise<ElementRow[]> {
 }
 
 /** The element a merged element ended up in, or null when the chain loops. */
-function survivor(byId: Map<string, ElementRow>, element: ElementRow): ElementRow | null {
+export function survivor(byId: Map<string, ElementRow>, element: ElementRow): ElementRow | null {
   const seen = new Set<string>();
   let current: ElementRow | undefined = element;
   while (current?.mergedInto) {
@@ -145,7 +145,7 @@ function survivor(byId: Map<string, ElementRow>, element: ElementRow): ElementRo
  * The openEHR and FHIR type of an element: from its data type key, or else the RM type of its CKM
  * link, which has no FHIR type when it is outside the list (ADR 0009).
  */
-function types(element: ElementRow): { rmType: string | null; fhirType: string | null } {
+export function types(element: ElementRow): { rmType: string | null; fhirType: string | null } {
   if (element.dataType !== null && isDataTypeKey(element.dataType)) {
     const type = dataTypeByKey(element.dataType);
     return { rmType: type.rmType, fhirType: type.fhirType };
@@ -160,11 +160,11 @@ function types(element: ElementRow): { rmType: string | null; fhirType: string |
  * A code as `system|code`, the token form of FHIR search
  * (<https://hl7.org/fhir/R4/search.html#token>); null without a code.
  */
-function token(system: string | null, code: string | null): string | null {
+export function token(system: string | null, code: string | null): string | null {
   return system !== null && code !== null ? `${system}|${code}` : null;
 }
 
-function cardinality(element: ElementRow): string | null {
+export function cardinality(element: ElementRow): string | null {
   if (element.minOccurs !== 0 && element.minOccurs !== 1) return null;
   return formatCardinality({ min: element.minOccurs, max: element.maxOccurs });
 }
@@ -174,6 +174,26 @@ function push<T>(map: Map<string, T[]>, key: string, value: T): void {
   const list = map.get(key);
   if (list) list.push(value);
   else map.set(key, [value]);
+}
+
+/**
+ * Per element whether its code proposal is settled; an element without a proposal has none.
+ * NOTE: DT4. Open codes do not hold up the hand-off; the exports mark them open.
+ */
+export async function codesStatuses(
+  trx: Db,
+  projectId: string,
+): Promise<Map<string | null, "open" | "settled">> {
+  const codeRows = await trx
+    .selectFrom("detail_proposal")
+    .innerJoin("element", "element.id", "detail_proposal.element_id")
+    .select(["detail_proposal.element_id as elementId", "detail_proposal.settled_at"])
+    .where("element.project_id", "=", projectId)
+    .where("detail_proposal.kind", "=", "terminology")
+    .execute();
+  return new Map(
+    codeRows.map((row) => [row.elementId, row.settled_at === null ? "open" : "settled"]),
+  );
 }
 
 /**
@@ -261,17 +281,7 @@ export async function exportElementsCsv(
       push(valueCodes, row.elementId, token(row.codeSystem, row.code) ?? "");
     }
 
-    // NOTE: DT4. Open codes do not hold up the hand-off; the export marks them open.
-    const codeRows = await trx
-      .selectFrom("detail_proposal")
-      .innerJoin("element", "element.id", "detail_proposal.element_id")
-      .select(["detail_proposal.element_id as elementId", "detail_proposal.settled_at"])
-      .where("element.project_id", "=", project.id)
-      .where("detail_proposal.kind", "=", "terminology")
-      .execute();
-    const codesStatus = new Map(
-      codeRows.map((row) => [row.elementId, row.settled_at === null ? "open" : "settled"]),
-    );
+    const codesStatus = await codesStatuses(trx, project.id);
 
     const rounds = await trx
       .selectFrom("round")
