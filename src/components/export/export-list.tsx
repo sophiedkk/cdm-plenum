@@ -28,9 +28,12 @@ function ExportItem({
   title,
   description,
   level,
+  primary = false,
   run,
 }: Readonly<{
   id: string;
+  /** The one filled download of the list. */
+  primary?: boolean;
   level: 3 | 4;
   title: string;
   description: string;
@@ -64,7 +67,7 @@ function ExportItem({
       <div className="flex flex-wrap items-center gap-3">
         <Button
           type="button"
-          variant="outline"
+          variant={primary ? "default" : "outline"}
           disabled={busy}
           aria-busy={busy}
           aria-describedby={`${id}-description`}
@@ -96,17 +99,35 @@ function ExportItem({
   );
 }
 
-/** `level` is the heading level of each export: one below the heading of the section it sits in. */
-export function ExportList({ projectId, level }: Readonly<{ projectId: string; level: 3 | 4 }>) {
+/**
+ * `level` is the heading level of each export: one below the heading of the section it sits in.
+ * `primaryReport` makes the decision report the one filled download, for the hand-off.
+ */
+export function ExportList({
+  projectId,
+  level,
+  primaryReport = false,
+}: Readonly<{ projectId: string; level: 3 | 4; primaryReport?: boolean }>) {
   const exportElements = useServerFn(exportElementsCsvFn);
   const exportMindMap = useServerFn(exportMindMapFn);
   const exportRatings = useServerFn(exportRatingsCsvFn);
   const exportReport = useServerFn(exportDecisionReportFn);
   const data = { projectId };
+  const report = (
+    <ExportItem
+      level={level}
+      id="export-decision-report"
+      primary={primaryReport}
+      title={m.export_decision_report_title()}
+      description={m.export_decision_report_description()}
+      run={() => exportReport({ data })}
+    />
+  );
 
   return (
     <>
       <ul className="flex flex-col gap-4">
+        {primaryReport && report}
         <ExportItem
           level={level}
           id="export-elements"
@@ -142,13 +163,7 @@ export function ExportList({ projectId, level }: Readonly<{ projectId: string; l
           description={m.export_ratings_semicolon_description()}
           run={() => exportRatings({ data: { ...data, separator: "semicolon" } })}
         />
-        <ExportItem
-          level={level}
-          id="export-decision-report"
-          title={m.export_decision_report_title()}
-          description={m.export_decision_report_description()}
-          run={() => exportReport({ data })}
-        />
+        {!primaryReport && report}
       </ul>
       <details className="mt-4 text-sm">
         <summary className="cursor-pointer font-semibold">{m.export_csv_heading()}</summary>

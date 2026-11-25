@@ -7,8 +7,11 @@ import type { Cardinality } from "./cardinality.ts";
 import type { DataTypeKey } from "./data-types.ts";
 import type { ElementReference } from "./elements.ts";
 
-/** The consent answers (DT2), in the order of the buttons. */
-export const DETAIL_ANSWERS = ["agree", "objection"] as const;
+/**
+ * The consent answers (DT2), in the order of the buttons. "leave" hands the decision to the
+ * experts: it counts as answered, is no objection and no agreement (owner decision 2026-11-25).
+ */
+export const DETAIL_ANSWERS = ["agree", "objection", "leave"] as const;
 export type DetailAnswer = (typeof DETAIL_ANSWERS)[number];
 
 export function isDetailAnswer(value: unknown): value is DetailAnswer {
@@ -54,7 +57,7 @@ export interface ConsentState {
    * The answers to this version, for the facilitator and the proposers of its kind; null for
    * anyone else. The objections carry no name.
    */
-  answers: { agreed: number; objections: DetailObjection[] } | null;
+  answers: { agreed: number; left: number; objections: DetailObjection[] } | null;
   /** Objections to earlier versions with their notes (owner decision 2026-11-23); same readers. */
   history: DetailObjection[] | null;
 }
@@ -199,6 +202,11 @@ export interface DetailValueRound {
 
 /** The structure step of the detail phase for the signed-in member. */
 export interface DetailBoard {
+  /**
+   * Whether the member reads the technical form (RM and FHIR types, `min..max`, binding): the
+   * facilitator, an architect or a terminologist (P4, owner decision 2026-11-25).
+   */
+  modeller: boolean;
   /** Whether the member may propose a structure: the facilitator, or an architect (DT1). */
   mayPropose: boolean;
   /** Whether the member may propose codes: the facilitator, or a terminologist (DT4). */

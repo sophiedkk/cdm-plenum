@@ -28,9 +28,15 @@ function fill(template: string, values: Record<string, string | number>): string
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key]));
 }
 
-/** The card of one element on the detail page, by its heading. */
+/** The card of the element on its own page: the one region named for it. */
 function card(page: Page, name: string) {
-  return page.getByRole("listitem").filter({ has: page.getByRole("heading", { name }) });
+  return page.getByRole("region", { name, exact: true });
+}
+
+/** Opens an element's view from the Details list. */
+async function openElement(page: Page, name: string) {
+  await page.getByRole("link", { name, exact: true }).click();
+  await expect(card(page, name)).toBeVisible();
 }
 
 /**
@@ -84,6 +90,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
       // The facilitator puts both lists into one draft round from their cards.
       await signInTo(page, project.facilitator.email, locale, detailsUrl);
+      await openElement(page, "Severity");
       const start = card(page, "Severity").getByRole("button", {
         name: new RegExp(`^${text.details_value_round_start}`),
       });
@@ -94,6 +101,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
           name: fill(text.details_value_round_draft, { number: 2 }),
         }),
       ).toBeVisible();
+      await page.getByRole("link", { name: text.details_back_list }).click();
+      await openElement(page, "Measurement site");
       const add = card(page, "Measurement site").getByRole("button", {
         name: new RegExp(`^${fill(text.details_value_round_add, { number: 2 })}`),
       });
@@ -222,6 +231,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
 
       // The Details page shows the new version and links back to the round.
       await page.goto(detailsUrl);
+      await openElement(page, "Severity");
       const severityCard = card(page, "Severity");
       await expect(
         severityCard.getByRole("link", {

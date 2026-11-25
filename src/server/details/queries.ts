@@ -386,6 +386,7 @@ export async function detailBoard(
         answers: readsAnswers
           ? {
               agreed: current.filter((answer) => answer.answer === "agree").length,
+              left: current.filter((answer) => answer.answer === "leave").length,
               objections: current.filter((answer) => answer.answer === "objection").map(objection),
             }
           : null,
@@ -464,6 +465,7 @@ export async function detailBoard(
     });
 
     return done({
+      modeller: facilitator || architect || terminologist,
       mayPropose: mayProposeIn(project, architect),
       mayProposeCodes: mayProposeIn(project, terminologist),
       mayReview: terminologist && project.phase === DETAIL_PHASE,

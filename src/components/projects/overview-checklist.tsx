@@ -9,6 +9,7 @@ import { Link } from "@tanstack/react-router";
 import { CheckIcon, CircleIcon, SendIcon } from "lucide-react";
 import { type ReactNode, type Ref, useId, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ExportList } from "@/components/export/export-list";
 import { DateTime } from "@/components/status/date-time";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
@@ -543,7 +544,37 @@ export function PhaseMove({
   );
 }
 
-/** The Overview of the facilitator: the checklist of the phase, or the hand-off page in hand-off. */
+/**
+ * The facilitator's hand-off (F4, owner decision 2026-11-25): where the details stand in one line
+ * with the way to them, what happens next in a sentence, and the downloads with the decision
+ * report as the one filled button.
+ */
+function HandoffOverview({
+  projectId,
+  facts,
+}: Readonly<{ projectId: string; facts: OverviewFacts }>) {
+  const { settled, inModel, codable, codesSettled } = facts.detail;
+  return (
+    <div className="flex max-w-3xl flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-y py-4">
+        <p>
+          {m.projects_handoff_status({
+            settled,
+            total: inModel,
+            codes: Math.max(codable - codesSettled, 0),
+          })}
+        </p>
+        <ItemLink to="/projects/$projectId/details" projectId={projectId}>
+          {m.projects_check_detail_action()}
+        </ItemLink>
+      </div>
+      <p>{m.projects_handoff_next()}</p>
+      <ExportList projectId={projectId} level={3} primaryReport />
+    </div>
+  );
+}
+
+/** The Overview of the facilitator: the checklist of the phase, or the hand-off in hand-off. */
 export function OverviewChecklist({
   projectId,
   phase,
@@ -573,13 +604,7 @@ export function OverviewChecklist({
       {next ? (
         <Checklist projectId={projectId} items={items} reveal={reveal} remind={remind} />
       ) : (
-        <div>
-          <Button asChild size="lg">
-            <Link to="/projects/$projectId/handoff" params={{ projectId }}>
-              {m.projects_overview_export_action()}
-            </Link>
-          </Button>
-        </div>
+        <HandoffOverview projectId={projectId} facts={facts} />
       )}
       <PhaseMove phase={phase} move={move} onMoved={onMoved} />
     </section>

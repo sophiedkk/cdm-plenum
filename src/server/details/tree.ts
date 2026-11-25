@@ -248,6 +248,7 @@ async function consentOf(
     answers: readsAnswers
       ? {
           agreed: current.filter((answer) => answer.answer === "agree").length,
+          left: current.filter((answer) => answer.answer === "leave").length,
           objections: current.filter((answer) => answer.answer === "objection").map(objection),
         }
       : null,

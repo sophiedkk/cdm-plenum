@@ -4,6 +4,8 @@
 // Element cardinality (EL1): a minimum of 0 or 1 and a maximum of a positive number or many
 // (null). openEHR occurrences and FHIR element cardinality share the `min..max` form.
 
+import { m } from "@/i18n/messages";
+
 export interface Cardinality {
   min: 0 | 1;
   max: number | null;
@@ -32,4 +34,16 @@ export function parseCardinality(text: string): Cardinality | null {
   const min = match[1] === "1" ? 1 : 0;
   const max = match[2] === "*" || match[2] === undefined ? null : Number(match[2]);
   return cardinalityError(min, max) === null ? { min, max } : null;
+}
+
+/**
+ * Writes a cardinality in words for readers who are no modellers, such as "Required, once" (P4,
+ * owner decision 2026-11-25). The words come from the active locale.
+ */
+export function describeCardinality({ min, max }: Cardinality): string {
+  if (max === 1) return min === 1 ? m.details_card_required_once() : m.details_card_optional_once();
+  if (max === null) {
+    return min === 1 ? m.details_card_required_many() : m.details_card_optional_many();
+  }
+  return m.details_card_range({ min, max });
 }

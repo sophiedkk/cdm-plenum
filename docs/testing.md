@@ -186,8 +186,15 @@ Then work through these steps:
    Invite a new address and open the invitation from Mailpit in a private
    window; the sign-in link in the e-mail opens a page where you press
    "Sign in".
-5. **Detail:** open "Oxygen saturation (demo)". The Details tab lists the
-   three elements in the model. SpO2 is settled, and its LOINC code waits
+5. **Detail:** open "Oxygen saturation (demo)". The Details tab is a list:
+   the tree of the model first, then the three elements in the model, each
+   with its status and what asks for you, and the settled ones in a folded
+   "Done" group. A row opens that element's own page, with "Back to the list
+   of elements". As a nurse, "Leave to the experts" counts as answered and
+   the page then offers "Next element needing your answer"; a nurse reads
+   "Quantity" and "Required, once" while "For modellers" (the RM and FHIR
+   types, `min..max`, the binding) is folded, and the architect and the
+   facilitator see it open. SpO2 is settled, and its LOINC code waits
    for the group: the demo has one terminologist, so the review was
    skipped with a reason. The architect's proposal for "Inspired oxygen"
    has one open objection: mark it addressed with a note, then settle it.
@@ -209,15 +216,17 @@ Then work through these steps:
    version that the group answers again.
 6. **Hand-off:** open "Respiratory rate (demo)". Two rounds are closed;
    round 2 settled one of the two elements without consensus. The
-   Overview's one main button opens the hand-off page: below the downloads it
-   shows the tree and each element of the model with its structure and codes,
-   and marks what is not settled. Download the elements as CSV, as "CSV for
+   Overview is the hand-off: one line says how many structures are settled and
+   how many codes are open, with a link to Details, and the decision report is
+   the one filled download. Opening the hand-off address as facilitator leads
+   back to the Overview. Download the elements as CSV, as "CSV for
    Excel with a semicolon" (open it in a Dutch Excel: it should show columns)
    and as a mind map, and the decision report: it lists the scope, the panel
    per group, the rule and response of both rounds, the panel per expert
    type when each round opened (a count of 1 or 2 reads "fewer than 3") and
-   the outcome per element, and names no one. As participant the same page
-   shows the model without any download.
+   the outcome per element, and names no one. As participant the hand-off page
+   shows the agreed model in plain words with one line about what stays open,
+   and no download.
 7. **As participant,** switch person to `nurse.a@example.test`.
    The project list shows what waits per project. Open Blood pressure: its
    home shows "Your turn: rate round 2" with its sentence and closing date, and what is

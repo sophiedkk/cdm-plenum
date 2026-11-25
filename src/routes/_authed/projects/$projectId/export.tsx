@@ -10,13 +10,13 @@ import { requireStep } from "@/lib/guards";
 
 /**
  * The downloads of the project (EX1, EX2, EX3, EX4), for its facilitator only. In the hand-off
- * phase they sit on the hand-off page with the model, so this URL leads there.
+ * phase they sit on the Overview, so this URL leads there.
  */
 export const Route = createFileRoute("/_authed/projects/$projectId/export")({
   beforeLoad: (args) => {
     requireStep("export")(args);
     if (args.context.project.phase === "handoff") {
-      throw redirect({ to: "/projects/$projectId/handoff", params: args.params });
+      throw redirect({ to: "/projects/$projectId", params: args.params });
     }
   },
   head: ({ match }) => ({ meta: [{ title: projectTitle(match.context, m.export_title()) }] }),

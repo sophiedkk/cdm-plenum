@@ -264,7 +264,7 @@ async function factsOf(
     ).length,
     lastClosedRound,
     detail:
-      project.phase === "detail"
+      project.phase === "detail" || project.phase === "handoff"
         ? await detailProgress(db, project.id)
         : { inModel: 0, proposed: 0, settled: 0, codable: 0, codesSettled: 0, openObjections: 0 },
     mailConfigured: deps.mailConfigured,

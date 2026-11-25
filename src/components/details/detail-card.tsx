@@ -159,14 +159,26 @@ function NoteForm({
   );
 }
 
-export function ProposalStatus({ proposal }: Readonly<{ proposal: ConsentState | null }>) {
-  if (proposal === null) return <StatusBadge icon={CircleIcon} label={m.details_status_none()} />;
+/** Where a proposal stands; `format` words the label, such as "Structure: Open" in the list. */
+export function ProposalStatus({
+  proposal,
+  format = (status) => status,
+}: Readonly<{ proposal: ConsentState | null; format?: (status: string) => string }>) {
+  if (proposal === null) {
+    return <StatusBadge icon={CircleIcon} label={format(m.details_status_none())} />;
+  }
   return proposal.settledAt === null ? (
-    <StatusBadge tone="info" icon={CircleDotIcon} label={m.details_status_open()} />
+    <StatusBadge tone="info" icon={CircleDotIcon} label={format(m.details_status_open())} />
   ) : (
-    <StatusBadge tone="success" icon={CheckIcon} label={m.details_status_settled()} />
+    <StatusBadge tone="success" icon={CheckIcon} label={format(m.details_status_settled())} />
   );
 }
+
+const OWN_TEXT: Record<DetailAnswer, () => string> = {
+  agree: () => m.details_own_agreed(),
+  objection: () => m.details_own_objected(),
+  leave: () => m.details_own_left(),
+};
 
 /** The participant's own answer and the buttons to give or change it (DT2). */
 function AnswerPart({
@@ -177,10 +189,10 @@ function AnswerPart({
   const [objecting, setObjecting] = useState(false);
   const [pending, setPending] = useState(false);
   const own = proposal.own;
-  const agree = async () => {
+  const answerWith = async (value: "agree" | "leave") => {
     setPending(true);
     await run(
-      () => actions.answer(proposal.id, proposal.version, "agree", null),
+      () => actions.answer(proposal.id, proposal.version, value, null),
       m.details_answer_saved(),
       actions.onChanged,
     );
@@ -190,7 +202,7 @@ function AnswerPart({
     <div className="border-t pt-3">
       {own !== null && (
         <p className="mb-2">
-          {own.answer === "agree" ? m.details_own_agreed() : m.details_own_objected()}
+          {OWN_TEXT[own.answer]()}
           {own.reason !== null && (
             <span className="block whitespace-pre-wrap text-muted-foreground">{own.reason}</span>
           )}
@@ -202,9 +214,19 @@ function AnswerPart({
           variant="outline"
           disabled={pending || own?.answer === "agree"}
           aria-busy={pending}
-          onClick={() => void agree()}
+          onClick={() => void answerWith("agree")}
         >
           {m.details_agree()}
+          <span className="sr-only">: {name}</span>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={pending || own?.answer === "leave"}
+          aria-busy={pending}
+          onClick={() => void answerWith("leave")}
+        >
+          {m.details_leave()}
           <span className="sr-only">: {name}</span>
         </Button>
         <Button
@@ -300,6 +322,7 @@ function AnswersPart({
         {m.details_answers_count({
           agreed: answers.agreed,
           objections: answers.objections.length,
+          left: answers.left,
         })}
       </p>
       {answers.objections.length > 0 && (
@@ -626,12 +649,14 @@ function ReviewPart({
 function Part({
   title,
   status,
+  level,
   children,
-}: Readonly<{ title: string; status: ReactNode; children: ReactNode }>) {
+}: Readonly<{ title: string; status: ReactNode; level: "h3" | "h4"; children: ReactNode }>) {
+  const Heading = level;
   return (
     <section className="flex flex-col gap-3 border-t pt-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 className="font-semibold">{title}</h4>
+        <Heading className="font-semibold">{title}</Heading>
         {status}
       </div>
       {children}
@@ -686,7 +711,13 @@ export function DetailCard({
   actions,
   projectId,
   valueRounds,
+  modeller,
+  standalone = false,
 }: Readonly<{
+  /** Whether the reader gets the technical form of the facts open (P4). */
+  modeller: boolean;
+  /** On its own page: the page title names the element, so the card has no heading of its own. */
+  standalone?: boolean;
   projectId: string;
   /** The facilitator's view of what can start now (DT3); null for anyone else. */
   valueRounds: DetailBoard["valueRounds"];
@@ -707,21 +738,37 @@ export function DetailCard({
   // NOTE: EL26, P3.2. A reference takes its codes from the model it names: no code step.
   const showCodes =
     element.reference === null && (structureSettled || codes !== null || element.codesInReview);
+  const Root = standalone ? "section" : "li";
+  const level = standalone ? "h3" : "h4";
   return (
-    <li aria-labelledby={headingId} className="flex flex-col gap-3 rounded-lg border p-4">
-      <h3 id={headingId} className="text-lg font-semibold">
-        {element.name}
-      </h3>
+    <Root
+      aria-labelledby={standalone ? undefined : headingId}
+      aria-label={standalone ? element.name : undefined}
+      className="flex flex-col gap-3 rounded-lg border p-4"
+    >
+      {!standalone && (
+        <h3 id={headingId} className="text-lg font-semibold">
+          {element.name}
+        </h3>
+      )}
       {element.reference && <ReferenceText reference={element.reference} />}
       {element.description !== "" && (
         <p className="whitespace-pre-wrap text-muted-foreground">{element.description}</p>
       )}
-      <Part title={m.details_structure()} status={<ProposalStatus proposal={proposal} />}>
+      <Part
+        title={m.details_structure()}
+        level={level}
+        status={<ProposalStatus proposal={proposal} />}
+      >
         {proposal === null ? (
           <p className="text-muted-foreground">{m.details_no_proposal()}</p>
         ) : (
           <>
-            <StructureFacts structure={proposal.structure} reference={element.reference !== null} />
+            <StructureFacts
+              structure={proposal.structure}
+              reference={element.reference !== null}
+              modeller={modeller}
+            />
             <p className="text-sm text-muted-foreground">
               {proposal.proposedBy === "facilitator"
                 ? m.details_by_facilitator({ version: proposal.version })
@@ -768,14 +815,14 @@ export function DetailCard({
         )}
       </Part>
       {showCodes && (
-        <Part title={m.details_codes()} status={<ProposalStatus proposal={codes} />}>
+        <Part title={m.details_codes()} level={level} status={<ProposalStatus proposal={codes} />}>
           {codes === null ? (
             <p className="text-muted-foreground">
               {element.codesInReview ? m.details_codes_in_review() : m.details_no_codes()}
             </p>
           ) : (
             <>
-              <CodeFacts codes={codes.codes} values={element.current.values} />
+              <CodeFacts codes={codes.codes} values={element.current.values} modeller={modeller} />
               <p className="text-sm text-muted-foreground">
                 {codes.proposedBy === "facilitator"
                   ? m.details_by_facilitator({ version: codes.version })
@@ -808,6 +855,6 @@ export function DetailCard({
           )}
         </Part>
       )}
-    </li>
+    </Root>
   );
 }

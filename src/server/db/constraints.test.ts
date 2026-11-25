@@ -217,6 +217,63 @@ describe("detail_proposal units", () => {
   });
 });
 
+describe("detail_answer", () => {
+  it("takes agree, leave and objection, and a reason only with an objection (DT2)", async () => {
+    const p = await project();
+    const code = await member(p, "a");
+    const memberId = "member-a";
+    const proposal = await db
+      .insertInto("detail_proposal")
+      .values({ element_id: await element(p), data_type: "text" })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const row = (answer: string, reason: string | null, suffix: string) => ({
+      proposal_id: proposal.id,
+      version: Number(suffix),
+      member_id: memberId,
+      answer,
+      reason,
+    });
+    expect(code).toBeTruthy();
+    await db
+      .insertInto("detail_answer")
+      .values(row("agree", null, "1"))
+      .execute();
+    await db
+      .insertInto("detail_answer")
+      .values(row("leave", null, "2"))
+      .execute();
+    await db
+      .insertInto("detail_answer")
+      .values(row("objection", "Wrong unit.", "3"))
+      .execute();
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("detail_answer")
+          .values(row("leave", "Why not.", "4"))
+          .execute(),
+      /detail_answer_reason_check/,
+    );
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("detail_answer")
+          .values(row("objection", null, "5"))
+          .execute(),
+      /detail_answer_reason_check/,
+    );
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("detail_answer")
+          .values(row("abstain", null, "6"))
+          .execute(),
+      /detail_answer_answer_check/,
+    );
+  });
+});
+
 describe("round", () => {
   it("lets the facilitator change the rule before the round opens", async () => {
     const r = await round(await project(), false);

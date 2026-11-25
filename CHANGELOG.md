@@ -11,6 +11,19 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The Detail page is a list: the tree of the model as the first row, then one
+  row per element with where its structure and codes stand and what asks for
+  you ("Needs your answer", "Objection to address", "Codes to review"). Rows
+  that ask for you come first and settled ones sit in a folded "Done" group.
+  Each row opens its own page, with a way back to the list and, for a
+  participant, a link to the next element that needs an answer. The tree has
+  its own page.
+- A third answer to a detail proposal: "Leave to the experts". It counts as
+  answered, is no objection and no agreement, and the facilitator can settle
+  without it.
+- The facilitator's Overview in the hand-off phase shows how many structures
+  are settled and how many codes are open, what happens next, and the
+  downloads, with the decision report as the one main button.
 - Each page where you act as a participant starts with a task bar under the
   title: what to do on this page in one sentence and your progress, such as
   "1 of 3 answered". When nothing is left, the bar says "You are done", what
@@ -27,6 +40,16 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Participants who are not architects or terminologists read the data type by
+  its plain name and the cardinality in words, such as "Required, once" or
+  "Optional, any number". The openEHR and FHIR types, the `0..1` form and the
+  binding strength sit under "For modellers", open for the facilitator,
+  architects and terminologists. This covers the detail page, the recap and
+  the hand-off.
+- The hand-off page is for participants: the agreed model in plain words with
+  one line about what stays open, instead of a "Not settled" badge on each
+  element. The facilitator's hand-off is the Overview, and the old hand-off and
+  export addresses lead there.
 - The facilitator has five tabs: Overview, Scope, Elements, Rounds and Detail.
   People and Settings moved into a "Project" menu at the end of the row. On a
   phone the current tab scrolls into view.

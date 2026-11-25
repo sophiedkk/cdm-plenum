@@ -3,7 +3,6 @@
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
-import { ExportList } from "@/components/export/export-list";
 import { ModelSummary } from "@/components/projects/phase-recap";
 import { projectTitle } from "@/components/projects/project-title";
 import { TaskBar } from "@/components/projects/task-bar";
@@ -13,13 +12,14 @@ import { requireStep } from "@/lib/guards";
 import { phaseRecapQueryOptions } from "@/server/projects/query-options";
 
 /**
- * The hand-off page (PR4, owner decision 2026-11-25): the agreed model, read only, for every
- * member, and for the facilitator the downloads (EX1 to EX4). Other phases have no such page.
+ * The hand-off page (PR4, owner decision 2026-11-25): the agreed model in plain words, read only,
+ * for the participants. The facilitator's hand-off, with the downloads (EX1 to EX4), is the
+ * Overview, so the facilitator is sent there. Other phases have no such page.
  */
 export const Route = createFileRoute("/_authed/projects/$projectId/handoff")({
   beforeLoad: (args) => {
     requireStep("handoff")(args);
-    if (args.context.project.phase !== "handoff") {
+    if (args.context.project.phase !== "handoff" || args.context.project.role === "facilitator") {
       throw redirect({ to: "/projects/$projectId", params: args.params });
     }
   },
@@ -37,31 +37,20 @@ export const Route = createFileRoute("/_authed/projects/$projectId/handoff")({
 
 function Handoff() {
   const { projectId } = Route.useParams();
-  const { project } = Route.useRouteContext();
   const { data: recap } = useSuspenseQuery(phaseRecapQueryOptions(projectId, "detail"));
   if (!recap.ok || recap.value.phase !== "detail") return <NotFoundState />;
   return (
     <div className="flex flex-col gap-6">
       <PageHeader level={2} title={m.projects_phase_handoff()} />
-      {project.role !== "facilitator" && (
-        <TaskBar
-          projectId={projectId}
-          done={{
-            title: m.projects_bar_handoff_title(),
-            next: m.projects_bar_handoff_done(),
-          }}
-          filledBack
-        />
-      )}
-      {project.role === "facilitator" && (
-        <section aria-labelledby="handoff-downloads" className="flex max-w-3xl flex-col gap-3">
-          <h3 id="handoff-downloads" className="text-lg font-semibold">
-            {m.projects_handoff_downloads()}
-          </h3>
-          <ExportList projectId={projectId} level={4} />
-        </section>
-      )}
-      <ModelSummary recap={recap.value} />
+      <TaskBar
+        projectId={projectId}
+        done={{
+          title: m.projects_bar_handoff_title(),
+          next: m.projects_bar_handoff_done(),
+        }}
+        filledBack
+      />
+      <ModelSummary recap={recap.value} handoff />
     </div>
   );
 }
