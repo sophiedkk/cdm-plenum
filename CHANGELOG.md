@@ -9,7 +9,33 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- "Review skipped by the facilitator" no longer ends in an empty colon for
+  participants and architects, who do not see the reason.
+- The facilitator's checklist counts settled elements in words that fit one
+  and many ("Settled: 1 of 3 elements"), in English and Dutch. The line about
+  settled codes follows the same pattern.
+- A phase recap no longer marks the Overview tab as current next to its
+  phase step.
+- A table that scrolls sideways, such as the activity log on a phone, is a
+  named region you can reach and scroll with the keyboard.
+- The brainstorm intro mentions cards from existing models only when there
+  are some, and names them by their "From existing models" heading and not
+  by their dashed outline.
+- Ticking "Refers to another model" no longer moves what you just used: the
+  element dialog is anchored to the top and grows downward, the brainstorm
+  column grows instead of shrinking its card area, and editing an element
+  shows a note in place of the data type field.
+
 ### Changed
+
+- One word for each thing: "Not sure" ("Twijfel") for the middle rating band
+  and the first-look answer, with the first-look answers in the order of the
+  rating bands; "No consensus" ("Nog geen consensus" while a round is open)
+  for undecided elements; "Detail" ("Uitwerken") for the detail phase tab and
+  page; "Elements" ("Elementen") for the board page; "Closing date"
+  ("Sluitingsdatum") for the moment a round closes.
 
 - The rating card is easier to read: the element name is the largest text
   on the card, and the question sits directly above the scale as its label.

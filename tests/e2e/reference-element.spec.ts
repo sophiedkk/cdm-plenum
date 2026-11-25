@@ -8,7 +8,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { openedRound } from "../../src/server/rounds/test-round.ts";
 import { setPhase } from "../../src/server/test-fixtures.ts";
-import { signInTo } from "./board-seed.ts";
+import { seedElement, signInTo, userIdOf } from "./board-seed.ts";
 import {
   BROWSER_LOCALE,
   expect,
@@ -27,6 +27,21 @@ const URL = "https://models.example.test/zib/bloeddruk";
 /** Fills the `{name}` placeholders of a catalogue text. */
 function fill(template: string, values: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key]));
+}
+
+/** The top of an element in the document, so a scroll that follows the focus does not count. */
+function pageY(element: Locator): Promise<number> {
+  return element.evaluate((node) => node.getBoundingClientRect().top + window.scrollY);
+}
+
+/** The top of an element once its dialog has finished animating into place. */
+async function settledY(element: Locator): Promise<number> {
+  await element.evaluate((node) =>
+    Promise.all(
+      (node.closest("[role=dialog]")?.getAnimations() ?? []).map((animation) => animation.finished),
+    ),
+  );
+  return pageY(element);
 }
 
 for (const locale of ["en", "nl"] as const satisfies Locale[]) {
@@ -53,8 +68,14 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const name = form.getByRole("textbox").first();
       await expectHydrated(name);
       await name.fill("Blood pressure");
-      await form.getByRole("checkbox", { name: text.board_reference_choice }).click();
-      // The title and link open below the choice, so the name field stays where it was.
+      const choice = form.getByRole("checkbox", { name: text.board_reference_choice });
+      const nameBefore = await pageY(name);
+      const choiceBefore = await pageY(choice);
+      await choice.click();
+      // The title and link open below the choice, so the name field and the choice stay put.
+      await expect(form.getByLabel(text.board_reference_title_label)).toBeVisible();
+      expect(await pageY(name)).toBe(nameBefore);
+      expect(await pageY(choice)).toBe(choiceBefore);
       await form.getByLabel(text.board_reference_title_label).fill(TITLE);
       await form.getByLabel(text.board_reference_url_label).fill(URL);
       await expectAxeClean(page);
@@ -116,7 +137,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const dialog = page.getByRole("dialog", { name: text.board_add_title });
       await dialog.getByLabel(text.board_name_label, { exact: true }).fill("Body weight");
       await expect(dialog.getByLabel(text.board_reference_title_label)).toHaveCount(0);
-      await dialog.getByRole("checkbox", { name: text.board_reference_choice }).click();
+      const choice = dialog.getByRole("checkbox", { name: text.board_reference_choice });
+      const title = dialog.getByRole("heading");
+      const titleBefore = await settledY(title);
+      const choiceBefore = await settledY(choice);
+      await choice.click();
+      // The dialog is anchored to the top and grows downward: nothing above the new fields moves.
+      await expect(dialog.getByLabel(text.board_reference_title_label)).toBeVisible();
+      expect(await pageY(title)).toBe(titleBefore);
+      expect(await pageY(choice)).toBe(choiceBefore);
       await dialog.getByLabel(text.board_reference_title_label).fill("Archetype for body weight");
       await expectAxeClean(page);
       await dialog.getByRole("button", { name: text.board_add }).click();
@@ -129,6 +158,37 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       );
       // Without a link the title is text, not a link.
       await expect(row.getByRole("link")).toHaveCount(0);
+      await expectAxeClean(page);
+    });
+
+    test("editing an element in the detail phase swaps the data type for a note", async ({
+      page,
+      db,
+    }) => {
+      const project = await seedProject(db, "discover");
+      const participant = await seedParticipant(db, project);
+      await seedElement(db, await userIdOf(db, participant), project.projectId, {
+        name: "Heart rate",
+      });
+      await setPhase(db, project.projectId, "detail");
+      await signInTo(
+        page,
+        project.facilitator.email,
+        locale,
+        `/projects/${project.projectId}/board`,
+      );
+      await page.getByRole("button", { name: "Heart rate", exact: true }).click();
+      await page
+        .getByRole("button", { name: new RegExp(`^${text.board_edit}`) })
+        .first()
+        .click();
+      const dialog = page.getByRole("dialog");
+      const choice = dialog.getByRole("checkbox", { name: text.board_reference_choice });
+      await expect(dialog.getByText(text.board_data_type_legend, { exact: true })).toBeVisible();
+      const choiceBefore = await settledY(choice);
+      await choice.click();
+      await expect(dialog.getByText(text.board_data_type_refers_note)).toBeVisible();
+      expect(await pageY(choice)).toBe(choiceBefore);
       await expectAxeClean(page);
     });
   });

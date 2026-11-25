@@ -5,6 +5,7 @@ import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-quer
 import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { brainstormIntro } from "@/components/board/brainstorm-intro";
 import { RevealButton } from "@/components/board/brainstorm-panel";
 import { BoardStrip, QuestionBoard } from "@/components/board/question-board";
 import { projectTitle } from "@/components/projects/project-title";
@@ -89,11 +90,7 @@ function Brainstorm() {
       <PageHeader
         level={2}
         title={m.board_brainstorm_title()}
-        description={
-          board.value.privateStep
-            ? m.board_brainstorm_purpose_private()
-            : m.board_brainstorm_purpose_shared()
-        }
+        description={brainstormIntro(board.value)}
         actions={
           revealDue && status?.ok ? (
             <RevealButton

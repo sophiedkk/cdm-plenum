@@ -21,7 +21,7 @@ import type { ResponseRate } from "@/server/rounds/results";
 /** Invited, started and completed participants per stakeholder group, with the total. */
 export function ResponseRateTable({ rate }: Readonly<{ rate: ResponseRate }>) {
   return (
-    <Table>
+    <Table aria-label={m.rounds_response_caption()}>
       <TableCaption className="text-left">{m.rounds_response_caption()}</TableCaption>
       <TableHeader>
         <TableRow>
@@ -70,7 +70,7 @@ export function RatingsByParticipantTable({
     return <p className="text-muted-foreground">{m.rounds_by_participant_empty()}</p>;
   }
   return (
-    <Table>
+    <Table aria-label={m.rounds_by_participant_caption()}>
       <TableCaption className="text-left">{m.rounds_by_participant_caption()}</TableCaption>
       <TableHeader>
         <TableRow>

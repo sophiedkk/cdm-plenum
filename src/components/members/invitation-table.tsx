@@ -46,7 +46,7 @@ function InvitationRows({
   onRevoke: (invitation: InvitationRow) => void;
 }>) {
   return (
-    <Table>
+    <Table aria-label={caption}>
       <TableCaption className="sr-only">{caption}</TableCaption>
       <TableHeader>
         <TableRow>

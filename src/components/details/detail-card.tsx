@@ -27,6 +27,7 @@ import {
   type DetailObjection,
   type DetailStructure,
   openObjections,
+  type ReviewState,
   reviewDone,
 } from "@/lib/details";
 import type { Outcome } from "@/lib/forms/outcome";
@@ -507,6 +508,13 @@ const REVIEW_TEXT = {
   skipped: () => m.details_review_skipped(),
 } as const;
 
+/** The skip line loses its colon when the reader gets no note: the server withholds it. */
+export function reviewText(state: ReviewState, note: string | null): string {
+  return state === "skipped" && note === null
+    ? m.details_review_skipped_no_note()
+    : REVIEW_TEXT[state]();
+}
+
 /**
  * Where the review of the codes stands (DT4); a second terminologist approves or returns, and the
  * facilitator skips with a reason when no other terminologist can review.
@@ -540,7 +548,7 @@ function ReviewPart({
   return (
     <div className="border-t pt-3">
       <p>
-        {REVIEW_TEXT[state]()}
+        {reviewText(state, note)}
         {note !== null && (
           <span className="block whitespace-pre-wrap text-muted-foreground">{note}</span>
         )}

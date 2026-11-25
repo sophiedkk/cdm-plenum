@@ -125,7 +125,7 @@ export function AccountsTable({
 }>) {
   const [busy, setBusy] = useState<string | null>(null);
   return (
-    <Table>
+    <Table aria-label={m.admin_accounts_caption()}>
       <TableCaption className="sr-only">{m.admin_accounts_caption()}</TableCaption>
       <TableHeader>
         <TableRow>

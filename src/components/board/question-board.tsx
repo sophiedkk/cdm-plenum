@@ -315,10 +315,7 @@ function Column({
   const id = useId();
   const listed = column.own.length + column.fromModels.length + column.others.length;
   return (
-    <section
-      aria-labelledby={id}
-      className="flex min-h-72 flex-col rounded-lg border bg-card lg:min-h-130"
-    >
+    <section aria-labelledby={id} className="flex flex-col rounded-lg border bg-card">
       <div className="border-b px-3 pt-3 pb-2">
         <h3 id={id} className="text-[0.9375rem] leading-[1.375rem] font-semibold">
           {promptQuestion(column.prompt, modelType)}
@@ -327,7 +324,7 @@ function Column({
           {m.board_column_listed({ count: listed })}
         </p>
       </div>
-      <div className="flex flex-1 flex-col gap-1.5 p-2">
+      <div className="flex min-h-40 flex-col gap-1.5 p-2 lg:min-h-96">
         <Group title={m.board_column_yours()} cards={column.own} kind="own" />
         <Group title={m.board_column_from_models()} cards={column.fromModels} kind="model" />
         <Group title={m.board_column_from_others()} cards={column.others} kind="other" />

@@ -320,7 +320,7 @@ describe("RatingElement", () => {
       expect(nursing.querySelector("[data-own]")).toBeNull();
     }
     const five = screen.getByRole("radio", { name: "5" });
-    expect(description(five)).toBe("Unsure Round 1: 5");
+    expect(description(five)).toBe("Not sure Round 1: 5");
     expect(screen.getAllByText("Round 1: 5")).toHaveLength(1);
     expect(description(screen.getByRole("radio", { name: "7" }))).toBe("Belongs in the model");
   });
@@ -433,11 +433,11 @@ describe("the scale in the round's bands (DE1)", () => {
     expect(scoresIn("middle")).toEqual(["3", "4", "5", "6", "7"]);
     expect(scoresIn("top")).toEqual(["8", "9", "10"]);
     expect(bandOf("bottom")?.textContent).toContain("Does not belong in the model");
-    expect(bandOf("middle")?.textContent).toContain("Unsure");
+    expect(bandOf("middle")?.textContent).toContain("Not sure");
     expect(bandOf("top")?.textContent).toContain("Belongs in the model");
     expect(screen.getByRole("radio", { name: "0, does not belong in the model" })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "10, belongs in the model" })).toBeTruthy();
-    expect(description(screen.getByRole("radio", { name: "3" }))).toBe("Unsure");
+    expect(description(screen.getByRole("radio", { name: "3" }))).toBe("Not sure");
     // "Unable to rate" stands apart, in no band.
     const unable = screen.getByRole("radio", { name: "Unable to rate" });
     expect(unable.closest("[data-band]")).toBeNull();
@@ -449,7 +449,7 @@ describe("the scale in the round's bands (DE1)", () => {
     expect(bandOf("middle")).toBeNull();
     expect(scoresIn("bottom")).toEqual(["1", "2"]);
     expect(scoresIn("top")).toEqual(["3", "4", "5"]);
-    expect(screen.queryByText("Unsure")).toBeNull();
+    expect(screen.queryByText("Not sure")).toBeNull();
     expect(screen.getByText(/Keys: 1 to 5 choose a score/)).toBeTruthy();
   });
 

@@ -78,6 +78,16 @@ const UNDER = [
 const TAB_LINK =
   "-mb-px inline-flex border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap text-muted-foreground hover:text-foreground aria-[current=page]:border-foreground aria-[current=page]:font-semibold aria-[current=page]:text-foreground";
 
+/** A recap page belongs to its phase step in the header, so it marks no tab (PR13). */
+export function currentTab(matches: (to: string) => boolean): TabKey | null {
+  if (matches("/projects/$projectId/recap/$phase")) return null;
+  return (
+    UNDER.find((page) => matches(page.to))?.tab ??
+    TABS.find((tab) => tab.key !== "overview" && matches(tab.to))?.key ??
+    "overview"
+  );
+}
+
 /**
  * The facilitator's tabs, in one order in every phase (ADR 0019). Overview marks only itself and
  * the export; every other tab also marks the pages under it.
@@ -85,11 +95,7 @@ const TAB_LINK =
 export function ProjectTabs({ projectId }: Readonly<{ projectId: string }>) {
   const matchRoute = useMatchRoute();
   const params = { projectId };
-  const current =
-    UNDER.find((page) => matchRoute({ to: page.to, params, fuzzy: true }))?.tab ??
-    TABS.find((tab) => tab.key !== "overview" && matchRoute({ to: tab.to, params, fuzzy: true }))
-      ?.key ??
-    "overview";
+  const current = currentTab((to) => matchRoute({ to, params, fuzzy: true }) !== false);
   return (
     <nav aria-label={m.projects_tabs_label()} className="mb-6 border-b">
       <ul className="flex overflow-x-auto">

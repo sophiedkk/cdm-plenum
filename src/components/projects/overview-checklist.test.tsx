@@ -251,6 +251,26 @@ describe("the checklist per phase", () => {
     expect(undecided?.text).toContain("2 elements still without consensus");
   });
 
+  it("counts settled elements in words that fit one and many", () => {
+    for (const [settled, text] of [
+      [1, "Settled: 1 of 3 elements"],
+      [3, "Settled: 3 of 3 elements"],
+    ] as const) {
+      cleanup();
+      renderOverview("detail", {
+        detail: {
+          inModel: 3,
+          proposed: 3,
+          settled,
+          codable: 0,
+          codesSettled: 0,
+          openObjections: 0,
+        },
+      });
+      expect(items().some((item) => item.text?.includes(text))).toBe(true);
+    }
+  });
+
   it("asks to set up the next round while elements wait for a decision", () => {
     renderOverview("decide", { undecided: 4, lastClosedRound: { id: "round-1", number: 1 } });
     expect(screen.getByText("Set up round 2")).toBeTruthy();
