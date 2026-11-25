@@ -122,6 +122,8 @@ function Scale({
   choice,
   editable,
   previous,
+  keysId,
+  onKeyboardFocus,
   onChoose,
 }: Readonly<{
   base: string;
@@ -130,6 +132,9 @@ function Scale({
   editable: boolean;
   /** The participant's own answer in the previous round, when they gave one. */
   previous: { number: number; own: OwnRating } | null;
+  /** The keys help, which describes the scale and shows while it has keyboard focus. */
+  keysId: string;
+  onKeyboardFocus: (focused: boolean) => void;
   onChoose: (value: string) => void;
 }>) {
   const previousValue =
@@ -153,6 +158,11 @@ function Scale({
   return (
     <RadioGroupPrimitive.Root
       aria-labelledby={`${base}-scale`}
+      aria-describedby={keysId}
+      onFocus={(event) => onKeyboardFocus(event.target.matches(":focus-visible"))}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) onKeyboardFocus(false);
+      }}
       value={choice}
       disabled={!editable}
       onValueChange={onChoose}
@@ -183,7 +193,7 @@ function Scale({
             </div>
             <p
               id={bandId}
-              className="border-t-2 border-muted-foreground pt-0.5 text-center text-xs text-muted-foreground"
+              className="border-t-2 border-muted-foreground pt-0.5 text-center text-sm text-muted-foreground"
             >
               {band.label}
             </p>
@@ -216,7 +226,7 @@ function PreviousReasons({
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
       <div className="flex flex-wrap items-center gap-x-3">
-        <p id={`${listId}-heading`} className="font-medium">
+        <p id={`${listId}-heading`} className="font-semibold">
           {m.rounds_rate_previous_reasons()}
         </p>
         {reasons.length > REASONS_SHOWN && (
@@ -274,7 +284,7 @@ function PreviousRound({
   return (
     <div className="flex flex-col gap-2 text-sm">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <p className="font-medium">
+        <p>
           {m.rounds_rate_previous_own_value({
             number: previous.number,
             value: ownText(previous.own),
@@ -328,7 +338,7 @@ function PreviousRound({
           <PreviousReasons base={base} reasons={previous.reasons} />
         </div>
         <details className="self-end md:col-start-1 md:row-start-2 md:open:col-span-2 md:open:row-start-3">
-          <summary className="cursor-pointer font-medium">
+          <summary className="cursor-pointer font-semibold">
             {m.rounds_rate_previous_figures()}
           </summary>
           <div className="mt-3 flex flex-col gap-4">
@@ -426,6 +436,7 @@ export function RatingElement({
   };
 
   const digits = digitRange(rule);
+  const [keysShown, setKeysShown] = useState(false);
   useShortcuts((key) => {
     if (!editable) return false;
     if (key === "u") {
@@ -456,7 +467,7 @@ export function RatingElement({
     >
       <div className="flex flex-col gap-1">
         {element.group && (
-          <p className="text-sm font-semibold text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             <span className="sr-only">
               {kind === "values" ? m.rounds_value_card_element() : m.rounds_card_group()}{" "}
             </span>
@@ -468,7 +479,7 @@ export function RatingElement({
             id={`${base}-heading`}
             ref={headingRef}
             tabIndex={-1}
-            className="min-w-0 text-lg font-semibold break-words outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-w-0 text-2xl font-semibold break-words outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {element.name}
           </h3>
@@ -482,33 +493,37 @@ export function RatingElement({
         {element.description && (
           <p className="break-words text-muted-foreground">{element.description}</p>
         )}
-        <p id={`${base}-scale`} className="mt-3 text-2xl font-semibold tracking-tight">
+      </div>
+      <div className="flex flex-col gap-2">
+        {/* The question is the label of the scale, so the task sits right above the options. */}
+        <p id={`${base}-scale`} className="font-semibold">
           {kind === "values" ? m.rounds_value_rate_question() : m.rounds_rate_question()}
         </p>
-      </div>
-      {element.previous && (
-        <PreviousRound base={base} element={{ ...element, previous: element.previous }} />
-      )}
-      <div className="flex flex-col gap-2">
-        {/* The keys line sits beside the scale where it fits, under it where it does not. */}
-        <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
-          <Scale
-            base={base}
-            rule={rule}
-            choice={choice}
-            editable={editable}
-            previous={element.previous}
-            onChoose={choose}
-          />
-          <p
-            data-testid="rating-keys"
-            className="min-w-56 flex-1 pb-5 text-sm text-muted-foreground touch:hidden"
-          >
-            {editable && digits
-              ? m.rounds_rate_keys({ first: digits.first, last: digits.last })
-              : m.rounds_rate_keys_move()}
-          </p>
-        </div>
+        {element.previous && (
+          <PreviousRound base={base} element={{ ...element, previous: element.previous }} />
+        )}
+        <Scale
+          base={base}
+          rule={rule}
+          choice={choice}
+          editable={editable}
+          previous={element.previous}
+          keysId={`${base}-keys`}
+          onKeyboardFocus={setKeysShown}
+          onChoose={choose}
+        />
+        {/* Help on demand: the keys show while the scale has keyboard focus. */}
+        <p
+          id={`${base}-keys`}
+          data-testid="rating-keys"
+          className={
+            keysShown ? "text-sm text-muted-foreground touch:hidden" : "sr-only touch:hidden"
+          }
+        >
+          {editable && digits
+            ? m.rounds_rate_keys({ first: digits.first, last: digits.last })
+            : m.rounds_rate_keys_move()}
+        </p>
         <div className="flex min-h-8 flex-wrap items-center gap-x-4 gap-y-2">
           <p
             role="status"
