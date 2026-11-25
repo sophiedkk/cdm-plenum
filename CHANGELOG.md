@@ -172,6 +172,14 @@ the project uses [Semantic Versioning](https://semver.org/).
   on, when the group links elements to existing models, instead of from
   decide.
 
+### Fixed
+
+- Every date and time in the app is shown in your browser's time zone with
+  the zone named, such as "November 25, 2026 at 14:00 GMT+1". The app stores
+  your time zone in a cookie, so pages load with the right time. Only the
+  first page in a new browser shows UTC for a moment.
+- The close button of a window reads "Sluiten" in Dutch instead of "Close".
+
 ## [0.2.0] - 2026-11-20
 
 ### Added

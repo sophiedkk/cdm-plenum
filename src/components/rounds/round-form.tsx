@@ -25,8 +25,9 @@ import { type ConsensusRule, DEFAULT_RULE, type RuleError, ruleError } from "@/l
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
 import { type RefusalCode, refusalMessage } from "@/lib/i18n/refusals";
 import { ruleErrorMessage } from "@/lib/i18n/round-labels";
+import { useTimeZone } from "@/lib/time-zone";
 import { PROPOSAL_RULE_MAX } from "@/server/rounds/schemas";
-import { formatNumber, fromLocalInput, useTimeZone } from "./format";
+import { formatNumber, fromLocalInput } from "./format";
 
 /** An element the round can rate. */
 export interface ElementChoice {

@@ -40,3 +40,26 @@ describe("round formats", () => {
     expect(toLocalInput("2026-07-01T16:00:00Z", "UTC")).toBe("2026-07-01T16:00");
   });
 });
+
+describe("moments in a fixed time zone", () => {
+  const winter = "2026-11-25T13:00:00Z";
+  const summer = "2026-07-25T12:00:00Z";
+
+  it("writes English with the zone name and 24-hour time", () => {
+    expect(formatDateTime(winter, "Europe/Amsterdam")).toMatch(
+      /November 25, 2026.*14:00.*(CET|GMT\+1)/,
+    );
+    expect(formatDateTime(summer, "Europe/Amsterdam")).toMatch(
+      /July 25, 2026.*14:00.*(CEST|GMT\+2)/,
+    );
+    expect(formatDateTime(winter, "UTC")).toMatch(/13:00.*UTC/);
+  });
+
+  it("writes Dutch with the same zone", () => {
+    overwriteGetLocale(() => "nl");
+    expect(formatDateTime(winter, "Europe/Amsterdam")).toMatch(
+      /25 november 2026.*14:00.*(CET|GMT\+1)/,
+    );
+    expect(formatDateTime(winter, "America/New_York")).toMatch(/08:00/);
+  });
+});

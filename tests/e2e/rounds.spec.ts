@@ -23,6 +23,7 @@ import {
   seedParticipant,
   seedProject,
   test,
+  watchHydration,
 } from "./fixtures.ts";
 import { tabTo } from "./keyboard.ts";
 import { appUrl } from "./run-env.ts";
@@ -103,6 +104,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const rounds = `/projects/${project.projectId}/rounds`;
 
       // The facilitator sees the panel below the minimum on Settings (PR12) and sets up the round.
+      const hydration = watchHydration(page);
       await signInAs(page, project.facilitator.email, locale);
       await page.goto(`/projects/${project.projectId}/settings`);
       await expect(page.getByRole("heading", { name: text.rounds_panel_heading })).toBeVisible();
@@ -139,6 +141,13 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await openButton.click();
       const dialog = page.getByRole("dialog");
       await expect(dialog).toContainText(text.rounds_open_fixed);
+      // The dialog's own close button is translated (Q-I18N-1): no English "Close" in Dutch.
+      await expect(
+        dialog.getByRole("button", { name: text.common_close, exact: true }),
+      ).toBeVisible();
+      if (locale === "nl") {
+        await expect(page.getByRole("button", { name: "Close", exact: true })).toHaveCount(0);
+      }
       await axeClean(page);
       await dialog.getByRole("button", { name: text.rounds_open_confirm }).click();
       const reason = dialog.getByLabel(text.rounds_open_reason_label);
@@ -153,6 +162,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await page.getByText(text.rounds_setup_details).click();
       await expect(page.getByText("A teaching group of two")).toBeVisible();
       await axeClean(page);
+      // The round page shows its closing date as a time with a zone: no hydration error.
+      hydration.expectNone();
 
       // The first participant rates with the keyboard only.
       const rater = await pageFor(browser, locale, first);

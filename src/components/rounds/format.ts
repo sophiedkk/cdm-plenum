@@ -1,21 +1,9 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// Numbers, percentages and moments in the active locale. A moment is shown in the browser's time
-// zone with the zone named; the server render uses UTC until the page hydrates.
-import { useSyncExternalStore } from "react";
+// Numbers, percentages and moments in the active locale. A moment is shown in the reader's time
+// zone (`useTimeZone`) with the zone named.
 import { getLocale } from "@/i18n/runtime";
-
-const noSubscription = () => () => {};
-
-/** The browser's IANA time zone, or "UTC" during the server render. */
-export function useTimeZone(): string {
-  return useSyncExternalStore(
-    noSubscription,
-    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
-    () => "UTC",
-  );
-}
 
 /** A number with the locale's decimal sign: 7.5 is "7,5" in Dutch. */
 export function formatNumber(value: number): string {
