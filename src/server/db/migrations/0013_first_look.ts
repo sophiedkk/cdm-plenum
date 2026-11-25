@@ -7,7 +7,7 @@
 import { type Kysely, sql } from "kysely";
 
 /** The answers to "Does this element belong to the concept?"; src/lib/first-look.ts agrees. */
-export const FIRST_LOOK_ANSWER_KEYS = ["belongs", "not_sure", "not_belongs"] as const;
+export const FIRST_LOOK_ANSWER_KEYS = ["not_belongs", "not_sure", "belongs"] as const;
 
 const inList = (keys: readonly string[]) => sql.join(keys.map((key) => sql.lit(key)));
 

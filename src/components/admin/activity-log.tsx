@@ -82,7 +82,7 @@ export function ActivityTable({ entries }: Readonly<{ entries: readonly Activity
     );
   }
   return (
-    <Table>
+    <Table aria-label={m.admin_activity_caption()}>
       <TableCaption className="sr-only">{m.admin_activity_caption()}</TableCaption>
       <TableHeader>
         <TableRow>

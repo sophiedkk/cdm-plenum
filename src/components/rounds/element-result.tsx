@@ -276,7 +276,9 @@ export function ResultsTable({
 }>) {
   const modelType = useModelType();
   return (
-    <Table>
+    <Table
+      aria-label={kind === "values" ? m.rounds_value_results_caption() : m.rounds_results_caption()}
+    >
       <TableCaption className="sr-only">
         {kind === "values" ? m.rounds_value_results_caption() : m.rounds_results_caption()}
       </TableCaption>

@@ -126,7 +126,7 @@ function Rounds() {
             {newRound}
           </EmptyState>
         ) : (
-          <Table>
+          <Table aria-label={m.rounds_table_caption()}>
             <TableCaption className="sr-only">{m.rounds_table_caption()}</TableCaption>
             <TableHeader>
               <TableRow>

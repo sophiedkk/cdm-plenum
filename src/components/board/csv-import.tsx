@@ -240,7 +240,7 @@ export function CsvImport({
             </p>
           )}
           {shown.result.refused.length > 0 && (
-            <Table>
+            <Table aria-label={m.board_import_refused_heading()}>
               <TableCaption className="caption-top text-left font-medium text-foreground">
                 {m.board_import_refused_heading()}
               </TableCaption>
@@ -263,7 +263,7 @@ export function CsvImport({
             </Table>
           )}
           {shown.result.accepted.length > 0 && (
-            <Table>
+            <Table aria-label={m.board_import_accepted_heading()}>
               <TableCaption className="caption-top text-left font-medium text-foreground">
                 {m.board_import_accepted_heading()}
               </TableCaption>

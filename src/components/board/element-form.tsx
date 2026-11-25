@@ -241,7 +241,11 @@ export function ElementForm({
         <>
           <form.Subscribe selector={(state) => state.values.refers}>
             {(refers) =>
-              !refers && <form.AppField name="dataType">{() => <DataTypeField />}</form.AppField>
+              refers ? (
+                <p className="text-sm text-muted-foreground">{m.board_data_type_refers_note()}</p>
+              ) : (
+                <form.AppField name="dataType">{() => <DataTypeField />}</form.AppField>
+              )
             }
           </form.Subscribe>
           <fieldset className="flex flex-col gap-3">

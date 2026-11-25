@@ -165,7 +165,7 @@ export function AppRightsTable({
   }
 
   return (
-    <Table>
+    <Table aria-label={m.admin_rights_caption()}>
       <TableCaption className="sr-only">{m.admin_rights_caption()}</TableCaption>
       <TableHeader>
         <TableRow>

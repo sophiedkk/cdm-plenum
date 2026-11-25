@@ -158,7 +158,7 @@ describe("ProjectPages (PR9, ADR 0019)", () => {
         .map((link) => [link.textContent, link.getAttribute("href")]),
     ).toEqual([
       ["Scope", "/projects/p1/scope"],
-      ["Element board", "/projects/p1/board"],
+      ["Elements", "/projects/p1/board"],
     ]);
   });
 
@@ -173,7 +173,7 @@ describe("TaskCard (PR8)", () => {
     render(<TaskCard projectId="p1" overview={overview()} />);
     const card = screen.getByRole("region", { name: "Your turn: rate round 2" });
     const facts = [...card.querySelectorAll("dt")].map((term) => term.textContent);
-    expect(facts).toEqual(["Elements", "Closes", "Rated by you"]);
+    expect(facts).toEqual(["Elements", "Closing date", "Rated by you"]);
     expect(card.querySelector("time")?.getAttribute("dateTime")).toBe(CLOSES);
     // The closing date names its time zone.
     expect(card.querySelector("time")?.textContent).toMatch(/UTC/);
@@ -197,7 +197,7 @@ describe("TaskCard (PR8)", () => {
     const card = screen.getByRole("region", { name: "Your turn: rate the values of round 3" });
     expect([...card.querySelectorAll("dt")].map((term) => term.textContent)).toEqual([
       "Values",
-      "Closes",
+      "Closing date",
       "Rated by you",
     ]);
     expect(screen.getByRole("link", { name: "Start rating" }).getAttribute("href")).toBe(
@@ -273,7 +273,7 @@ describe("DecidedSoFarSection (PR8)", () => {
     render(<DecidedSoFarSection projectId="p1" decided={DECIDED} />);
     const bar = screen.getByRole("img");
     expect(bar.getAttribute("aria-label")).toBe(
-      "2 in the model, 1 not in the model, 1 still open, 1 not rated yet",
+      "2 in the model, 1 not in the model, 1 no consensus yet, 1 not rated yet",
     );
     expect(
       [...bar.querySelectorAll("[data-status]")].map((part) => [

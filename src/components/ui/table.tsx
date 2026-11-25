@@ -6,11 +6,45 @@
 "use client";
 
 import { cn } from "cn";
-import type * as React from "react";
+import * as React from "react";
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+/** A table needs a name for the region that scrolls it: its caption or heading (WCAG 2.1.1). */
+type TableName =
+  | { "aria-label": string; "aria-labelledby"?: never }
+  | { "aria-labelledby": string; "aria-label"?: never };
+
+/**
+ * A table that scrolls sideways becomes a named region with a tab stop, so a keyboard user can
+ * scroll it (axe scrollable-region-focusable). A table that fits gets neither, so it adds no
+ * needless tab stop or landmark.
+ */
+function Table({ className, ...props }: React.ComponentProps<"table"> & TableName) {
+  const container = React.useRef<HTMLDivElement>(null);
+  const [overflows, setOverflows] = React.useState(false);
+  React.useEffect(() => {
+    const element = container.current;
+    if (element === null || typeof ResizeObserver === "undefined") return;
+    const measure = () => setOverflows(element.scrollWidth > element.clientWidth);
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    if (element.firstElementChild) observer.observe(element.firstElementChild);
+    measure();
+    return () => observer.disconnect();
+  }, []);
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    <div
+      ref={container}
+      data-slot="table-container"
+      className="relative w-full overflow-x-auto"
+      {...(overflows
+        ? {
+            role: "region",
+            tabIndex: 0,
+            "aria-label": props["aria-label"],
+            "aria-labelledby": props["aria-labelledby"],
+          }
+        : {})}
+    >
       <table
         data-slot="table"
         className={cn("w-full caption-bottom text-sm", className)}

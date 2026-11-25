@@ -52,7 +52,7 @@ export function PanelTable({
   caption: string;
 }>) {
   return (
-    <Table>
+    <Table aria-label={caption}>
       <TableCaption className="sr-only">{caption}</TableCaption>
       <TableHeader>
         <TableRow>

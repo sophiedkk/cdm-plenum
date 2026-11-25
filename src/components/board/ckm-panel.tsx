@@ -187,7 +187,7 @@ export function CkmPanel({
             <p className="text-sm text-muted-foreground">
               {m.board_ckm_revision({ revision: view.revision, status: view.status })}
             </p>
-            <Table>
+            <Table aria-label={m.board_ckm_elements_heading({ name: open.name })}>
               <TableCaption className="sr-only">
                 {m.board_ckm_elements_heading({ name: open.name })}
               </TableCaption>
@@ -293,7 +293,7 @@ export function CkmPanel({
           {results.length === 0 ? (
             <p className="text-muted-foreground">{m.board_ckm_no_results()}</p>
           ) : (
-            <Table>
+            <Table aria-label={m.board_ckm_results_heading()}>
               <TableCaption className="sr-only">{m.board_ckm_results_heading()}</TableCaption>
               <TableHeader>
                 <TableRow>

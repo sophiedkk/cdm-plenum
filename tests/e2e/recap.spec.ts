@@ -93,5 +93,27 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await page.goto(`/projects/${project.projectId}/recap/decide`);
       await expect(page).toHaveURL((url) => url.pathname === `/projects/${project.projectId}`);
     });
+
+    test("a recap page marks the phase step, not a tab, as current for the facilitator", async ({
+      page,
+      db,
+    }) => {
+      const project = await seedProject(db, "decide");
+      await signInTo(
+        page,
+        project.facilitator.email,
+        locale,
+        `/projects/${project.projectId}/recap/scope`,
+      );
+      const tabs = page.getByRole("navigation", { name: text.projects_tabs_label });
+      await expect(tabs).toBeVisible();
+      await expect(tabs.locator('[aria-current="page"]')).toHaveCount(0);
+      await expect(
+        page
+          .getByRole("list", { name: text.projects_steps_label })
+          .locator('[aria-current="page"]'),
+      ).toHaveCount(1);
+      await expectAxeCleanInBothThemes(page);
+    });
   });
 }

@@ -56,6 +56,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const question = page.getByRole("group", {
         name: fill(text.board_first_look_question, { concept: "Blood pressure" }),
       });
+      // The answers run from low to high, as the rating bands do.
+      await expect(question.getByRole("button")).toHaveText([
+        text.board_first_look_not_belongs,
+        text.board_first_look_not_sure,
+        text.board_first_look_belongs,
+      ]);
       const belongs = question.getByRole("button", { name: text.board_first_look_belongs });
       await expectHydrated(belongs);
       await belongs.click();

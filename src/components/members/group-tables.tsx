@@ -39,7 +39,7 @@ export function GroupPeopleTable({
   actions: (group: GroupWithMembers) => ReactNode;
 }>) {
   return (
-    <Table>
+    <Table aria-label={m.members_groups_caption()}>
       <TableCaption className="sr-only">{m.members_groups_caption()}</TableCaption>
       <TableHeader>
         <TableRow className="hover:bg-transparent">
