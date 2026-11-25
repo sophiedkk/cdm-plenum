@@ -9,6 +9,8 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-25
+
 ### Added
 
 - You choose how a project runs when you create it: a "Delphi study"
@@ -735,7 +737,8 @@ rating rounds and the CSV and mind map exports.
   network address, so a class behind one address can sign in together.
 - A deactivated account cannot sign in, and its open sessions end at once.
 
-[Unreleased]: https://github.com/sophiedkk/cdm-plenum/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/sophiedkk/cdm-plenum/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/sophiedkk/cdm-plenum/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/sophiedkk/cdm-plenum/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sophiedkk/cdm-plenum/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sophiedkk/cdm-plenum/releases/tag/v0.1.0
