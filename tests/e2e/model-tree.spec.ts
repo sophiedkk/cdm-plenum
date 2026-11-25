@@ -152,6 +152,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await page.goto(`/projects/${project.projectId}/export`);
       const download = page.getByRole("button", {
         name: fill(text.export_download, { name: text.export_elements_title }),
+        exact: true,
       });
       await expectHydrated(download);
       const downloading = page.waitForEvent("download");

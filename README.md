@@ -10,12 +10,13 @@ in a standard such as an openEHR archetype or a FHIR profile. The group starts
 from existing models (openEHR archetypes from the Clinical Knowledge Manager,
 FHIR profiles from a package), adds what is missing on a shared board, and
 rates the elements in e-Delphi rounds against a consensus rule fixed in
-advance. The elements in the model then get their structure by consent. The
-agreed list goes to the existing authoring tools and to CKM review as CSV and
-as a FreeMind mind map.
+advance. The elements in the model then get their structure and codes by
+consent. The agreed model goes to the existing authoring tools and to CKM
+review as CSV and as a FreeMind mind map, with a decision report for the
+study.
 
-The project is in an early stage. The requirements draft is in
-[docs/requirements.md](docs/requirements.md) and the design in
+What each release holds is in [CHANGELOG.md](CHANGELOG.md). The requirements
+draft is in [docs/requirements.md](docs/requirements.md) and the design in
 [docs/architecture.md](docs/architecture.md), with the decision records in
 [docs/adr/](docs/adr/README.md).
 
@@ -32,11 +33,11 @@ flowchart LR
 
 | Phase | What happens |
 | --- | --- |
-| Scope | The facilitator writes the concept, use cases and sources; participants comment. |
+| Scope | The facilitator writes the concept, use cases and sources, and picks the model type (observation, evaluation, instruction, action or sub-block), which sets the questions of the brainstorm. Participants comment. |
 | Discover | The facilitator puts elements from existing models (CKM archetypes, FHIR profiles, forms) on the list and participants take a first look at them. Each participant then adds what is missing, alone, until the facilitator reveals the board, merges duplicates and groups the elements for the participants to check. |
 | Decide | Participants rate each element anonymously in e-Delphi rounds against a consensus rule fixed in advance. Elements without consensus go to a next round with the group's scores. |
-| Detail | The facilitator or an architect proposes the data type, cardinality and values of each element in the model; then a terminologist proposes its codes, which a second terminologist reviews. Participants agree or object, and the facilitator settles. |
-| Hand-off | The agreed elements are exported as CSV and as a mind map, the ratings for the study report. |
+| Detail | The facilitator or an architect proposes the tree of the model and, per element, the data type, cardinality, values and units, or a reference to another model. A terminologist proposes the codes, which a second terminologist reviews. Participants agree or object, a value list can go to a rating round of its own, and the facilitator settles. |
+| Hand-off | Everyone sees the agreed model on one page. The facilitator downloads it as CSV (also with semicolons for Excel) and as a mind map, the ratings for the study report and a decision report. |
 
 ## Screenshots
 
@@ -88,7 +89,7 @@ phase:
 | Heart rate (demo) | Discover | A private brainstorm by five participants, board not revealed yet |
 | Blood pressure (demo) | Decide | A closed first round with results and an open second round |
 | Oxygen saturation (demo) | Detail | One settled structure with codes to answer, and one structure with an open objection |
-| Respiratory rate (demo) | Hand-off | Two closed rounds, ready for export |
+| Respiratory rate (demo) | Hand-off | Two closed rounds; the hand-off page with the model and the downloads |
 
 Your address becomes facilitator of every project and administrator of the
 app. A second run adds only the projects that are missing.
@@ -103,8 +104,8 @@ e-mail at <http://localhost:3000/dev/sign-in> with one button per person, and
 "Switch person" in the menu under your name opens it again
 ([docs/testing.md](docs/testing.md#sign-in-without-e-mail) explains it). Sign in as a
 participant to see their view: their task on each project's home, the first look in
-Heart rate, round 2 to rate in Blood pressure, and the structure proposals to
-answer in Oxygen saturation.
+Heart rate, round 2 to rate in Blood pressure, the structure proposals to
+answer in Oxygen saturation, and the agreed model in Respiratory rate.
 
 Run the checks (typecheck, lint, unit tests) with `scripts/dev/pnpm.sh check`,
 and the browser tests with `scripts/dev/e2e.sh`.
