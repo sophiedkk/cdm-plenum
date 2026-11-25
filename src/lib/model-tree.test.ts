@@ -11,6 +11,7 @@ import {
   moveGroup,
   nestGroups,
   newGroupId,
+  shiftElement,
   shiftGroup,
   type TreeGroup,
 } from "./model-tree.ts";
@@ -116,5 +117,27 @@ describe("newGroupId", () => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
     );
     expect(newGroupId()).not.toBe(newGroupId());
+  });
+});
+
+describe("shiftElement", () => {
+  const list = [
+    { id: "a", groupId: "g" },
+    { id: "x", groupId: "h" },
+    { id: "b", groupId: "g" },
+    { id: "c", groupId: "g" },
+  ];
+  const order = (elements: readonly { id: string }[]) => elements.map((element) => element.id);
+
+  it("swaps an element with its neighbour in the same group, passing other groups", () => {
+    expect(order(shiftElement(list, "b", -1))).toEqual(["b", "x", "a", "c"]);
+    expect(order(shiftElement(list, "b", 1))).toEqual(["a", "x", "c", "b"]);
+  });
+
+  it("does nothing at either end of a group or for an unknown element", () => {
+    expect(shiftElement(list, "a", -1)).toEqual(list);
+    expect(shiftElement(list, "c", 1)).toEqual(list);
+    expect(shiftElement(list, "x", 1)).toEqual(list);
+    expect(shiftElement(list, "none", 1)).toEqual(list);
   });
 });

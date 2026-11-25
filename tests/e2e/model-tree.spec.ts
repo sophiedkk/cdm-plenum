@@ -123,6 +123,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         .getByLabel(fill(text.details_tree_group_of, { name: "Cuff size" }))
         .selectOption({ label: `${measurement} > Cuff` });
       await editor.getByLabel(`${text.details_tree_registration}: Author`).check();
+      // Author joins Systolic in the measurement and moves above it (the order within a group).
+      await editor
+        .getByLabel(fill(text.details_tree_group_of, { name: "Author" }))
+        .selectOption({ label: measurement });
+      const moveAuthorUp = editor.getByRole("button", {
+        name: new RegExp(`^${text.details_tree_move_up}\\s*: Author$`),
+      });
+      await moveAuthorUp.click();
+      await expect(moveAuthorUp).toBeDisabled();
       await expectAxeCleanInBothThemes(page);
       await editor.getByRole("button", { name: text.details_propose_submit }).click();
       await expect(treeOf(page)).toContainText(fill(text.details_by_architecture, { version: 1 }));
@@ -155,6 +164,11 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(cuffItem).toContainText("0..1");
       await expect(cuffItem).toContainText(text.details_tree_sub_block);
       await expect(cuffItem).toContainText("Cuff size");
+      const measurementItem = treeOf(page)
+        .getByRole("listitem")
+        .filter({ hasText: "Author" })
+        .first();
+      await expect(measurementItem).toContainText(/Author[\s\S]*Systolic/);
       await expect(
         treeOf(page).getByRole("listitem").filter({ hasText: "Author" }).last(),
       ).toContainText(text.details_tree_registration);

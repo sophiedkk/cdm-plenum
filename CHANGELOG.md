@@ -11,6 +11,10 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The model tree keeps the order of the elements within a group. In the tree
+  editor each element has "Move up" and "Move down" buttons, settling the tree
+  keeps the order, and the Details page, the recap, the elements CSV, the mind
+  map and the decision report list a group's elements in that order.
 - The Detail page is a list: the tree of the model as the first row, then one
   row per element with where its structure and codes stand and what asks for
   you ("Needs your answer", "Objection to address", "Codes to review"). Rows

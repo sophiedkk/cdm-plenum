@@ -227,3 +227,23 @@ export function shiftGroup<G extends { id: string; parentId: string | null }>(
   swapped[b] = moving;
   return depthFirst(swapped);
 }
+
+/**
+ * Swaps an element with the element before (-1) or after (+1) it in the same group; nothing at
+ * either end. The order of the list is the order within the group (DT6, issue #99).
+ */
+export function shiftElement<E extends { id: string; groupId: string | null }>(
+  elements: readonly E[],
+  id: string,
+  step: -1 | 1,
+): E[] {
+  const moving = elements.find((element) => element.id === id);
+  if (!moving) return [...elements];
+  const siblings = elements.filter((element) => element.groupId === moving.groupId);
+  const other = siblings[siblings.indexOf(moving) + step];
+  if (!other) return [...elements];
+  const swapped = [...elements];
+  swapped[elements.indexOf(moving)] = other;
+  swapped[elements.indexOf(other)] = moving;
+  return swapped;
+}

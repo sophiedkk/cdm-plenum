@@ -41,6 +41,7 @@ import {
   newGroupId,
   SUB_BLOCK_TITLE_MAX,
   SUB_BLOCK_URL_MAX,
+  shiftElement,
   shiftGroup,
   type TreeInput,
 } from "@/lib/model-tree";
@@ -235,6 +236,17 @@ export function TreeForm({
         ?.querySelector<HTMLElement>(`[data-group="${id}"] [data-control="${control}"]`)
         ?.focus();
     });
+  };
+  const refocusElement = (id: string, control: string) => {
+    requestAnimationFrame(() => {
+      formRef.current
+        ?.querySelector<HTMLElement>(`[data-element="${id}"] [data-control="${control}"]`)
+        ?.focus();
+    });
+  };
+  const moveElement = (id: string, step: -1 | 1) => {
+    form.setFieldValue("elements", shiftElement(form.state.values.elements, id, step));
+    refocusElement(id, step < 0 ? "up" : "down");
   };
   const setGroups = (next: EditGroup[]) => form.setFieldValue("groups", next);
   const groupsNow = () => form.state.values.groups;
@@ -475,7 +487,11 @@ export function TreeForm({
               <legend className="mb-1 font-semibold">{m.details_tree_elements()}</legend>
               <ul className="flex flex-col gap-3">
                 {elements.map((element, index) => (
-                  <li key={element.id} className="flex flex-col gap-2 rounded-lg border p-3">
+                  <li
+                    key={element.id}
+                    data-element={element.id}
+                    className="flex flex-col gap-2 rounded-lg border p-3"
+                  >
                     <p className="font-medium">{element.name}</p>
                     <div className="grid items-end gap-3 sm:grid-cols-2">
                       <form.AppField name={`elements[${index}].groupId`}>
@@ -497,6 +513,37 @@ export function TreeForm({
                           <CheckField label={m.details_tree_registration()} srName={element.name} />
                         )}
                       </form.AppField>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        data-control="up"
+                        disabled={
+                          elements.findIndex((other) => other.groupId === element.groupId) === index
+                        }
+                        onClick={() => moveElement(element.id, -1)}
+                      >
+                        <ArrowUpIcon aria-hidden="true" data-icon="inline-start" />
+                        {m.details_tree_move_up()}
+                        <span className="sr-only">: {element.name}</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        data-control="down"
+                        disabled={
+                          elements.findLastIndex((other) => other.groupId === element.groupId) ===
+                          index
+                        }
+                        onClick={() => moveElement(element.id, 1)}
+                      >
+                        <ArrowDownIcon aria-hidden="true" data-icon="inline-start" />
+                        {m.details_tree_move_down()}
+                        <span className="sr-only">: {element.name}</span>
+                      </Button>
                     </div>
                   </li>
                 ))}
