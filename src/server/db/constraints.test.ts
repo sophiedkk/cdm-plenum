@@ -605,3 +605,61 @@ describe("round proposals (DE16)", () => {
     );
   });
 });
+
+describe("the order of elements in the tree (DT6, #99)", () => {
+  it("holds a place of 0 or more on an element, and none outside a settled tree", async () => {
+    const p = await project();
+    const row = await db
+      .insertInto("element")
+      .values({ project_id: p, name: "Systolic", tree_position: 0 })
+      .returning(["id", "tree_position"])
+      .executeTakeFirstOrThrow();
+    expect(row.tree_position).toBe(0);
+    const loose = await db
+      .insertInto("element")
+      .values({ project_id: p, name: "Loose" })
+      .returning("tree_position")
+      .executeTakeFirstOrThrow();
+    expect(loose.tree_position).toBeNull();
+    await expectRefused(
+      (trx) =>
+        trx.updateTable("element").set({ tree_position: -1 }).where("id", "=", row.id).execute(),
+      /element_tree_position_check/,
+    );
+  });
+
+  it("requires a place of 0 or more on a proposed element", async () => {
+    const p = await project();
+    const element = await db
+      .insertInto("element")
+      .values({ project_id: p, name: "Systolic" })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const proposal = await db
+      .insertInto("detail_proposal")
+      .values({ kind: "tree", project_id: p })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const values = { proposal_id: proposal.id, element_id: element.id, registration: false };
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("tree_proposal_element")
+          .values({ ...values, position: undefined as unknown as number })
+          .execute(),
+      /null value in column "position"/,
+    );
+    await expectRefused(
+      (trx) =>
+        trx
+          .insertInto("tree_proposal_element")
+          .values({ ...values, position: -1 })
+          .execute(),
+      /tree_proposal_element_position_check/,
+    );
+    await db
+      .insertInto("tree_proposal_element")
+      .values({ ...values, position: 0 })
+      .execute();
+  });
+});
