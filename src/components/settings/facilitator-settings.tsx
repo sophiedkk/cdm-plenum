@@ -9,14 +9,16 @@ import { LogOutIcon, UserPlusIcon } from "lucide-react";
 import { useId, useState } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
+import { ModeChoice } from "@/components/projects/mode-choice";
 import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { m } from "@/i18n/messages";
 import type { Outcome } from "@/lib/forms/outcome";
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
-import { expertTypeLabel } from "@/lib/i18n/labels";
+import { expertTypeLabel, projectModeDescription, projectModeLabel } from "@/lib/i18n/labels";
 import { refusalMessage } from "@/lib/i18n/refusals";
+import type { ProjectMode } from "@/lib/project-mode";
 import type { ExpertType } from "@/lib/project-roles";
 import { SaveStatus, useAutoSave } from "./auto-save";
 
@@ -141,6 +143,57 @@ export function PrivateBrainstormForm({
       save={save}
       onSaved={onSaved}
     />
+  );
+}
+
+/**
+ * How the project runs (PR14, ADR 0023): applied when you pick an option, until a round has
+ * opened. After that the server refuses (`mode_locked`), so the choice gives way to text.
+ */
+export function ProjectModeForm({
+  mode,
+  locked,
+  save,
+  onSaved,
+}: Readonly<{
+  mode: ProjectMode;
+  locked: boolean;
+  save: (mode: ProjectMode) => Promise<Outcome<unknown>>;
+  onSaved: (mode: ProjectMode) => Promise<void> | void;
+}>) {
+  const [value, setValue] = useState(mode);
+  const { state, run } = useAutoSave();
+
+  async function change(next: ProjectMode) {
+    const before = value;
+    setValue(next);
+    if (await run(() => save(next))) await onSaved(next);
+    else setValue(before);
+  }
+
+  return (
+    <section aria-labelledby="project-mode-title" className="flex flex-col gap-4">
+      <h3 id="project-mode-title" className="type-section">
+        {m.projects_mode_heading()}
+      </h3>
+      {locked ? (
+        <div data-testid="project-mode-locked">
+          <p className="font-semibold">{projectModeLabel(mode)}</p>
+          <p className="text-muted-foreground">{projectModeDescription(mode)}</p>
+          <p className="mt-2 text-muted-foreground">{m.projects_mode_locked()}</p>
+        </div>
+      ) : (
+        <>
+          <ModeChoice
+            name="project-mode"
+            value={value}
+            onChange={(next) => void change(next)}
+            labelledBy="project-mode-title"
+          />
+          <SaveStatus state={state} />
+        </>
+      )}
+    </section>
   );
 }
 

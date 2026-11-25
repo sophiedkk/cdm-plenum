@@ -38,6 +38,7 @@ export const PROJECT_ACTION_ERRORS = [
   "value_number_not_integer",
   "merge_values_conflict",
   "rater_group_locked",
+  "mode_locked",
   "board_already_revealed",
   "merge_before_reveal",
   "phase_changed",

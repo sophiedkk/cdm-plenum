@@ -20,6 +20,7 @@ import {
   removeGroup,
   renameGroup,
   setGroupNamesVisible,
+  setProjectMode,
   setRaterGroup,
 } from "./queries.ts";
 import { phaseRecap } from "./recap.ts";
@@ -31,6 +32,7 @@ import {
   movePhaseInput,
   phaseRecapInput,
   projectInput,
+  projectModeInput,
   raterGroupInput,
   renameGroupInput,
 } from "./schemas.ts";
@@ -103,6 +105,11 @@ export const setGroupNamesVisibleFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(groupNamesVisibleInput)
   .handler(({ data, context }) => setGroupNamesVisible(getDb(), context.userId, data));
+
+export const setProjectModeFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(projectModeInput)
+  .handler(({ data, context }) => setProjectMode(getDb(), context.userId, data));
 
 export const setRaterGroupFn = createServerFn({ method: "POST" })
   .middleware([requireSession])

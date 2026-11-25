@@ -1,15 +1,16 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
+import { CheckIcon, CircleDotIcon, CircleIcon, PencilIcon } from "lucide-react";
+import { type ReactNode, useId, useState } from "react";
+import { toast } from "sonner";
+import { ReferenceText } from "@/components/board/reference-text";
 // One element in the model on the detail page (DT1 to DT5): its structure, then its codes, each
 // with the participant's consent answer and, for the facilitator and the proposers of that kind,
 // the answers without names. Codes first wait for a second terminologist's review. The
 // facilitator marks objections addressed and settles; a form opens below its button, so the
 // buttons keep their place.
-import { CheckIcon, CircleDotIcon, CircleIcon, PencilIcon } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
-import { toast } from "sonner";
-import { ReferenceText } from "@/components/board/reference-text";
+import { authorName } from "@/components/comments/comment-thread";
 import { FormDialog } from "@/components/members/form-dialog";
 import { StatusBadge } from "@/components/status/status-badge";
 import { Button } from "@/components/ui/button";
@@ -259,7 +260,19 @@ function AnswerPart({
   );
 }
 
-/** One objection without a name, with the facilitator's note or the button to add one. */
+/** Who raised an objection; only a Team project sends one (PR14). */
+function ObjectionAuthor({ objection }: Readonly<{ objection: DetailObjection }>) {
+  if (objection.author === undefined) return null;
+  return (
+    <p className="text-sm text-muted-foreground">
+      {objection.author === null
+        ? m.common_comment_author_left()
+        : m.common_comment_author({ name: authorName(objection.author) })}
+    </p>
+  );
+}
+
+/** One objection, named in a Team project, with the facilitator's note or the button to add one. */
 function ObjectionItem({
   objection,
   mayAddress,
@@ -269,6 +282,7 @@ function ObjectionItem({
   return (
     <li className="flex flex-col gap-1 rounded-lg border p-3">
       <p className="whitespace-pre-wrap">{objection.reason}</p>
+      <ObjectionAuthor objection={objection} />
       {objection.addressedNote !== null ? (
         <p className="text-sm text-muted-foreground">
           {m.details_addressed()} {objection.addressedNote}
@@ -308,7 +322,7 @@ function ObjectionItem({
   );
 }
 
-/** The answers to the current version and the earlier objections, without names. */
+/** The answers to the current version and the earlier objections. */
 function AnswersPart({
   proposal,
   mayAddress,
@@ -349,6 +363,7 @@ function AnswersPart({
                   {m.details_history_version({ version: objection.version })}
                 </p>
                 <p className="whitespace-pre-wrap">{objection.reason}</p>
+                <ObjectionAuthor objection={objection} />
                 {objection.addressedNote !== null && (
                   <p className="text-muted-foreground">
                     {m.details_addressed()} {objection.addressedNote}

@@ -305,6 +305,7 @@ describe("getProject", () => {
         boardRevealed: false,
         modelType: null,
         mode: "delphi",
+        modeLocked: false,
       },
     });
     const seen = await getProject(db, participant, projectId);

@@ -67,6 +67,7 @@ function ElementItem({
   element,
   position,
   detailFields,
+  named,
   opened,
   actions,
   targets,
@@ -75,6 +76,7 @@ function ElementItem({
   element: CardElement;
   position: number;
   detailFields: boolean;
+  named: boolean;
   opened: boolean;
   actions: ElementActions;
   targets: readonly MarkTarget[];
@@ -137,6 +139,7 @@ function ElementItem({
               isFacilitator={false}
               canEdit={false}
               detailFields={detailFields}
+              named={named}
               showDescription={false}
               addComment={addComment && ((body: string) => addComment(element, body))}
               onCommentAdded={() => actions.onCommentAdded(element)}
@@ -156,12 +159,15 @@ export function ElementList({
   projectId,
   elements,
   detailFields,
+  named = false,
   openElementId,
   actions,
 }: Readonly<{
   projectId: string;
   elements: readonly CardElement[];
   detailFields: boolean;
+  /** Whether the project is a Team, so each element shows who added it (PR14). */
+  named?: boolean;
   /** The element whose details are open when the board loads. */
   openElementId?: string | undefined;
   actions: ElementActions;
@@ -176,6 +182,7 @@ export function ElementList({
           element={element}
           position={index + 1}
           detailFields={detailFields}
+          named={named}
           opened={element.id === openElementId}
           actions={actions}
           targets={targets}

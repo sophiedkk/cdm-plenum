@@ -25,7 +25,13 @@ import {
   phaseOpenFor,
   readProject,
 } from "../projects/access.ts";
-import { type Author, actorMemberId } from "../projects/member.ts";
+import {
+  type Author,
+  actorMemberId,
+  isTeamProject,
+  type TeamAuthor,
+  teamAuthors,
+} from "../projects/member.ts";
 import { log } from "../projects/queries.ts";
 import {
   type AddCkmSourceInput,
@@ -94,6 +100,8 @@ export interface SourceElementRow {
 /** A source model as every member sees it; `addedBy` is the facilitator's only (EL2). */
 export interface SourceModel {
   id: string;
+  /** Who added or suggested it; present in a Team project only (PR14, ADR 0023). */
+  addedBy?: TeamAuthor | null;
   kind: SourceModelKind;
   status: SourceModelStatus;
   title: string;
@@ -542,7 +550,8 @@ async function modelRows(db: Kysely<DB>, projectId: string): Promise<ModelRow[]>
 
 /**
  * The project's source models, suggestions included, oldest first, for any member (EL12).
- * Who added or suggested one stays out (EL2, ADR 0005); `mine` marks the reader's own.
+ * Who added or suggested one stays out in a Delphi project (EL2, ADR 0005) and is named, by
+ * name only, in a Team project (PR14); `mine` marks the reader's own.
  */
 export async function listSourceModels(
   db: Kysely<DB>,
@@ -551,7 +560,22 @@ export async function listSourceModels(
 ): Promise<SourceActionResult<SourceModel[]>> {
   return readProject(db, userId, input.projectId, null, async (db, project) => {
     const me = await actorMemberId(db, project.id, userId);
-    return done((await modelRows(db, project.id)).map((row) => toSourceModel(row, me)));
+    const rows = await modelRows(db, project.id);
+    const authors = (await isTeamProject(db, project.id))
+      ? await teamAuthors(
+          db,
+          rows.map((row) => row.added_by_member_id),
+        )
+      : null;
+    return done(
+      rows.map((row) => ({
+        ...toSourceModel(row, me),
+        ...(authors && {
+          addedBy:
+            row.added_by_member_id === null ? null : (authors.get(row.added_by_member_id) ?? null),
+        }),
+      })),
+    );
   });
 }
 

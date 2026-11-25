@@ -8,6 +8,7 @@ import type { Locale } from "@/i18n/runtime";
 import type { ElementPrompt } from "@/lib/brainstorm";
 import type { GroupLabel } from "@/lib/element-groups";
 import type { ModelType } from "@/lib/model-types";
+import type { ProjectMode } from "@/lib/project-mode";
 import type { ProjectPhase } from "@/lib/project-phases";
 import type { ExpertType, ProjectRole } from "@/lib/project-roles";
 
@@ -235,4 +236,24 @@ export function modelTypeLabel(type: ModelType): string {
 /** The one-line explanation of a model type (SC4) in the active locale. */
 export function modelTypeDescription(type: ModelType): string {
   return MODEL_TYPE_DESCRIPTIONS[type]();
+}
+
+const PROJECT_MODE_LABELS: Record<ProjectMode, () => string> = {
+  delphi: () => m.projects_mode_delphi(),
+  team: () => m.projects_mode_team(),
+};
+
+const PROJECT_MODE_DESCRIPTIONS: Record<ProjectMode, () => string> = {
+  delphi: () => m.projects_mode_delphi_description(),
+  team: () => m.projects_mode_team_description(),
+};
+
+/** The name of a project mode (PR14) in the active locale. */
+export function projectModeLabel(mode: ProjectMode): string {
+  return PROJECT_MODE_LABELS[mode]();
+}
+
+/** The one-line explanation of a project mode (PR14) in the active locale. */
+export function projectModeDescription(mode: ProjectMode): string {
+  return PROJECT_MODE_DESCRIPTIONS[mode]();
 }

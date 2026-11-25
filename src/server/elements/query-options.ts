@@ -43,20 +43,15 @@ export const elementKeys = {
 
 /**
  * The elements on the board. Only the facilitator asks for the authors (EL2, ADR 0005); a
- * participant's answer has no author field at all, and the key keeps the two answers apart.
+ * participant's answer has no author field at all, unless the project is a Team (PR14), and
+ * the key keeps the two answers apart.
  */
 export function boardQueryOptions(projectId: string, withAuthors: boolean) {
   return queryOptions({
     queryKey: [...elementKeys.board(projectId), withAuthors ? "authors" : "public"] as const,
     queryFn: async () => {
       if (withAuthors) return listElementsWithAuthorsFn({ data: { projectId } });
-      const result = await listElementsFn({ data: { projectId } });
-      return result.ok
-        ? {
-            ok: true as const,
-            value: result.value.map((element) => ({ ...element, author: null })),
-          }
-        : result;
+      return listElementsFn({ data: { projectId } });
     },
     staleTime: STALE_TIME.board,
   });

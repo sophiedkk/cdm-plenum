@@ -95,6 +95,7 @@ function ParticipantHome() {
       <ProjectPages projectId={projectId} pages={homePages(phase)} />
       <AboutProject
         projectName={project.name}
+        mode={project.mode}
         groups={groups.value}
         leave={() => leave({ data: { projectId } })}
         onLeft={async () => {

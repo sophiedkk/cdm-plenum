@@ -12,10 +12,14 @@ import {
   VoteIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { type CommentOutcome, CommentThread } from "@/components/comments/comment-thread";
+import {
+  authorName,
+  type CommentOutcome,
+  CommentThread,
+} from "@/components/comments/comment-thread";
 // The details of one element on the board (EL1, EL4, EL5, EL6, EL9): its description, fields,
 // sources, CKM link and the links of merged duplicates, proposed values, comments and actions,
-// and the member's own marks (EL16). The author shows only in the facilitator's view (EL2). Data
+// and the member's own marks (EL16). The author shows in the facilitator's view (EL2) and in a Team project (PR14). Data
 // type, cardinality and values show from the phase that decides them (EL21); the facilitator
 // keeps the actions that set them in every phase.
 import { useModelType } from "@/components/projects/model-type-context";
@@ -30,12 +34,15 @@ import { refusalMessage } from "@/lib/i18n/refusals";
 import { joinUnits } from "@/lib/units";
 import type { BoardElement, ElementSourceKind } from "@/server/elements/queries";
 import { elementCommentsQueryOptions } from "@/server/elements/query-options";
-import type { Author } from "@/server/projects/member";
+import type { Author, TeamAuthor } from "@/server/projects/member";
 import { CkmLinks } from "./ckm-links";
 import { dataTypeName, dataTypePair } from "./data-type-text";
 import { type ElementMarkProps, ElementMarks } from "./element-marks";
 
-export type CardElement = BoardElement & { author: Author | null };
+/** A board element with its author when the reader may see one: the facilitator, or a Team (PR14). */
+export type CardElement = Omit<BoardElement, "author"> & {
+  author?: Author | TeamAuthor | null;
+};
 
 const SOURCE_ICONS: Record<ElementSourceKind, LucideIcon> = {
   brainstorm: LightbulbIcon,
@@ -88,6 +95,7 @@ export function ElementDetails({
   projectId,
   element,
   isFacilitator,
+  named = false,
   canEdit = true,
   detailFields,
   showDescription = true,
@@ -101,6 +109,8 @@ export function ElementDetails({
   projectId: string;
   element: CardElement;
   isFacilitator: boolean;
+  /** Whether a participant sees the author too: the project is a Team (PR14). */
+  named?: boolean;
   /** Whether the facilitator's edit, values and link buttons show. */
   canEdit?: boolean;
   /** Whether the phase shows data type, cardinality and values (EL21). */
@@ -185,11 +195,9 @@ export function ElementDetails({
               )}
             </Row>
           )}
-          {isFacilitator && (
+          {(isFacilitator || named) && element.author !== undefined && (
             <Row term={m.board_field_author()}>
-              {element.author === null
-                ? m.board_author_left()
-                : element.author.name.trim() || element.author.email}
+              {element.author === null ? m.board_author_left() : authorName(element.author)}
             </Row>
           )}
         </dl>

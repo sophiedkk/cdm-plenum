@@ -11,6 +11,16 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- You choose how a project runs when you create it: a "Delphi study"
+  (anonymous ratings on a scale of 1 to 9 against a consensus rule, the
+  default) or a "Team" (named participants decide by consent). You can change
+  it under Settings until the first round opens; after that the page says it is
+  fixed. In a Team project participants see by name who added an element, who
+  wrote a comment on the scope or an element, and who added a card on the
+  brainstorm board once it is revealed, who raised a detail objection and who
+  suggested a source model. Participants never see an e-mail address, only a
+  name. A Delphi project keeps hiding authors.
+  Participants read how the project runs under "About this project".
 - The model tree keeps the order of the elements within a group. In the tree
   editor each element has "Move up" and "Move down" buttons, settling the tree
   keeps the order, and the Details page, the recap, the elements CSV, the mind

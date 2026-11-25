@@ -36,9 +36,13 @@ export interface DetailStructure {
   units: string[];
 }
 
-/** An objection without its author (EL2): the reason and, once addressed, the facilitator's note. */
+/**
+ * An objection: the reason and, once addressed, the facilitator's note. The author is present
+ * in a Team project only (PR14, ADR 0023); a Delphi project sends none (EL2).
+ */
 export interface DetailObjection {
   id: string;
+  author?: { name: string } | null;
   /** The version of the proposal it was raised against. */
   version: number;
   reason: string;
