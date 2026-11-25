@@ -10,6 +10,7 @@ import { NotFoundState, PageHeader } from "@/components/shell/route-states";
 import { type AddModelActions, AddModelButton } from "@/components/sources/add-model";
 import { CoverageTable } from "@/components/sources/coverage-table";
 import { ModelCards, Suggestions } from "@/components/sources/model-list";
+import { usePhaseEdit } from "@/components/status/phase-banner";
 import { m } from "@/i18n/messages";
 import { requireStep } from "@/lib/guards";
 import { searchCkmFn } from "@/server/ckm/functions";
@@ -60,6 +61,7 @@ function ExistingModels() {
   const { projectId } = Route.useParams();
   const { project } = Route.useRouteContext();
   const queryClient = useQueryClient();
+  const { editable, banner } = usePhaseEdit(project.role, project.phase, "models");
   const { data: models } = useSuspenseQuery(sourceModelsQueryOptions(projectId));
   const { data: coverage } = useSuspenseQuery(sourceCoverageQueryOptions(projectId));
   const searchCkm = useServerFn(searchCkmFn);
@@ -134,24 +136,29 @@ function ExistingModels() {
         title={m.board_models_title()}
         description={m.board_models_purpose({ project: project.name })}
       />
+      {banner}
       <ModelCards
         models={added}
         add={
-          <AddModelButton
-            actions={actions}
-            onAdded={async () => {
-              toast.success(m.board_models_added());
-              await refresh();
-            }}
-          />
+          editable ? (
+            <AddModelButton
+              actions={actions}
+              onAdded={async () => {
+                toast.success(m.board_models_added());
+                await refresh();
+              }}
+            />
+          ) : undefined
         }
       />
-      <Suggestions
-        suggestions={suggestions}
-        accept={(sourceModelId) => accept({ data: { projectId, sourceModelId } })}
-        dismiss={(sourceModelId) => dismiss({ data: { projectId, sourceModelId } })}
-        onDone={refresh}
-      />
+      {editable && (
+        <Suggestions
+          suggestions={suggestions}
+          accept={(sourceModelId) => accept({ data: { projectId, sourceModelId } })}
+          dismiss={(sourceModelId) => dismiss({ data: { projectId, sourceModelId } })}
+          onDone={refresh}
+        />
+      )}
       {coverage.value.rows.length > 0 && (
         <section aria-labelledby="coverage-heading" className="mt-10">
           <h2 id="coverage-heading" className="text-lg font-semibold">
@@ -159,6 +166,7 @@ function ExistingModels() {
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{m.board_models_coverage_intro()}</p>
           <CoverageTable
+            readOnly={!editable}
             coverage={coverage.value}
             putOnList={(rowIds) => putOnList({ data: { projectId, rowIds } })}
             unmatch={(rowId) => unmatch({ data: { projectId, rowId } })}

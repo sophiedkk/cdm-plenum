@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   ckmColumnShown,
   detailFieldsShown,
+  facilitatorAccess,
   PARTICIPANT_ACCESS,
   PARTICIPANT_WRITES,
   PROJECT_STEPS,
@@ -164,5 +165,32 @@ describe("preparesAhead", () => {
       "scope",
       "discover",
     ]);
+  });
+});
+
+describe("facilitatorAccess (F3)", () => {
+  const reads = (step: (typeof PROJECT_STEPS)[number]) =>
+    PROJECT_PHASES.filter((phase) => facilitatorAccess(phase, step) === "read");
+
+  it("reads a step once the project is past its last editing phase", () => {
+    expect(reads("scope")).toEqual(["discover", "decide", "detail", "handoff"]);
+    expect(reads("models")).toEqual(["decide", "detail", "handoff"]);
+    expect(reads("brainstorm")).toEqual(["decide", "detail", "handoff"]);
+    expect(reads("grouping")).toEqual(["decide", "detail", "handoff"]);
+    expect(reads("board")).toEqual(["detail", "handoff"]);
+    expect(reads("rounds")).toEqual(["detail", "handoff"]);
+    expect(reads("details")).toEqual(["handoff"]);
+  });
+
+  it("keeps a step editable ahead of its phase, as the facilitator prepares ahead (PR10)", () => {
+    expect(facilitatorAccess("scope", "rounds")).toBe("edit");
+    expect(facilitatorAccess("scope", "board")).toBe("edit");
+    expect(facilitatorAccess("discover", "details")).toBe("edit");
+  });
+
+  it("never closes the people, settings and export steps", () => {
+    for (const step of ["members", "settings", "export", "handoff"] as const) {
+      expect(reads(step)).toEqual([]);
+    }
   });
 });

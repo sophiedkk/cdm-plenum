@@ -77,10 +77,13 @@ export function RevealButton({
   participants,
   reveal,
   onRevealed,
+  primary = false,
 }: Readonly<{
   participants: readonly ParticipantCount[];
   reveal: () => Promise<Outcome<unknown>>;
   onRevealed: () => Promise<void> | void;
+  /** The suggested action of the page, shown filled. */
+  primary?: boolean;
 }>) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -106,7 +109,11 @@ export function RevealButton({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm">
+        <Button
+          type="button"
+          variant={primary ? "default" : "outline"}
+          size={primary ? "default" : "sm"}
+        >
           <EyeIcon aria-hidden="true" data-icon="inline-start" />
           {m.board_reveal()}
         </Button>
