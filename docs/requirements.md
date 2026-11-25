@@ -239,7 +239,7 @@ Classified by the ISO/IEC 25010 quality characteristics.
 | Q-AUDIT-1 | Traceability | Every element links to its source and to its rating history. | For any included element the export shows where it came from and its outcome in each round. |
 | Q-ACC-1 | Accessibility | WCAG 2.1 level AA. | An axe check and a keyboard-only walkthrough find no errors at level A and AA. |
 | Q-ACC-2 | Accessibility | Outcomes do not rely on colour alone. | Every outcome (included, excluded, no consensus) has text next to its colour. |
-| Q-I18N-1 | Usability | The interface is available in English and Dutch. | Every user-visible text comes from the message catalogue; switching to Dutch leaves no English text on the Must screens. |
+| Q-I18N-1 | Usability | The interface is available in English and Dutch. | Every user-visible text comes from the message catalogue; switching to Dutch leaves no English text on the Must screens. Owner decision 2026-11-25: every date and time is shown in the reader's browser time zone with the zone named (for example "14:00 GMT+1"), server and client rendering the same text. |
 | Q-USE-1 | Usability | Compact views: one row per element, details on demand. | At 1280 by 800 pixels, the board shows at least 10 elements and a round's results at least 8 elements without scrolling past the page header ([ADR 0013](adr/0013-participant-task-home-and-compact-views.md)). |
 | Q-PERF-1 | Performance | Fast pages. | Pages load within 2 seconds with a project of 100 elements and 50 participants. |
 | Q-MAINT-1 | Maintainability | Transferable to a new developer. | Test coverage of the core is at least 70%; `CLAUDE.md` and the architecture documentation are up to date. |

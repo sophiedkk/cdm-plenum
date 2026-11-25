@@ -145,6 +145,11 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A server function that fails now writes one line to the server log with
+  the function name, the error class, the message and the stack, so a
+  missing migration shows up in the log. The log never holds the input of
+  the function, so no rating, element text or name ends up in it.
+
 - The brainstorm is a board with one column per question. Elements from
   existing models show dashed in their column, your own elements are
   marked, and before the reveal other people's elements show only as a
@@ -177,6 +182,11 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Every date and time in the app is shown in your browser's time zone with
+  the zone named, such as "November 25, 2026 at 14:00 GMT+1". The app stores
+  your time zone in a cookie, so pages load with the right time. Only the
+  first page in a new browser shows UTC for a moment.
+- The close button of a window reads "Sluiten" in Dutch instead of "Close".
 - The response rate of a closed round no longer changes when a participant
   leaves the project later. A closed round counts the participants who were
   in each group when it closed; an open round counts the current ones.

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type { Kysely } from "kysely";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { PROJECT_PHASES, type ProjectPhase } from "@/lib/project-phases";
 import { grantAppRole } from "../admin/app-roles.ts";
 import { createProject } from "../projects/queries.ts";
@@ -20,12 +20,16 @@ import {
 } from "./seed-demo.ts";
 import { createTestDb } from "./test-db.ts";
 
+// NOTE: no spec governs this, our own design: a seed takes 0.3 to 0.5 s alone but over 5 s on a
+// loaded host (#69), so the tests that only read share one seed and the rest get 30 s each.
+const SEED_TIMEOUT = 30_000;
+
 let db: Kysely<DB> | undefined;
 
-afterEach(async () => {
-  await db?.destroy();
-  db = undefined;
-});
+function live(): Kysely<DB> {
+  if (!db) throw new Error("no test database");
+  return db;
+}
 
 async function projectOf(summary: SeedSummary, phase: ProjectPhase): Promise<string> {
   const project = summary.projects.find((p) => p.phase === phase);
@@ -56,24 +60,34 @@ async function roundsOf(projectId: string) {
     .execute();
 }
 
-describe("seedDemo", () => {
-  it("creates one demo project per phase, each in its phase", async () => {
+describe("seedDemo, one seed read by several tests", { timeout: SEED_TIMEOUT }, () => {
+  let seeded: SeedSummary;
+
+  beforeAll(async () => {
     db = await createTestDb();
-    const summary = await seedDemo(db, "facilitator@example.test");
-    expect(summary.projects.map((p) => [p.phase, p.name, p.status])).toEqual(
+    seeded = await seedDemo(db, "facilitator@example.test");
+  }, SEED_TIMEOUT);
+
+  afterAll(async () => {
+    await db?.destroy();
+    db = undefined;
+  });
+
+  it("creates one demo project per phase, each in its phase", async () => {
+    expect(seeded.projects.map((p) => [p.phase, p.name, p.status])).toEqual(
       PROJECT_PHASES.map((phase) => [phase, DEMO_PROJECTS[phase], "seeded"]),
     );
     for (const phase of PROJECT_PHASES) {
-      const project = await db
+      const project = await live()
         .selectFrom("project")
         .select("phase")
-        .where("id", "=", await projectOf(summary, phase))
+        .where("id", "=", await projectOf(seeded, phase))
         .executeTakeFirstOrThrow();
       expect(project.phase).toBe(phase);
-      const members = await db
+      const members = await live()
         .selectFrom("member")
         .select("role")
-        .where("organizationId", "=", await projectOf(summary, phase))
+        .where("organizationId", "=", await projectOf(seeded, phase))
         .execute();
       expect(members.filter((m) => m.role === "participant")).toHaveLength(
         DEMO_PARTICIPANTS.length,
@@ -83,15 +97,14 @@ describe("seedDemo", () => {
   });
 
   it("leaves the scope project with comments and no elements", async () => {
-    db = await createTestDb();
-    const projectId = await projectOf(await seedDemo(db, "facilitator@example.test"), "scope");
-    const comments = await db
+    const projectId = await projectOf(seeded, "scope");
+    const comments = await live()
       .selectFrom("scope_comment")
       .select("id")
       .where("project_id", "=", projectId)
       .execute();
     expect(comments).toHaveLength(3);
-    const elements = await db
+    const elements = await live()
       .selectFrom("element")
       .select("id")
       .where("project_id", "=", projectId)
@@ -100,16 +113,15 @@ describe("seedDemo", () => {
   });
 
   it("leaves the discover project in the private step, with elements of five participants", async () => {
-    db = await createTestDb();
-    const projectId = await projectOf(await seedDemo(db, "facilitator@example.test"), "discover");
-    const project = await db
+    const projectId = await projectOf(seeded, "discover");
+    const project = await live()
       .selectFrom("project")
       .select(["private_brainstorm", "board_revealed_at"])
       .where("id", "=", projectId)
       .executeTakeFirstOrThrow();
     expect(project.private_brainstorm).toBe(true);
     expect(project.board_revealed_at).toBeNull();
-    const elements = await db
+    const elements = await live()
       .selectFrom("element")
       .select((eb) => [
         "author_member_id",
@@ -134,7 +146,7 @@ describe("seedDemo", () => {
     const imported = elements.filter((e) => e.imported);
     expect(imported.length).toBeGreaterThan(5);
     expect(imported.filter((e) => e.group_id !== null).length).toBeGreaterThan(5);
-    const answers = await db
+    const answers = await live()
       .selectFrom("first_look_answer")
       .innerJoin("element", "element.id", "first_look_answer.element_id")
       .select("first_look_answer.member_id")
@@ -145,16 +157,15 @@ describe("seedDemo", () => {
   });
 
   it("gives the decide project a closed round 1 with every outcome and an open round 2", async () => {
-    db = await createTestDb();
-    const projectId = await projectOf(await seedDemo(db, "facilitator@example.test"), "decide");
-    const elements = await db
+    const projectId = await projectOf(seeded, "decide");
+    const elements = await live()
       .selectFrom("element")
       .select("id")
       .where("project_id", "=", projectId)
       .execute();
     expect(elements).toHaveLength(DEMO_ELEMENTS.length);
     // Every element sits in the group of its question, the headings of the round (DE19).
-    const grouped = await db
+    const grouped = await live()
       .selectFrom("element")
       .select("group_id")
       .where("project_id", "=", projectId)
@@ -167,7 +178,7 @@ describe("seedDemo", () => {
       [2, true, false],
     ]);
     expect(await outcomes(rounds[0])).toEqual({ included: 5, excluded: 1, no_consensus: 2 });
-    const round2 = await db
+    const round2 = await live()
       .selectFrom("round_element")
       .select("element_id")
       .where("round_id", "=", rounds[1]?.id ?? "")
@@ -176,11 +187,10 @@ describe("seedDemo", () => {
   });
 
   it("gives the detail project one settled proposal and one with an open objection", async () => {
-    db = await createTestDb();
-    const projectId = await projectOf(await seedDemo(db, "facilitator@example.test"), "detail");
+    const projectId = await projectOf(seeded, "detail");
     const rounds = await roundsOf(projectId);
     expect(await outcomes(rounds[0])).toEqual({ included: 3, excluded: 1, no_consensus: 0 });
-    const proposals = await db
+    const proposals = await live()
       .selectFrom("detail_proposal")
       .innerJoin("element", "element.id", "detail_proposal.element_id")
       .select(["element.name", "element.data_type", "detail_proposal.settled_at"])
@@ -192,7 +202,7 @@ describe("seedDemo", () => {
       ["Inspired oxygen", false, null],
       ["SpO2", true, "proportion"],
     ]);
-    const objections = await db
+    const objections = await live()
       .selectFrom("detail_answer")
       .innerJoin("detail_proposal", "detail_proposal.id", "detail_answer.proposal_id")
       .innerJoin("element", "element.id", "detail_proposal.element_id")
@@ -202,7 +212,7 @@ describe("seedDemo", () => {
       .where("detail_answer.addressed_at", "is", null)
       .execute();
     expect(objections).toHaveLength(1);
-    const codes = await db
+    const codes = await live()
       .selectFrom("detail_proposal")
       .innerJoin("element", "element.id", "detail_proposal.element_id")
       .select(["element.name", "detail_proposal.code", "detail_proposal.review_state"])
@@ -213,8 +223,7 @@ describe("seedDemo", () => {
   });
 
   it("gives the hand-off project two closed rounds, the second settling one element", async () => {
-    db = await createTestDb();
-    const projectId = await projectOf(await seedDemo(db, "facilitator@example.test"), "handoff");
+    const projectId = await projectOf(seeded, "handoff");
     const rounds = await roundsOf(projectId);
     expect(rounds.map((r) => [r.number, r.closed_at !== null])).toEqual([
       [1, true],
@@ -223,6 +232,13 @@ describe("seedDemo", () => {
     expect(await outcomes(rounds[0])).toEqual({ included: 3, excluded: 1, no_consensus: 2 });
     expect(await outcomes(rounds[1])).toEqual({ included: 1, excluded: 0, no_consensus: 1 });
     expect(DEMO_HANDOFF_ELEMENTS.filter((e) => e.round2)).toHaveLength(2);
+  });
+});
+
+describe("seedDemo", { timeout: SEED_TIMEOUT }, () => {
+  afterEach(async () => {
+    await db?.destroy();
+    db = undefined;
   });
 
   it("changes nothing when every demo project already exists", async () => {

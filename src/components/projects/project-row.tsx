@@ -5,10 +5,11 @@
 // what waits for this person there with its deadline, or a quiet "nothing for you now".
 import { ChevronRightIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { formatShortDate, useTimeZone } from "@/components/rounds/format";
+import { formatShortDate } from "@/components/rounds/format";
 import { m } from "@/i18n/messages";
 import { projectPhaseLabel } from "@/lib/i18n/labels";
 import type { Waiting } from "@/lib/project-home";
+import { useTimeZone } from "@/lib/time-zone";
 import { cn } from "@/lib/utils";
 import type { ProjectRow as Row } from "@/server/projects/overview";
 import { MiniPhase } from "./phase-steps";
