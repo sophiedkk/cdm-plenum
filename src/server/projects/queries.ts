@@ -9,6 +9,7 @@ import { m } from "@/i18n/messages";
 import type { Locale } from "@/i18n/runtime";
 import type { ActivityAction } from "@/lib/activity-actions";
 import { isModelType, type ModelType } from "@/lib/model-types";
+import { isProjectMode, type ProjectMode } from "@/lib/project-mode";
 import { isProjectPhase, type ProjectPhase } from "@/lib/project-phases";
 import {
   DEFAULT_GROUPS,
@@ -145,6 +146,8 @@ export interface ProjectDetail extends ProjectSummary {
   boardRevealed: boolean;
   /** The model type (SC4); the brainstorm questions and starting groups follow it (EL14). */
   modelType: ModelType | null;
+  /** How the project runs (PR14, ADR 0023). */
+  mode: ProjectMode;
 }
 
 /** The stakeholder group of `userId` in the project, or null when they are in none. */
@@ -179,6 +182,7 @@ export async function getProject(
         "private_brainstorm",
         "board_revealed_at",
         "model_type",
+        "mode",
       ])
       .where("id", "=", project.id)
       .executeTakeFirstOrThrow();
@@ -193,6 +197,7 @@ export async function getProject(
       privateBrainstorm: row.private_brainstorm,
       boardRevealed: row.board_revealed_at !== null,
       modelType: isModelType(row.model_type) ? row.model_type : null,
+      mode: isProjectMode(row.mode) ? row.mode : "delphi",
     });
   });
 }
