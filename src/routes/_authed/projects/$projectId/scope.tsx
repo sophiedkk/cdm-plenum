@@ -56,7 +56,7 @@ export const Route = createFileRoute("/_authed/projects/$projectId/scope")({
   component: Scope,
 });
 
-const SECTION_HEADING = "text-lg font-semibold outline-none";
+const SECTION_HEADING = "type-section outline-none";
 
 function Scope() {
   const { projectId } = Route.useParams();
