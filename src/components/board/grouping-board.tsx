@@ -1,14 +1,15 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The facilitator's grouping (EL18, ADR 0020): "Not grouped yet" beside the groups, each element
-// a card. Drag a card onto a group with a mouse, a pen or a finger (pointer events), or click it,
-// or press Enter on it, and choose "Move <name> here" in a group: the keyboard path (WCAG 2.1.1,
-// 2.5.1). Escape puts a picked card down. A live region says what was picked up and moved.
 import { PencilIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/members/form-dialog";
+// The facilitator's grouping (EL18, ADR 0020): "Not grouped yet" beside the groups, each element
+// a card. Drag a card onto a group with a mouse, a pen or a finger (pointer events), or click it,
+// or press Enter on it, and choose "Move <name> here" in a group: the keyboard path (WCAG 2.1.1,
+// 2.5.1). Escape puts a picked card down. A live region says what was picked up and moved.
+import { useModelType } from "@/components/projects/model-type-context";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import type { Outcome } from "@/lib/forms/outcome";
@@ -121,6 +122,7 @@ export function GroupingBoard({
   board,
   actions,
 }: Readonly<{ board: Board; actions: GroupingActions }>) {
+  const modelType = useModelType();
   const [held, setHeld] = useState<GroupedElement | null>(null);
   const [over, setOver] = useState<Zone | null>(null);
   const [said, setSaid] = useState("");
@@ -147,7 +149,7 @@ export function GroupingBoard({
   const nameOfZone = (zone: Zone) => {
     if (zone === POOL) return m.board_check_ungrouped();
     const group = board.groups.find((candidate) => candidate.id === zone);
-    return group ? groupName(group) : "";
+    return group ? groupName(group, modelType) : "";
   };
 
   useEffect(() => {
@@ -302,7 +304,7 @@ export function GroupingBoard({
       <div className="grid gap-4 lg:grid-cols-2">
         {board.groups.map((group) => {
           const items = inZone(group.id);
-          const name = groupName(group);
+          const name = groupName(group, modelType);
           const missing = board.remarks.missing[group.id] ?? [];
           return (
             <section

@@ -1,18 +1,19 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The brainstorm board (EL23, ADR 0020): a strip with how many people added elements, then one
-// column per brainstorm question (EL14). The member's own cards are marked, cards from existing
-// models are dashed, and before the reveal other people's cards are a count only (EL13). Typing in
-// a column and pressing Enter adds an element under that question; "refers to another model"
-// opens the model's title and link below the name (EL26). After the reveal similar names show
-// while typing, with "Same as this" to support that element instead (EL15, EL16).
 import { revalidateLogic, useStore } from "@tanstack/react-form";
 import { CopyIcon } from "lucide-react";
 import { type ReactNode, useId, useRef } from "react";
 import { useAppForm } from "@/components/form/app-form";
 import { FieldFeedback, useFieldA11y } from "@/components/form/field-a11y";
 import { useFieldContext } from "@/components/form/form-context";
+// The brainstorm board (EL23, ADR 0020): a strip with how many people added elements, then one
+// column per brainstorm question (EL14). The member's own cards are marked, cards from existing
+// models are dashed, and before the reveal other people's cards are a count only (EL13). Typing in
+// a column and pressing Enter adds an element under that question; "refers to another model"
+// opens the model's title and link below the name (EL26). After the reveal similar names show
+// while typing, with "Same as this" to support that element instead (EL15, EL16).
+import { useModelType } from "@/components/projects/model-type-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { m } from "@/i18n/messages";
@@ -159,8 +160,9 @@ function ColumnAddForm({
   hintLink: (element: HintElement) => ReactNode;
   actions: QuestionBoardActions;
 }>) {
+  const modelType = useModelType();
   const formRef = useRef<HTMLFormElement>(null);
-  const label = m.board_column_add_label({ question: promptQuestion(prompt) });
+  const label = m.board_column_add_label({ question: promptQuestion(prompt, modelType) });
   const form = useAppForm({
     defaultValues: { name: "", description: "", ...fromReference(null) },
     validationLogic: revalidateLogic(),
@@ -309,6 +311,7 @@ function Column({
   hintLink: (element: HintElement) => ReactNode;
   actions: QuestionBoardActions;
 }>) {
+  const modelType = useModelType();
   const id = useId();
   const listed = column.own.length + column.fromModels.length + column.others.length;
   return (
@@ -318,7 +321,7 @@ function Column({
     >
       <div className="border-b px-3 pt-3 pb-2">
         <h3 id={id} className="text-[0.9375rem] leading-[1.375rem] font-semibold">
-          {promptQuestion(column.prompt)}
+          {promptQuestion(column.prompt, modelType)}
         </h3>
         <p className="mt-0.5 text-sm text-muted-foreground">
           {m.board_column_listed({ count: listed })}

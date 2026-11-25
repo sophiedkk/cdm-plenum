@@ -9,9 +9,9 @@
 import { preparesAhead } from "./phase-access.ts";
 import type { ProjectPhase } from "./project-phases.ts";
 
-// NOTE: SC4, EL18, ADR 0020; no spec governs this, our own design. Every type keeps the four
-// starting groups of the brainstorm questions (migration 0014): a group places elements by its
-// question, so other groups would need other questions. The facilitator renames or adds groups.
+// NOTE: SC4, EL14, EL18, ADR 0020; no spec governs this, our own design. Every type keeps the four
+// question slots and starting groups of migration 0014; their wording follows the type (labels.ts).
+// The facilitator renames or adds groups.
 export const MODEL_TYPES = [
   "observation",
   "evaluation",

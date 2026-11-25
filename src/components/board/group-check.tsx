@@ -1,15 +1,16 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
-// The participants' check of the groups (EL24, ADR 0020): per element "Same as…" (the EL16 mark)
-// and "Belongs elsewhere", per group "Something missing in this group?". Every remark is the
-// reader's own; other participants never see it (EL2). Each disclosure opens below its button,
-// so the buttons keep their place.
 import { revalidateLogic } from "@tanstack/react-form";
 import { useId, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
+// The participants' check of the groups (EL24, ADR 0020): per element "Same as…" (the EL16 mark)
+// and "Belongs elsewhere", per group "Something missing in this group?". Every remark is the
+// reader's own; other participants never see it (EL2). Each disclosure opens below its button,
+// so the buttons keep their place.
+import { useModelType } from "@/components/projects/model-type-context";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import { GROUP_MISSING_MAX } from "@/lib/element-groups";
@@ -275,11 +276,12 @@ export function GroupCheckList({
   sameAs,
   actions,
 }: Readonly<{ check: Check; sameAs: readonly SameAsPair[]; actions: GroupCheckActions }>) {
+  const modelType = useModelType();
   const everyone = [...check.groups.flatMap((group) => group.elements), ...check.ungrouped];
   const sections = [
     ...check.groups.map((group) => ({
       id: group.id,
-      name: groupName(group),
+      name: groupName(group, modelType),
       elements: group.elements,
       canMiss: true,
     })),

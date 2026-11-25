@@ -1,6 +1,10 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
+import { CheckIcon, ChevronRightIcon } from "lucide-react";
+import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
+import { type ReactNode, type Ref, useId, useRef, useState } from "react";
+import { ReferenceText } from "@/components/board/reference-text";
 // One card of the rating screen (DE3, DE7, DE8, DE15, DE18, ADR 0019): the element's name and
 // description with the question right under them, the scale as a radio group of large buttons in
 // the round's three bands with "unable to rate" after them, the reason at full width and the
@@ -10,10 +14,7 @@
 // when the field loses focus. In a later round the card shows the own earlier score in a line and
 // above the scale; how the group scored, with the anonymous reasons, opens below that line. No
 // outcome label of the earlier round shows: it can push ratings toward the group (ADR 0013).
-import { CheckIcon, ChevronRightIcon } from "lucide-react";
-import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
-import { type ReactNode, type Ref, useId, useRef, useState } from "react";
-import { ReferenceText } from "@/components/board/reference-text";
+import { useModelType } from "@/components/projects/model-type-context";
 import { Button } from "@/components/ui/button";
 import { FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
@@ -382,6 +383,7 @@ export function RatingElement({
   saveFlag: (kind: DetailFlagKind, reason: string) => Promise<FlagOutcome>;
   removeFlag: (kind: DetailFlagKind) => Promise<FlagOutcome>;
 }>) {
+  const modelType = useModelType();
   const base = useId();
   const initial = element.own.rated
     ? element.own.score === null
@@ -458,7 +460,7 @@ export function RatingElement({
             <span className="sr-only">
               {kind === "values" ? m.rounds_value_card_element() : m.rounds_card_group()}{" "}
             </span>
-            {groupName(element.group)}
+            {groupName(element.group, modelType)}
           </p>
         )}
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">

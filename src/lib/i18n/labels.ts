@@ -4,6 +4,7 @@
 // Translated names of the values the screens show: project roles, phases, expert types and the
 // brainstorm questions. A table per value set, so a new value is a type error until it has a label.
 import { m } from "@/i18n/messages";
+import type { Locale } from "@/i18n/runtime";
 import type { ElementPrompt } from "@/lib/brainstorm";
 import type { GroupLabel } from "@/lib/element-groups";
 import type { ModelType } from "@/lib/model-types";
@@ -44,44 +45,170 @@ export function expertTypeLabel(expertType: ExpertType): string {
   return EXPERT_TYPE_LABELS[expertType]();
 }
 
-const PROMPT_QUESTIONS: Record<ElementPrompt, () => string> = {
-  recorded: () => m.board_prompt_recorded(),
-  patient_state: () => m.board_prompt_patient_state(),
-  method: () => m.board_prompt_method(),
-  context: () => m.board_prompt_context(),
-};
-
-/** The brainstorm question (EL14) in the active locale. */
-export function promptQuestion(prompt: ElementPrompt): string {
-  return PROMPT_QUESTIONS[prompt]();
+/** Reads a message in another locale than the active one, as the export does. */
+export interface LocaleOption {
+  locale: Locale;
 }
 
-const PROMPT_LABELS: Record<ElementPrompt, () => string> = {
-  recorded: () => m.board_prompt_short_recorded(),
-  patient_state: () => m.board_prompt_short_patient_state(),
-  method: () => m.board_prompt_short_method(),
-  context: () => m.board_prompt_short_context(),
+interface SlotWording {
+  question: (options?: LocaleOption) => string;
+  short: (options?: LocaleOption) => string;
+  group: (options?: LocaleOption) => string;
+}
+
+// NOTE: EL14, EL18, SC4; no spec governs this, our own design, approved by the owner on 2026-11-25.
+// The four slots and their keys stay; only the wording, the short label and the group name depend
+// on the model type. The split follows the openEHR guide "What reference model class to use when"
+// (https://openehr.atlassian.net/wiki/spaces/healthmod/pages/2949139). No type reads as an
+// observation. Nothing is stored per type, so a changed type moves no element.
+const WORDING: Record<ModelType, Record<ElementPrompt, SlotWording>> = {
+  observation: {
+    recorded: {
+      question: (options) => m.board_prompt_recorded({}, options),
+      short: (options) => m.board_prompt_short_recorded({}, options),
+      group: (options) => m.board_group_recorded({}, options),
+    },
+    patient_state: {
+      question: (options) => m.board_prompt_patient_state({}, options),
+      short: (options) => m.board_prompt_short_patient_state({}, options),
+      group: (options) => m.board_group_patient_state({}, options),
+    },
+    method: {
+      question: (options) => m.board_prompt_method({}, options),
+      short: (options) => m.board_prompt_short_method({}, options),
+      group: (options) => m.board_group_method({}, options),
+    },
+    context: {
+      question: (options) => m.board_prompt_context({}, options),
+      short: (options) => m.board_prompt_short_context({}, options),
+      group: (options) => m.board_group_context({}, options),
+    },
+  },
+  evaluation: {
+    recorded: {
+      question: (options) => m.board_prompt_evaluation_recorded({}, options),
+      short: (options) => m.board_prompt_short_evaluation_recorded({}, options),
+      group: (options) => m.board_group_evaluation_recorded({}, options),
+    },
+    patient_state: {
+      question: (options) => m.board_prompt_evaluation_patient_state({}, options),
+      short: (options) => m.board_prompt_short_evaluation_patient_state({}, options),
+      group: (options) => m.board_group_evaluation_patient_state({}, options),
+    },
+    method: {
+      question: (options) => m.board_prompt_evaluation_method({}, options),
+      short: (options) => m.board_prompt_short_evaluation_method({}, options),
+      group: (options) => m.board_group_evaluation_method({}, options),
+    },
+    context: {
+      question: (options) => m.board_prompt_context({}, options),
+      short: (options) => m.board_prompt_short_context({}, options),
+      group: (options) => m.board_group_context({}, options),
+    },
+  },
+  instruction: {
+    recorded: {
+      question: (options) => m.board_prompt_instruction_recorded({}, options),
+      short: (options) => m.board_prompt_short_instruction_recorded({}, options),
+      group: (options) => m.board_group_instruction_recorded({}, options),
+    },
+    patient_state: {
+      question: (options) => m.board_prompt_instruction_patient_state({}, options),
+      short: (options) => m.board_prompt_short_instruction_patient_state({}, options),
+      group: (options) => m.board_group_instruction_patient_state({}, options),
+    },
+    method: {
+      question: (options) => m.board_prompt_instruction_method({}, options),
+      short: (options) => m.board_prompt_short_instruction_method({}, options),
+      group: (options) => m.board_group_instruction_method({}, options),
+    },
+    context: {
+      question: (options) => m.board_prompt_context({}, options),
+      short: (options) => m.board_prompt_short_context({}, options),
+      group: (options) => m.board_group_context({}, options),
+    },
+  },
+  action: {
+    recorded: {
+      question: (options) => m.board_prompt_action_recorded({}, options),
+      short: (options) => m.board_prompt_short_action_recorded({}, options),
+      group: (options) => m.board_group_action_recorded({}, options),
+    },
+    patient_state: {
+      question: (options) => m.board_prompt_action_patient_state({}, options),
+      short: (options) => m.board_prompt_short_action_patient_state({}, options),
+      group: (options) => m.board_group_action_patient_state({}, options),
+    },
+    method: {
+      question: (options) => m.board_prompt_action_method({}, options),
+      short: (options) => m.board_prompt_short_action_method({}, options),
+      group: (options) => m.board_group_action_method({}, options),
+    },
+    context: {
+      question: (options) => m.board_prompt_context({}, options),
+      short: (options) => m.board_prompt_short_context({}, options),
+      group: (options) => m.board_group_context({}, options),
+    },
+  },
+  cluster: {
+    recorded: {
+      question: (options) => m.board_prompt_cluster_recorded({}, options),
+      short: (options) => m.board_prompt_short_cluster_recorded({}, options),
+      group: (options) => m.board_group_cluster_recorded({}, options),
+    },
+    patient_state: {
+      question: (options) => m.board_prompt_cluster_patient_state({}, options),
+      short: (options) => m.board_prompt_short_cluster_patient_state({}, options),
+      group: (options) => m.board_group_cluster_patient_state({}, options),
+    },
+    method: {
+      question: (options) => m.board_prompt_cluster_method({}, options),
+      short: (options) => m.board_prompt_short_cluster_method({}, options),
+      group: (options) => m.board_group_cluster_method({}, options),
+    },
+    context: {
+      question: (options) => m.board_prompt_cluster_context({}, options),
+      short: (options) => m.board_prompt_short_cluster_context({}, options),
+      group: (options) => m.board_group_cluster_context({}, options),
+    },
+  },
 };
 
-const GROUP_NAMES: Record<ElementPrompt, () => string> = {
-  recorded: () => m.board_group_recorded(),
-  patient_state: () => m.board_group_patient_state(),
-  method: () => m.board_group_method(),
-  context: () => m.board_group_context(),
-};
+function wording(prompt: ElementPrompt, type: ModelType | null): SlotWording {
+  return WORDING[type ?? "observation"][prompt];
+}
+
+/** The brainstorm question (EL14) for a model type in the active locale. */
+export function promptQuestion(
+  prompt: ElementPrompt,
+  type: ModelType | null,
+  options?: LocaleOption,
+): string {
+  return wording(prompt, type).question(options);
+}
 
 /**
  * The name of a group of elements (EL18): the facilitator's own, or the name of the question the
- * group started from, in the active locale.
+ * group started from for the project's model type, in the active locale.
  */
-export function groupName(group: GroupLabel): string {
+export function groupName(
+  group: GroupLabel,
+  type: ModelType | null,
+  options?: LocaleOption,
+): string {
   if (group.name !== null) return group.name;
-  return group.prompt === null ? "" : GROUP_NAMES[group.prompt]();
+  return group.prompt === null ? "" : wording(group.prompt, type).group(options);
 }
 
 /** The brainstorm question in a word or two, for a table column; null for another source. */
-export function promptLabel(prompt: ElementPrompt | null): string {
-  return prompt === null ? m.board_prompt_short_none() : PROMPT_LABELS[prompt]();
+export function promptLabel(
+  prompt: ElementPrompt | null,
+  type: ModelType | null,
+  options?: LocaleOption,
+): string {
+  return prompt === null
+    ? m.board_prompt_short_none({}, options)
+    : wording(prompt, type).short(options);
 }
 
 const MODEL_TYPE_LABELS: Record<ModelType, () => string> = {

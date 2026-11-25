@@ -154,7 +154,9 @@ Then work through these steps:
    the Overview, with the checklist for the scope phase; the Scope tab shows
    the concept, use cases and three comments. Under "Model type", choose
    Observation and save; a participant sees the type and its one-line
-   explanation in the same place. Move the project on to
+   explanation in the same place. Choose Evaluation instead and open the
+   brainstorm board (Discover): the four columns now ask what is concluded,
+   what it is based on, how certain it is and the situation. Move the project on to
    discover with "Go on to Discover" at the end of the checklist.
 2. **Discover:** open "Heart rate (demo)". The Overview lists the parts of
    discover. "Review" on the first item opens Existing models: the pulse

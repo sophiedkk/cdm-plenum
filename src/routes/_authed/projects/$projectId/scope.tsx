@@ -194,7 +194,14 @@ function Scope() {
               type={statement.modelType}
               save={(modelType) => setModelType({ data: { projectId, modelType } })}
               onSaved={async () => {
-                await refreshScope();
+                await Promise.all([
+                  refreshScope(),
+                  // The questions and group names on every page follow the type.
+                  queryClient.invalidateQueries({
+                    queryKey: projectKeys.detail(projectId),
+                    exact: true,
+                  }),
+                ]);
                 toast.success(m.scope_model_type_saved());
               }}
             />

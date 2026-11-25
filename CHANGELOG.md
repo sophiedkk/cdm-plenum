@@ -21,6 +21,17 @@ the project uses [Semantic Versioning](https://semver.org/).
 - Decision report: each round lists the panel per expert type when it opened
   and the minimum that applied. A count of 1 or 2 reads "fewer than 3". The
   reason for opening below the minimum is not part of the report.
+- Brainstorm questions per model type: the four questions, their column
+  labels and the names of the four starting groups follow the model type of
+  the project. An evaluation asks what is concluded, what it is based on, how
+  certain it is and the situation; an instruction asks what is asked, when,
+  why and the situation; an action asks what was done, which step, how and
+  the situation; a sub-block asks which parts it has, what to know about each
+  part, how it was determined and where it is reused. An observation and a
+  project without a type keep the questions as before. Changing the type
+  moves no element, and a group you renamed keeps its name. The element
+  export names the groups the same way.
+
 - Hand-off page: in the Hand-off phase every member opens a read-only page
   with the agreed model: the tree, each element with its data type,
   cardinality, values and codes, and the references to other models. Parts
