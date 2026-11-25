@@ -6,7 +6,7 @@
 // element, so the answers, objections, revisions and settling of DT2 (queries.ts) work on it
 // unchanged. The proposed groups and elements are rows of their own; settling copies them onto
 // the groups and elements (tree-settle.ts). No query hands a member id to the screens (EL2).
-import type { Kysely } from "kysely";
+import { type Kysely, sql } from "kysely";
 import { type ElementPrompt, isElementPrompt } from "@/lib/brainstorm";
 import type { Cardinality } from "@/lib/cardinality";
 import { type ConsentState, isDetailAnswer } from "@/lib/details";
@@ -104,6 +104,7 @@ export async function currentTree(db: Db, projectId: string): Promise<ModelTree>
           .selectFrom("element")
           .select(["id", "name", "group_id", "registration"])
           .where("id", "in", ids)
+          .orderBy(sql`tree_position asc nulls last`)
           .orderBy("created_at")
           .orderBy("id")
           .execute();
@@ -149,6 +150,7 @@ async function proposedTree(db: Db, proposalId: string): Promise<ModelTree> {
     .select(["element.id", "element.name", "row.group_id", "row.registration"])
     .where("row.proposal_id", "=", proposalId)
     .where("element.merged_into", "is", null)
+    .orderBy("row.position")
     .orderBy("element.created_at")
     .orderBy("element.id")
     .execute();
@@ -380,8 +382,10 @@ export async function proposeTree(
       await trx
         .insertInto("tree_proposal_element")
         .values(
-          input.elements.map((element) => ({
+          input.elements.map((element, index) => ({
             proposal_id: saved.id,
+            // The order of the list is the order within the group, as for the groups above.
+            position: index,
             element_id: element.id,
             group_id: element.groupId,
             registration: element.registration,

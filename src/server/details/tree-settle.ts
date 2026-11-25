@@ -134,12 +134,18 @@ export async function settleTree(
       "tree_proposal_element.element_id",
       "tree_proposal_element.group_id",
       "tree_proposal_element.registration",
+      "tree_proposal_element.position",
     ])
     .where("tree_proposal_element.proposal_id", "=", proposalId)
     .where("element.project_id", "=", projectId)
     .where("element.merged_into", "is", null)
     .execute();
   const now = new Date();
+  await trx
+    .updateTable("element")
+    .set({ tree_position: null })
+    .where("project_id", "=", projectId)
+    .execute();
   for (const element of elements) {
     const groupId =
       element.group_id !== null && (kept.has(element.group_id) || existing.has(element.group_id))
@@ -147,7 +153,12 @@ export async function settleTree(
         : null;
     await trx
       .updateTable("element")
-      .set({ group_id: groupId, registration: element.registration, updated_at: now })
+      .set({
+        group_id: groupId,
+        registration: element.registration,
+        tree_position: element.position,
+        updated_at: now,
+      })
       .where("id", "=", element.element_id)
       .execute();
   }
