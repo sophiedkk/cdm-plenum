@@ -21,7 +21,7 @@ export function AddElementPanel({ children }: Readonly<{ children: ReactNode }>)
       aria-label={m.board_add_title()}
       className="mb-6 flex max-w-2xl flex-col gap-4 rounded-lg border p-4"
     >
-      <h3 className="text-lg font-semibold">{m.board_add_title()}</h3>
+      <h3 className="type-section">{m.board_add_title()}</h3>
       <p className="text-muted-foreground">{m.board_add_description()}</p>
       {children}
     </section>

@@ -80,7 +80,7 @@ function FacilitatorMembers({ projectId }: Readonly<{ projectId: string }>) {
     <div className="flex flex-col gap-8">
       <section aria-labelledby="groups-title" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 id="groups-title" className="text-lg font-semibold">
+          <h3 id="groups-title" className="type-section">
             {m.members_groups_title()}
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -153,7 +153,7 @@ function FacilitatorMembers({ projectId }: Readonly<{ projectId: string }>) {
         />
       </section>
       <section aria-labelledby="invitations-title" className="flex flex-col gap-3">
-        <h3 id="invitations-title" className="text-lg font-semibold">
+        <h3 id="invitations-title" className="type-section">
           {m.members_invitations_title()}
         </h3>
         <InvitationTable

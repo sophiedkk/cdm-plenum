@@ -63,7 +63,7 @@ function SwitchSetting({
 
   return (
     <section aria-labelledby={`${id}-title`} className="flex flex-col gap-4">
-      <h3 id={`${id}-title`} className="text-lg font-semibold">
+      <h3 id={`${id}-title`} className="type-section">
         {title}
       </h3>
       <Field orientation="horizontal">
@@ -123,7 +123,7 @@ export function PrivateBrainstormForm({
   if (revealed) {
     return (
       <section aria-labelledby="private-brainstorm-title" className="flex flex-col gap-4">
-        <h3 id="private-brainstorm-title" className="text-lg font-semibold">
+        <h3 id="private-brainstorm-title" className="type-section">
           {m.members_private_title()}
         </h3>
         <p className="text-muted-foreground" data-testid="private-brainstorm-revealed">
@@ -202,7 +202,7 @@ export function RaterGroupForm({
       }}
     >
       <div className="flex flex-col gap-1">
-        <h3 id="rater-group-title" className="text-lg font-semibold">
+        <h3 id="rater-group-title" className="type-section">
           {m.members_rater_title()}
         </h3>
         <p className="text-muted-foreground">{m.members_rater_description()}</p>

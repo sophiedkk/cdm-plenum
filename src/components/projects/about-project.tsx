@@ -75,7 +75,7 @@ export function AboutProject({
         className="mt-4 flex flex-col gap-8 rounded-lg border p-4 sm:p-6"
       >
         <div className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold">{m.members_groups_title()}</h2>
+          <h2 className="type-section">{m.members_groups_title()}</h2>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-x-6 gap-y-4">
             {shown.map((group) => (
               <div key={group.id} className="flex flex-col gap-1">

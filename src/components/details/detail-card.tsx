@@ -747,7 +747,7 @@ export function DetailCard({
       className="flex flex-col gap-3 rounded-lg border p-4"
     >
       {!standalone && (
-        <h3 id={headingId} className="text-lg font-semibold">
+        <h3 id={headingId} className="type-section">
           {element.name}
         </h3>
       )}

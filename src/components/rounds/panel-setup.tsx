@@ -347,7 +347,7 @@ export function PanelSetup({
   return (
     <section aria-labelledby="panel-heading" className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h3 id="panel-heading" className="text-lg font-semibold">
+        <h3 id="panel-heading" className="type-section">
           {m.rounds_panel_heading()}
         </h3>
         <p className="text-muted-foreground">

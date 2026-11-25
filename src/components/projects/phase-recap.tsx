@@ -38,7 +38,7 @@ function Closed({ at }: Readonly<{ at: string | null }>) {
 function Heading({ title, closedAt }: Readonly<{ title: string; closedAt: string | null }>) {
   return (
     <div className="mb-6 flex flex-col gap-1">
-      <h2 className="text-xl font-semibold">{title}</h2>
+      <h2 className="type-page-title">{title}</h2>
       <Closed at={closedAt} />
     </div>
   );
@@ -47,7 +47,7 @@ function Heading({ title, closedAt }: Readonly<{ title: string; closedAt: string
 function Num({ value, label }: Readonly<{ value: number; label: string }>) {
   return (
     <div className="rounded-lg border p-4">
-      <dd className="text-3xl font-semibold tabular-nums">{value}</dd>
+      <dd className="type-home-card tabular-nums">{value}</dd>
       <dt className="text-sm text-muted-foreground">{label}</dt>
     </div>
   );
@@ -136,7 +136,7 @@ function DiscoverView({ projectId, recap }: Readonly<{ projectId: string; recap:
       </dl>
       <div className="mt-8 grid gap-8 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <section aria-labelledby="recap-groups" className="flex flex-col gap-4">
-          <h3 id="recap-groups" className="text-lg font-semibold">
+          <h3 id="recap-groups" className="type-section">
             {m.projects_recap_groups()}
           </h3>
           {recap.groups.map((group) => (
@@ -155,7 +155,7 @@ function DiscoverView({ projectId, recap }: Readonly<{ projectId: string; recap:
           ))}
         </section>
         <section aria-labelledby="recap-models" className="flex flex-col gap-3">
-          <h3 id="recap-models" className="text-lg font-semibold">
+          <h3 id="recap-models" className="type-section">
             {m.projects_recap_models()}
           </h3>
           {recap.models.length === 0 ? (
@@ -264,7 +264,7 @@ export function ModelSummary({
       )}
       <section className="mb-12 flex max-w-3xl flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-lg font-semibold">{m.details_tree()}</h3>
+          <h3 className="type-section">{m.details_tree()}</h3>
           {!handoff && !recap.treeSettled && (
             <StatusBadge label={m.projects_recap_detail_not_settled()} />
           )}

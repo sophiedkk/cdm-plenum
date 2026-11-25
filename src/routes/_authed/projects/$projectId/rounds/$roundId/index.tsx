@@ -258,7 +258,7 @@ function RoundPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <h2 className="text-xl font-semibold">{roundName(round)}</h2>
+        <h2 className="type-page-title">{roundName(round)}</h2>
         <RoundFacts round={round} />
       </div>
       {canRate && round.status === "open" && <RateCall round={round} />}
@@ -349,7 +349,7 @@ function DraftSetup({ round }: Readonly<{ round: RoundDetail }>) {
   return (
     <>
       <section aria-labelledby="setup-heading" className="flex max-w-3xl flex-col gap-4">
-        <h3 id="setup-heading" className="text-lg font-semibold">
+        <h3 id="setup-heading" className="type-section">
           {m.rounds_setup_heading()}
         </h3>
         <RoundForm
@@ -393,7 +393,7 @@ function DraftSetup({ round }: Readonly<{ round: RoundDetail }>) {
         />
       )}
       <section aria-labelledby="open-heading" className="flex max-w-3xl flex-col gap-4">
-        <h3 id="open-heading" className="text-lg font-semibold">
+        <h3 id="open-heading" className="type-section">
           {m.rounds_open_heading()}
         </h3>
         <p>{m.rounds_open_intro()}</p>
@@ -510,7 +510,7 @@ function RoundProgress({ round }: Readonly<{ round: RoundDetail }>) {
   const rate = valueOrNotFound(data);
   return (
     <section aria-labelledby="progress-heading" className="flex flex-col gap-3">
-      <h3 id="progress-heading" className="text-lg font-semibold">
+      <h3 id="progress-heading" className="type-section">
         {m.rounds_progress_heading()}
       </h3>
       <p>
@@ -563,7 +563,7 @@ function Results({
   return (
     <>
       <section aria-labelledby="results-heading" className="flex flex-col gap-2">
-        <h3 id="results-heading" className="text-lg font-semibold">
+        <h3 id="results-heading" className="type-section">
           {m.rounds_results_heading()}
         </h3>
         <ResultsTable

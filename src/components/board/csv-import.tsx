@@ -224,7 +224,7 @@ export function CsvImport({
             id="csv-preview"
             ref={previewHeading}
             tabIndex={-1}
-            className="text-lg font-semibold outline-none"
+            className="type-section outline-none"
           >
             {m.board_import_preview_heading({ file: shown.file.name })}
           </h3>

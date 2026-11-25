@@ -59,7 +59,7 @@ describe("CommentThread", () => {
     renderThread([{ id: "c1", body: "A", createdAt: AT }]);
     const time = screen.getByRole("list", { name: "Comments" }).querySelector("time");
     expect(time?.getAttribute("dateTime")).toBe(AT);
-    expect(time?.textContent).toMatch(/^November \d+, 2026.* \d{2}:\d{2} [A-Z][\w+:-]*$/);
+    expect(time?.textContent).toMatch(/^\d+ November 2026.* \d{2}:\d{2} [A-Z][\w+:-]*$/);
   });
 
   it("shows the author, or a former member, in the facilitator's list", () => {

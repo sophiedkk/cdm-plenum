@@ -327,7 +327,7 @@ export function DetailFlagList({
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h3 id={headingId} className="text-lg font-semibold">
+        <h3 id={headingId} className="type-section">
           {m.rounds_flags_heading({ count: flagged.length })}
         </h3>
         <p className="text-sm text-muted-foreground">{m.rounds_flags_intro()}</p>

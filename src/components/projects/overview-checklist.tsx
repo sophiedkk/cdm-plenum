@@ -679,7 +679,7 @@ export function OverviewChecklist({
   const open = rows.filter(({ item }) => item.done === false).map(({ view }) => view.text);
   return (
     <section aria-labelledby="overview-heading" className="flex flex-col gap-4">
-      <h2 id="overview-heading" className="text-lg font-semibold">
+      <h2 id="overview-heading" className="type-section">
         {next
           ? m.projects_overview_before({ phase: projectPhaseLabel(next) })
           : m.projects_overview_export()}

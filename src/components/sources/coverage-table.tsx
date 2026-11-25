@@ -206,12 +206,12 @@ export function CoverageTable({
                     <label htmlFor={readOnly ? undefined : boxId} className="flex flex-col">
                       <span>{name}</span>
                       {base !== null && row.cells[base.id] === undefined && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="type-meta text-muted-foreground">
                           {m.board_models_not_in_base()}
                         </span>
                       )}
                       {row.onList && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="type-meta text-muted-foreground">
                           {m.board_models_on_list()}
                         </span>
                       )}
@@ -228,9 +228,9 @@ export function CoverageTable({
                             </span>
                             <span className="sr-only">{m.board_models_has_it()}</span>
                             {element.name !== name && (
-                              <span className="text-xs">{element.name}</span>
+                              <span className="type-meta">{element.name}</span>
                             )}
-                            <span className="text-xs text-muted-foreground">
+                            <span className="type-meta text-muted-foreground">
                               {cellDetail(element)}
                             </span>
                           </span>
@@ -246,7 +246,7 @@ export function CoverageTable({
                     );
                   })}
                   {showBasis && (
-                    <td className="px-3 py-2.5 text-xs whitespace-nowrap text-muted-foreground">
+                    <td className="px-3 py-2.5 type-meta whitespace-nowrap text-muted-foreground">
                       <span className="flex flex-col items-start">
                         <span>{models > 1 ? BASIS_LABELS[row.basis]() : BASIS_LABELS.none()}</span>
                         {!readOnly && suggested(row) && (

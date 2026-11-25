@@ -168,7 +168,7 @@ export function CkmPanel({
         </div>
         <h3 className="font-medium">
           {m.board_ckm_elements_heading({ name: open.name })}
-          <span className="ml-2 font-mono text-xs text-muted-foreground">{open.archetypeId}</span>
+          <span className="ml-2 font-mono type-meta text-muted-foreground">{open.archetypeId}</span>
         </h3>
         {archetype.isPending && (
           <p role="status" className="flex items-center gap-2 text-muted-foreground">
@@ -208,13 +208,13 @@ export function CkmPanel({
                       {/* The path tells apart elements with the same name in other events. */}
                       <span
                         id={`ckm-path-${index}`}
-                        className="block font-mono text-xs break-all text-muted-foreground"
+                        className="block font-mono type-meta break-all text-muted-foreground"
                       >
                         {element.path}
                       </span>
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{element.atCode}</TableCell>
-                    <TableCell className="font-mono text-xs whitespace-normal">
+                    <TableCell className="font-mono type-meta">{element.atCode}</TableCell>
+                    <TableCell className="font-mono type-meta whitespace-normal">
                       {rmTypes(element)}
                     </TableCell>
                     <TableCell>{occurrences(element)}</TableCell>
@@ -308,7 +308,7 @@ export function CkmPanel({
                 {results.map((row) => (
                   <TableRow key={row.cid}>
                     <TableCell className="whitespace-normal">{row.name}</TableCell>
-                    <TableCell className="font-mono text-xs whitespace-normal break-all">
+                    <TableCell className="font-mono type-meta whitespace-normal break-all">
                       {row.archetypeId}
                     </TableCell>
                     <TableCell>{row.status}</TableCell>

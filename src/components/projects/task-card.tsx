@@ -29,7 +29,7 @@ function Sentence({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 const CARD = "rounded-lg border bg-card p-4 text-card-foreground shadow-xs sm:p-6";
-const HEADING = "text-2xl font-semibold tracking-tight sm:text-3xl";
+const HEADING = "type-home-card";
 
 /** The card for a task that asks something; the line for one that does not. */
 export function TaskCard({

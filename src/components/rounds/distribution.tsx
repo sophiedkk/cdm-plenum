@@ -61,7 +61,7 @@ export function MiniDistribution({
         // join the group label next to the image.
         <span
           data-own-label={m.rounds_result_mini_you()}
-          className="absolute top-full mt-0.5 -translate-x-1/2 text-[0.6875rem] leading-none font-medium after:content-[attr(data-own-label)]"
+          className="absolute top-full mt-0.5 -translate-x-1/2 type-meta leading-none after:content-[attr(data-own-label)]"
           style={{ left: `${((ownIndex + 0.5) / result.distribution.length) * 100}%` }}
         />
       )}

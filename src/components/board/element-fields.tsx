@@ -95,7 +95,7 @@ export function DataTypeField() {
                 <span className="font-medium">
                   {option.name}
                   {option.pair && (
-                    <span className="ml-2 font-mono text-xs text-muted-foreground">
+                    <span className="ml-2 font-mono type-meta text-muted-foreground">
                       {option.pair}
                     </span>
                   )}

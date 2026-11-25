@@ -68,7 +68,7 @@ function DevSignIn() {
 
   return (
     <Frame>
-      <h1 className="text-2xl font-semibold tracking-tight">{m.shell_dev_sign_in_title()}</h1>
+      <h1 className="type-page-title">{m.shell_dev_sign_in_title()}</h1>
       <p className="mt-2 mb-6">{m.shell_dev_sign_in_note()}</p>
       {groups.length === 0 ? (
         <p className="text-muted-foreground">{m.shell_dev_sign_in_empty()}</p>
@@ -76,7 +76,7 @@ function DevSignIn() {
         <div className="flex flex-col gap-6">
           {groups.map((group) => (
             <section key={`${group.kind}:${heading(group)}`} className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold">{heading(group)}</h2>
+              <h2 className="type-section">{heading(group)}</h2>
               <ul className="flex flex-col gap-2">
                 {group.people.map((person) => (
                   <li key={person.id}>

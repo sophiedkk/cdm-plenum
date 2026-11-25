@@ -484,8 +484,10 @@ describe("the scale in the round's bands (DE1)", () => {
     expect(question?.textContent).toBe(
       "Does this element belong in the data model, for any use case in scope?",
     );
-    expect(screen.getByRole("heading", { level: 3 }).className.split(" ")).toContain("text-2xl");
-    expect(question?.className.split(" ")).not.toContain("text-2xl");
+    expect(screen.getByRole("heading", { level: 3 }).className.split(" ")).toContain(
+      "type-page-title",
+    );
+    expect(question?.className.split(" ")).not.toContain("type-page-title");
   });
 
   it("shows the chosen score filled and with a check, the others without", () => {

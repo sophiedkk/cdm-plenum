@@ -102,7 +102,7 @@ export function ProposeSection({
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-4 rounded-lg border p-4">
       <div className="flex flex-col gap-1">
-        <h3 id={headingId} className="text-lg font-semibold">
+        <h3 id={headingId} className="type-section">
           {m.rounds_propose_heading()}
         </h3>
         <p className="text-sm text-muted-foreground">{m.rounds_propose_intro()}</p>
@@ -230,7 +230,7 @@ export function ProposalList({
 
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-3">
-      <h3 id={headingId} className="text-lg font-semibold">
+      <h3 id={headingId} className="type-section">
         {m.rounds_proposals_heading({ count: proposals.length })}
       </h3>
       <p className="text-sm text-muted-foreground">{m.rounds_proposals_intro()}</p>

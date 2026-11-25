@@ -76,7 +76,7 @@ function Admin() {
       <div className="flex flex-col gap-10">
         <section aria-labelledby="rights-title" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <h2 id="rights-title" className="text-xl font-semibold">
+            <h2 id="rights-title" className="type-section">
               {m.admin_rights_title()}
             </h2>
             <p className="text-muted-foreground">{m.admin_rights_description()}</p>
@@ -97,7 +97,7 @@ function Admin() {
         <Separator />
         <section aria-labelledby="accounts-title" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <h2 id="accounts-title" className="text-xl font-semibold">
+            <h2 id="accounts-title" className="type-section">
               {m.admin_accounts_title()}
             </h2>
             <p className="text-muted-foreground">{m.admin_accounts_description()}</p>
@@ -113,7 +113,7 @@ function Admin() {
         <Separator />
         <section aria-labelledby="activity-title" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <h2 id="activity-title" className="text-xl font-semibold">
+            <h2 id="activity-title" className="type-section">
               {m.admin_activity_title()}
             </h2>
             <p className="text-muted-foreground">

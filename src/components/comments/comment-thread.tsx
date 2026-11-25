@@ -97,7 +97,7 @@ export function CommentThread({
             return (
               <li key={comment.id} className="rounded-lg border p-3">
                 <p className="whitespace-pre-wrap">{comment.body}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 type-meta text-muted-foreground">
                   {author && <span>{author}, </span>}
                   <DateTime value={comment.createdAt} />
                 </p>

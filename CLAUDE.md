@@ -220,13 +220,16 @@ page from these patterns; each has a real use and a test you can copy.
   information once, in its best form, never as a picture and a text that say
   the same, and never a link next to a status that could itself be the link
   (owner decision); one filled button per view,
-  for the next step, the rest outline or text; type sizes 14 meta (nothing
-  smaller for content), 16 body, 18 section, 24 page title, 30 the home card
-  heading, weights 400 and 600; spacing on 4 px (24 between blocks, 48 between
+  for the next step, the rest outline or text; type by role, defined once in
+  `src/styles/app.css` (`type-meta` 14, `type-body` 16, `type-section` 18,
+  `type-page-title` 24, `type-home-card` 30; nothing under 14 for content;
+  weights 400 and 600, and 500 stays allowed for controls: buttons, labels,
+  table heads, tabs); components use the role, never a pixel size; spacing on 4 px (24 between blocks, 48 between
   sections); a card for the task card and repeated independent items, a list
   for what participants read, a table only for facilitator comparisons of four
-  rows or more; no description under a page title and help under a field only
-  on focus or error; show a value only when it says something; settings save
+  rows or more; a page has at most one short line under its title saying what
+  it is for; field help is short, under the field, only where the label alone
+  is not enough; show a value only when it says something; settings save
   on change or with one save bar per page; controls do not move when a panel
   opens: it opens below them.
 - **Standard-agnostic wording:** the tool builds a common data model of a

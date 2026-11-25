@@ -16,7 +16,7 @@ export const Route = createFileRoute("/")({
 function Home() {
   return (
     <PublicLayout>
-      <h1 className="text-3xl font-semibold tracking-tight">{m.app_name()}</h1>
+      <h1 className="type-home-card">{m.app_name()}</h1>
       <p className="mt-2 text-muted-foreground">{m.app_description()}</p>
       <Button asChild className="mt-6">
         <Link to="/sign-in">{m.shell_sign_in()}</Link>
