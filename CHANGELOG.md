@@ -137,6 +137,11 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A server function that fails now writes one line to the server log with
+  the function name, the error class, the message and the stack, so a
+  missing migration shows up in the log. The log never holds the input of
+  the function, so no rating, element text or name ends up in it.
+
 - The brainstorm is a board with one column per question. Elements from
   existing models show dashed in their column, your own elements are
   marked, and before the reveal other people's elements show only as a
