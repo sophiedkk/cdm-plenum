@@ -9,6 +9,13 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The rating card is easier to read: the element name is the largest text
+  on the card, and the question sits directly above the scale as its label.
+  The card uses fewer type sizes, and the scale labels are larger. The line
+  with the keys shows only while you use the scale with the keyboard.
+
 ## [0.3.0] - 2026-11-25
 
 ### Added

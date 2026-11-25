@@ -403,7 +403,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
   });
 }
 
-test("the keys line shows with a mouse and a keyboard, not on a touch screen (DE18)", async ({
+test("the keys line shows while the scale has keyboard focus, not on a click or a touch screen (DE18)", async ({
   db,
   browser,
 }) => {
@@ -425,9 +425,19 @@ test("the keys line shows with a mouse and a keyboard, not on a touch screen (DE
     const rater = await pageFor(browser, "en", participant, device);
     await rater.goto(ratePath);
     await expectHydrated(rater.getByRole("radio", { name: "7", exact: true }));
-    const keys = rater.getByText(/^Keys:/);
-    if (shown) await expect(keys).toBeVisible();
+    // Owner decision 2026-11-25: help on demand. A screen reader always has the line (sr-only),
+    // which Playwright counts as visible, so the class tells whether a sighted user sees it.
+    const keys = rater.getByTestId("rating-keys");
+    await rater.getByRole("radio", { name: "7", exact: true }).click();
+    if (shown) await expect(keys).toHaveClass(/\bsr-only\b/);
     else await expect(keys).toBeHidden();
+    await rater.getByRole("heading", { level: 3, name: "Systolic pressure" }).focus();
+    await rater.keyboard.press("Tab");
+    await expect(rater.getByRole("radio", { name: "7", exact: true })).toBeFocused();
+    if (shown) {
+      await expect(keys).not.toHaveClass(/\bsr-only\b/);
+      await expect(keys).toHaveText(/^Keys:/);
+    } else await expect(keys).toBeHidden();
     await expectAxeClean(rater);
     await rater.context().close();
   }

@@ -458,6 +458,36 @@ describe("the scale in the round's bands (DE1)", () => {
     expect(screen.getByTestId("rating-keys").className.split(" ")).toContain("touch:hidden");
   });
 
+  it("shows the keys line only while the scale has keyboard focus, and always to a screen reader", () => {
+    renderWithRule(DEFAULT_RULE);
+    const keys = screen.getByTestId("rating-keys");
+    const scale = screen.getByRole("radiogroup");
+    expect(scale.getAttribute("aria-describedby")).toBe(keys.id);
+    expect(keys.className.split(" ")).toContain("sr-only");
+
+    const five = screen.getByRole("radio", { name: "5" });
+    const matches = vi.spyOn(five, "matches").mockReturnValue(true);
+    fireEvent.focus(five);
+    expect(keys.className.split(" ")).not.toContain("sr-only");
+    fireEvent.blur(five, { relatedTarget: document.body });
+    expect(keys.className.split(" ")).toContain("sr-only");
+
+    matches.mockReturnValue(false);
+    fireEvent.focus(five);
+    expect(keys.className.split(" ")).toContain("sr-only");
+  });
+
+  it("puts the question right above the scale and labels the scale with it", () => {
+    renderWithRule(DEFAULT_RULE);
+    const scale = screen.getByRole("radiogroup");
+    const question = document.getElementById(scale.getAttribute("aria-labelledby") ?? "");
+    expect(question?.textContent).toBe(
+      "Does this element belong in the data model, for any use case in scope?",
+    );
+    expect(screen.getByRole("heading", { level: 3 }).className.split(" ")).toContain("text-2xl");
+    expect(question?.className.split(" ")).not.toContain("text-2xl");
+  });
+
   it("shows the chosen score filled and with a check, the others without", () => {
     renderWithRule(DEFAULT_RULE, { ...ELEMENT, own: { rated: true, score: 6, reason: null } });
     const six = screen.getByRole("radio", { name: "6" });
