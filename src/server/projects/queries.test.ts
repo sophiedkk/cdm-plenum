@@ -304,6 +304,7 @@ describe("getProject", () => {
         privateBrainstorm: true,
         boardRevealed: false,
         modelType: null,
+        mode: "delphi",
       },
     });
     const seen = await getProject(db, participant, projectId);

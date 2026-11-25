@@ -3,7 +3,7 @@
 
 # 0005. Rating pseudonyms and anonymity on the server
 
-- Status: Proposed
+- Status: Proposed; applies to Delphi projects only since ADR 0023
 - Date: 2026-11-19
 - Deciders: owner (facilitator visibility optional), maintainer (design)
 
