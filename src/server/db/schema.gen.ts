@@ -265,6 +265,7 @@ export interface Project {
   group_check_at: Timestamp | null;
   group_names_visible: Generated<boolean>;
   id: string;
+  mode: Generated<string>;
   model_type: string | null;
   panel_minimum_reason: string | null;
   phase: Generated<string>;

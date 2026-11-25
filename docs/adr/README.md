@@ -31,6 +31,7 @@ Each significant architecture or technology decision is recorded here in the
 | [0020](0020-discover-first-look-board-and-grouping.md) | Discover: a first look at existing models, a question board, grouping by the facilitator | Proposed |
 | [0021](0021-model-structure-after-zib-2.md) | The model gets explicit structure, after zib 2.0 | Accepted |
 | [0022](0022-five-tabs-and-linked-phase-step.md) | Five facilitator tabs, a linked current phase step and back links that name their target | Proposed |
+| [0023](0023-team-or-delphi-study.md) | Two ways to run a project: Team or Delphi study | Accepted |
 
 ## Adding a record
 
