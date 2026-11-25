@@ -92,7 +92,7 @@ export function markTarget(
   return { id: element.id, name: `${position}. ${element.name}` };
 }
 
-function elementMarks(
+export function elementMarks(
   element: CardElement,
   targets: readonly MarkTarget[],
   marks: BoardMarks,

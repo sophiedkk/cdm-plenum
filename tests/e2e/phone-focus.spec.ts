@@ -170,7 +170,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expectAxeClean(page);
     });
 
-    test("a participant's board keeps every column of a row in view", async ({ page, db }) => {
+    test("a participant's board list keeps every element in view", async ({ page, db }) => {
       const project = await seedProject(db, "discover");
       const participant = await seedParticipant(db, project);
       await seedElement(db, project.facilitator.userId, project.projectId, {
@@ -179,13 +179,14 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       });
       await seedReveal(db, project.facilitator.userId, project.projectId);
       await signInTo(page, participant, locale, `/projects/${project.projectId}/board`);
-      const row = page.getByRole("table", { name: text.board_list_label }).getByRole("row").nth(1);
-      const toggle = row.getByRole("button", { name: "Diastolic", exact: true });
+      const item = page
+        .getByRole("list", { name: text.board_list_label })
+        .getByRole("listitem")
+        .first();
+      const toggle = item.getByRole("button", { name: "Diastolic", exact: true });
       await expectHydrated(toggle);
-      for (const cell of await row.getByRole("cell").all()) {
-        await expect.poll(() => inViewSideways(cell)).toBe(true);
-      }
-      expect(await inViewSideways(toggle)).toBe(true);
+      await expect(item).toContainText("Lowest pressure in the cycle.");
+      expect(await inViewSideways(item)).toBe(true);
       expect(await scrollsSideways(page)).toBe(false);
       await expectAxeClean(page);
       await toggle.click();

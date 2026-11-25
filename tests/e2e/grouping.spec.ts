@@ -202,5 +202,36 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(page.getByText(participant)).toHaveCount(0);
       await expectAxeCleanInBothThemes(page);
     });
+
+    test("a finished grouping reads as lists until Edit anyway", async ({ page, db }) => {
+      const project = await seedProject(db, "decide");
+      await insertElement(db, project.projectId, "Observer");
+      await signInTo(
+        page,
+        project.facilitator.email,
+        locale,
+        `/projects/${project.projectId}/grouping`,
+      );
+      const banner = page.getByTestId("phase-banner");
+      await expect(banner).toBeVisible();
+      await expect(page.getByRole("button", { name: "Observer" })).toHaveCount(0);
+      await expect(page.getByRole("listitem").filter({ hasText: "Observer" })).toBeVisible();
+      await expect(
+        page.getByRole("button", {
+          name: fill(text.board_grouping_rename_named, { name: text.board_group_recorded }),
+        }),
+      ).toHaveCount(0);
+      await expectAxeClean(page);
+      await banner.getByRole("button", { name: text.common_phase_edit_anyway }).click();
+      const card = page.getByRole("button", { name: "Observer" });
+      await expect(card).toBeVisible();
+      await card.click();
+      await expect(
+        page
+          .getByRole("button", { name: fill(text.board_grouping_move_here, { name: "Observer" }) })
+          .first(),
+      ).toBeVisible();
+      await expectAxeClean(page);
+    });
   });
 }

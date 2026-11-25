@@ -103,26 +103,24 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
           bodies.push(await response.text().catch(() => ""));
       });
       await signInTo(page, participant, locale, `/projects/${project.projectId}/board`);
-      await expect(page.getByRole("rowheader", { name: "Diastolic" })).toBeVisible();
+      // P8: a list for the participant, with the whole description and no empty signals.
+      const list = page.getByRole("list", { name: text.board_list_label });
+      await expect(list.getByRole("button", { name: "Diastolic", exact: true })).toBeVisible();
+      await expect(page.getByRole("table")).toHaveCount(0);
+      await expect(list).toContainText("Lowest pressure in the cycle.");
+      await expect(list).not.toContainText(text.board_ckm_status_none);
       await expect(page.getByRole("button", { name: text.board_more_actions })).toHaveCount(0);
       await expect(page.getByRole("link", { name: text.board_models_title })).toHaveCount(0);
       // Participants add on the brainstorm only (ADR 0018).
       await expect(page.getByRole("button", { name: text.board_add })).toHaveCount(0);
       // Data type and cardinality wait for their phase (EL21).
-      const table = page.getByRole("table", { name: text.board_list_label });
-      await expect(
-        table.getByRole("columnheader", { name: text.board_field_data_type }),
-      ).toHaveCount(0);
-      await expect(
-        table.getByRole("columnheader", { name: text.board_field_cardinality }),
-      ).toHaveCount(0);
-      await expect(
-        table.getByRole("columnheader", { name: text.board_column_question }),
-      ).toBeVisible();
+      await expect(list).not.toContainText(text.board_field_data_type);
       await expectAxeClean(page);
 
       const details = await openDetails(page, text, "Diastolic");
-      await expect(details).toContainText("Lowest pressure in the cycle.");
+      // The description shows once, above the details.
+      await expect(details).not.toContainText("Lowest pressure in the cycle.");
+      await expect(page.getByText("Lowest pressure in the cycle.")).toHaveCount(1);
       await expect(details).not.toContainText(text.board_field_data_type);
       await expect(page.getByText(text.board_field_author)).toHaveCount(0);
       await expectAxeClean(page);
@@ -146,7 +144,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expectHydrated(add);
       await tabTo(page, add, 40);
       await page.keyboard.press("Enter");
-      const dialog = page.getByRole("dialog", { name: text.board_add_title });
+      // A2: the form opens in the page below the button, not in a dialog.
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      const dialog = page.getByRole("region", { name: text.board_add_title });
       await expect(dialog.getByLabel(text.board_name_label, { exact: true })).toBeFocused();
       // EL1: a name and a description, and nothing else.
       await expect(dialog.getByRole("textbox")).toHaveCount(2);
@@ -156,9 +156,10 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await page.keyboard.type("Systolic");
       await page.keyboard.press("Tab");
       await page.keyboard.type("Highest pressure in the cycle.");
-      await tabTo(page, dialog.getByRole("button", { name: text.board_add }), 5);
+      await tabTo(page, dialog.getByRole("button", { name: text.board_add_submit }), 5);
       await page.keyboard.press("Enter");
       await expect(dialog).toHaveCount(0);
+      await expect(add).toBeFocused();
 
       const row = page
         .getByRole("row")

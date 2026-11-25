@@ -70,6 +70,23 @@ function ElementCard({
   );
 }
 
+/** An element in the read view: its name as plain text, with the count of other groups. */
+function ElementLine({
+  element,
+  elsewhere,
+}: Readonly<{ element: GroupedElement; elsewhere: number }>) {
+  return (
+    <li>
+      {element.name}
+      {elsewhere > 0 && (
+        <span className="ml-2 text-sm text-muted-foreground">
+          {m.board_grouping_elsewhere({ count: elsewhere })}
+        </span>
+      )}
+    </li>
+  );
+}
+
 function MoveHere({ name, onMove }: Readonly<{ name: string; onMove: () => void }>) {
   return (
     <button
@@ -121,7 +138,13 @@ function RenameGroup({
 export function GroupingBoard({
   board,
   actions,
-}: Readonly<{ board: Board; actions: GroupingActions }>) {
+  readOnly = false,
+}: Readonly<{
+  board: Board;
+  actions: GroupingActions;
+  /** The read view of a finished phase: no picking, dragging, moving or renaming; lists only. */
+  readOnly?: boolean;
+}>) {
   const modelType = useModelType();
   const [held, setHeld] = useState<GroupedElement | null>(null);
   const [over, setOver] = useState<Zone | null>(null);
@@ -265,6 +288,15 @@ export function GroupingBoard({
   }
 
   function card(element: GroupedElement) {
+    if (readOnly) {
+      return (
+        <ElementLine
+          key={element.id}
+          element={element}
+          elsewhere={board.remarks.elsewhere[element.id] ?? 0}
+        />
+      );
+    }
     return (
       <ElementCard
         key={element.id}
@@ -281,13 +313,16 @@ export function GroupingBoard({
   }
 
   function moveHere(zone: Zone) {
-    if (held === null) return null;
+    if (readOnly || held === null) return null;
     const from = all.find((entry) => entry.element.id === held.id)?.zone;
     if (from === zone) return null;
     return <MoveHere name={held.name} onMove={() => void moveRef.current(held, zone)} />;
   }
 
   const pool = inZone(POOL);
+  // The read view lists the names one under the other; the working view shows chips to drag.
+  const listClass = (extra: string) =>
+    cn(extra, readOnly ? "flex flex-col gap-1" : "flex flex-wrap gap-1.5");
   return (
     <div className="grid items-start gap-6 md:grid-cols-[18.75rem_minmax(0,1fr)]">
       <section
@@ -304,7 +339,7 @@ export function GroupingBoard({
         {pool.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">{m.board_grouping_pool_empty()}</p>
         ) : (
-          <ul className="mt-2 flex flex-wrap gap-1.5">{pool.map(card)}</ul>
+          <ul className={listClass("mt-2")}>{pool.map(card)}</ul>
         )}
         {moveHere(POOL)}
       </section>
@@ -333,19 +368,26 @@ export function GroupingBoard({
                     {items.length}
                   </span>
                 </h3>
-                <RenameGroup
-                  label={m.board_grouping_rename_named({ name })}
-                  current={name}
-                  rename={(next) => actions.rename(group.id, next)}
-                  onRenamed={async (next) => {
-                    toast.success(m.board_grouping_renamed({ name: next }));
-                    await actions.onChanged();
-                  }}
-                />
+                {!readOnly && (
+                  <RenameGroup
+                    label={m.board_grouping_rename_named({ name })}
+                    current={name}
+                    rename={(next) => actions.rename(group.id, next)}
+                    onRenamed={async (next) => {
+                      toast.success(m.board_grouping_renamed({ name: next }));
+                      await actions.onChanged();
+                    }}
+                  />
+                )}
               </div>
-              <ul className="flex min-h-24 flex-wrap content-start gap-1.5 px-3 pt-2 pb-3">
+              <ul
+                className={cn(
+                  listClass("min-h-24 content-start px-3 pt-2 pb-3"),
+                  readOnly && "min-h-0",
+                )}
+              >
                 {items.map(card)}
-                {items.length === 0 && (
+                {items.length === 0 && !readOnly && (
                   <li className="px-0.5 py-1 text-sm text-muted-foreground">
                     {m.board_grouping_drop_hint()}
                   </li>

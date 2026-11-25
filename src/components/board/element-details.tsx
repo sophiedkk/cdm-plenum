@@ -90,6 +90,7 @@ export function ElementDetails({
   isFacilitator,
   canEdit = true,
   detailFields,
+  showDescription = true,
   addComment,
   onCommentAdded,
   onEdit,
@@ -104,6 +105,8 @@ export function ElementDetails({
   canEdit?: boolean;
   /** Whether the phase shows data type, cardinality and values (EL21). */
   detailFields: boolean;
+  /** False where the page already shows the description above these details. */
+  showDescription?: boolean;
   /** Left out when the phase closed comments on the board (PR9). */
   addComment?: ((body: string) => Promise<CommentOutcome>) | undefined;
   onCommentAdded: () => Promise<void> | void;
@@ -120,7 +123,9 @@ export function ElementDetails({
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div className="flex flex-col gap-3">
-        {element.description !== "" && <p className="whitespace-pre-wrap">{element.description}</p>}
+        {showDescription && element.description !== "" && (
+          <p className="whitespace-pre-wrap">{element.description}</p>
+        )}
         <dl className="flex flex-col gap-2 text-sm">
           {detailFields ? (
             <>
