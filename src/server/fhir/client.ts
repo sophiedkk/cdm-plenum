@@ -103,17 +103,20 @@ const versionList = z.object({
 });
 
 // NOTE: https://hl7.org/fhir/packages.html: package.json names the FHIR versions in
-// `fhirVersions`; older packages only depend on the core package of their version.
+// `fhirVersions`, "in some older packages" `fhir-version-list`; older packages only depend on
+// the core package of their version.
 const packageManifest = z.object({
   name: z.string(),
   version: z.string(),
   fhirVersions: z.array(z.string()).optional(),
+  "fhir-version-list": z.array(z.string()).optional(),
   dependencies: z.record(z.string(), z.string()).optional(),
 });
 
 function isR4(manifest: z.infer<typeof packageManifest>): boolean {
-  if (manifest.fhirVersions !== undefined) {
-    return manifest.fhirVersions.some((version) => /^4\.0(\.|$)/.test(version));
+  const versions = manifest.fhirVersions ?? manifest["fhir-version-list"];
+  if (versions !== undefined) {
+    return versions.some((version) => /^4\.0(\.|$)/.test(version));
   }
   return manifest.dependencies?.["hl7.fhir.r4.core"] !== undefined;
 }
@@ -372,7 +375,13 @@ export function createFhirClient(options: FhirClientOptions = {}): FhirClient {
 
   return {
     async searchPackages(text) {
-      const query = new URLSearchParams({ name: text.trim(), fhirversion: "R4" });
+      // NOTE: the Nictiz zib2020 and nl-core packages are all prereleases, which the catalog
+      // leaves out unless `prerelease=true` is sent.
+      const query = new URLSearchParams({
+        name: text.trim(),
+        fhirversion: "R4",
+        prerelease: "true",
+      });
       const result = await getJson("search", `catalog?${query}`, catalogRows);
       if (result.kind !== "ok") return result;
       return {

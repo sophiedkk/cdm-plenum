@@ -9,6 +9,18 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- The FHIR tab of "Add a model" has quick picks for four packages: FHIR R4
+  core, IPS, Nictiz zib2020 and Nictiz nl-core. Above the profile list, a
+  filter field narrows the profiles by name or URL as you type.
+
+### Fixed
+
+- The Nictiz zib and nl-core packages and the FHIR R4 core package can now
+  be found and opened. The search left out prerelease packages, and the R4
+  core package was refused as "not R4".
+
 ### Changed
 
 - The rating card is easier to read: the element name is the largest text

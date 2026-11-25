@@ -27,6 +27,20 @@ describe.skipIf(!enabled)("FHIR package registry contract", () => {
     expect(result.value.every((row) => row.name.startsWith("nictiz"))).toBe(true);
   });
 
+  it("finds the prerelease zib2020 package by name", async () => {
+    const result = await fhir.searchPackages("zib2020");
+    if (result.kind !== "ok") throw new Error(`search: ${JSON.stringify(result)}`);
+    expect(result.value.map((row) => row.name)).toContain(ZIB_PACKAGE);
+  });
+
+  it("opens R4 core 4.0.1 and lists the bp profile", { timeout: 180_000 }, async () => {
+    const result = await fhir.structureDefinitions("hl7.fhir.r4.core", "4.0.1");
+    if (result.kind !== "ok") throw new Error(`package: ${JSON.stringify(result)}`);
+    expect(result.value.map((sd) => sd.url)).toContain(
+      "http://hl7.org/fhir/StructureDefinition/bp",
+    );
+  });
+
   it("lists the versions of the zib2020 package", async () => {
     const result = await fhir.packageVersions(ZIB_PACKAGE);
     if (result.kind !== "ok") throw new Error(`versions: ${JSON.stringify(result)}`);
