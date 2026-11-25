@@ -134,7 +134,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       // Nothing is left: the bar is the done state, and the proposal stays open to change.
       await expect(bar.getByRole("heading", { name: text.projects_bar_done_title })).toBeVisible();
       await expect(bar.getByText(text.projects_bar_detail_done)).toBeVisible();
-      await expect(bar.getByRole("link", { name: text.projects_bar_back })).toBeVisible();
+      await expect(bar.getByRole("link", { name: text.projects_back_task })).toBeVisible();
       await expectAxeCleanInBothThemes(page);
 
       // The facilitator reads the objection without a name, addresses it and settles.

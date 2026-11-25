@@ -7,7 +7,7 @@
 // project page keeps the same left edge; the facilitator lands on the Overview,
 // reveals the board from its checklist and moves to decide through the confirmation. Axe-clean in
 // the light and the dark theme; the home and the rating card fit a phone without sideways scroll.
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { type Kysely, sql } from "kysely";
 import type { DB } from "../../src/server/db/schema.gen.ts";
 import { closeRound } from "../../src/server/rounds/queries.ts";
@@ -179,8 +179,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(page).toHaveURL((url) => url.pathname === `/projects/${seeded.projectId}`);
       await expect(page.getByRole("heading", { level: 1, name: "Blood pressure" })).toBeVisible();
       await expect(page).toHaveTitle(/^Blood pressure \|/);
-      // A participant has no tabs: the home is the navigation. The current step is no link; the
-      // done steps open their recaps (PR13).
+      // A participant has no tabs: the home is the navigation. The current step links to the
+      // home and the done steps open their recaps (PR13, ADR 0022).
       await expect(
         page.getByRole("navigation", { name: text.projects_tabs_label, exact: true }),
       ).toHaveCount(0);
@@ -189,8 +189,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       );
       await expect(
         steps(page, text).locator('[aria-current="step"]').getByRole("link"),
-      ).toHaveCount(0);
-      await expect(steps(page, text).getByRole("link")).toHaveCount(2);
+      ).toHaveAttribute("href", `/projects/${seeded.projectId}`);
+      await expect(steps(page, text).getByRole("link")).toHaveCount(3);
       const edge = await leftEdges(page);
 
       const card = page.getByRole("region", {
@@ -256,13 +256,14 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(steps(page, text).locator('[aria-current="step"]')).toContainText(
         text.projects_phase_decide,
       );
-      await expect(
-        steps(page, text).locator('[aria-current="step"]').getByRole("link"),
-      ).toHaveCount(0);
       expect(await leftEdges(page)).toEqual(edge);
       await expectAxeClean(page);
       await snap(page, { path: test.info().outputPath(`scope-in-decide-${locale}.png`) });
-      await page.getByRole("link", { name: text.projects_back_home }).click();
+      // The way back names the participant's task; the current phase step goes there too.
+      await steps(page, text).locator('[aria-current="step"]').getByRole("link").click();
+      await expect(page).toHaveURL((url) => url.pathname === `/projects/${seeded.projectId}`);
+      await page.goBack();
+      await page.getByRole("link", { name: text.projects_back_task }).click();
       await expect(page).toHaveURL((url) => url.pathname === `/projects/${seeded.projectId}`);
 
       // The card starts the rating on the first element.
@@ -312,12 +313,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         "aria-current",
         "page",
       );
-      // The facilitator's tabs navigate; of the steps only the done scope links, to its recap.
-      await expect(steps(page, text).getByRole("link")).toHaveCount(1);
-      await expect(steps(page, text).getByRole("link")).toHaveAttribute(
+      // Of the steps the done scope links to its recap and the current phase to the Overview.
+      await expect(steps(page, text).getByRole("link")).toHaveCount(2);
+      await expect(steps(page, text).getByRole("link").first()).toHaveAttribute(
         "href",
         `/projects/${project.projectId}/recap/scope`,
       );
+      await expect(
+        steps(page, text).locator('[aria-current="step"]').getByRole("link"),
+      ).toHaveAttribute("href", `/projects/${project.projectId}`);
       const edge = await leftEdges(page);
       await expect(
         page.getByRole("heading", {
@@ -347,8 +351,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(page.getByRole("heading", { level: 2, name: text.board_title })).toBeVisible();
       expect(await leftEdges(page)).toEqual(edge);
       await snap(page, { path: test.info().outputPath(`elements-discover-${locale}.png`) });
-      await tabs.getByRole("link", { name: text.projects_tab_overview }).click();
+      await steps(page, text).locator('[aria-current="step"]').getByRole("link").click();
       await expect(page).toHaveURL((url) => url.pathname === `/projects/${project.projectId}`);
+      await expect(tabs.getByRole("link", { name: text.projects_tab_overview })).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
 
       // The reveal from the checklist, after its confirmation.
       const reveal = page.getByRole("button", { name: text.board_reveal });
@@ -394,6 +402,35 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       expect(phase.phase).toBe("decide");
     });
 
+    test("People and Settings open from the Project menu, which is then the current tab", async ({
+      page,
+      db,
+    }) => {
+      const project = await seedProject(db, "discover");
+      await signInTo(page, project.facilitator.email, locale, `/projects/${project.projectId}`);
+      const tabs = page.getByRole("navigation", { name: text.projects_tabs_label });
+      await expect(tabs.getByRole("link")).toHaveCount(5);
+      const menu = tabs.getByRole("button", { name: text.projects_tab_project });
+      await expect(menu).not.toHaveAttribute("aria-current", "page");
+      await expectHydrated(menu);
+      await menu.click();
+      await expect(page.getByRole("menuitem")).toHaveText([
+        text.projects_tab_people,
+        text.projects_tab_settings,
+      ]);
+      await expectAxeClean(page);
+      await page.getByRole("menuitem", { name: text.projects_tab_people }).click();
+      await expect(page).toHaveURL((url) => url.pathname.endsWith("/members"));
+      await expect(menu).toHaveAttribute("aria-current", "page");
+      await expect(tabs.locator('a[aria-current="page"]')).toHaveCount(0);
+      await expectAxeClean(page);
+      await menu.click();
+      await page.getByRole("menuitem", { name: text.projects_tab_settings }).click();
+      await expect(page).toHaveURL((url) => url.pathname.endsWith("/settings"));
+      await expect(menu).toHaveAttribute("aria-current", "page");
+      await expectAxeClean(page);
+    });
+
     test("the facilitator's Overview in decide follows the open round", async ({ page, db }) => {
       const seeded = await seedDeciding(db);
       await signInTo(page, seeded.facilitator, locale, `/projects/${seeded.projectId}`);
@@ -435,6 +472,28 @@ test("a participant's discover home asks for elements and shows no decisions yet
 
 test.describe("on a phone", () => {
   test.use({ viewport: PHONE, locale: BROWSER_LOCALE.en });
+
+  /** Whether the element sits inside the viewport sideways; its clipped bottom border is no matter. */
+  async function inViewSideways(locator: Locator): Promise<boolean> {
+    const box = await locator.boundingBox();
+    return box !== null && box.x >= 0 && box.x + box.width <= PHONE.width;
+  }
+
+  test("the facilitator's current tab is in view, also the last one", async ({ page, db }) => {
+    const text = MESSAGES.en;
+    const project = await seedProject(db, "decide");
+    await signInTo(page, project.facilitator.email, "en", `/projects/${project.projectId}/details`);
+    const tabs = page.getByRole("navigation", { name: text.projects_tabs_label });
+    const details = tabs.getByRole("link", { name: text.projects_tab_details });
+    await expect(details).toHaveAttribute("aria-current", "page");
+    await expect.poll(() => inViewSideways(details)).toBe(true);
+    await page.goto(`/projects/${project.projectId}/settings`);
+    const menu = tabs.getByRole("button", { name: text.projects_tab_project });
+    await expect(menu).toHaveAttribute("aria-current", "page");
+    await expect.poll(() => inViewSideways(menu)).toBe(true);
+    expect(await scrollsSideways(page)).toBe(false);
+    await expectAxeClean(page);
+  });
 
   test("the home and the rating card scroll only down", async ({ page, db }) => {
     const seeded = await seedDeciding(db);

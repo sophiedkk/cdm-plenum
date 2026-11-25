@@ -42,7 +42,7 @@ async function tabNames(page: Page, locale: Locale): Promise<string[]> {
 
 /**
  * The pages a participant's home links to besides the task, by their text. A participant has no
- * tabs; the current phase step is no link, and a done step links only to its recap (PR13).
+ * tabs; the current phase step links to the home and a done step to its recap (PR13).
  */
 async function homeLinks(page: Page, locale: Locale): Promise<string[]> {
   const text = MESSAGES[locale];
@@ -51,11 +51,13 @@ async function homeLinks(page: Page, locale: Locale): Promise<string[]> {
   ).toHaveCount(0);
   const steps = page.getByRole("list", { name: text.projects_steps_label });
   await expect(steps).toBeVisible();
-  await expect(steps.locator('[aria-current="step"]').getByRole("link")).toHaveCount(0);
+  const current = steps.locator('[aria-current="step"]').getByRole("link");
+  await expect(current).toHaveAttribute("href", /^\/projects\/[^/]+$/);
+  const own = await current.getAttribute("href");
   for (const href of await steps
     .getByRole("link")
     .evaluateAll((links) => links.map((link) => link.getAttribute("href") ?? ""))) {
-    expect(href).toMatch(/\/recap\/(scope|discover|decide|detail)$/);
+    if (href !== own) expect(href).toMatch(/\/recap\/(scope|discover|decide|detail)$/);
   }
   const pages = page.getByRole("navigation", { name: text.projects_home_pages_title });
   if ((await pages.count()) === 0) return [];
@@ -115,7 +117,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         (url) => url.pathname === `/projects/${project.projectId}/scope`,
       );
       await expect(page.getByRole("heading", { level: 2, name: text.scope_title })).toBeVisible();
-      await expect(page.getByRole("link", { name: text.projects_back_home })).toHaveAttribute(
+      await expect(page.getByRole("link", { name: text.projects_back_task })).toHaveAttribute(
         "href",
         `/projects/${project.projectId}`,
       );
@@ -179,8 +181,6 @@ test("the facilitator sees the same tabs in the same order in every phase (ADR 0
     text.projects_tab_elements,
     text.projects_tab_rounds,
     text.projects_tab_details,
-    text.projects_tab_people,
-    text.projects_tab_settings,
   ];
   await signInTo(page, project.facilitator.email, "en", projectUrl);
   for (const phase of PROJECT_PHASES) {
@@ -188,6 +188,12 @@ test("the facilitator sees the same tabs in the same order in every phase (ADR 0
     await page.goto(projectUrl);
     await expect(page.locator('[aria-current="step"]')).toContainText(PHASE_NAMES[phase]);
     expect(await tabNames(page, "en")).toEqual(tabs);
+    // People and Settings sit in the Project menu, the last item of the tab row.
+    await expect(
+      page
+        .getByRole("navigation", { name: text.projects_tabs_label })
+        .getByRole("button", { name: text.projects_tab_project }),
+    ).toBeVisible();
     // The project opens on the Overview in every phase.
     await expect(
       page

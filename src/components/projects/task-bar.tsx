@@ -63,7 +63,7 @@ export function TaskBar({
         <div>
           <Button asChild variant={filledBack ? "default" : "outline"}>
             <Link to="/projects/$projectId" params={{ projectId }}>
-              {m.projects_bar_back()}
+              {m.projects_back_task()}
             </Link>
           </Button>
         </div>

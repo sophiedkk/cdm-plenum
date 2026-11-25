@@ -125,11 +125,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(
         a.page.getByRole("heading", { level: 2, name: text.board_brainstorm_title }),
       ).toBeVisible();
-      // Only the done scope step links, to its recap; the way on is back to the project home.
+      // The done scope step links to its recap and the current one to the home; the way on is
+      // back to the task.
       await expect(
         a.page.getByRole("list", { name: text.projects_steps_label }).getByRole("link"),
-      ).toHaveCount(1);
-      await expect(a.page.getByRole("link", { name: text.projects_back_home })).toHaveAttribute(
+      ).toHaveCount(2);
+      await expect(a.page.getByRole("link", { name: text.projects_back_task })).toHaveAttribute(
         "href",
         `/projects/${project.projectId}`,
       );
@@ -145,7 +146,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(bar.getByRole("status")).toHaveText(fill(text.projects_bar_added, { count: 2 }));
       await expect(bar.getByRole("heading")).toHaveCount(0);
       // The task card on the home counts the participant's own elements.
-      await a.page.getByRole("link", { name: text.projects_back_home }).click();
+      await a.page.getByRole("link", { name: text.projects_back_task }).click();
       await expect(
         a.page.getByRole("region", { name: text.projects_home_turn_discover }).locator("dd"),
       ).toHaveText("2");

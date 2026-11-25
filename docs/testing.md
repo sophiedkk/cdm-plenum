@@ -181,7 +181,7 @@ Then work through these steps:
    its rating card names each element's group and the overview lists the
    ratings under group headings. "Scope" and "Discover" in the header are
    done: each opens a read-only recap of that phase.
-4. Open the People tab. Eight participants sit in five stakeholder groups:
+4. Open People from the Project menu. Eight participants sit in five stakeholder groups:
    Nursing, Primary care, General medicine, Terminology and Architecture.
    Invite a new address and open the invitation from Mailpit in a private
    window; the sign-in link in the e-mail opens a page where you press

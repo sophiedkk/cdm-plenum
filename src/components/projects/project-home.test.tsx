@@ -98,7 +98,7 @@ describe("the phase steps", () => {
     expect(steps.querySelector('[aria-current="step"]')?.textContent).toBe("Decide, now");
   });
 
-  it("link a done phase to its recap; the current and later phases are no links (PR13)", () => {
+  it("link a done phase to its recap and the current phase to the phase home (PR13, ADR 0022)", () => {
     render(
       <ProjectHeader projectId="p1" name="Blood pressure" overview={overview()} back="projects" />,
     );
@@ -107,29 +107,37 @@ describe("the phase steps", () => {
       within(steps)
         .getAllByRole("link")
         .map((link) => link.getAttribute("href")),
-    ).toEqual(["/projects/p1/recap/scope", "/projects/p1/recap/discover"]);
+    ).toEqual(["/projects/p1/recap/scope", "/projects/p1/recap/discover", "/projects/p1"]);
     const current = steps.querySelector('[aria-current="step"]') as HTMLElement;
     expect(current.textContent).toBe("Decide, now");
-    expect(within(current).queryAllByRole("link")).toHaveLength(0);
+    expect(within(current).getByRole("link").getAttribute("href")).toBe("/projects/p1");
+    const later = within(steps).getByText("Detail", { exact: false });
+    expect(later.closest("a")).toBeNull();
   });
 
-  it("sit below the way back to the project on a page of the project", () => {
-    render(
+  it("sit below a way back that names its target on a page of the project", () => {
+    const { rerender } = render(
+      <ProjectHeader projectId="p1" name="Blood pressure" overview={overview()} back="task" />,
+    );
+    expect(screen.getByRole("link", { name: "Back to your task" }).getAttribute("href")).toBe(
+      "/projects/p1",
+    );
+    rerender(
       <ProjectHeader projectId="p1" name="Blood pressure" overview={overview()} back="home" />,
     );
     expect(screen.getByRole("link", { name: "Back to the project" }).getAttribute("href")).toBe(
       "/projects/p1",
     );
-    // Besides the way back, only the recaps of the done phases link.
+    // Besides the way back, only the recaps and the current phase's home link.
     expect(
       screen
         .getAllByRole("link")
         .map((link) => link.getAttribute("href"))
         .filter((href) => !href?.includes("/recap/")),
-    ).toEqual(["/projects/p1"]);
+    ).toEqual(["/projects/p1", "/projects/p1"]);
   });
 
-  it("link only the done phases for the facilitator too, whose tabs navigate", () => {
+  it("link the done phases and the current one for the facilitator too, whose tabs navigate", () => {
     render(
       <ProjectHeader
         projectId="p1"
@@ -143,7 +151,7 @@ describe("the phase steps", () => {
       within(steps)
         .queryAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Scope, done, open the recap", "Discover, done, open the recap"]);
+    ).toEqual(["Scope, done, open the recap", "Discover, done, open the recap", "Decide, now"]);
     expect(screen.getByRole("heading", { level: 1, name: "Blood pressure" })).toBeTruthy();
   });
 });

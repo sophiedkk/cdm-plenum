@@ -93,7 +93,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         bar.getByRole("heading", { name: text.projects_bar_handoff_title }),
       ).toBeVisible();
       await expect(bar.getByText(text.projects_bar_handoff_done)).toBeVisible();
-      await expect(bar.getByRole("link", { name: text.projects_bar_back })).toHaveAttribute(
+      await expect(bar.getByRole("link", { name: text.projects_back_task })).toHaveAttribute(
         "href",
         `/projects/${project.projectId}`,
       );

@@ -180,7 +180,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await page.goto(`/projects/${project.projectId}/check`);
       await expect(bar.getByRole("heading", { name: text.projects_bar_done_title })).toBeVisible();
       await expect(bar.getByText(text.projects_bar_check_done)).toBeVisible();
-      await expect(bar.getByRole("link", { name: text.projects_bar_back })).toBeVisible();
+      await expect(bar.getByRole("link", { name: text.projects_back_task })).toBeVisible();
       await expect(page.getByRole("button", { name: text.board_check_done })).toHaveCount(0);
       await expect(
         page.getByRole("button", { name: text.board_check_missing }).first(),

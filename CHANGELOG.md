@@ -27,6 +27,12 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The facilitator has five tabs: Overview, Scope, Elements, Rounds and Detail.
+  People and Settings moved into a "Project" menu at the end of the row. On a
+  phone the current tab scrolls into view.
+- The current phase step in the project header now opens the phase home: the
+  Overview for the facilitator, the project home for a participant. The back
+  link on a participant's step page reads "Back to your task".
 - One word for each thing: "Not sure" ("Twijfel") for the middle rating band
   and the first-look answer, with the first-look answers in the order of the
   rating bands; "No consensus" ("Nog geen consensus" while a round is open)

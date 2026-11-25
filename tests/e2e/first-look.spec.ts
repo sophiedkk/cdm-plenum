@@ -85,7 +85,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       // The last answer turns the bar into the done state; the cards stay to change an answer.
       await expect(bar.getByRole("heading", { name: text.projects_bar_done_title })).toBeVisible();
       await expect(bar.getByText(text.projects_bar_first_look_done)).toBeVisible();
-      await expect(bar.getByRole("link", { name: text.projects_bar_back })).toBeVisible();
+      await expect(bar.getByRole("link", { name: text.projects_back_task })).toBeVisible();
       await expect(
         question.getByRole("button", { name: text.board_first_look_belongs }),
       ).toBeVisible();
