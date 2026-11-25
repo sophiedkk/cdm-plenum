@@ -673,11 +673,7 @@ export function OverviewChecklist({
           ? m.projects_overview_before({ phase: projectPhaseLabel(next) })
           : m.projects_overview_export()}
       </h2>
-      {next ? (
-        <Checklist rows={rows} />
-      ) : (
-        <HandoffOverview projectId={projectId} facts={facts} />
-      )}
+      {next ? <Checklist rows={rows} /> : <HandoffOverview projectId={projectId} facts={facts} />}
       <PhaseMove phase={phase} open={open} move={move} onMoved={onMoved} />
     </section>
   );
