@@ -11,6 +11,10 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The model tree keeps the order of the elements within a group. In the tree
+  editor each element has "Move up" and "Move down" buttons, settling the tree
+  keeps the order, and the Details page, the recap, the elements CSV, the mind
+  map and the decision report list a group's elements in that order.
 - Each page where you act as a participant starts with a task bar under the
   title: what to do on this page in one sentence and your progress, such as
   "1 of 3 answered". When nothing is left, the bar says "You are done", what
