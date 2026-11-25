@@ -39,6 +39,17 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       db,
     }) => {
       const project = await seedProject(db, "discover");
+      // A panel of nobody meets a minimum of nothing, so the page shows its one line.
+      await db
+        .insertInto("project_panel_minimum")
+        .values(
+          (["clinical", "terminology", "architecture"] as const).map((expert_type) => ({
+            project_id: project.projectId,
+            expert_type,
+            minimum: 0,
+          })),
+        )
+        .execute();
       await signInTo(
         page,
         project.facilitator.email,
@@ -58,14 +69,24 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         page.getByRole("heading", { level: 2, name: text.projects_settings_title }),
       ).toBeVisible();
       await expect(page.getByRole("heading", { name: text.rounds_panel_heading })).toBeVisible();
+      // Every setting applies when changed: no save buttons, and the panel is one line.
+      await expect(page.getByText(text.rounds_panel_meets_minimum)).toBeVisible();
+      await expect(page.getByRole("table")).toHaveCount(0);
+      // Only the minimum, whose counts and reason belong together, keeps a save button.
+      await expect(page.getByRole("button", { name: /save|opslaan/i })).toHaveCount(1);
+      await expect(page.getByRole("button", { name: text.rounds_minimum_save })).toBeVisible();
+      await expectAxeCleanInBothThemes(page);
+      const show = page.getByRole("button", { name: text.rounds_panel_show_table });
+      await expectHydrated(show);
+      await show.click();
+      await expect(page.getByRole("table", { name: text.rounds_panel_caption })).toBeVisible();
       await expectAxeCleanInBothThemes(page);
 
       // The change class (DE11).
       const classB = page.getByRole("radio", { name: text.rounds_change_class_b });
       await expectHydrated(classB);
       await classB.click();
-      await page.getByRole("button", { name: text.rounds_change_class_save }).click();
-      await expect(page.getByText(text.rounds_change_class_saved)).toBeVisible();
+      await expect(page.getByRole("status").filter({ hasText: text.common_saved })).toBeVisible();
       await expect
         .poll(async () => {
           const row = await db
@@ -78,12 +99,11 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         .toBe("B");
 
       // The private brainstorm (EL13), on by default.
-      const privately = page.getByRole("checkbox", { name: text.members_private_label });
+      const privately = page.getByRole("switch", { name: text.members_private_label });
       await expect(privately).toBeChecked();
       await privately.click();
-      await page.getByRole("button", { name: text.members_private_save }).click();
-      await expect(page.getByText(text.members_private_off)).toBeVisible();
       await expect(privately).not.toBeChecked();
+      await expect(page.getByRole("status").filter({ hasText: text.common_saved })).toHaveCount(2);
       const row = await db
         .selectFrom("project")
         .select("private_brainstorm")

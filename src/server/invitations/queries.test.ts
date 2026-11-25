@@ -12,7 +12,13 @@ import type { Mailer, MailMessage } from "../mail.ts";
 import { emailOf, facilitatorWithProject, groupId, insertUser } from "../test-fixtures.ts";
 import { acceptInvitationsOnSignIn, hasPendingInvitation, mayCreateAccount } from "./acceptance.ts";
 import { INVITATION_LIFETIME_SECONDS } from "./lifetime.ts";
-import { invitationPreview, invite, listInvitations, revokeInvitation } from "./queries.ts";
+import {
+  invitationPreview,
+  invite,
+  listInvitations,
+  restoreInvitation,
+  revokeInvitation,
+} from "./queries.ts";
 
 const BASE = "http://localhost:3000";
 const HOUR = 3_600_000;
@@ -171,6 +177,96 @@ describe("invite (PR3)", () => {
     expect(await revokeInvitation(db, outsider, revoke)).toEqual({
       ok: false,
       error: "not_found",
+    });
+    expect(await restoreInvitation(db, participant, revoke, deps)).toEqual({
+      ok: false,
+      error: "forbidden",
+    });
+    expect(await restoreInvitation(db, outsider, revoke, deps)).toEqual({
+      ok: false,
+      error: "not_found",
+    });
+  });
+});
+
+describe("restoreInvitation (undo of a revoke)", () => {
+  async function restore(facilitator: string, projectId: string, invitationId: string) {
+    return restoreInvitation(db, facilitator, { projectId, invitationId }, { now: new Date() });
+  }
+
+  it("makes a revoked invitation pending again, with the same link", async () => {
+    const { facilitator, projectId, nursing } = await setup();
+    const created = await inviteAddress(facilitator, projectId, nursing, "a@example.test");
+    const input = { projectId, invitationId: created.invitationId };
+    await revokeInvitation(db, facilitator, input);
+    expect(await restore(facilitator, projectId, created.invitationId)).toEqual({
+      ok: true,
+      value: null,
+    });
+    const listed = await listInvitations(db, facilitator, projectId, {
+      baseUrl: BASE,
+      now: new Date(),
+    });
+    if (!listed.ok) throw new Error(listed.error);
+    expect(listed.value).toEqual([
+      expect.objectContaining({ id: created.invitationId, status: "pending", url: created.url }),
+    ]);
+    const logged = await db
+      .selectFrom("activity_log")
+      .select("action")
+      .where("target_id", "=", created.invitationId)
+      .orderBy("id")
+      .execute();
+    expect(logged.map((row) => row.action)).toEqual([
+      "invitation_created",
+      "invitation_revoked",
+      "invitation_restored",
+    ]);
+  });
+
+  it("refuses an invitation that is pending, expired, or of another project", async () => {
+    const { facilitator, projectId, nursing } = await setup();
+    const pending = await inviteAddress(facilitator, projectId, nursing, "a@example.test");
+    expect(await restore(facilitator, projectId, pending.invitationId)).toEqual({
+      ok: false,
+      error: "invitation_not_found",
+    });
+    const past = new Date(Date.now() - 49 * HOUR);
+    const old = await inviteAddress(facilitator, projectId, nursing, "b@example.test", past);
+    await db
+      .updateTable("invitation")
+      .set({ status: "canceled" })
+      .where("id", "=", old.invitationId)
+      .execute();
+    expect(await restore(facilitator, projectId, old.invitationId)).toEqual({
+      ok: false,
+      error: "invitation_not_found",
+    });
+    const other = await facilitatorWithProject(db, "other");
+    const foreign = await inviteAddress(
+      other.userId,
+      other.projectId,
+      await groupId(db, other.projectId, "Nursing"),
+      "c@example.test",
+    );
+    await revokeInvitation(db, other.userId, {
+      projectId: other.projectId,
+      invitationId: foreign.invitationId,
+    });
+    expect(await restore(facilitator, projectId, foreign.invitationId)).toEqual({
+      ok: false,
+      error: "invitation_not_found",
+    });
+  });
+
+  it("refuses when the address was invited again after the revoke", async () => {
+    const { facilitator, projectId, nursing } = await setup();
+    const first = await inviteAddress(facilitator, projectId, nursing, "a@example.test");
+    await revokeInvitation(db, facilitator, { projectId, invitationId: first.invitationId });
+    await inviteAddress(facilitator, projectId, nursing, "a@example.test");
+    expect(await restore(facilitator, projectId, first.invitationId)).toEqual({
+      ok: false,
+      error: "already_invited",
     });
   });
 });

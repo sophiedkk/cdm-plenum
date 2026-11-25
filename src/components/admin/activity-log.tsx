@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The activity log (AD2), newest first, filtered by action and shown a page at a time. It shows
-// the action's label, the project's name, the actor's name and ids, never content.
+// the action's label, the project's name, the actor's name and the name of what it acted on,
+// never content.
 import { ChevronLeftIcon, ChevronRightIcon, HistoryIcon } from "lucide-react";
 import { type ReactNode, useId } from "react";
 import { EmptyState } from "@/components/shell/route-states";
@@ -25,15 +26,30 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { m } from "@/i18n/messages";
+import { hasNamedSubject } from "@/lib/activity-subjects";
 import { activityLabel } from "@/lib/i18n/activity-labels";
 import type { ActivityEntry } from "@/server/admin/queries";
 
 /** The filter value for every action; no action code starts with an underscore. */
 export const ALL_ACTIONS = "_all";
 
-function Id({ value }: Readonly<{ value: string | null }>) {
-  if (value === null) return <span className="text-muted-foreground">{m.admin_none()}</span>;
+function Id({ value }: Readonly<{ value: string }>) {
   return <code className="font-mono text-xs break-all">{value}</code>;
+}
+
+function None() {
+  return <span className="text-muted-foreground">{m.admin_none()}</span>;
+}
+
+/** The target by name; "(removed)" when it no longer exists, a dash for a target without a name. */
+function Subject({ entry }: Readonly<{ entry: ActivityEntry }>) {
+  if (!hasNamedSubject(entry.targetType)) return <None />;
+  if (entry.subject === null) {
+    return <span className="text-muted-foreground">{m.admin_subject_removed()}</span>;
+  }
+  return entry.targetType === "round"
+    ? m.admin_subject_round({ number: entry.subject })
+    : entry.subject;
 }
 
 export function ActivityFilter({
@@ -112,20 +128,13 @@ export function ActivityTable({ entries }: Readonly<{ entries: readonly Activity
             <TableCell className="whitespace-normal">
               {entry.projectName ??
                 (entry.projectId === null ? (
-                  <span className="text-muted-foreground">{m.admin_none()}</span>
+                  <None />
                 ) : (
                   <span className="text-muted-foreground">{m.admin_project_removed()}</span>
                 ))}
             </TableCell>
             <TableCell className="whitespace-normal">
-              {entry.targetType === null ? (
-                <Id value={null} />
-              ) : (
-                <span className="flex flex-col gap-1">
-                  <code className="font-mono text-xs">{entry.targetType}</code>
-                  {entry.targetId !== null && <Id value={entry.targetId} />}
-                </span>
-              )}
+              <Subject entry={entry} />
             </TableCell>
           </TableRow>
         ))}

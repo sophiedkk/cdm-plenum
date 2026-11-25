@@ -34,13 +34,10 @@ const STATUS: PanelStatus = {
 function renderSetup(
   status: PanelStatus,
   saveMinimum = vi.fn(async () => ({ ok: true }) as PanelOutcome),
+  saveChangeClass = vi.fn(async () => ({ ok: true }) as PanelOutcome),
 ) {
   render(
-    <PanelSetup
-      status={status}
-      saveChangeClass={vi.fn(async () => ({ ok: true }) as PanelOutcome)}
-      saveMinimum={saveMinimum}
-    />,
+    <PanelSetup status={status} saveChangeClass={saveChangeClass} saveMinimum={saveMinimum} />,
   );
   return saveMinimum;
 }
@@ -85,5 +82,52 @@ describe("PanelSetup minimum (DE13)", () => {
     });
     expect(screen.getByText("Reason for the project's own minimum")).toBeTruthy();
     expect(screen.getByText("No terminologist in this course.")).toBeTruthy();
+  });
+});
+
+describe("PanelSetup summary and change class (F6, F7)", () => {
+  it("says in one line that the panel meets the minimum, and opens the table below it", () => {
+    renderSetup(STATUS);
+    expect(screen.getByText("The panel meets the minimum for every expert type.")).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
+    const toggle = screen.getByRole("button", { name: "Show per expert type" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(toggle);
+    expect(screen.getByRole("table")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Hide the table" }).getAttribute("aria-expanded"),
+    ).toBe("true");
+  });
+
+  it("shows the table at once when an expert type falls short", () => {
+    renderSetup({
+      ...STATUS,
+      joined: { clinical: 1, terminology: 1, architecture: 2 },
+      shortfall: [{ expertType: "clinical", joined: 1, minimum: 2 }],
+    });
+    expect(screen.getByRole("table")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Show per expert type" })).toBeNull();
+  });
+
+  it("saves the change class when you pick it and says so", async () => {
+    const saveChangeClass = vi.fn(async () => ({ ok: true }) as PanelOutcome);
+    renderSetup(STATUS, undefined, saveChangeClass);
+    expect(screen.queryByRole("button", { name: "Save change class" })).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: /^B, small change/ }));
+    await waitFor(() => expect(saveChangeClass).toHaveBeenCalledWith("B"));
+    expect((await screen.findByRole("status")).textContent).toBe("Saved");
+  });
+
+  it("shows a refusal inline and puts the choice back", async () => {
+    const saveChangeClass = vi.fn(
+      async () => ({ ok: false, error: "panel_locked" }) as PanelOutcome,
+    );
+    renderSetup(STATUS, undefined, saveChangeClass);
+    fireEvent.click(screen.getByRole("radio", { name: /^B, small change/ }));
+    const alert = await screen.findByText(/./, { selector: "[role=alert]" });
+    expect(alert.textContent?.length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("radio", { name: /^D, large change/ }).getAttribute("aria-checked"),
+    ).toBe("true");
   });
 });

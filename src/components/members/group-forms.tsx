@@ -4,20 +4,11 @@
 // The facilitator's stakeholder group forms (PR6): add, rename and remove a group. A refusal
 // shows in the form: a taken name at the name field, anything else at the top.
 import { revalidateLogic } from "@tanstack/react-form";
-import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { EllipsisIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,14 +18,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { m } from "@/i18n/messages";
 import type { Outcome } from "@/lib/forms/outcome";
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
 import { expertTypeLabel } from "@/lib/i18n/labels";
 import { refusalMessage } from "@/lib/i18n/refusals";
 import { EXPERT_TYPES, type ExpertType, GROUP_NAME_MAX } from "@/lib/project-roles";
+import { UNDO_MS } from "@/lib/undo";
 
 function groupName() {
   return z
@@ -156,17 +153,20 @@ export function NewGroupForm({
   );
 }
 
-/** A button that opens a dialog to rename one group. */
+/** The dialog to rename one group; the group's action menu opens it. */
 export function RenameGroupDialog({
   group,
   rename,
   onRenamed,
+  open,
+  onOpenChange,
 }: Readonly<{
   group: { id: string; name: string };
   rename: (name: string) => Promise<Outcome<unknown>>;
   onRenamed: (name: string) => Promise<void> | void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }>) {
-  const [open, setOpen] = useState(false);
   const form = useAppForm({
     defaultValues: { name: group.name, expertType: "" } as GroupValues,
     validationLogic: revalidateLogic(),
@@ -175,7 +175,7 @@ export function RenameGroupDialog({
       const name = value.name.trim();
       const renamed = await submitGroupCall(formApi, () => rename(name));
       if (!renamed) return;
-      setOpen(false);
+      onOpenChange(false);
       await onRenamed(name);
     },
   });
@@ -185,20 +185,9 @@ export function RenameGroupDialog({
       open={open}
       onOpenChange={(next) => {
         if (next) form.reset({ name: group.name, expertType: "" });
-        setOpen(next);
+        onOpenChange(next);
       }}
     >
-      <DialogTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-label={m.members_rename_label({ group: group.name })}
-        >
-          <PencilIcon aria-hidden="true" data-icon="inline-start" />
-          {m.members_rename()}
-        </Button>
-      </DialogTrigger>
       <DialogContent showCloseButton={false}>
         <form
           noValidate
@@ -243,74 +232,91 @@ export function RenameGroupDialog({
 }
 
 /**
- * A button that asks to confirm removing one group. A group with participants or open
- * invitations stays; the refusal shows in the dialog.
+ * The one menu of a group (UI/UX analysis F6): Rename and Remove. Removing happens at once with
+ * an Undo toast: only a group without people or open invitations can go (`group_not_empty`), so
+ * undoing it creates the group again with its name and expert type, and nothing else is lost.
  */
-export function RemoveGroupDialog({
+export function GroupActions({
   group,
+  rename,
+  onRenamed,
   remove,
-  onRemoved,
+  restore,
+  onChanged,
 }: Readonly<{
-  group: { id: string; name: string };
+  group: { id: string; name: string; expertType: ExpertType };
+  rename: (name: string) => Promise<Outcome<unknown>>;
+  onRenamed: (name: string) => Promise<void> | void;
   remove: () => Promise<Outcome<unknown>>;
-  onRemoved: () => Promise<void> | void;
+  restore: () => Promise<Outcome<unknown>>;
+  /** Called after a remove or an undo, to refresh the lists. */
+  onChanged: () => Promise<void> | void;
 }>) {
-  const [open, setOpen] = useState(false);
-  const form = useAppForm({
-    defaultValues: { name: "", expertType: "" } as GroupValues,
-    onSubmit: async ({ formApi }) => {
-      const removed = await submitGroupCall(formApi, remove);
-      if (!removed) return;
-      setOpen(false);
-      await onRemoved();
-    },
-  });
+  const [renaming, setRenaming] = useState(false);
+
+  async function undo() {
+    try {
+      const outcome = await restore();
+      if (!outcome.ok) {
+        toast.error(refusalMessage(outcome.error));
+        return;
+      }
+      toast.success(m.members_group_restored({ group: group.name }));
+      await onChanged();
+    } catch {
+      toast.error(m.common_error_unexpected());
+    }
+  }
+
+  async function removeNow() {
+    try {
+      const outcome = await remove();
+      if (!outcome.ok) {
+        toast.error(refusalMessage(outcome.error));
+        return;
+      }
+      toast.success(m.members_group_removed({ group: group.name }), {
+        duration: UNDO_MS,
+        action: { label: m.common_undo(), onClick: () => void undo() },
+      });
+      await onChanged();
+    } catch {
+      toast.error(m.common_error_unexpected());
+    }
+  }
 
   return (
-    <AlertDialog
-      open={open}
-      onOpenChange={(next) => {
-        if (next) form.reset();
-        setOpen(next);
-      }}
-    >
-      <AlertDialogTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-label={m.members_remove_label({ group: group.name })}
-        >
-          <Trash2Icon aria-hidden="true" data-icon="inline-start" />
-          {m.members_remove()}
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <form
-          noValidate
-          className="flex flex-col gap-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void form.handleSubmit();
-          }}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle>{m.members_remove_title({ group: group.name })}</AlertDialogTitle>
-            <AlertDialogDescription>{m.members_remove_description()}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <form.AppForm>
-            <form.FormErrors />
-          </form.AppForm>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{m.common_cancel()}</AlertDialogCancel>
-            <form.AppForm>
-              <form.SubmitButton variant="destructive">
-                {m.members_remove_submit()}
-              </form.SubmitButton>
-            </form.AppForm>
-          </AlertDialogFooter>
-        </form>
-      </AlertDialogContent>
-    </AlertDialog>
+    <>
+      {/* Not modal: a modal menu hides the page with aria-hidden while the page stays focusable. */}
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={m.members_actions_label({ group: group.name })}
+          >
+            <EllipsisIcon aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => setRenaming(true)}>
+            <PencilIcon aria-hidden="true" />
+            {m.members_rename()}
+          </DropdownMenuItem>
+          <DropdownMenuItem variant="destructive" onSelect={() => void removeNow()}>
+            <Trash2Icon aria-hidden="true" />
+            {m.members_remove()}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <RenameGroupDialog
+        group={group}
+        rename={rename}
+        onRenamed={onRenamed}
+        open={renaming}
+        onOpenChange={setRenaming}
+      />
+    </>
   );
 }

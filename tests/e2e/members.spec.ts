@@ -141,7 +141,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(groupPeople(page, FIRST_GROUP)).toContainText(participant);
       await expect(page.getByText(text.members_invitations_none_open)).toBeVisible();
       // The settings moved to their own page (PR12).
-      await expect(page.getByRole("checkbox", { name: text.members_names_label })).toHaveCount(0);
+      await expect(page.getByRole("switch", { name: text.members_names_label })).toHaveCount(0);
       await expectAxeClean(page);
 
       const email = addressOf(uniqueName("invitee"));
@@ -162,6 +162,77 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(dialog.getByText(text.members_group_name_required)).toBeVisible();
       await expect(dialog.getByLabel(text.members_group_name_label, { exact: true })).toBeFocused();
       await expectAxeClean(page);
+    });
+
+    test("a group has one actions menu, and removing a group or revoking an invitation can be undone", async ({
+      page,
+      db,
+    }) => {
+      const project = await seedProject(db);
+      await signIn(page, project.facilitator.email, locale);
+      await page.goto(membersUrl(project));
+      const menuOf = (group: string) =>
+        page.getByRole("button", { name: fill(text.members_actions_label, { group }) });
+      await expectHydrated(menuOf(FIRST_GROUP));
+      await expect(
+        page.getByRole("button", { name: text.members_rename, exact: true }),
+      ).toHaveCount(0);
+
+      // An empty group takes one row.
+      const name = uniqueName("Empty");
+      await page.getByRole("button", { name: text.members_new_group_title, exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: text.members_new_group_title });
+      await dialog.getByLabel(text.members_group_name_label, { exact: true }).fill(name);
+      await dialog.getByLabel(text.members_expert_type_label, { exact: true }).click();
+      await page.getByRole("option").first().click();
+      await dialog.getByRole("button", { name: text.members_new_group_submit }).click();
+      await expect(dialog).toBeHidden();
+      await expect(groupPeople(page, name).getByRole("row")).toHaveCount(1);
+      await expect(groupPeople(page, name)).toContainText(text.members_no_participants);
+
+      await menuOf(name).click();
+      await expect(page.getByRole("menuitem", { name: text.members_rename })).toBeVisible();
+      await expectAxeClean(page);
+      await page.getByRole("menuitem", { name: text.members_remove }).click();
+      await expect(groupPeople(page, name)).toHaveCount(0);
+      const removed = page.locator("[data-sonner-toast]").filter({
+        hasText: fill(text.members_group_removed, { group: name }),
+      });
+      await expect(removed).toBeVisible();
+      await toastsSettled(page);
+      await expectAxeClean(page);
+      await removed.getByRole("button", { name: text.common_undo }).click();
+      await expect(groupPeople(page, name)).toHaveCount(1);
+
+      // A group with people cannot be removed; the refusal says why.
+      await seedParticipant(db, project);
+      await menuOf(FIRST_GROUP).click();
+      await page.getByRole("menuitem", { name: text.members_remove }).click();
+      await expect(page.getByText(text.common_refusal_group_not_empty)).toBeVisible();
+      await expect(groupPeople(page, FIRST_GROUP)).toHaveCount(1);
+
+      // Revoking an invitation is undone the same way.
+      const email = addressOf(uniqueName("invitee"));
+      await page.getByRole("button", { name: text.members_invite_title, exact: true }).click();
+      const invite = page.getByRole("dialog", { name: text.members_invite_title });
+      await invite.getByLabel(text.members_invite_email_label, { exact: true }).fill(email);
+      await invite.getByLabel(text.members_invite_group_label, { exact: true }).click();
+      await page.getByRole("option").first().click();
+      await invite.getByRole("button", { name: text.members_invite_submit, exact: true }).click();
+      const row = page.getByRole("row").filter({ hasText: email });
+      await expect(row).toBeVisible();
+      await row.getByRole("button", { name: fill(text.members_revoke_label, { email }) }).click();
+      await expect(page.getByText(text.members_invitations_none_open)).toBeVisible();
+      const revoked = page.locator("[data-sonner-toast]").filter({
+        hasText: fill(text.members_invitation_revoked, { email }),
+      });
+      await revoked.getByRole("button", { name: text.common_undo }).click();
+      await expect(
+        page
+          .getByRole("row")
+          .filter({ hasText: email })
+          .getByText(text.members_invitation_status_pending),
+      ).toBeVisible();
     });
 
     test("a participant sees the number per group, no names, and the page is axe-clean", async ({
@@ -208,16 +279,15 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const otherName = `Invented Nurse ${locale}`;
       await nameAccount(db, other, otherName);
 
-      async function setNames(on: boolean, saved: string) {
+      async function setNames(on: boolean) {
         await context.clearCookies();
         await signIn(page, project.facilitator.email, locale);
         await page.goto(settingsUrl(project));
-        const box = page.getByRole("checkbox", { name: text.members_names_label });
+        const box = page.getByRole("switch", { name: text.members_names_label });
         await expectHydrated(box);
         await expect(box).toBeChecked({ checked: !on });
         await box.click();
-        await page.getByRole("button", { name: text.members_names_save }).click();
-        await expect(page.getByText(saved)).toBeVisible();
+        await expect(page.getByRole("status").filter({ hasText: text.common_saved })).toBeVisible();
         await expect(box).toBeChecked({ checked: on });
         await toastsSettled(page);
         await expectAxeClean(page);
@@ -231,7 +301,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         return panel;
       }
 
-      await setNames(true, text.members_names_shown);
+      await setNames(true);
       const named = await asParticipant();
       const group = aboutGroup(named, FIRST_GROUP);
       await expect(group).toContainText(otherName);
@@ -239,7 +309,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(group).not.toContainText(fill(text.projects_about_people_many, { count: 2 }));
       await expectAxeClean(page);
 
-      await setNames(false, text.members_names_hidden);
+      await setNames(false);
       const counted = await asParticipant();
       await expect(aboutGroup(counted, FIRST_GROUP)).toContainText(
         fill(text.projects_about_people_many, { count: 2 }),

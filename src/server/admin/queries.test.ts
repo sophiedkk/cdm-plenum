@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { APP_ROLE_KEYS } from "../db/migrations/0003_access.ts";
 import type { DB } from "../db/schema.gen.ts";
 import { createTestDb } from "../db/test-db.ts";
-import { emailOf, facilitatorWithProject, insertUser } from "../test-fixtures.ts";
+import { emailOf, facilitatorWithProject, insertElement, insertUser } from "../test-fixtures.ts";
 import { grantAppRole, userHasAppRole } from "./app-roles.ts";
 import {
   deactivateAccount,
@@ -227,6 +227,52 @@ describe("listActivity (AD2)", () => {
         targetType: "project",
         targetId: projectId,
       }),
+    ]);
+  });
+
+  it("names the subject of an entry, and gives null once it no longer exists", async () => {
+    const admin = await administrator();
+    const { userId: facilitator, projectId } = await facilitatorWithProject(db);
+    const element = await insertElement(db, projectId, "Systolic pressure");
+    const team = await db
+      .selectFrom("team")
+      .select(["id", "name"])
+      .where("organizationId", "=", projectId)
+      .executeTakeFirstOrThrow();
+    const round = await db
+      .insertInto("round")
+      .values({ project_id: projectId, number: 3, closes_at: NOW })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const gone = "00000000-0000-4000-8000-000000000000";
+    const subjects: [string, string][] = [
+      ["element", element],
+      ["group", team.id],
+      ["round", round.id],
+      ["element", gone],
+      ["scope_comment", gone],
+    ];
+    await db
+      .insertInto("activity_log")
+      .values(
+        subjects.map(([targetType, targetId], index) => ({
+          action: "test_subject",
+          actor_user_id: facilitator,
+          project_id: projectId,
+          target_type: targetType,
+          target_id: targetId,
+          occurred_at: new Date(NOW.getTime() + index * 1000),
+        })),
+      )
+      .execute();
+    const listed = await listActivity(db, admin, { action: "test_subject" });
+    if (!listed.ok) throw new Error(listed.error);
+    expect(listed.value.entries.map((entry) => entry.subject).reverse()).toEqual([
+      "Systolic pressure",
+      team.name,
+      "3",
+      null,
+      null,
     ]);
   });
 

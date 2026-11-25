@@ -91,7 +91,6 @@ function Settings() {
           const result = await setChangeClass({ data: { projectId, changeClass } });
           if (!result.ok) return result;
           await refreshPanel();
-          toast.success(m.rounds_change_class_saved());
           return { ok: true };
         }}
         saveMinimum={async (minimums, reason) => {
@@ -105,12 +104,10 @@ function Settings() {
       <Separator />
       <div className="grid gap-10 lg:grid-cols-2">
         <PrivateBrainstormForm
-          key={`${project.privateBrainstorm}-${project.boardRevealed}`}
           enabled={project.privateBrainstorm}
           revealed={project.boardRevealed}
           save={(enabled) => setPrivateBrainstorm({ data: { projectId, enabled } })}
-          onSaved={async (enabled) => {
-            toast.success(enabled ? m.members_private_on() : m.members_private_off());
+          onSaved={async () => {
             await Promise.all([
               refreshProject(),
               queryClient.invalidateQueries({ queryKey: elementKeys.all(projectId) }),
@@ -118,13 +115,9 @@ function Settings() {
           }}
         />
         <GroupNamesForm
-          key={String(project.groupNamesVisible)}
           visible={project.groupNamesVisible}
           save={(visible) => setGroupNamesVisible({ data: { projectId, visible } })}
-          onSaved={async (visible) => {
-            toast.success(visible ? m.members_names_shown() : m.members_names_hidden());
-            await refreshProject();
-          }}
+          onSaved={() => refreshProject()}
         />
       </div>
       <Separator />

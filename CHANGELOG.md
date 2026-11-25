@@ -25,8 +25,25 @@ the project uses [Semantic Versioning](https://semver.org/).
   core, IPS, Nictiz zib2020 and Nictiz nl-core. Above the profile list, a
   filter field narrows the profiles by name or URL as you type.
 
+- Removing a group on People, and revoking an invitation, now happens at once
+  with an "Undo" button in the message. Undo brings the group or the invitation
+  back, with the same link for an invitation.
+
 ### Changed
 
+- Settings apply when you change them. The change class, the brainstorm and
+  group-name switches show "Saved" next to the control (or the reason in words
+  when the server refuses) instead of a save button per setting. Only the
+  minimum panel keeps its button, because its counts and its reason belong
+  together.
+- The panel on Settings is one line, "The panel meets the minimum for every
+  expert type", with "Show per expert type" for the table. The table shows at
+  once when an expert type falls short.
+- On People, each group has one "Actions for" menu with Rename and Remove
+  instead of two buttons, and an empty group takes one row.
+- The activity log names what an entry is about (the element, the round, the
+  group, the source) instead of a technical id, and says "(removed)" when it no
+  longer exists.
 - The facilitator has five tabs: Overview, Scope, Elements, Rounds and Detail.
   People and Settings moved into a "Project" menu at the end of the row. On a
   phone the current tab scrolls into view.

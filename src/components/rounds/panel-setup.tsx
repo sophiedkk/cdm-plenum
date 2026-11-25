@@ -6,9 +6,12 @@
 // (`panel_locked`).
 import { revalidateLogic } from "@tanstack/react-form";
 import { CircleAlertIcon, CircleCheckIcon, LockIcon } from "lucide-react";
+import { useId, useState } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/components/form/app-form";
+import { SaveStatus, useAutoSave } from "@/components/settings/auto-save";
 import { StatusBadge } from "@/components/status/status-badge";
+import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldContent,
@@ -114,69 +117,37 @@ function ChangeClassForm({
   current: ChangeClass;
   save: (changeClass: ChangeClass) => Promise<PanelOutcome>;
 }>) {
-  const form = useAppForm({
-    defaultValues: { changeClass: current },
-    onSubmit: async ({ value, formApi }) => {
-      let outcome: PanelOutcome;
-      try {
-        outcome = await save(value.changeClass);
-      } catch {
-        applyServerRefusal(formApi, { form: m.common_error_unexpected() });
-        return;
-      }
-      if (!outcome.ok) applyServerRefusal(formApi, { form: refusalMessage(outcome.error) });
-    },
-  });
+  const [value, setValue] = useState(current);
+  const { state, run } = useAutoSave();
+
+  async function change(next: ChangeClass) {
+    const before = value;
+    setValue(next);
+    if (!(await run(() => save(next)))) setValue(before);
+  }
+
   return (
-    <form
-      noValidate
-      className="flex flex-col gap-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void form.handleSubmit();
-      }}
-    >
-      <form.AppForm>
-        <form.FormErrors />
-      </form.AppForm>
-      <form.Field name="changeClass">
-        {(field) => (
-          <FieldSet>
-            <FieldLegend>{m.rounds_change_class_legend()}</FieldLegend>
-            <FieldDescription>{m.rounds_change_class_help()}</FieldDescription>
-            <RadioGroup
-              name={field.name}
-              value={field.state.value}
-              onValueChange={(value) => field.handleChange(value as ChangeClass)}
-            >
-              {CHANGE_CLASSES.map((changeClass) => {
-                const id = `change-class-${changeClass}`;
-                return (
-                  <Field key={changeClass} orientation="horizontal">
-                    <RadioGroupItem
-                      value={changeClass}
-                      id={id}
-                      aria-describedby={`${id}-description`}
-                    />
-                    <FieldContent>
-                      <FieldLabel htmlFor={id}>{changeClassLabel(changeClass)}</FieldLabel>
-                      <FieldDescription id={`${id}-description`}>
-                        {changeClassDescription(changeClass)}
-                      </FieldDescription>
-                    </FieldContent>
-                  </Field>
-                );
-              })}
-            </RadioGroup>
-          </FieldSet>
-        )}
-      </form.Field>
-      <div>
-        <form.AppForm>
-          <form.SubmitButton variant="outline">{m.rounds_change_class_save()}</form.SubmitButton>
-        </form.AppForm>
-      </div>
-    </form>
+    <FieldSet>
+      <FieldLegend>{m.rounds_change_class_legend()}</FieldLegend>
+      <FieldDescription>{m.rounds_change_class_help()}</FieldDescription>
+      <RadioGroup value={value} onValueChange={(next) => void change(next as ChangeClass)}>
+        {CHANGE_CLASSES.map((changeClass) => {
+          const id = `change-class-${changeClass}`;
+          return (
+            <Field key={changeClass} orientation="horizontal">
+              <RadioGroupItem value={changeClass} id={id} aria-describedby={`${id}-description`} />
+              <FieldContent>
+                <FieldLabel htmlFor={id}>{changeClassLabel(changeClass)}</FieldLabel>
+                <FieldDescription id={`${id}-description`}>
+                  {changeClassDescription(changeClass)}
+                </FieldDescription>
+              </FieldContent>
+            </Field>
+          );
+        })}
+      </RadioGroup>
+      <SaveStatus state={state} />
+    </FieldSet>
   );
 }
 
@@ -217,6 +188,8 @@ export function minimumSchema() {
     });
 }
 
+// NOTE: no spec governs this, our own design: the minimum stays one form with one save button,
+// because its counts and its reason are valid only together.
 function MinimumForm({
   status,
   save,
@@ -321,6 +294,44 @@ function MinimumReason({ status }: Readonly<{ status: PanelStatus }>) {
 }
 
 /**
+ * One line while every expert type meets the minimum; the table shows when one falls short or
+ * when the facilitator opens it. It opens below the button, so the button stays where it is.
+ */
+function PanelSummary({ status }: Readonly<{ status: PanelStatus }>) {
+  const [open, setOpen] = useState(false);
+  const tableId = useId();
+  const failing = status.shortfall.length > 0;
+  const table = (
+    <PanelTable
+      joined={status.joined}
+      minimum={status.minimum}
+      caption={m.rounds_panel_caption()}
+    />
+  );
+  if (failing) return table;
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <span>{m.rounds_panel_meets_minimum()}</span>
+        <Button
+          type="button"
+          variant="link"
+          className="h-auto p-0"
+          aria-expanded={open}
+          aria-controls={tableId}
+          onClick={() => setOpen((value) => !value)}
+        >
+          {open ? m.rounds_panel_hide_table() : m.rounds_panel_show_table()}
+        </Button>
+      </p>
+      <div id={tableId} hidden={!open}>
+        {open && table}
+      </div>
+    </div>
+  );
+}
+
+/**
  * The panel section of the Settings page (PR12): the table, whose status column names any
  * shortfall, and while no round has opened the change class and the minimum per expert type.
  */
@@ -343,11 +354,7 @@ export function PanelSetup({
           {m.rounds_panel_intro({ changeClass: changeClassLabel(status.changeClass) })}
         </p>
       </div>
-      <PanelTable
-        joined={status.joined}
-        minimum={status.minimum}
-        caption={m.rounds_panel_caption()}
-      />
+      <PanelSummary status={status} />
       <MinimumReason status={status} />
       {status.locked ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -356,11 +363,7 @@ export function PanelSetup({
         </p>
       ) : (
         <div className="grid gap-8 lg:grid-cols-2">
-          <ChangeClassForm
-            key={status.changeClass}
-            current={status.changeClass}
-            save={saveChangeClass}
-          />
+          <ChangeClassForm current={status.changeClass} save={saveChangeClass} />
           <MinimumForm
             key={`${JSON.stringify(status.overrides)}-${status.overridesReason}`}
             status={status}

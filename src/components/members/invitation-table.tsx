@@ -21,6 +21,7 @@ import {
 import { m } from "@/i18n/messages";
 import type { Outcome } from "@/lib/forms/outcome";
 import { refusalMessage } from "@/lib/i18n/refusals";
+import { UNDO_MS } from "@/lib/undo";
 import type { InvitationRow } from "@/server/invitations/queries";
 import { InvitationStatusBadge } from "./member-badges";
 
@@ -109,22 +110,42 @@ function InvitationRows({
 export function InvitationTable({
   invitations,
   revoke,
+  restore,
   onRevoked,
 }: Readonly<{
   invitations: readonly InvitationRow[];
   revoke: (invitationId: string) => Promise<Outcome<unknown>>;
+  /** Undoes a revoke while the Undo action of its toast is shown. */
+  restore: (invitationId: string) => Promise<Outcome<unknown>>;
   onRevoked: () => Promise<void> | void;
 }>) {
   const [busy, setBusy] = useState<string | null>(null);
   const open = invitations.filter((invitation) => invitation.status === "pending");
   const earlier = invitations.filter((invitation) => invitation.status !== "pending");
 
+  async function undo(invitation: InvitationRow) {
+    try {
+      const outcome = await restore(invitation.id);
+      if (outcome.ok) {
+        toast.success(m.members_invitation_restored({ email: invitation.email }));
+        await onRevoked();
+      } else {
+        toast.error(refusalMessage(outcome.error));
+      }
+    } catch {
+      toast.error(m.common_error_unexpected());
+    }
+  }
+
   async function onRevoke(invitation: InvitationRow) {
     setBusy(invitation.id);
     try {
       const outcome = await revoke(invitation.id);
       if (outcome.ok) {
-        toast.success(m.members_invitation_revoked({ email: invitation.email }));
+        toast.success(m.members_invitation_revoked({ email: invitation.email }), {
+          duration: UNDO_MS,
+          action: { label: m.common_undo(), onClick: () => void undo(invitation) },
+        });
         await onRevoked();
       } else {
         toast.error(refusalMessage(outcome.error));

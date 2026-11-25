@@ -197,6 +197,52 @@ export async function revokeInvitation(
 }
 
 /**
+ * Undoes a revoke (facilitator only): a canceled invitation that has not expired and whose
+ * address has no other pending invitation becomes pending again, with the same link.
+ */
+export async function restoreInvitation(
+  db: Kysely<DB>,
+  userId: string,
+  input: InvitationInput,
+  deps: { now: Date },
+): Promise<ProjectResult<null>> {
+  return withProject(
+    db,
+    userId,
+    input.projectId,
+    { invitation: ["cancel"] },
+    async (trx, project) => {
+      const canceled = await trx
+        .selectFrom("invitation")
+        .select("email")
+        .where("id", "=", input.invitationId)
+        .where("organizationId", "=", project.id)
+        .where("status", "=", "canceled")
+        .where("expiresAt", ">", deps.now)
+        .forUpdate()
+        .executeTakeFirst();
+      if (!canceled) return refused("invitation_not_found");
+      const pending = await trx
+        .selectFrom("invitation")
+        .select("id")
+        .where("organizationId", "=", project.id)
+        .where("email", "=", canceled.email)
+        .where("status", "=", "pending")
+        .where("expiresAt", ">", deps.now)
+        .executeTakeFirst();
+      if (pending) return refused("already_invited");
+      await trx
+        .updateTable("invitation")
+        .set({ status: "pending" })
+        .where("id", "=", input.invitationId)
+        .execute();
+      await log(trx, userId, project.id, "invitation_restored", "invitation", input.invitationId);
+      return done(null);
+    },
+  );
+}
+
+/**
  * What the invitation page may show without a session: the project name, only while the
  * invitation is pending and unexpired. Anything else gives `null`, so a used, revoked or
  * expired link reveals nothing.

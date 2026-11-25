@@ -8,6 +8,7 @@ import { randomBytes } from "node:crypto";
 import type { Kysely } from "kysely";
 import { grantAppRole, userHasAppRole } from "../../src/server/admin/app-roles.ts";
 import type { DB } from "../../src/server/db/schema.gen.ts";
+import { insertElement } from "../../src/server/test-fixtures.ts";
 import { expectAxeCleanAfterToasts } from "./axe.ts";
 import {
   addressOf,
@@ -217,6 +218,64 @@ test("the activity log names actions and projects, a page at a time, in English 
     await expect(pages).toContainText(pageWord(2));
     await expect(rows.first()).toContainText(projectName);
     await expect(pages.getByRole("link", { name: text.admin_activity_previous })).toBeVisible();
+    await expectAxeCleanAfterToasts(page);
+    await context.close();
+  }
+});
+
+test("the activity log names the subject, and says when it was removed", async ({
+  browser,
+  db,
+}) => {
+  const admin = await seedAdministrator(db);
+  const project = await seedProject(db);
+  const element = await insertElement(db, project.projectId, uniqueName("Systolic"));
+  const round = await db
+    .insertInto("round")
+    .values({ project_id: project.projectId, number: 7, closes_at: new Date() })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  const gone = "00000000-0000-4000-8000-000000000000";
+  const named = await db
+    .selectFrom("element")
+    .select("name")
+    .where("id", "=", element)
+    .executeTakeFirstOrThrow();
+  // Far ahead of other specs' entries, but older than the paging test's, which stay the newest.
+  await db
+    .insertInto("activity_log")
+    .values(
+      [
+        ["element", element],
+        ["round", round.id],
+        ["element", gone],
+      ].map(([targetType, targetId], second) => ({
+        action: "element_updated",
+        project_id: project.projectId,
+        target_type: targetType,
+        target_id: targetId,
+        occurred_at: new Date(Date.UTC(2099, 0, 1, 0, 0, second)),
+      })),
+    )
+    .execute();
+  for (const locale of ["en", "nl"] as const satisfies Locale[]) {
+    const text = MESSAGES[locale];
+    const [a, b, c] = randomBytes(3);
+    const context = await browser.newContext({
+      baseURL: appUrl(),
+      locale: BROWSER_LOCALE[locale],
+      extraHTTPHeaders: { "X-Forwarded-For": `10.${a}.${b}.${c}` },
+    });
+    const page = await context.newPage();
+    await signIn(page, admin, locale);
+    await page.goto("/admin?action=element_updated");
+    const rows = page
+      .getByRole("table", { name: text.admin_activity_caption })
+      .locator("tbody > tr");
+    await expect(rows.first()).toContainText(text.admin_subject_removed);
+    await expect(rows.nth(1)).toContainText(text.admin_subject_round.replace("{number}", "7"));
+    await expect(rows.nth(2)).toContainText(named.name);
+    await expect(rows.nth(2)).not.toContainText(element);
     await expectAxeCleanAfterToasts(page);
     await context.close();
   }
