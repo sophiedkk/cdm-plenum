@@ -11,6 +11,16 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Each page where you act as a participant starts with a task bar under the
+  title: what to do on this page in one sentence and your progress, such as
+  "1 of 3 answered". When nothing is left, the bar says "You are done", what
+  happens next and links back to your task, and the items stay open to change
+  an answer. This covers the first look, adding elements, checking the groups,
+  rating, the detail page, the scope and the hand-off.
+- Your task on the project home now says in one sentence what to do. The scope
+  and discover cards add a line when nothing else is needed, and an architect
+  or terminologist in the detail phase sees what is still to propose next to
+  what is still to answer.
 - The FHIR tab of "Add a model" has quick picks for four packages: FHIR R4
   core, IPS, Nictiz zib2020 and Nictiz nl-core. Above the profile list, a
   filter field narrows the profiles by name or URL as you type.

@@ -182,6 +182,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       // Card 1 of 3 fits the first screen; data type, cardinality and values wait for their phase.
       const first = card("Systolic pressure");
       await expect(first).toContainText(fill(text.rounds_card_position, { index: 1, total: 3 }));
+      // The task bar holds the task and the count, once (P1).
+      const bar = rater.getByTestId("task-bar");
+      await expect(bar).toContainText(fill(text.projects_task_rate, { number: 1 }));
+      await expect(bar.getByRole("status")).toHaveText(
+        fill(text.rounds_rate_progress, { rated: 0, total: 3 }),
+      );
       const seven = first.getByRole("radio", { name: "7", exact: true });
       await expectHydrated(seven);
       expect(await bottomOf(rater, first)).toBeLessThanOrEqual(SCREEN.height);
@@ -193,6 +199,9 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       ).toHaveCount(0);
       await seven.click();
       await saved("Systolic pressure", 7);
+      await expect(bar.getByRole("status")).toHaveText(
+        fill(text.rounds_rate_progress, { rated: 1, total: 3 }),
+      );
       // With "Remove my answer" shown after the choice, the card still fits.
       expect(await bottomOf(rater, next)).toBeLessThanOrEqual(SCREEN.height);
       await expectAxeClean(rater);
@@ -238,7 +247,10 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await next.click();
       await expect(heading(text.rounds_overview_heading)).toBeFocused();
       const overview = rater.getByRole("region", { name: text.rounds_overview_heading });
-      // The rating screen holds the count once; the overview does not repeat it.
+      // Every element is rated: the bar is the done state and holds the way back. The rating
+      // screen holds the count once; the overview does not repeat it.
+      await expect(bar.getByRole("heading", { name: text.projects_bar_done_title })).toBeVisible();
+      await expect(bar.getByText(text.projects_bar_rate_done)).toBeVisible();
       await expect(
         rater.getByText(fill(text.rounds_rate_progress, { rated: 3, total: 3 })),
       ).toHaveCount(1);

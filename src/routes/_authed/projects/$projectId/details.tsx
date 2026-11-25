@@ -8,10 +8,12 @@ import { RulerIcon } from "lucide-react";
 import { type DetailActions, DetailCard } from "@/components/details/detail-card";
 import { TreeSection } from "@/components/details/tree-section";
 import { projectTitle } from "@/components/projects/project-title";
+import { TaskBar } from "@/components/projects/task-bar";
 import { EmptyState, NotFoundState, PageHeader } from "@/components/shell/route-states";
 import { StepClosedNote } from "@/components/status/step-closed-note";
 import { m } from "@/i18n/messages";
 import { requireStep } from "@/lib/guards";
+import { detailStepProgress } from "@/lib/task-progress";
 import {
   addressObjectionFn,
   answerDetailFn,
@@ -28,7 +30,7 @@ import {
   treeBoardQueryOptions,
 } from "@/server/details/query-options";
 import { elementKeys } from "@/server/elements/query-options";
-import { projectKeys } from "@/server/projects/query-options";
+import { projectKeys, projectOverviewQueryOptions } from "@/server/projects/query-options";
 import { addValueListFn } from "@/server/rounds/functions";
 import { roundKeys } from "@/server/rounds/query-options";
 
@@ -57,6 +59,7 @@ function DetailsPage() {
   const queryClient = useQueryClient();
   const { data: board } = useSuspenseQuery(detailBoardQueryOptions(projectId));
   const { data: tree } = useSuspenseQuery(treeBoardQueryOptions(projectId));
+  const { data: overview } = useSuspenseQuery(projectOverviewQueryOptions(projectId));
   const proposeTree = useServerFn(proposeTreeFn);
   const propose = useServerFn(proposeDetailFn);
   const answer = useServerFn(answerDetailFn);
@@ -98,9 +101,34 @@ function DetailsPage() {
   const { elements, mayPropose, mayProposeCodes, mayReview, mayAnswer, open, valueRounds } =
     board.value;
 
+  const bar =
+    !facilitator && board.value.open && overview.ok
+      ? detailStepProgress(overview.value.detail)
+      : null;
+  const progress = bar
+    ? [
+        ...(bar.progress
+          ? [m.projects_bar_answered({ done: bar.progress.done, total: bar.progress.total })]
+          : []),
+        ...(bar.toPropose > 0 ? [m.projects_bar_to_propose({ count: bar.toPropose })] : []),
+        ...(bar.toProposeCodes > 0
+          ? [m.projects_bar_to_propose_codes({ count: bar.toProposeCodes })]
+          : []),
+        ...(bar.toReview > 0 ? [m.projects_bar_to_review({ count: bar.toReview })] : []),
+      ]
+    : [];
+
   return (
     <>
       <PageHeader level={2} title={m.details_title()} />
+      {bar && (
+        <TaskBar
+          projectId={projectId}
+          sentence={m.projects_bar_detail()}
+          progress={progress}
+          done={bar.done ? { next: m.projects_bar_detail_done() } : null}
+        />
+      )}
       {!open && !facilitator && <StepClosedNote className="mb-4" />}
       {elements.length === 0 ? (
         <EmptyState

@@ -9,6 +9,7 @@ import { brainstormIntro } from "@/components/board/brainstorm-intro";
 import { RevealButton } from "@/components/board/brainstorm-panel";
 import { BoardStrip, QuestionBoard } from "@/components/board/question-board";
 import { projectTitle } from "@/components/projects/project-title";
+import { TaskBar } from "@/components/projects/task-bar";
 import { NotFoundState, PageHeader } from "@/components/shell/route-states";
 import { SuggestModelButton } from "@/components/sources/suggest-model";
 import { m } from "@/i18n/messages";
@@ -20,7 +21,11 @@ import {
   brainstormStatusQueryOptions,
   elementKeys,
 } from "@/server/elements/query-options";
-import { projectKeys, projectQueryOptions } from "@/server/projects/query-options";
+import {
+  projectKeys,
+  projectOverviewQueryOptions,
+  projectQueryOptions,
+} from "@/server/projects/query-options";
 import { suggestSourceFn } from "@/server/sources/functions";
 import { sourceKeys } from "@/server/sources/query-options";
 
@@ -51,6 +56,7 @@ function Brainstorm() {
   const router = useRouter();
   const { data: board } = useSuspenseQuery(brainstormBoardQueryOptions(projectId));
   const { data: detail } = useSuspenseQuery(projectQueryOptions(projectId));
+  const { data: overview } = useSuspenseQuery(projectOverviewQueryOptions(projectId));
   const isFacilitator = project.role === "facilitator";
   const revealDue =
     isFacilitator &&
@@ -78,6 +84,9 @@ function Brainstorm() {
     writeOpen(project.role, project.phase, "element_mark");
   const canSuggest = !isFacilitator && writeOpen(project.role, project.phase, "source_suggest");
 
+  // Adding is open-ended, so the bar counts what the member added and never says they are done.
+  const added = !isFacilitator && canAdd && overview.ok ? overview.value.ownElements : null;
+
   async function refresh() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: elementKeys.all(projectId) }),
@@ -90,7 +99,7 @@ function Brainstorm() {
       <PageHeader
         level={2}
         title={m.board_brainstorm_title()}
-        description={brainstormIntro(board.value)}
+        description={added !== null ? undefined : brainstormIntro(board.value)}
         actions={
           revealDue && status?.ok ? (
             <RevealButton
@@ -107,6 +116,13 @@ function Brainstorm() {
           ) : undefined
         }
       />
+      {added !== null && (
+        <TaskBar
+          projectId={projectId}
+          sentence={brainstormIntro(board.value)}
+          progress={[m.projects_bar_added({ count: added })]}
+        />
+      )}
       <BoardStrip board={board.value} />
       <QuestionBoard
         board={board.value}

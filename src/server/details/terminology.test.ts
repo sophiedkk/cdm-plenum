@@ -127,6 +127,30 @@ afterEach(async () => {
   await db.destroy();
 });
 
+describe("the codes a terminologist still has to propose (DT4)", () => {
+  it("counts the elements with a settled structure and no code proposal", async () => {
+    expect(await ownDetailProgress(db, m.projectId, terminologist)).toMatchObject({
+      toProposeCodes: 0,
+    });
+    await settledStructure(systolic);
+    expect(await ownDetailProgress(db, m.projectId, terminologist)).toMatchObject({
+      toProposeCodes: 1,
+    });
+    must(await propose(terminologist));
+    expect(await ownDetailProgress(db, m.projectId, terminologist)).toMatchObject({
+      toProposeCodes: 0,
+    });
+  });
+
+  it("counts nothing for a participant outside a terminology group, and no structures", async () => {
+    await settledStructure(systolic);
+    expect(await ownDetailProgress(db, m.projectId, m.participant)).toMatchObject({
+      toProposeCodes: 0,
+      toPropose: 0,
+    });
+  });
+});
+
 describe("proposeCodes (DT4, DT5)", () => {
   it("waits for a settled structure, then takes one entry per value", async () => {
     expect(await propose(terminologist)).toEqual({ ok: false, error: "detail_structure_open" });
@@ -305,6 +329,8 @@ describe("settling codes (DT5)", () => {
       open: 0,
       answered: 0,
       toReview: 1,
+      toPropose: 0,
+      toProposeCodes: 0,
     });
     expect(await ownDetailProgress(db, m.projectId, terminologist)).toMatchObject({
       toReview: 0,

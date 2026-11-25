@@ -929,40 +929,81 @@ export async function detailProgress(db: Db, projectId: string): Promise<DetailP
   };
 }
 
+/** What waits for the user in the detail phase (DT2, DT4). */
+export interface OwnDetailProgress {
+  /** The open proposals the group answers: a structure, the tree, or codes once reviewed. */
+  open: number;
+  /** How many of them the user answered in their current version. */
+  answered: number;
+  /** For a terminologist, the code proposals of others that wait for their review. */
+  toReview: number;
+  /** For an architect, the elements without a structure proposal, and the tree if it has none. */
+  toPropose: number;
+  /** For a terminologist, the elements with a settled structure and no code proposal. */
+  toProposeCodes: number;
+}
+
 /**
  * What waits for the user in the detail phase: the open proposals the group answers (a
  * structure, or codes once reviewed), how many of them they answered in their current version,
- * and, for a terminologist, the code proposals of others that wait for their review (DT4).
+ * for a terminologist the code proposals of others that wait for their review (DT4), and what an
+ * expert still has to propose (DT1, DT4).
  */
 export async function ownDetailProgress(
   db: Db,
   projectId: string,
   userId: string,
-): Promise<{ open: number; answered: number; toReview: number }> {
-  const none = { open: 0, answered: 0, toReview: 0 };
-  const ids = (await modelElements(db, projectId)).map((element) => element.id);
+): Promise<OwnDetailProgress> {
+  const none = { open: 0, answered: 0, toReview: 0, toPropose: 0, toProposeCodes: 0 };
+  const elements = await modelElements(db, projectId);
+  const ids = elements.map((element) => element.id);
   if (ids.length === 0) return none;
-  const unsettled = await db
+  const proposals = await db
     .selectFrom("detail_proposal")
-    .select(["id", "kind", "review_state", "proposer_member_id"])
+    .select(["id", "kind", "element_id", "review_state", "proposer_member_id", "settled_at"])
     .where((eb) => eb.or([eb("element_id", "in", ids), eb("project_id", "=", projectId)]))
-    .where("settled_at", "is", null)
     .execute();
+  const unsettled = proposals.filter((proposal) => proposal.settled_at === null);
   const me = await db
     .selectFrom("member")
     .select("id")
     .where("organizationId", "=", projectId)
     .where("userId", "=", userId)
     .executeTakeFirst();
-  const toReview =
-    me !== undefined && (await inExpertGroup(db, projectId, userId, "terminology"))
-      ? unsettled.filter(
-          (proposal) =>
-            proposal.review_state === "pending" && proposal.proposer_member_id !== me.id,
-        ).length
-      : 0;
+  const terminologist =
+    me !== undefined && (await inExpertGroup(db, projectId, userId, "terminology"));
+  const architect =
+    me !== undefined && (await inExpertGroup(db, projectId, userId, "architecture"));
+  const toReview = terminologist
+    ? unsettled.filter(
+        (proposal) => proposal.review_state === "pending" && proposal.proposer_member_id !== me.id,
+      ).length
+    : 0;
+  const withKind = (kind: string) =>
+    new Set(proposals.filter((proposal) => proposal.kind === kind).map((row) => row.element_id));
+  const structured = withKind("structure");
+  const settledStructure = new Set(
+    proposals
+      .filter((proposal) => proposal.kind === "structure" && proposal.settled_at !== null)
+      .map((proposal) => proposal.element_id),
+  );
+  const coded = withKind("terminology");
+  const toPropose = architect
+    ? elements.filter((element) => !structured.has(element.id)).length +
+      (proposals.some((proposal) => proposal.kind === "tree") ? 0 : 1)
+    : 0;
+  // NOTE: EL26. A reference element takes no codes, and codes follow a settled structure (DT4).
+  const toProposeCodes = terminologist
+    ? elements.filter(
+        (element) =>
+          element.kind !== "reference" &&
+          settledStructure.has(element.id) &&
+          !coded.has(element.id),
+      ).length
+    : 0;
+  const extra = { toReview, toPropose, toProposeCodes };
   const open = unsettled.filter(consentOpen);
-  if (open.length === 0 || me === undefined) return { ...none, toReview };
+  if (open.length === 0 || me === undefined) return { ...none, ...extra };
   const answered = await db
     .selectFrom("detail_answer")
     .innerJoin("detail_proposal", "detail_proposal.id", "detail_answer.proposal_id")
@@ -975,7 +1016,7 @@ export async function ownDetailProgress(
     .whereRef("detail_answer.version", "=", "detail_proposal.version")
     .where("detail_answer.member_id", "=", me.id)
     .executeTakeFirst();
-  return { open: open.length, answered: Number(answered?.count ?? 0), toReview };
+  return { open: open.length, answered: Number(answered?.count ?? 0), ...extra };
 }
 
 /** An element in the model with the structure it carries and whether its proposal is settled. */

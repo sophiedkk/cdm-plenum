@@ -24,6 +24,7 @@ import {
   answerDetail,
   detailProgress,
   ownDetailProgress,
+  proposeDetail,
   settleDetail,
 } from "./queries.ts";
 import { proposeTree, treeBoard } from "./tree.ts";
@@ -159,6 +160,31 @@ describe("the tree board (DT6)", () => {
       error: "phase_closed",
     });
     expect((await boardOf(m.facilitator)).open).toBe(false);
+  });
+});
+
+describe("what an architect still has to propose (DT1, DT6)", () => {
+  it("counts the elements without a structure and the tree until it has a proposal", async () => {
+    expect(await ownDetailProgress(db, m.projectId, architect)).toMatchObject({ toPropose: 3 });
+    await proposed(architect);
+    expect(await ownDetailProgress(db, m.projectId, architect)).toMatchObject({ toPropose: 2 });
+    const structure = await proposeDetail(db, architect, {
+      projectId: m.projectId,
+      elementId: systolic,
+      version: 0,
+      dataType: "text",
+      cardinality: { min: 0, max: 1 },
+      units: [],
+      values: [],
+    });
+    expect(structure.ok).toBe(true);
+    expect(await ownDetailProgress(db, m.projectId, architect)).toMatchObject({ toPropose: 1 });
+  });
+
+  it("counts nothing for a participant outside an architecture group", async () => {
+    expect(await ownDetailProgress(db, m.projectId, m.participant)).toMatchObject({
+      toPropose: 0,
+    });
   });
 });
 

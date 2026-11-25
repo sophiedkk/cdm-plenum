@@ -9,6 +9,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { GroupCheckList, remarkCount } from "@/components/board/group-check";
 import { projectTitle } from "@/components/projects/project-title";
+import { TaskBar } from "@/components/projects/task-bar";
 import { EmptyState, NotFoundState, PageHeader } from "@/components/shell/route-states";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
@@ -45,6 +46,7 @@ export const Route = createFileRoute("/_authed/projects/$projectId/check")({
 
 function CheckGroups() {
   const { projectId } = Route.useParams();
+  const { project } = Route.useRouteContext();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { data: check } = useSuspenseQuery(groupCheckQueryOptions(projectId));
@@ -81,24 +83,41 @@ function CheckGroups() {
     ]);
   };
 
+  const remarks =
+    count === 0
+      ? m.board_check_remarks_none()
+      : count === 1
+        ? m.board_check_remarks_one()
+        : m.board_check_remarks_many({ count });
+  // The facilitator has no task here; the bar takes the place of the purpose line and the count.
+  const bar = project.role !== "facilitator";
+
   return (
     <>
       <PageHeader
         level={2}
         title={m.board_check_title()}
-        description={m.board_check_purpose()}
+        description={bar ? undefined : m.board_check_purpose()}
         actions={
-          <span aria-live="polite" className="text-sm text-muted-foreground">
-            {count === 0
-              ? m.board_check_remarks_none()
-              : count === 1
-                ? m.board_check_remarks_one()
-                : m.board_check_remarks_many({ count })}
-          </span>
+          bar ? undefined : (
+            <span aria-live="polite" className="text-sm text-muted-foreground">
+              {remarks}
+            </span>
+          )
         }
       />
-      {check.value.done && (
-        <p className="mb-4 text-sm text-muted-foreground">{m.board_check_already_done()}</p>
+      {bar ? (
+        <TaskBar
+          projectId={projectId}
+          sentence={m.projects_bar_check()}
+          progress={[remarks]}
+          done={check.value.done ? { next: m.projects_bar_check_done() } : null}
+          filledBack
+        />
+      ) : (
+        check.value.done && (
+          <p className="mb-4 text-sm text-muted-foreground">{m.board_check_already_done()}</p>
+        )
       )}
       <GroupCheckList
         check={check.value}

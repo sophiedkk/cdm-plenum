@@ -51,6 +51,12 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
         page.getByRole("heading", { level: 2, name: text.board_first_look_title }),
       ).toBeVisible();
       await expect(page.getByRole("heading", { level: 3, name: "Systolic" })).toBeVisible();
+      // The task bar says the task and counts the answers (P1).
+      const bar = page.getByTestId("task-bar");
+      await expect(bar).toContainText(text.projects_bar_first_look);
+      await expect(bar.getByRole("status")).toHaveText(
+        fill(text.projects_bar_looked, { done: 0, total: 2 }),
+      );
       await expectAxeCleanInBothThemes(page);
 
       const question = page.getByRole("group", {
@@ -75,6 +81,13 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       ).toHaveAttribute("aria-pressed", "true");
       await expect(
         page.getByRole("complementary").getByText(text.board_first_look_short_belongs),
+      ).toBeVisible();
+      // The last answer turns the bar into the done state; the cards stay to change an answer.
+      await expect(bar.getByRole("heading", { name: text.projects_bar_done_title })).toBeVisible();
+      await expect(bar.getByText(text.projects_bar_first_look_done)).toBeVisible();
+      await expect(bar.getByRole("link", { name: text.projects_back_task })).toBeVisible();
+      await expect(
+        question.getByRole("button", { name: text.board_first_look_belongs }),
       ).toBeVisible();
       await expectAxeCleanInBothThemes(page);
 

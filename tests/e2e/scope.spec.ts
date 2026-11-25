@@ -116,6 +116,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const section = page.getByRole("region", { name: text.scope_model_type_heading });
       const evaluation = section.getByRole("radio", { name: text.scope_model_type_evaluation });
       await expectHydrated(evaluation);
+      // The facilitator has the Overview checklist, not a task bar.
+      await expect(page.getByTestId("task-bar")).toHaveCount(0);
       await expect(section.getByRole("radio")).toHaveCount(5);
       await expect(section.getByText(text.scope_model_type_cluster_description)).toBeVisible();
       await expectAxeClean(page);
@@ -161,6 +163,10 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       });
       await signInTo(page, participant, locale, `/projects/${project.projectId}/scope`);
       await expect(page.getByText("Hypertension follow-up.")).toBeVisible();
+      // The task bar says what to do and has no progress and no done state (P1).
+      const bar = page.getByTestId("task-bar");
+      await expect(bar).toContainText(text.projects_task_scope);
+      await expect(bar.getByRole("heading")).toHaveCount(0);
       await expect(page.getByRole("button", { name: text.scope_edit })).toHaveCount(0);
       await expect(page.getByLabel(text.scope_source_label_label)).toHaveCount(0);
       await expectAxeClean(page);

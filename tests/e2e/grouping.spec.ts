@@ -142,7 +142,11 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await signInTo(page, participant, locale, `/projects/${project.projectId}`);
       await page.getByRole("link", { name: text.projects_task_check_action }).click();
       await expect(page).toHaveURL((url) => url.pathname.endsWith("/check"));
-      await expect(page.getByText(text.board_check_remarks_none)).toBeVisible();
+      // The task bar says the task and counts the remarks, once (P1).
+      const bar = page.getByTestId("task-bar");
+      await expect(bar).toContainText(text.projects_bar_check);
+      await expect(bar.getByRole("status")).toHaveText(text.board_check_remarks_none);
+      await expect(bar.getByRole("heading")).toHaveCount(0);
       await expectAxeCleanInBothThemes(page);
       const elsewhere = page.getByRole("button", {
         name: fill(text.board_check_elsewhere_named, { name: "Observer" }),
@@ -171,6 +175,17 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expectAxeCleanAfterToasts(page);
       await page.getByRole("button", { name: text.board_check_done }).click();
       await expect(page).toHaveURL((url) => url.pathname === `/projects/${project.projectId}`);
+
+      // Back on the page, the bar is the done state and the groups stay open to change.
+      await page.goto(`/projects/${project.projectId}/check`);
+      await expect(bar.getByRole("heading", { name: text.projects_bar_done_title })).toBeVisible();
+      await expect(bar.getByText(text.projects_bar_check_done)).toBeVisible();
+      await expect(bar.getByRole("link", { name: text.projects_back_task })).toBeVisible();
+      await expect(page.getByRole("button", { name: text.board_check_done })).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: text.board_check_missing }).first(),
+      ).toBeVisible();
+      await expectAxeCleanInBothThemes(page);
 
       // The facilitator reads the remarks, without names.
       await page.context().clearCookies();

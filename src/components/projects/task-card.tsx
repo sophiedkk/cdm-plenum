@@ -23,6 +23,11 @@ function Facts({ facts }: Readonly<{ facts: { term: string; value: ReactNode }[]
   );
 }
 
+/** The one sentence under the heading: what to do (PR8). */
+function Sentence({ children }: Readonly<{ children: ReactNode }>) {
+  return <p className="mt-2 max-w-3xl text-muted-foreground">{children}</p>;
+}
+
 const CARD = "rounded-lg border bg-card p-4 text-card-foreground shadow-xs sm:p-6";
 const HEADING = "text-2xl font-semibold tracking-tight sm:text-3xl";
 
@@ -39,6 +44,8 @@ export function TaskCard({
           <h2 id="task-heading" className={HEADING}>
             {m.projects_home_turn_scope()}
           </h2>
+          <Sentence>{m.projects_task_scope()}</Sentence>
+          <p className="mt-2 text-sm text-muted-foreground">{m.projects_task_scope_done()}</p>
           <Button asChild size="lg" className="mt-6">
             <Link to="/projects/$projectId/scope" params={{ projectId }}>
               {m.projects_task_scope_action()}
@@ -55,6 +62,7 @@ export function TaskCard({
             <h2 id="task-heading" className={HEADING}>
               {m.projects_home_turn_check()}
             </h2>
+            <Sentence>{m.projects_bar_check()}</Sentence>
             <Button asChild size="lg" className="mt-6">
               <Link to="/projects/$projectId/check" params={{ projectId }}>
                 {m.projects_task_check_action()}
@@ -68,6 +76,7 @@ export function TaskCard({
             <h2 id="task-heading" className={HEADING}>
               {m.projects_home_turn_first_look()}
             </h2>
+            <Sentence>{m.projects_bar_first_look()}</Sentence>
             <Facts
               facts={[
                 { term: m.projects_home_fact_to_look_at(), value: task.firstLook.total },
@@ -88,6 +97,10 @@ export function TaskCard({
           <h2 id="task-heading" className={HEADING}>
             {m.projects_home_turn_discover()}
           </h2>
+          <Sentence>{m.projects_task_discover()}</Sentence>
+          {(task.firstLook.total > 0 || task.groupCheck.asked) && (
+            <p className="mt-2 text-sm text-muted-foreground">{m.projects_task_discover_done()}</p>
+          )}
           <Facts facts={[{ term: m.projects_home_fact_added(), value: task.added }]} />
           <Button asChild size="lg" className="mt-6">
             <Link to="/projects/$projectId/brainstorm" params={{ projectId }}>
@@ -104,10 +117,21 @@ export function TaskCard({
           <h2 id="task-heading" className={HEADING}>
             {m.projects_home_turn_detail()}
           </h2>
+          <Sentence>{m.projects_bar_detail()}</Sentence>
           <Facts
             facts={[
-              { term: m.projects_home_fact_proposals(), value: task.open },
-              { term: m.projects_home_fact_answered(), value: task.answered },
+              ...(task.open > 0
+                ? [
+                    { term: m.projects_home_fact_proposals(), value: task.open },
+                    { term: m.projects_home_fact_answered(), value: task.answered },
+                  ]
+                : []),
+              ...(task.toPropose > 0
+                ? [{ term: m.projects_home_fact_to_propose(), value: task.toPropose }]
+                : []),
+              ...(task.toProposeCodes > 0
+                ? [{ term: m.projects_home_fact_to_propose_codes(), value: task.toProposeCodes }]
+                : []),
               ...(task.toReview > 0
                 ? [{ term: m.projects_home_fact_to_review(), value: task.toReview }]
                 : []),
@@ -138,6 +162,11 @@ function RateCard({
           ? m.projects_home_turn_rate_values({ number: task.number })
           : m.projects_home_turn_rate({ number: task.number })}
       </h2>
+      <Sentence>
+        {task.roundKind === "values"
+          ? m.projects_bar_rate_values()
+          : m.projects_task_rate({ number: task.number })}
+      </Sentence>
       <Facts
         facts={[
           {

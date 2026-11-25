@@ -9,6 +9,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { CommentThread } from "@/components/comments/comment-thread";
 import { projectTitle } from "@/components/projects/project-title";
+import { TaskBar } from "@/components/projects/task-bar";
 import { ModelTypeForm, ModelTypeView } from "@/components/scope/model-type";
 import { AddSourceForm, ScopeSourceList } from "@/components/scope/scope-sources";
 import { ScopeStatementForm, ScopeStatementView } from "@/components/scope/scope-statement";
@@ -136,9 +137,17 @@ function Scope() {
     requestAnimationFrame(() => sourcesHeading.current?.focus());
   }
 
+  // The task is to read and comment, so the bar shows only while a participant may comment.
+  const bar = !isFacilitator && canComment;
+
   return (
     <>
-      <PageHeader level={2} title={m.scope_title()} description={m.scope_purpose()} />
+      <PageHeader
+        level={2}
+        title={m.scope_title()}
+        description={bar ? undefined : m.scope_purpose()}
+      />
+      {bar && <TaskBar projectId={projectId} sentence={m.projects_task_scope()} />}
       <div className="flex max-w-3xl flex-col gap-10">
         <section aria-labelledby="scope-statement" className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-2">

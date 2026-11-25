@@ -157,7 +157,7 @@ export async function projectOverview(
       detail:
         phase === "detail"
           ? await ownDetailProgress(reader, project.id, userId)
-          : { open: 0, answered: 0, toReview: 0 },
+          : { open: 0, answered: 0, toReview: 0, toPropose: 0, toProposeCodes: 0 },
       lastClosedRoundId: lastClosed?.id ?? null,
     });
   });

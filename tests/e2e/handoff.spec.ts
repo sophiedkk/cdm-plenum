@@ -42,6 +42,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(
         page.getByRole("heading", { level: 3, name: "Systolic pressure" }),
       ).toBeVisible();
+      await expect(page.getByTestId("task-bar")).toHaveCount(0);
       await expectAxeClean(page);
 
       const comma = page.getByRole("button", {
@@ -86,6 +87,16 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       await expect(
         page.getByRole("heading", { level: 3, name: "Systolic pressure" }),
       ).toBeVisible();
+      // The task bar says the model is agreed and leads back to the home (P1).
+      const bar = page.getByTestId("task-bar");
+      await expect(
+        bar.getByRole("heading", { name: text.projects_bar_handoff_title }),
+      ).toBeVisible();
+      await expect(bar.getByText(text.projects_bar_handoff_done)).toBeVisible();
+      await expect(bar.getByRole("link", { name: text.projects_back_task })).toHaveAttribute(
+        "href",
+        `/projects/${project.projectId}`,
+      );
       await expect(
         page.getByRole("button", { name: new RegExp(text.export_download.replace("{name}", "")) }),
       ).toHaveCount(0);
