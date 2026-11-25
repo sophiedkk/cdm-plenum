@@ -206,3 +206,19 @@ export const test = base.extend<object, WorkerFixtures>({
     { scope: "worker" },
   ],
 });
+
+/**
+ * Collects React hydration errors a page logs: the full messages of a development build and the
+ * minified codes 418, 423 and 425 of the production build the e2e suite runs against.
+ */
+export function watchHydration(page: Page): { expectNone: () => void } {
+  const found: string[] = [];
+  const record = (text: string) => {
+    if (/hydrat|Minified React error #(418|423|425)/i.test(text)) found.push(text);
+  };
+  page.on("console", (message) => {
+    if (message.type() === "error" || message.type() === "warning") record(message.text());
+  });
+  page.on("pageerror", (error) => record(error.message));
+  return { expectNone: () => expect(found).toEqual([]) };
+}

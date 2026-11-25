@@ -66,7 +66,9 @@ describe("migrations", () => {
     expect(planned.trim(), planned).toBe(";");
   });
 
-  it("migrate down to an empty schema and back up again", async () => {
+  // NOTE: no spec governs this, our own design: the test runs every migration three times
+  // (0.8 s alone, over 5 s under load, #69), so it gets its own timeout, not a higher global one.
+  it("migrate down to an empty schema and back up again", { timeout: 30_000 }, async () => {
     const baseUrl = baseTestDatabaseUrl();
     const runUrl = await createRunDatabase(baseUrl);
     const db = new Kysely<unknown>({

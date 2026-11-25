@@ -39,6 +39,7 @@ export const ACTIVITY_ACTIONS = [
   "element_supported",
   "element_updated",
   "element_values_set",
+  "export_decision_report",
   "export_elements_csv",
   "export_mind_map",
   "export_ratings_csv",

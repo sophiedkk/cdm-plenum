@@ -43,6 +43,7 @@ const ACTION_LABELS: Record<(typeof ACTIVITY_ACTIONS)[number], () => string> = {
   element_values_set: () => m.admin_action_element_values_set(),
   export_elements_csv: () => m.admin_action_export_elements_csv(),
   export_mind_map: () => m.admin_action_export_mind_map(),
+  export_decision_report: () => m.admin_action_export_decision_report(),
   export_ratings_csv: () => m.admin_action_export_ratings_csv(),
   group_check_asked: () => m.admin_action_group_check_asked(),
   group_created: () => m.admin_action_group_created(),

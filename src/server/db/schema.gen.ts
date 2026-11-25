@@ -448,6 +448,13 @@ export interface TeamMember {
   userId: string;
 }
 
+export interface TeamMemberLeft {
+  joined_at: Timestamp;
+  left_at: Timestamp;
+  team_id: string;
+  user_id: string;
+}
+
 export interface TreeProposalElement {
   element_id: string;
   group_id: string | null;
@@ -538,6 +545,7 @@ export interface DB {
   source_element: SourceElement;
   source_model: SourceModel;
   team: Team;
+  team_member_left: TeamMemberLeft;
   teamMember: TeamMember;
   tree_proposal_element: TreeProposalElement;
   tree_proposal_group: TreeProposalGroup;

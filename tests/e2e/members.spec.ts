@@ -23,6 +23,7 @@ import {
   signIn,
   test,
   uniqueName,
+  watchHydration,
 } from "./fixtures.ts";
 import { tabTo } from "./keyboard.ts";
 
@@ -130,6 +131,7 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
     }) => {
       const project = await seedProject(db);
       const participant = await seedParticipant(db, project);
+      const hydration = watchHydration(page);
       await signIn(page, project.facilitator.email, locale);
       await page.goto(membersUrl(project));
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
@@ -148,6 +150,8 @@ for (const locale of ["en", "nl"] as const satisfies Locale[]) {
       const row = page.getByRole("row").filter({ hasText: email });
       await expect(row).toBeVisible();
       await expect(row.getByText(text.members_invitation_status_pending)).toBeVisible();
+      // The invitation's expiry is a time with a zone: no hydration error.
+      hydration.expectNone();
       await toastsSettled(page);
       await expectAxeClean(page);
 

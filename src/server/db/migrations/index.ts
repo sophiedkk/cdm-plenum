@@ -25,6 +25,7 @@ import * as m0019 from "./0019_base_model.ts";
 import * as m0020 from "./0020_reference_element.ts";
 import * as m0021 from "./0021_model_tree.ts";
 import * as m0022 from "./0022_value_rounds.ts";
+import * as m0023 from "./0023_team_member_left.ts";
 import * as m0024 from "./0024_session_cap.ts";
 
 export const migrations: Record<string, Migration> = {
@@ -49,6 +50,7 @@ export const migrations: Record<string, Migration> = {
   "0020_reference_element": m0020,
   "0021_model_tree": m0021,
   "0022_value_rounds": m0022,
+  "0023_team_member_left": m0023,
   "0024_session_cap": m0024,
 };
 
