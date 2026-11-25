@@ -25,7 +25,13 @@ import {
   refused,
   withProject,
 } from "../projects/access.ts";
-import { type Author, actorMemberId } from "../projects/member.ts";
+import {
+  type Author,
+  actorMemberId,
+  isTeamProject,
+  type TeamAuthor,
+  teamAuthors,
+} from "../projects/member.ts";
 import { log } from "../projects/queries.ts";
 import type {
   AddElementCommentInput,
@@ -66,7 +72,10 @@ export interface ElementCkmLink {
   rmType: string;
 }
 
-/** An element as every member sees it: no author (EL2). */
+/**
+ * An element as every member sees it: no author in a Delphi project (EL2). In a Team project the
+ * `author` key is present with the display name, null when the author left (PR14, ADR 0023).
+ */
 export interface BoardElement {
   id: string;
   name: string;
@@ -89,6 +98,7 @@ export interface BoardElement {
   reference: ElementReference | null;
   commentCount: number;
   createdAt: string;
+  author?: TeamAuthor | null;
 }
 
 export interface BoardElementWithAuthor extends BoardElement {
@@ -100,8 +110,10 @@ export interface ElementComment {
   id: string;
   body: string;
   createdAt: string;
-  /** Whether the requester wrote it; the only thing a participant learns about an author. */
+  /** Whether the requester wrote it; all a participant learns about an author in a Delphi project. */
   mine: boolean;
+  /** Present in a Team project only (PR14, ADR 0023). */
+  author?: TeamAuthor | null;
 }
 
 export interface ElementCommentWithAuthor extends Omit<ElementComment, "mine"> {
@@ -375,9 +387,36 @@ export async function listElements(
 ): Promise<ProjectResult<BoardElement[]>> {
   return readProject(db, userId, projectId, null, async (db, project) => {
     if (!boardVisible(project)) return done([]);
-    return done(
-      await boardElements(db, project.id, await visibleAuthor(db, project, userId), true),
+    const elements = await boardElements(
+      db,
+      project.id,
+      await visibleAuthor(db, project, userId),
+      true,
     );
+    return done(await withTeamAuthors(db, project.id, elements));
+  });
+}
+
+/**
+ * In a Team project, the display name of each element's author (PR14, ADR 0023); the elements
+ * of a Delphi project come back untouched, without an `author` key (Q-ANON-1).
+ */
+async function withTeamAuthors(
+  db: Kysely<DB>,
+  projectId: string,
+  elements: BoardElement[],
+): Promise<BoardElement[]> {
+  if (!(await isTeamProject(db, projectId))) return elements;
+  const rows = await db
+    .selectFrom("element")
+    .select(["id", "author_member_id"])
+    .where("project_id", "=", projectId)
+    .execute();
+  const memberOf = new Map(rows.map((row) => [row.id, row.author_member_id]));
+  const authors = await teamAuthors(db, [...memberOf.values()]);
+  return elements.map((element) => {
+    const memberId = memberOf.get(element.id) ?? null;
+    return { ...element, author: memberId === null ? null : (authors.get(memberId) ?? null) };
   });
 }
 
@@ -794,12 +833,23 @@ export async function listElementComments(
     // models, but not what others wrote under them: only their own comments.
     if (onlyAuthor !== null) query = query.where("author_member_id", "=", onlyAuthor);
     const rows = await query.orderBy("created_at").orderBy("id").execute();
+    const named = await isTeamProject(db, project.id);
+    const authors = named
+      ? await teamAuthors(
+          db,
+          rows.map((row) => row.author_member_id),
+        )
+      : null;
     return done(
       rows.map((row) => ({
         id: row.id,
         body: row.body,
         createdAt: row.created_at.toISOString(),
         mine: row.author_member_id === self,
+        ...(authors && {
+          author:
+            row.author_member_id === null ? null : (authors.get(row.author_member_id) ?? null),
+        }),
       })),
     );
   });

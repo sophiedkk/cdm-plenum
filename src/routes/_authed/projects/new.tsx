@@ -29,7 +29,7 @@ function NewProject() {
     <div className="max-w-xl">
       <PageHeader title={m.projects_new_title()} description={m.projects_new_description()} />
       <NewProjectForm
-        create={(name) => createProject({ data: { name } })}
+        create={(name, mode) => createProject({ data: { name, mode } })}
         onCreated={async (projectId, name) => {
           await queryClient.invalidateQueries({ queryKey: projectKeys.list() });
           toast.success(m.projects_created({ name }));

@@ -4,17 +4,25 @@
 
 // The form pattern on its real use, the new project form (PR2): labelled field, error text
 // linked with aria-describedby, focus to the first invalid field, server refusals in the form.
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { baseLocale, overwriteGetLocale } from "@/i18n/runtime";
+import type { ProjectMode } from "@/lib/project-mode";
 import { type CreateProjectOutcome, NewProjectForm } from "./new-project-form";
+
+// The radio group measures itself; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
 
 afterEach(() => {
   cleanup();
   overwriteGetLocale(() => baseLocale);
 });
 
-function renderForm(create: (name: string) => Promise<CreateProjectOutcome>) {
+function renderForm(create: (name: string, mode: ProjectMode) => Promise<CreateProjectOutcome>) {
   const onCreated = vi.fn();
   render(<NewProjectForm create={create} onCreated={onCreated} />);
   return {
@@ -81,7 +89,23 @@ describe("NewProjectForm", () => {
     fireEvent.change(input, { target: { value: "  Blood pressure " } });
     fireEvent.click(submit);
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith("p-1", "Blood pressure"));
-    expect(create).toHaveBeenCalledWith("Blood pressure");
+    expect(create).toHaveBeenCalledWith("Blood pressure", "delphi");
+  });
+
+  it("offers the Delphi study preselected and sends a Team when it is picked (PR14)", async () => {
+    const create = vi.fn(async () => ({ ok: true, value: { projectId: "p-1" } }) as const);
+    const { input, submit, onCreated } = renderForm(create);
+    const group = screen.getByRole("radiogroup", { name: "How the project runs" });
+    const delphi = within(group).getByRole("radio", { name: /Delphi study/ });
+    expect(delphi.getAttribute("aria-checked")).toBe("true");
+    expect(
+      within(group).getByText("Anonymous ratings on a scale of 1 to 9 against a consensus rule."),
+    ).toBeTruthy();
+    fireEvent.click(within(group).getByRole("radio", { name: /Team/ }));
+    fireEvent.change(input, { target: { value: "Blood pressure" } });
+    fireEvent.click(submit);
+    await waitFor(() => expect(onCreated).toHaveBeenCalled());
+    expect(create).toHaveBeenCalledWith("Blood pressure", "team");
   });
 
   it("speaks Dutch when the locale is Dutch", async () => {

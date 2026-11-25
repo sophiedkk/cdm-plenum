@@ -425,6 +425,7 @@ describe("AboutProject (PR5, PR7)", () => {
     render(
       <AboutProject
         projectName="Blood pressure"
+        mode="delphi"
         groups={GROUPS}
         leave={vi.fn()}
         onLeft={vi.fn()}
@@ -445,10 +446,36 @@ describe("AboutProject (PR5, PR7)", () => {
     ).toBeTruthy();
   });
 
+  it("says in one line how the project runs (PR14)", () => {
+    const { rerender } = render(
+      <AboutProject
+        projectName="Blood pressure"
+        mode="team"
+        groups={GROUPS}
+        leave={vi.fn()}
+        onLeft={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("about-mode").textContent).toBe(
+      "This project runs as a team: everyone sees who wrote what.",
+    );
+    rerender(
+      <AboutProject
+        projectName="Blood pressure"
+        mode="delphi"
+        groups={GROUPS}
+        leave={vi.fn()}
+        onLeft={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("about-mode").textContent).toContain("Delphi study");
+  });
+
   it("shows names only when the server sent them (PR7)", () => {
     render(
       <AboutProject
         projectName="Blood pressure"
+        mode="delphi"
         groups={[{ ...NURSING, names: ["Nurse A", ""] }]}
         leave={vi.fn()}
         onLeft={vi.fn()}

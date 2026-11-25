@@ -3,6 +3,7 @@
 
 // The input of the project server functions, checked before any handler runs.
 import { z } from "zod";
+import { PROJECT_MODES } from "@/lib/project-mode";
 import { PHASE_DIRECTIONS, PROJECT_PHASES } from "@/lib/project-phases";
 import { EXPERT_TYPES, GROUP_NAME_MAX, PROJECT_NAME_MAX } from "@/lib/project-roles";
 
@@ -11,8 +12,17 @@ export const idSchema = z.string().regex(/^[A-Za-z0-9_-]{8,64}$/);
 
 const name = (max: number) => z.string().trim().min(1).max(max);
 
-export const createProjectInput = z.object({ name: name(PROJECT_NAME_MAX) });
-export type CreateProjectInput = z.infer<typeof createProjectInput>;
+export const createProjectInput = z.object({
+  name: name(PROJECT_NAME_MAX),
+  mode: z.enum(PROJECT_MODES),
+});
+/** The mode is optional here so callers such as the demo seed keep the Delphi default (PR14). */
+export type CreateProjectInput = Omit<z.infer<typeof createProjectInput>, "mode"> & {
+  mode?: z.infer<typeof createProjectInput>["mode"];
+};
+
+export const projectModeInput = z.object({ projectId: idSchema, mode: z.enum(PROJECT_MODES) });
+export type ProjectModeInput = z.infer<typeof projectModeInput>;
 
 export const projectInput = z.object({ projectId: idSchema });
 

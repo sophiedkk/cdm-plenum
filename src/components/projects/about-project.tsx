@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // "About this project" at the bottom of the participant's home (PR5 to PR7, ADR 0019): one quiet
-// disclosure with the stakeholder groups and leaving the project. The names of the people in a
+// disclosure with how the project runs (PR14), the stakeholder groups and leaving the project. The names of the people in a
 // group show only when the facilitator allows it (PR7); the server leaves them out otherwise.
 import { ChevronRightIcon } from "lucide-react";
 import { useId, useState } from "react";
@@ -10,6 +10,7 @@ import { LeaveProject } from "@/components/members/leave-project";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
 import type { Outcome } from "@/lib/forms/outcome";
+import type { ProjectMode } from "@/lib/project-mode";
 import { cn } from "@/lib/utils";
 import type { VisibleGroup } from "@/server/projects/queries";
 
@@ -38,11 +39,13 @@ function GroupPeople({ group }: Readonly<{ group: VisibleGroup }>) {
 
 export function AboutProject({
   projectName,
+  mode,
   groups,
   leave,
   onLeft,
 }: Readonly<{
   projectName: string;
+  mode: ProjectMode;
   groups: readonly VisibleGroup[];
   leave: () => Promise<Outcome<unknown>>;
   onLeft: () => Promise<void> | void;
@@ -74,6 +77,9 @@ export function AboutProject({
         hidden={!open}
         className="mt-4 flex flex-col gap-8 rounded-lg border p-4 sm:p-6"
       >
+        <p data-testid="about-mode">
+          {mode === "team" ? m.projects_about_mode_team() : m.projects_about_mode_delphi()}
+        </p>
         <div className="flex flex-col gap-4">
           <h2 className="type-section">{m.members_groups_title()}</h2>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-x-6 gap-y-4">

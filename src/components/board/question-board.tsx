@@ -4,6 +4,7 @@
 import { revalidateLogic, useStore } from "@tanstack/react-form";
 import { CopyIcon } from "lucide-react";
 import { type ReactNode, useId, useRef } from "react";
+import { authorName } from "@/components/comments/comment-thread";
 import { useAppForm } from "@/components/form/app-form";
 import { FieldFeedback, useFieldA11y } from "@/components/form/field-a11y";
 import { useFieldContext } from "@/components/form/form-context";
@@ -80,6 +81,13 @@ function Card({ card, kind }: Readonly<{ card: BoardCard; kind: "own" | "model" 
     >
       {card.name}
       {card.reference && <ReferenceText reference={card.reference} className="mt-0.5" />}
+      {card.author !== undefined && (
+        <span className="mt-0.5 block text-muted-foreground">
+          {card.author === null
+            ? m.common_comment_author_left()
+            : m.common_comment_author({ name: authorName(card.author) })}
+        </span>
+      )}
     </li>
   );
 }

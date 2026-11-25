@@ -35,6 +35,7 @@ import type {
   CreateProjectInput,
   GroupInput,
   GroupNamesVisibleInput,
+  ProjectModeInput,
   RaterGroupInput,
   RenameGroupInput,
 } from "./schemas.ts";
@@ -72,7 +73,10 @@ export async function createProject(
       .insertInto("organization")
       .values({ id: projectId, name: input.name, slug: projectId, createdAt: now })
       .execute();
-    await trx.insertInto("project").values({ id: projectId }).execute();
+    await trx
+      .insertInto("project")
+      .values({ id: projectId, mode: input.mode ?? "delphi" })
+      .execute();
     await trx.insertInto("scope_statement").values({ project_id: projectId }).execute();
     const memberId = randomUUID();
     await trx
@@ -148,6 +152,8 @@ export interface ProjectDetail extends ProjectSummary {
   modelType: ModelType | null;
   /** How the project runs (PR14, ADR 0023). */
   mode: ProjectMode;
+  /** Whether a round has opened, which fixes the mode (PR14). */
+  modeLocked: boolean;
 }
 
 /** The stakeholder group of `userId` in the project, or null when they are in none. */
@@ -198,6 +204,7 @@ export async function getProject(
       boardRevealed: row.board_revealed_at !== null,
       modelType: isModelType(row.model_type) ? row.model_type : null,
       mode: isProjectMode(row.mode) ? row.mode : "delphi",
+      modeLocked: await roundOpened(reader, project.id),
     });
   });
 }
@@ -422,6 +429,41 @@ export async function setGroupNamesVisible(
       .execute();
     const action = input.visible ? "group_names_shown" : "group_names_hidden";
     await log(trx, userId, project.id, action, "project", project.id);
+    return done(null);
+  });
+}
+
+/** Whether any round of the project has opened, open or closed since (PR14). */
+async function roundOpened(trx: Kysely<DB>, projectId: string): Promise<boolean> {
+  const row = await trx
+    .selectFrom("round")
+    .select("id")
+    .where("project_id", "=", projectId)
+    .where("opened_at", "is not", null)
+    .limit(1)
+    .executeTakeFirst();
+  return row !== undefined;
+}
+
+/**
+ * Changes how the project runs, until the first round opens (PR14, facilitator only). After
+ * that the server refuses with `mode_locked`, so nothing given anonymously ever becomes named.
+ */
+export async function setProjectMode(
+  db: Kysely<DB>,
+  userId: string,
+  input: ProjectModeInput,
+): Promise<ProjectResult<null>> {
+  return withProject(db, userId, input.projectId, { project: ["update"] }, async (trx, project) => {
+    // NOTE: PR14, ADR 0023. The project row is locked, so a round cannot open between this check
+    // and the update.
+    if (await roundOpened(trx, project.id)) return refused("mode_locked");
+    await trx
+      .updateTable("project")
+      .set({ mode: input.mode })
+      .where("id", "=", project.id)
+      .execute();
+    await log(trx, userId, project.id, "project_mode_set", "project", project.id);
     return done(null);
   });
 }

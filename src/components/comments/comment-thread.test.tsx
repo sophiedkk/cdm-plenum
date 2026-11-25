@@ -55,6 +55,21 @@ describe("CommentThread", () => {
     expect(screen.queryByText(/former member/)).toBeNull();
   });
 
+  it("names the author a Team project sends along, without an address (PR14)", () => {
+    renderThread([
+      { id: "c1", body: "A", createdAt: AT, mine: false, author: { name: "Invented Doctor" } },
+      { id: "c2", body: "B", createdAt: AT, mine: true, author: null },
+    ]);
+    const items = screen.getAllByRole("listitem").map((item) => item.textContent);
+    expect(items[0]).toContain("By Invented Doctor");
+    expect(items[1]).toContain("By a former member");
+  });
+
+  it("labels an author without a name instead of showing an address (PR14)", () => {
+    renderThread([{ id: "c1", body: "A", createdAt: AT, mine: false, author: { name: "" } }]);
+    expect(screen.getByRole("listitem").textContent).toContain("By A member without a name");
+  });
+
   it("names the time zone of a comment's moment, as the rounds do", () => {
     renderThread([{ id: "c1", body: "A", createdAt: AT }]);
     const time = screen.getByRole("list", { name: "Comments" }).querySelector("time");
