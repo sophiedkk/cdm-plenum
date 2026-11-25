@@ -3,11 +3,15 @@
 
 # cdm-plenum
 
+A common data model (CDM) describes the data of one clinical concept
+independent of any standard, and a plenum is a meeting of all members: in
+cdm-plenum the whole group agrees on that model together.
+
 cdm-plenum guides a group of clinicians, information modellers and
 terminologists from the scope of a clinical concept to an agreed list of data
-elements: a common data model of the concept, before anyone writes it down
-in a standard such as an openEHR archetype or a FHIR profile. The group starts
-from existing models (openEHR archetypes from the Clinical Knowledge Manager,
+elements, before anyone writes it down in a standard such as an openEHR
+archetype or a FHIR profile. The group starts from existing models (openEHR
+archetypes from the Clinical Knowledge Manager,
 FHIR profiles from a package), adds what is missing on a shared board, and
 rates the elements in e-Delphi rounds against a consensus rule fixed in
 advance. The elements in the model then get their structure and codes by
