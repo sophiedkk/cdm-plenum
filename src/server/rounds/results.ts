@@ -11,12 +11,14 @@ import type { ExpertType } from "@/lib/panel";
 import { RATER_ROLES } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
+import { answeredCounts, type ConsentResult, consentResultsOf, emptyConsent } from "./consent.ts";
 import { inGroupOrder, itemGroupsOf, type RoundGroup } from "./groups.ts";
 import {
   type ElementOutcome,
   emptyOutcome,
   findRound,
   kindOf,
+  modeOf,
   outcomesOf,
   type RoundRow,
   type RoundSummary,
@@ -38,6 +40,8 @@ export interface ElementRoundResult extends ElementOutcome {
   group: RoundGroup | null;
   /** In a value round (DT3) the item is a value of the element its group names. */
   value?: RoundValueOf;
+  /** In a Team round (DE20): the counts and each answer by name; `result` holds no scores. */
+  consent?: ConsentResult;
 }
 
 export interface RoundResults {
@@ -65,12 +69,16 @@ export async function roundResults(
       return refused("round_not_found");
     }
     if (round.closed_at === null) return refused("round_not_closed");
-    const outcomes = await outcomesOf(trx, round);
+    const mode = await modeOf(trx, input.projectId);
+    const team = mode === "team" && kindOf(round) === "elements";
+    const outcomes = team ? new Map<string, ElementOutcome>() : await outcomesOf(trx, round);
+    const consent = team ? await consentResultsOf(trx, round.id) : new Map<string, ConsentResult>();
     const rows = await roundItems(trx, round);
     const groupOf = await itemGroupsOf(trx, rows);
     const elements = rows.map((element) => {
       const outcome = outcomes.get(element.id) ?? emptyOutcome(round);
       return {
+        ...(team ? { consent: consent.get(element.id) ?? emptyConsent() } : {}),
         id: element.id,
         name: element.name,
         reference: element.reference,
@@ -81,7 +89,7 @@ export async function roundResults(
       };
     });
     return done({
-      round: summaryOf(round, deps.now),
+      round: summaryOf(round, deps.now, mode),
       elements: inGroupOrder(elements),
       lists: kindOf(round) === "values" ? await valueListStates(trx, round.id) : [],
     });
@@ -207,25 +215,27 @@ export async function responseRateOf(
   // is only a grouping key here and never leaves this function.
   // A participant who changed group during the round still counts once.
   const raters =
-    kindOf(round) === "values"
-      ? await trx
-          .selectFrom("value_rating")
-          .select((eb) => [
-            eb.fn.max("team_id").as("team_id"),
-            eb.fn.count<string>("value_id").as("answered"),
-          ])
-          .where("round_id", "=", round.id)
-          .groupBy("rating_code_id")
-          .execute()
-      : await trx
-          .selectFrom("rating")
-          .select((eb) => [
-            eb.fn.max("team_id").as("team_id"),
-            eb.fn.count<string>("element_id").as("answered"),
-          ])
-          .where("round_id", "=", round.id)
-          .groupBy("rating_code_id")
-          .execute();
+    (await modeOf(trx, projectId)) === "team" && kindOf(round) === "elements"
+      ? await answeredCounts(trx, round.id)
+      : kindOf(round) === "values"
+        ? await trx
+            .selectFrom("value_rating")
+            .select((eb) => [
+              eb.fn.max("team_id").as("team_id"),
+              eb.fn.count<string>("value_id").as("answered"),
+            ])
+            .where("round_id", "=", round.id)
+            .groupBy("rating_code_id")
+            .execute()
+        : await trx
+            .selectFrom("rating")
+            .select((eb) => [
+              eb.fn.max("team_id").as("team_id"),
+              eb.fn.count<string>("element_id").as("answered"),
+            ])
+            .where("round_id", "=", round.id)
+            .groupBy("rating_code_id")
+            .execute();
   const started = new Map<string | null, number>();
   const completed = new Map<string | null, number>();
   const total = { invited: 0, started: 0, completed: 0 };

@@ -14,7 +14,7 @@ import {
 import { StatusBadge, type StatusTone } from "@/components/status/status-badge";
 import { m } from "@/i18n/messages";
 import type { Outcome } from "@/lib/consensus";
-import { outcomeLabel, roundStatusLabel } from "@/lib/i18n/round-labels";
+import { consentOutcomeLabel, outcomeLabel, roundStatusLabel } from "@/lib/i18n/round-labels";
 import type { RoundStatus } from "@/server/rounds/round";
 
 const STATUS_STYLE: Record<RoundStatus, { tone: StatusTone; icon: LucideIcon }> = {
@@ -43,10 +43,17 @@ export function RoundStatusBadge({ status }: Readonly<{ status: RoundStatus }>) 
 export function OutcomeBadge({
   outcome,
   kind = "elements",
-}: Readonly<{ outcome: Outcome; kind?: "elements" | "values" }>) {
+  consent = false,
+}: Readonly<{
+  outcome: Outcome;
+  kind?: "elements" | "values";
+  /** A Team round (DE20): the words are "In the model", "Not in the model" and "To discuss". */
+  consent?: boolean;
+}>) {
   const style = OUTCOME_STYLE[outcome];
-  const label =
-    kind === "values" && outcome !== "no_consensus"
+  const label = consent
+    ? consentOutcomeLabel(outcome)
+    : kind === "values" && outcome !== "no_consensus"
       ? outcome === "included"
         ? m.rounds_value_outcome_included()
         : m.rounds_value_outcome_excluded()

@@ -12,8 +12,9 @@ import type { DB } from "../db/schema.gen.ts";
 import { ownDetailProgress } from "../details/queries.ts";
 import { lookElements } from "../elements/first-look.ts";
 import { checkProgress } from "../elements/groups.ts";
+import { completedMemberCount, ownAnswerCount } from "../rounds/consent.ts";
 import { ownRatingCode } from "../rounds/rater-link.ts";
-import { kindOf, type RoundKind, statusOf } from "../rounds/round.ts";
+import { kindOf, modeOf, type RoundKind, statusOf } from "../rounds/round.ts";
 import { done, type ProjectResult, readProject, refused, withProject } from "./access.ts";
 import { log, ownGroupId } from "./queries.ts";
 import type { MovePhaseInput } from "./schemas.ts";
@@ -195,11 +196,14 @@ async function runningRound(
       .where("round_id", "=", round.id)
       .executeTakeFirst(),
   );
+  // A Team round (DE20) holds consent answers by member, not ratings by code.
+  const team = kind === "elements" && (await modeOf(db, projectId)) === "team";
   let rated: number | null = null;
   if (mayRate(role, await ownGroupId(db, projectId, userId))) {
-    const code = await ownRatingCode(db, projectId, userId);
-    rated =
-      code === null
+    const code = team ? null : await ownRatingCode(db, projectId, userId);
+    rated = team
+      ? await ownAnswerCount(db, round, userId)
+      : code === null
         ? 0
         : await count(
             db
@@ -228,14 +232,18 @@ async function runningRound(
         .executeTakeFirst(),
     );
     // One row per rater code that answered every element; the code never leaves this query.
-    const finished = await db
-      .selectFrom(ratings)
-      .select("rating_code_id")
-      .where("round_id", "=", round.id)
-      .groupBy("rating_code_id")
-      .having((eb) => eb.fn.countAll(), ">=", elements)
-      .execute();
-    completed = finished.length;
+    if (team) {
+      completed = await completedMemberCount(db, round.id, elements);
+    } else {
+      const finished = await db
+        .selectFrom(ratings)
+        .select("rating_code_id")
+        .where("round_id", "=", round.id)
+        .groupBy("rating_code_id")
+        .having((eb) => eb.fn.countAll(), ">=", elements)
+        .execute();
+      completed = finished.length;
+    }
   }
   return {
     id: round.id,

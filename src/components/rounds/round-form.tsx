@@ -40,8 +40,9 @@ export interface ElementChoice {
 export interface RoundSetup {
   /** Left out for a value round, which takes its lists from the Details page (DT3). */
   elementIds?: string[];
-  rule: ConsensusRule;
-  facilitatorSeesRaters: boolean;
+  /** Left out for a Team round, which decides by consent (DE20). */
+  rule?: ConsensusRule;
+  facilitatorSeesRaters?: boolean;
   closesAt: string;
   /** Round 1 only (DE16): null when the facilitator left the rule empty. */
   proposalRule?: string | null;
@@ -100,7 +101,11 @@ function ruleOfValues(values: RuleValues): ConsensusRule | null {
  * The checks of `createRoundInput` and `ruleError` with translated messages. Call it during
  * render, so the messages follow the active locale.
  */
-export function roundSetupSchema(now: () => Date = () => new Date(), withElements = true) {
+export function roundSetupSchema(
+  now: () => Date = () => new Date(),
+  withElements = true,
+  withRule = true,
+) {
   const score = z.string().refine(
     (text) => {
       const value = parseNumber(text);
@@ -122,12 +127,12 @@ export function roundSetupSchema(now: () => Date = () => new Date(), withElement
       elementIds: withElements
         ? z.array(z.string()).min(1, { error: () => m.rounds_elements_required() })
         : z.array(z.string()),
-      scaleMin: score,
-      scaleMax: score,
-      bottomBandMax: score,
-      topBandMin: score,
-      agreementPct: percentage,
-      oppositionPct: percentage,
+      scaleMin: withRule ? score : z.string(),
+      scaleMax: withRule ? score : z.string(),
+      bottomBandMax: withRule ? score : z.string(),
+      topBandMin: withRule ? score : z.string(),
+      agreementPct: withRule ? percentage : z.string(),
+      oppositionPct: withRule ? percentage : z.string(),
       closesAt: z.string().superRefine((text, ctx) => {
         const iso = fromLocalInput(text);
         if (iso === null) {
@@ -142,6 +147,7 @@ export function roundSetupSchema(now: () => Date = () => new Date(), withElement
       }),
     })
     .superRefine((values, ctx) => {
+      if (!withRule) return;
       const rule = ruleOfValues(values);
       if (rule === null) return;
       const problem = ruleError(rule);
@@ -228,9 +234,12 @@ export function RoundForm({
   onSaved,
   actions,
   kind = "elements",
+  mode = "delphi",
 }: Readonly<{
   /** A value round (DT3) has no elements to choose: `elements` is then null. */
   kind?: "elements" | "values";
+  /** A Team round (DE20) has no scale, rule or rater setting: its members answer by consent. */
+  mode?: "delphi" | "team";
   elements: readonly ElementChoice[] | null;
   initial: {
     elementIds: string[];
@@ -247,6 +256,7 @@ export function RoundForm({
 }>) {
   const timeZone = useTimeZone();
   const takesProposals = initial.proposalRule !== undefined;
+  const team = mode === "team";
   const form = useAppForm({
     defaultValues: {
       elementIds: initial.elementIds,
@@ -256,17 +266,16 @@ export function RoundForm({
       proposalRule: initial.proposalRule ?? "",
     },
     validationLogic: revalidateLogic(),
-    validators: { onDynamic: roundSetupSchema(undefined, elements !== null) },
+    validators: { onDynamic: roundSetupSchema(undefined, elements !== null, !team) },
     onSubmit: async ({ value, formApi }) => {
-      const rule = ruleOfValues(value);
+      const rule = team ? null : ruleOfValues(value);
       const closesAt = fromLocalInput(value.closesAt);
-      if (rule === null || closesAt === null) return;
+      if ((!team && rule === null) || closesAt === null) return;
       let outcome: RoundSetupOutcome;
       try {
         outcome = await save({
           ...(elements === null ? {} : { elementIds: value.elementIds }),
-          rule,
-          facilitatorSeesRaters: value.facilitatorSeesRaters,
+          ...(rule === null ? {} : { rule, facilitatorSeesRaters: value.facilitatorSeesRaters }),
           closesAt,
           ...(takesProposals
             ? { proposalRule: value.proposalRule.trim() === "" ? null : value.proposalRule.trim() }
@@ -325,102 +334,106 @@ export function RoundForm({
         </form.Field>
       )}
 
-      <FieldSet>
-        <FieldLegend>{m.rounds_rule_legend()}</FieldLegend>
-        <FieldDescription>
-          {kind === "values" ? m.rounds_value_setup_question() : m.rounds_setup_question()}
-        </FieldDescription>
-        <FieldDescription>
-          {kind === "values"
-            ? m.rounds_value_rule_default_explained()
-            : m.rounds_rule_default_explained()}
-        </FieldDescription>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <form.AppField name="scaleMin">
-            {(field) => (
-              <field.TextField
-                label={m.rounds_scale_min_label()}
-                inputMode="numeric"
-                autoComplete="off"
-              />
+      {team && <p>{m.rounds_consent_setup_note()}</p>}
+
+      {!team && (
+        <FieldSet>
+          <FieldLegend>{m.rounds_rule_legend()}</FieldLegend>
+          <FieldDescription>
+            {kind === "values" ? m.rounds_value_setup_question() : m.rounds_setup_question()}
+          </FieldDescription>
+          <FieldDescription>
+            {kind === "values"
+              ? m.rounds_value_rule_default_explained()
+              : m.rounds_rule_default_explained()}
+          </FieldDescription>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <form.AppField name="scaleMin">
+              {(field) => (
+                <field.TextField
+                  label={m.rounds_scale_min_label()}
+                  inputMode="numeric"
+                  autoComplete="off"
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="scaleMax">
+              {(field) => (
+                <field.TextField
+                  label={m.rounds_scale_max_label()}
+                  inputMode="numeric"
+                  autoComplete="off"
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="bottomBandMax">
+              {(field) => (
+                <field.TextField
+                  label={m.rounds_bottom_band_label()}
+                  description={m.rounds_bottom_band_help()}
+                  inputMode="numeric"
+                  autoComplete="off"
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="topBandMin">
+              {(field) => (
+                <field.TextField
+                  label={m.rounds_top_band_label()}
+                  description={m.rounds_top_band_help()}
+                  inputMode="numeric"
+                  autoComplete="off"
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="agreementPct">
+              {(field) => (
+                <field.TextField
+                  label={m.rounds_agreement_label()}
+                  description={m.rounds_agreement_help()}
+                  inputMode="decimal"
+                  autoComplete="off"
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="oppositionPct">
+              {(field) => (
+                <field.TextField
+                  label={m.rounds_opposition_label()}
+                  description={m.rounds_opposition_help()}
+                  inputMode="decimal"
+                  autoComplete="off"
+                />
+              )}
+            </form.AppField>
+          </div>
+          <div className="rounded-lg border p-4 text-sm">
+            <p className="mb-2 font-medium">{m.rounds_rule_in_words()}</p>
+            {shownRule ? (
+              <ul className="flex list-disc flex-col gap-1 pl-5">
+                {ruleSentences(shownRule, kind).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground">{m.rounds_rule_in_words_pending()}</p>
             )}
-          </form.AppField>
-          <form.AppField name="scaleMax">
-            {(field) => (
-              <field.TextField
-                label={m.rounds_scale_max_label()}
-                inputMode="numeric"
-                autoComplete="off"
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="bottomBandMax">
-            {(field) => (
-              <field.TextField
-                label={m.rounds_bottom_band_label()}
-                description={m.rounds_bottom_band_help()}
-                inputMode="numeric"
-                autoComplete="off"
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="topBandMin">
-            {(field) => (
-              <field.TextField
-                label={m.rounds_top_band_label()}
-                description={m.rounds_top_band_help()}
-                inputMode="numeric"
-                autoComplete="off"
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="agreementPct">
-            {(field) => (
-              <field.TextField
-                label={m.rounds_agreement_label()}
-                description={m.rounds_agreement_help()}
-                inputMode="decimal"
-                autoComplete="off"
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="oppositionPct">
-            {(field) => (
-              <field.TextField
-                label={m.rounds_opposition_label()}
-                description={m.rounds_opposition_help()}
-                inputMode="decimal"
-                autoComplete="off"
-              />
-            )}
-          </form.AppField>
-        </div>
-        <div className="rounded-lg border p-4 text-sm">
-          <p className="mb-2 font-medium">{m.rounds_rule_in_words()}</p>
-          {shownRule ? (
-            <ul className="flex list-disc flex-col gap-1 pl-5">
-              {ruleSentences(shownRule, kind).map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground">{m.rounds_rule_in_words_pending()}</p>
-          )}
-        </div>
-        <div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              for (const [key, value] of Object.entries(textOf(DEFAULT_RULE))) {
-                form.setFieldValue(key as RuleField, value);
-              }
-            }}
-          >
-            {m.rounds_rule_reset()}
-          </Button>
-        </div>
-      </FieldSet>
+          </div>
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                for (const [key, value] of Object.entries(textOf(DEFAULT_RULE))) {
+                  form.setFieldValue(key as RuleField, value);
+                }
+              }}
+            >
+              {m.rounds_rule_reset()}
+            </Button>
+          </div>
+        </FieldSet>
+      )}
 
       <form.Field name="closesAt">
         {(field) => (
@@ -428,16 +441,18 @@ export function RoundForm({
         )}
       </form.Field>
 
-      <form.Field name="facilitatorSeesRaters">
-        {(field) => (
-          <CheckboxControl
-            checked={field.state.value}
-            onChange={(checked) => field.handleChange(checked)}
-            label={m.rounds_sees_raters_label()}
-            description={m.rounds_sees_raters_help()}
-          />
-        )}
-      </form.Field>
+      {!team && (
+        <form.Field name="facilitatorSeesRaters">
+          {(field) => (
+            <CheckboxControl
+              checked={field.state.value}
+              onChange={(checked) => field.handleChange(checked)}
+              label={m.rounds_sees_raters_label()}
+              description={m.rounds_sees_raters_help()}
+            />
+          )}
+        </form.Field>
+      )}
 
       {takesProposals && (
         <form.AppField name="proposalRule">
@@ -451,7 +466,9 @@ export function RoundForm({
         </form.AppField>
       )}
 
-      <p className="text-sm text-muted-foreground">{m.rounds_fixed_after_opening()}</p>
+      <p className="text-sm text-muted-foreground">
+        {team ? m.rounds_consent_fixed_after_opening() : m.rounds_fixed_after_opening()}
+      </p>
 
       <div className="flex flex-wrap gap-2">
         <form.AppForm>

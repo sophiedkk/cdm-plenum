@@ -7,6 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getDb } from "../db/index.ts";
 import { requireSession } from "../middleware.ts";
 import { projectInput } from "../projects/schemas.ts";
+import { clearConsent, saveConsent, settleElement } from "./consent.ts";
 import { removeDetailFlag, roundFlags, saveDetailFlag } from "./flags.ts";
 import {
   addProposal,
@@ -38,6 +39,7 @@ import { responseRate, roundResults } from "./results.ts";
 import {
   addProposalInput,
   changeClassInput,
+  consentInput,
   createRoundInput,
   detailFlagInput,
   openRoundInput,
@@ -46,9 +48,11 @@ import {
   ratingInput,
   roundInput,
   roundValueListInput,
+  saveConsentInput,
   saveDetailFlagInput,
   saveRatingInput,
   saveValueRatingInput,
+  settleInput,
   updateRoundInput,
   valueListInput,
   valueRatingInput,
@@ -111,6 +115,21 @@ export const clearRatingFn = createServerFn({ method: "POST" })
   .middleware([requireSession])
   .validator(ratingInput)
   .handler(({ data, context }) => clearRating(getDb(), context.userId, data));
+
+export const saveConsentFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(saveConsentInput)
+  .handler(({ data, context }) => saveConsent(getDb(), context.userId, data));
+
+export const clearConsentFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(consentInput)
+  .handler(({ data, context }) => clearConsent(getDb(), context.userId, data));
+
+export const settleElementFn = createServerFn({ method: "POST" })
+  .middleware([requireSession])
+  .validator(settleInput)
+  .handler(({ data, context }) => settleElement(getDb(), context.userId, data, now()));
 
 export const saveValueRatingFn = createServerFn({ method: "POST" })
   .middleware([requireSession])

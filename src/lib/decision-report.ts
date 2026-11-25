@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Sophie de Klerk
 // SPDX-License-Identifier: Apache-2.0
 
+import type { ConsensusRule, Outcome } from "./consensus";
 // The decision report of a project (EX3) as Markdown. The server collects the facts and applies
 // the group-size rule (Q-PRIV-3); this file only orders and writes them, so the order of the
 // parts can be tested without a database.
@@ -8,7 +9,8 @@
 // NOTE: EX3 follows the ACCORD reporting guideline (Gattrell et al. 2024,
 // https://doi.org/10.1371/journal.pmed.1004326, Table 4). Parts and items: title T1; aim and
 // scope I2; panel M3, R3; method and rule M9, M11, M12; rounds R1, R3; outcomes R4, R5.
-import type { ConsensusRule, Outcome } from "./consensus";
+import type { ConsentCounts } from "./consent";
+import type { ProjectMode } from "./project-mode";
 
 /** A stakeholder group the report may name, or the merged rest (Q-PRIV-3). */
 export interface ReportGroupRow {
@@ -37,7 +39,15 @@ export interface ReportRound {
   panel: { expertType: string; raters: number; minimum: number }[] | null;
   total: { invited: number; started: number; completed: number };
   /** The outcome per item; empty until the round has closed. */
-  items: { name: string; outcome: Outcome; median: number | null; rated: number }[];
+  items: {
+    name: string;
+    outcome: Outcome;
+    median: number | null;
+    rated: number;
+    /** A Team round (DE20): the answers counted, and the note of the facilitator who settled. */
+    consent?: ConsentCounts;
+    settledNote?: string | null;
+  }[];
 }
 
 export interface ReportElement {
@@ -57,6 +67,8 @@ export interface ReportElement {
 }
 
 export interface DecisionReport {
+  /** A Team project decides by consent (DE20); left out, the report is that of a Delphi study. */
+  mode?: ProjectMode;
   projectName: string;
   generatedOn: string;
   scope: { concept: string; useCases: string; outOfScope: string };
@@ -73,6 +85,20 @@ export const OUTCOME_TEXT: Record<Outcome, string> = {
   excluded: "excluded",
   no_consensus: "no consensus",
 };
+
+/** The outcome in a Team report: an unsettled "no consensus" is "to discuss" (DE20). */
+const CONSENT_OUTCOME_TEXT: Record<Outcome, string> = {
+  included: "included",
+  excluded: "excluded",
+  no_consensus: "to discuss",
+};
+
+/** The rule of a consent round in words (DE20, ADR 0023). */
+export const CONSENT_RULE_TEXT =
+  "Each member answered Include, Leave out or Discuss for every item, with a reason for Leave out " +
+  "and Discuss, or Unable to judge, which is not counted. An item is included when every counted " +
+  "answer is Include and excluded when every counted answer is Leave out. Any other mix, or no " +
+  'answer, is "to discuss": the facilitator settles it after the discussion with a short note.';
 
 export const SMALL_GROUPS_TEXT = "Other groups (a group of fewer than 3 is not named)";
 
@@ -129,9 +155,11 @@ function date(iso: string): string {
 /** Writes the report in the order of the ACCORD checklist. */
 export function writeDecisionReport(report: DecisionReport): string {
   const out: string[] = [];
+  const team = report.mode === "team";
+  const outcomeText = team ? CONSENT_OUTCOME_TEXT : OUTCOME_TEXT;
   // T1: the title names the exercise and its method.
   out.push(
-    `# Decision report: ${cell(report.projectName)} (consensus exercise, e-Delphi rating rounds)`,
+    `# Decision report: ${cell(report.projectName)} (consensus exercise, ${team ? "team consent rounds" : "e-Delphi rating rounds"})`,
   );
   out.push(`Generated on ${report.generatedOn}. The report names no person.`);
 
@@ -155,14 +183,21 @@ export function writeDecisionReport(report: DecisionReport): string {
   // M9, M11, M12: the steps and the rule of each.
   out.push("## Consensus method and rules");
   out.push(
-    "The panel rated in rounds, anonymously: no participant sees who gave a rating. " +
-      'A score of "unable to rate" counts as a response but not toward the percentages; ' +
-      "this is our own design, no source consulted settles it.",
+    team
+      ? "The team answered in rounds, by name: every member sees each answer and reason once a " +
+          "round has closed."
+      : "The panel rated in rounds, anonymously: no participant sees who gave a rating. " +
+          'A score of "unable to rate" counts as a response but not toward the percentages; ' +
+          "this is our own design, no source consulted settles it.",
   );
   if (report.rounds.length === 0) out.push("No round has been opened.");
   for (const round of report.rounds) {
     out.push(`### Round ${round.number}`);
-    out.push(`Objective: ${KIND_TEXT[round.kind]}. ${ruleText(round.rule)}`);
+    out.push(
+      team && round.kind === "elements"
+        ? `Objective: decision on the elements of the model by consent. ${CONSENT_RULE_TEXT}`
+        : `Objective: ${KIND_TEXT[round.kind]}. ${ruleText(round.rule)}`,
+    );
   }
 
   // R1, R3: when, and who took part.
@@ -206,6 +241,34 @@ export function writeDecisionReport(report: DecisionReport): string {
   out.push("## Outcome per element");
   for (const round of report.rounds.filter((r) => r.status === "closed")) {
     out.push(`### Round ${round.number}`);
+    if (team && round.kind === "elements") {
+      out.push(
+        table(
+          ["Item", "Outcome", "Include", "Leave out", "Discuss", "Unable to judge"],
+          round.items.map((item) => [
+            cell(item.name),
+            item.settledNote ? `${outcomeText[item.outcome]} (settled)` : outcomeText[item.outcome],
+            String(item.consent?.include ?? 0),
+            String(item.consent?.leave_out ?? 0),
+            String(item.consent?.discuss ?? 0),
+            String(item.consent?.abstain ?? 0),
+          ]),
+        ),
+      );
+      const settled = round.items.filter((item) => item.settledNote);
+      if (settled.length > 0) {
+        out.push(
+          [
+            "Settled after the discussion:",
+            ...settled.map(
+              (item) =>
+                `- ${cell(item.name)}: ${outcomeText[item.outcome]}. ${cell(item.settledNote ?? "")}`,
+            ),
+          ].join("\n"),
+        );
+      }
+      continue;
+    }
     out.push(
       table(
         ["Item", "Outcome", "Median", "Scores"],
@@ -224,7 +287,7 @@ export function writeDecisionReport(report: DecisionReport): string {
       ["Element", "Outcome", "Data type", "Cardinality", "Units", "Group", "Code"],
       report.elements.map((element) => [
         cell(element.name),
-        element.outcome === null ? "not rated" : OUTCOME_TEXT[element.outcome],
+        element.outcome === null ? "not rated" : outcomeText[element.outcome],
         element.detail.dataType ?? "",
         element.detail.cardinality ?? "",
         cell(element.detail.units.join("; ")),

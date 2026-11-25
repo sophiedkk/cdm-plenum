@@ -11,6 +11,18 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Rounds of a Team project decide by consent. Each member answers Include,
+  Leave out or Discuss per element, or "Unable to judge", and a reason is
+  required for Leave out and Discuss. The round setup has no scale and no
+  consensus rule, and the rating card shows the four answers instead of the
+  1 to 9 scale. When the round closes, an element is in the model when every
+  answer is Include and out when every answer is Leave out; any other mix is
+  "To discuss". Everyone in the project then sees each answer and reason by
+  name, and the facilitator settles each "To discuss" element as in or out
+  with a short note. Settled outcomes count everywhere an outcome counts, the
+  answers export names the members, and the decision report states the rule
+  as consent and lists the settled elements with their notes. A Delphi study
+  keeps its anonymous 1 to 9 rounds.
 - The model tree keeps the order of the elements within a group. In the tree
   editor each element has "Move up" and "Move down" buttons, settling the tree
   keeps the order, and the Details page, the recap, the elements CSV, the mind

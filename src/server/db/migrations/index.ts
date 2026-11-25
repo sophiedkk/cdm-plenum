@@ -31,6 +31,7 @@ import * as m0025 from "./0025_units.ts";
 import * as m0026 from "./0026_tree_element_order.ts";
 import * as m0027 from "./0027_detail_answer_leave.ts";
 import * as m0028 from "./0028_project_mode.ts";
+import * as m0029 from "./0029_consent_rounds.ts";
 
 export const migrations: Record<string, Migration> = {
   "0001_auth": m0001,
@@ -60,6 +61,7 @@ export const migrations: Record<string, Migration> = {
   "0026_tree_element_order": m0026,
   "0027_detail_answer_leave": m0027,
   "0028_project_mode": m0028,
+  "0029_consent_rounds": m0029,
 };
 
 export const migrationProvider: MigrationProvider = {

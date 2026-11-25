@@ -16,6 +16,7 @@ import type { DB } from "../db/schema.gen.ts";
 import { projectGroups } from "../details/tree.ts";
 import { done, type ProjectResult, withProject } from "../projects/access.ts";
 import { log } from "../projects/queries.ts";
+import { modeOf } from "../rounds/round.ts";
 import { modelTypeOf } from "../scope/queries.ts";
 import { shownGroups } from "./rating-groups.ts";
 
@@ -471,6 +472,65 @@ export async function exportMindMap(
 }
 
 /**
+ * EX4 in a Team project (DE20, ADR 0023): one row per consent answer of a closed round, with the
+ * member's name instead of a participant code, the stakeholder group, the round number, the
+ * element name, the answer and the reason.
+ */
+async function exportAnswersCsv(
+  trx: Db,
+  userId: string,
+  projectId: string,
+  separator: CsvSeparator,
+  now: Date,
+): Promise<ProjectResult<ExportFile>> {
+  const answers = await trx
+    .selectFrom("consent_answer")
+    .innerJoin("round", "round.id", "consent_answer.round_id")
+    .innerJoin("element", "element.id", "consent_answer.element_id")
+    .innerJoin("member", "member.id", "consent_answer.member_id")
+    .innerJoin("user", "user.id", "member.userId")
+    .leftJoin("team", (join) =>
+      join
+        .onRef("team.id", "=", "consent_answer.team_id")
+        .onRef("team.organizationId", "=", "round.project_id"),
+    )
+    .select([
+      "user.name as personName",
+      "user.email as personEmail",
+      "team.name as groupName",
+      "round.number as round",
+      "element.name as element",
+      "consent_answer.answer",
+      "consent_answer.reason",
+    ])
+    .where("round.project_id", "=", projectId)
+    .where("round.closed_at", "is not", null)
+    .orderBy("round.number")
+    .orderBy("element.name")
+    .orderBy("element.id")
+    .orderBy("user.name")
+    .orderBy("user.email")
+    .execute();
+  const rows: CsvCell[][] = [
+    ["participant", "stakeholder_group", "round", "element", "answer", "reason"],
+    ...answers.map((row) => [
+      row.personName.trim() || row.personEmail,
+      row.groupName,
+      row.round,
+      row.element,
+      row.answer,
+      row.reason,
+    ]),
+  ];
+  await log(trx, userId, projectId, "export_ratings_csv", "project", projectId);
+  return done({
+    filename: `answers${csvFileSuffix(separator)}-${fileDate(now)}.csv`,
+    mediaType: CSV_MEDIA_TYPE,
+    content: writeCsv(rows, separator),
+  });
+}
+
+/**
  * EX4: one row per rating of a closed round, with the participant's rating code, the stakeholder
  * group stored on the rating (empty for a group too small to name, Q-PRIV-3), the round number,
  * the element name, the score (empty for "unable to rate") and the reason. The query reads no
@@ -484,6 +544,9 @@ export async function exportRatingsCsv(
   now = new Date(),
 ): Promise<ProjectResult<ExportFile>> {
   return withProject(db, userId, projectId, EXPORT, async (trx, project) => {
+    if ((await modeOf(trx, project.id)) === "team") {
+      return exportAnswersCsv(trx, userId, project.id, separator, now);
+    }
     const ratings = await trx
       .selectFrom("rating")
       .innerJoin("round", "round.id", "rating.round_id")

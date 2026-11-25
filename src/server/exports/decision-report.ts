@@ -6,6 +6,7 @@
 // rating-groups.ts), and no rating code, member or user id is read into the text.
 import type { Kysely } from "kysely";
 import type { Outcome } from "@/lib/consensus";
+import { consentCounts } from "@/lib/consent";
 import { isDataTypeKey } from "@/lib/data-types";
 import {
   type DecisionReport,
@@ -20,9 +21,11 @@ import type { DB } from "../db/schema.gen.ts";
 import { projectGroups } from "../details/tree.ts";
 import { done, type ProjectResult, withProject } from "../projects/access.ts";
 import { log } from "../projects/queries.ts";
+import { namedAnswersOf } from "../rounds/consent.ts";
 import { invitedBy, responseRateOf } from "../rounds/results.ts";
 import {
   kindOf,
+  modeOf,
   outcomesOf,
   type RoundRow,
   roundItems,
@@ -109,11 +112,30 @@ async function reportRound(
   round: RoundRow,
   now: Date,
 ): Promise<ReportRound> {
-  const summary = summaryOf(round, now);
+  const mode = await modeOf(trx, projectId);
+  const summary = summaryOf(round, now, mode);
   const rate = await responseRateOf(trx, projectId, round, now);
   const members = await invitedBy(trx, projectId, round.closed_at ?? now);
   let items: ReportRound["items"] = [];
-  if (round.closed_at !== null) {
+  if (round.closed_at !== null && mode === "team" && kindOf(round) === "elements") {
+    const answers = await namedAnswersOf(trx, round.id);
+    const settled = await trx
+      .selectFrom("round_element")
+      .select(["element_id", "settled_note"])
+      .where("round_id", "=", round.id)
+      .where("settled_note", "is not", null)
+      .execute();
+    const notes = new Map(settled.map((row) => [row.element_id, row.settled_note]));
+    // No name leaves this function: only the counts of the answers and the facilitator's note.
+    items = (await roundItems(trx, round)).map((item) => ({
+      name: item.name,
+      outcome: item.outcome ?? "no_consensus",
+      median: null,
+      rated: 0,
+      consent: consentCounts((answers.get(item.id) ?? []).map((row) => row.answer)),
+      settledNote: notes.get(item.id) ?? null,
+    }));
+  } else if (round.closed_at !== null) {
     const outcomes = await outcomesOf(trx, round);
     items = (await roundItems(trx, round)).map((item) => {
       const result = outcomes.get(item.id)?.result;
@@ -228,6 +250,7 @@ export async function decisionReportOf(
     });
 
   return {
+    mode: await modeOf(db, project.id),
     projectName: project.name,
     generatedOn: fileDate(now),
     scope: {

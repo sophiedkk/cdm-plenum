@@ -7,12 +7,17 @@ import type { ReactNode, Ref } from "react";
 // each with a link back to its card.
 import { useModelType } from "@/components/projects/model-type-context";
 import { m } from "@/i18n/messages";
+import { consentLabel } from "@/lib/i18n/round-labels";
 import type { MyElement, OwnRating } from "@/server/rounds/ratings";
 import { detailLabel } from "./detail-flags";
 import { GroupRows, headingBefore } from "./group-rows";
 
 function ratingText(own: OwnRating): string {
-  if (!own.rated) return m.rounds_overview_not_rated();
+  if (own.answer) return consentLabel(own.answer);
+  if (!own.rated)
+    return own.answer === undefined
+      ? m.rounds_overview_not_rated()
+      : m.rounds_consent_overview_not_answered();
   if (own.score === null) return m.rounds_rate_unable();
   return String(own.score);
 }
@@ -25,7 +30,10 @@ export function RatingOverview({
   headingRef,
   cardLink,
   kind = "elements",
+  consent = false,
 }: Readonly<{
+  /** A Team round (DE20): the participant's own answers, not ratings. */
+  consent?: boolean;
   /** The round rates elements, or the values of a value round (DT3). */
   kind?: "elements" | "values";
   number: number;
@@ -46,22 +54,30 @@ export function RatingOverview({
           tabIndex={-1}
           className="type-section outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {m.rounds_overview_heading()}
+          {consent ? m.rounds_consent_overview_heading() : m.rounds_overview_heading()}
         </h3>
         <p className="text-sm text-muted-foreground">
-          {kind === "values" ? m.rounds_value_overview_intro() : m.rounds_overview_intro()}
+          {consent
+            ? m.rounds_consent_overview_intro()
+            : kind === "values"
+              ? m.rounds_value_overview_intro()
+              : m.rounds_overview_intro()}
         </p>
       </div>
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full text-sm">
-          <caption className="sr-only">{m.rounds_overview_caption({ number })}</caption>
+          <caption className="sr-only">
+            {consent
+              ? m.rounds_consent_overview_caption({ number })
+              : m.rounds_overview_caption({ number })}
+          </caption>
           <thead className="bg-muted/50 text-left">
             <tr>
               <th scope="col" className="px-3 py-2 font-medium">
                 {kind === "values" ? m.rounds_value_overview_item() : m.rounds_overview_element()}
               </th>
               <th scope="col" className="px-3 py-2 font-medium">
-                {m.rounds_overview_rating()}
+                {consent ? m.rounds_consent_overview_answer() : m.rounds_overview_rating()}
               </th>
               {flags && (
                 <th scope="col" className="px-3 py-2 font-medium">

@@ -7,6 +7,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { DownloadIcon, Loader2Icon } from "lucide-react";
 import { useState } from "react";
 import { type DownloadFile, saveFile } from "@/components/export/save-file";
+import { useProjectMode } from "@/components/projects/project-mode-context";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { m } from "@/i18n/messages";
@@ -112,6 +113,8 @@ export function ExportList({
   const exportMindMap = useServerFn(exportMindMapFn);
   const exportRatings = useServerFn(exportRatingsCsvFn);
   const exportReport = useServerFn(exportDecisionReportFn);
+  // NOTE: DE20, ADR 0023. A Team project's round export names people, so it is "answers".
+  const team = useProjectMode() === "team";
   const data = { projectId };
   const report = (
     <ExportItem
@@ -152,15 +155,19 @@ export function ExportList({
         <ExportItem
           level={level}
           id="export-ratings"
-          title={m.export_ratings_title()}
-          description={m.export_ratings_description()}
+          title={team ? m.export_answers_title() : m.export_ratings_title()}
+          description={team ? m.export_answers_description() : m.export_ratings_description()}
           run={() => exportRatings({ data: { ...data, separator: "comma" } })}
         />
         <ExportItem
           level={level}
           id="export-ratings-semicolon"
-          title={m.export_ratings_semicolon_title()}
-          description={m.export_ratings_semicolon_description()}
+          title={team ? m.export_answers_semicolon_title() : m.export_ratings_semicolon_title()}
+          description={
+            team
+              ? m.export_answers_semicolon_description()
+              : m.export_ratings_semicolon_description()
+          }
           run={() => exportRatings({ data: { ...data, separator: "semicolon" } })}
         />
         {!primaryReport && report}

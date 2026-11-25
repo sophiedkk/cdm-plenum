@@ -23,8 +23,9 @@ import { detailProgress } from "../details/queries.ts";
 import { summaryOf } from "../elements/first-look.ts";
 import { checkProgress } from "../elements/groups.ts";
 import { markSummary } from "../elements/marks.ts";
+import { completedMemberCount } from "../rounds/consent.ts";
 import { joinedPanel, projectPanel } from "../rounds/queries.ts";
-import { type RoundKind, statusOf } from "../rounds/round.ts";
+import { modeOf, type RoundKind, statusOf } from "../rounds/round.ts";
 import { done, type LockedProject, type ProjectResult, readProject } from "./access.ts";
 import { projectOverview } from "./phase.ts";
 import { listProjects } from "./queries.ts";
@@ -136,13 +137,16 @@ async function followedRound(
       .executeTakeFirst(),
   );
   // One row per rater code that answered every element; the code never leaves this query.
-  const finished = await db
-    .selectFrom(kind === "values" ? "value_rating" : "rating")
-    .select("rating_code_id")
-    .where("round_id", "=", round.id)
-    .groupBy("rating_code_id")
-    .having((eb) => eb.fn.countAll(), ">=", elements)
-    .execute();
+  const team = kind === "elements" && (await modeOf(db, projectId)) === "team";
+  const finished = team
+    ? new Array(await completedMemberCount(db, round.id, elements))
+    : await db
+        .selectFrom(kind === "values" ? "value_rating" : "rating")
+        .select("rating_code_id")
+        .where("round_id", "=", round.id)
+        .groupBy("rating_code_id")
+        .having((eb) => eb.fn.countAll(), ">=", elements)
+        .execute();
   return {
     id: round.id,
     number: round.number,

@@ -41,7 +41,10 @@ export function RatingCards({
   afterOverview,
   flags = false,
   kind = "elements",
+  consent = false,
 }: Readonly<{
+  /** A Team round (DE20): the overview lists answers. */
+  consent?: boolean;
   /** What the round rates: elements, or the values of a value round (DT3). */
   kind?: "elements" | "values";
   number: number;
@@ -92,6 +95,7 @@ export function RatingCards({
           elements={elements}
           flags={flags}
           kind={kind}
+          consent={consent}
           headingRef={headingRef}
           cardLink={(index, name) => cardLink(index, name, "underline underline-offset-4")}
         />

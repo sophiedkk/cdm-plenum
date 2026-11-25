@@ -4,23 +4,24 @@
 // Rating in an open round (DE3), a participant's own ratings with the previous round next to
 // them (DE7, DE8), and the facilitator's view by participant when the round allows it (DE4).
 // Ratings carry the rating code only; rater-link.ts is the one place that resolves it (ADR 0005).
-import type { Kysely, Transaction } from "kysely";
+import type { Kysely } from "kysely";
+import type { ConsentAnswer } from "@/lib/consent";
 import { groupOrder } from "@/lib/element-groups";
 import type { ElementReference } from "@/lib/elements";
-import { ratingWriteOf, writeOpen } from "@/lib/phase-access";
-import type { ProjectPhase } from "@/lib/project-phases";
-import type { ProjectRole } from "@/lib/project-roles";
 import type { DB } from "../db/schema.gen.ts";
-import { log, ownGroupId } from "../projects/queries.ts";
+import { log } from "../projects/queries.ts";
 import { asFacilitator, asMember, done, type RoundResult, refused } from "./access.ts";
+import { type PreviousConsent, teamRatings } from "./consent.ts";
 import { type OwnFlag, ownFlags } from "./flags.ts";
 import { inGroupOrder, itemGroupsOf, type RoundGroup } from "./groups.ts";
+import { type RatedItem, raterContext } from "./rater-context.ts";
 import { ownRatingCode, type ParticipantRatings, ratingsByParticipantQuery } from "./rater-link.ts";
 import {
   type ElementOutcome,
   emptyOutcome,
   findRound,
   kindOf,
+  modeOf,
   outcomesOf,
   type RoundRow,
   type RoundSummary,
@@ -41,6 +42,7 @@ import type {
 const TRIGGER_REFUSALS = {
   rating_round_not_open: "round_not_open",
   rating_score_out_of_scale: "score_out_of_scale",
+  rating_project_team: "delphi_round_only",
 } as const;
 
 function triggerRefusal(error: unknown) {
@@ -53,48 +55,6 @@ function cleanReason(reason: string | undefined): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
-/** The item a rating is of: an element of an element round, or a value of a value round (DT3). */
-type RatedItem = { kind: "elements"; elementId: string } | { kind: "values"; valueId: string };
-
-const NOT_IN_ROUND = { elements: "element_not_in_round", values: "value_not_in_round" } as const;
-
-/**
- * The checks every rating action shares: the round is opened and of the item's kind, the phase
- * takes ratings in it (PR10, DT3: `phase_closed`), the item is in the round, and a facilitator
- * rates only from their own stakeholder group (DE14, `rater_group_required`).
- */
-async function raterContext(
-  trx: Transaction<DB>,
-  userId: string,
-  input: RoundInput,
-  item: RatedItem,
-  role: ProjectRole,
-  phase: ProjectPhase,
-): Promise<RoundResult<{ roundId: string; teamId: string | null }>> {
-  const teamId = await ownGroupId(trx, input.projectId, userId);
-  if (role === "facilitator" && teamId === null) return refused("rater_group_required");
-  const round = await findRound(trx, input.projectId, input.roundId, "share");
-  if (!round || round.opened_at === null) return refused("round_not_found");
-  if (kindOf(round) !== item.kind) return refused(NOT_IN_ROUND[item.kind]);
-  if (!writeOpen(role, phase, ratingWriteOf(item.kind))) return refused("phase_closed");
-  const inRound =
-    item.kind === "values"
-      ? await trx
-          .selectFrom("round_value")
-          .select("id")
-          .where("round_id", "=", round.id)
-          .where("id", "=", item.valueId)
-          .executeTakeFirst()
-      : await trx
-          .selectFrom("round_element")
-          .select("element_id as id")
-          .where("round_id", "=", round.id)
-          .where("element_id", "=", item.elementId)
-          .executeTakeFirst();
-  if (!inRound) return refused(NOT_IN_ROUND[item.kind]);
-  return done({ roundId: round.id, teamId });
-}
-
 async function saveScore(
   db: Kysely<DB>,
   userId: string,
@@ -103,6 +63,9 @@ async function saveScore(
 ): Promise<RoundResult<null>> {
   try {
     return await asMember(db, userId, input.projectId, async (trx, role, _visible, phase) => {
+      if (item.kind === "elements" && (await modeOf(trx, input.projectId)) === "team") {
+        return refused("delphi_round_only");
+      }
       const context = await raterContext(trx, userId, input, item, role, phase);
       if (!context.ok) return context;
       const { roundId, teamId } = context.value;
@@ -151,6 +114,9 @@ async function clearScore(
   item: RatedItem,
 ): Promise<RoundResult<null>> {
   return asMember(db, userId, input.projectId, async (trx, role, _visible, phase) => {
+    if (item.kind === "elements" && (await modeOf(trx, input.projectId)) === "team") {
+      return refused("delphi_round_only");
+    }
     const context = await raterContext(trx, userId, input, item, role, phase);
     if (!context.ok) return context;
     const { roundId } = context.value;
@@ -232,6 +198,8 @@ export interface OwnRating {
   /** Null with `rated` true is "unable to rate". */
   score: number | null;
   reason: string | null;
+  /** The consent answer of a Team round (DE20); left out in a Delphi round. */
+  answer?: ConsentAnswer | null;
 }
 
 export interface PreviousRound extends ElementOutcome {
@@ -256,6 +224,8 @@ export interface MyElement {
   previous: PreviousRound | null;
   /** In a value round (DT3) the item is a value: its number and the element it belongs to. */
   value?: RoundValueOf;
+  /** In a Team round (DE20): the answers of the previous round, by name. */
+  previousConsent?: PreviousConsent | null;
 }
 
 export interface MyRatings {
@@ -324,6 +294,10 @@ export async function myRatings(
     if (round.opened_at === null) {
       return refused(role === "facilitator" ? "round_not_open" : "round_not_found");
     }
+    const mode = await modeOf(trx, input.projectId);
+    if (mode === "team" && kindOf(round) === "elements") {
+      return done(await teamRatings(trx, round, userId, summaryOf(round, deps.now, mode)));
+    }
     const code = await ownRatingCode(trx, input.projectId, userId);
     const own = await ownRatings(trx, round, code);
     const flags = await ownFlags(trx, round.id, code);
@@ -374,7 +348,7 @@ export async function myRatings(
     // NOTE: DE19. The groups come in an order of the rater's own, the same all round long: the
     // seed is the rating code, or the user for a member without one yet, and the round.
     return done({
-      round: summaryOf(round, deps.now),
+      round: summaryOf(round, deps.now, mode),
       elements: inGroupOrder(elements, (ids) => groupOrder(ids, `${code ?? userId}:${round.id}`)),
     });
   });
@@ -392,6 +366,7 @@ export async function ratingsByParticipant(
   return asFacilitator(db, userId, input.projectId, async (trx, project) => {
     const round = await findRound(trx, project.id, input.roundId);
     if (!round) return refused("round_not_found");
+    if ((await modeOf(trx, project.id)) === "team") return refused("delphi_round_only");
     if (round.opened_at === null || !round.facilitator_sees_raters) return refused("raters_hidden");
     return done(await ratingsByParticipantQuery(trx, project.id, round.id));
   });

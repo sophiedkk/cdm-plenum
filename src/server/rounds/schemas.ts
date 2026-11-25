@@ -4,6 +4,7 @@
 // The input of the round server functions, checked before any handler runs. The rule's own
 // consistency (bands inside the scale, agreement above half) is `ruleError` in the query.
 import { z } from "zod";
+import { CONSENT_ANSWERS, CONSENT_TEXT_MAX } from "@/lib/consent";
 import { ELEMENT_NAME_MAX } from "@/lib/elements";
 import { CHANGE_CLASSES, type EXPERT_TYPES } from "@/lib/panel";
 import { idSchema } from "../projects/schemas.ts";
@@ -110,6 +111,23 @@ export type SaveRatingInput = z.infer<typeof saveRatingInput>;
 
 export const ratingInput = roundInput.extend({ elementId: z.uuid() });
 export type RatingInput = z.infer<typeof ratingInput>;
+
+/** A member's consent answer to one element of a Team round (DE20); migration 0029 agrees. */
+export const saveConsentInput = ratingInput.extend({
+  answer: z.enum(CONSENT_ANSWERS),
+  reason: z.string().max(CONSENT_TEXT_MAX).optional(),
+});
+export type SaveConsentInput = z.infer<typeof saveConsentInput>;
+
+export const consentInput = ratingInput;
+export type ConsentInput = z.infer<typeof consentInput>;
+
+/** The facilitator settles an element that ended on "To discuss", with a note (DE20). */
+export const settleInput = ratingInput.extend({
+  outcome: z.enum(["included", "excluded"]),
+  note: z.string().max(CONSENT_TEXT_MAX),
+});
+export type SettleInput = z.infer<typeof settleInput>;
 
 /** A rating of one value of a value round (DT3); a null score is "unable to rate". */
 export const saveValueRatingInput = roundInput.extend({
