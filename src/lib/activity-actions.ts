@@ -80,6 +80,7 @@ export const ACTIVITY_ACTIONS = [
   "source_suggestion_dismissed",
   "scope_source_added",
   "scope_source_removed",
+  "scope_source_restored",
   "scope_sources_reordered",
   "scope_updated",
   "signed_in",

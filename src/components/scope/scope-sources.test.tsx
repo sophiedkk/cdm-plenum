@@ -37,6 +37,14 @@ describe("ScopeSourceList", () => {
     fireEvent.click(screen.getByRole("button", { name: "Move Ward form up" }));
     expect(move).toHaveBeenCalledWith("s2", -1);
   });
+
+  it("removes a source at once, without a confirmation (the page offers Undo)", () => {
+    const remove = vi.fn(async () => undefined);
+    render(<ScopeSourceList sources={SOURCES} editable move={vi.fn()} remove={remove} />);
+    fireEvent.click(screen.getByRole("button", { name: "Remove Ward form" }));
+    expect(remove).toHaveBeenCalledWith(SOURCES[1]);
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
 });
 
 describe("AddSourceForm", () => {

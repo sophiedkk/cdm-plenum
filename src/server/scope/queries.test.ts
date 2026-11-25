@@ -17,10 +17,16 @@ import {
   listScopeCommentsWithAuthors,
   removeScopeSource,
   reorderScopeSources,
+  restoreScopeSource,
   setModelType,
   updateScope,
 } from "./queries.ts";
-import { addScopeSourceInput, setModelTypeInput, updateScopeInput } from "./schemas.ts";
+import {
+  addScopeSourceInput,
+  restoreScopeSourceInput,
+  setModelTypeInput,
+  updateScopeInput,
+} from "./schemas.ts";
 
 let db: Kysely<DB>;
 let m: ProjectMembers;
@@ -97,6 +103,9 @@ describe("scope statement (SC1)", () => {
       ok: false,
       error: "forbidden",
     });
+    expect(
+      await restoreScopeSource(db, by, { projectId, label: "x", url: null, position: 0 }),
+    ).toEqual({ ok: false, error: "forbidden" });
     const read = await getScope(db, m.facilitator, projectId);
     expect(read.ok && read.value.concept).toBe("");
   });
@@ -113,6 +122,9 @@ describe("scope statement (SC1)", () => {
       notFound,
     );
     expect(await removeScopeSource(db, by, { projectId, sourceId })).toEqual(notFound);
+    expect(
+      await restoreScopeSource(db, by, { projectId, label: "x", url: null, position: 0 }),
+    ).toEqual(notFound);
     expect(await addScopeComment(db, by, { projectId, body: "hi" })).toEqual(notFound);
     expect(await listScopeComments(db, by, projectId)).toEqual(notFound);
     expect(await listScopeCommentsWithAuthors(db, by, projectId)).toEqual(notFound);
@@ -163,6 +175,47 @@ describe("scope statement (SC1)", () => {
       { label: "C", position: 1 },
     ]);
     expect(await addSource("D")).toBeTruthy();
+  });
+
+  it("restores a removed source at its place with its address, and logs it", async () => {
+    await addSource("A");
+    const b = await addScopeSource(db, m.facilitator, {
+      projectId: m.projectId,
+      label: "B",
+      url: "https://example.test/b",
+    });
+    if (!b.ok) throw new Error(b.error);
+    await addSource("C");
+    await removeScopeSource(db, m.facilitator, {
+      projectId: m.projectId,
+      sourceId: b.value.sourceId,
+    });
+    const restored = await restoreScopeSource(db, m.facilitator, {
+      projectId: m.projectId,
+      label: "B",
+      url: "https://example.test/b",
+      position: 1,
+    });
+    expect(restored.ok).toBe(true);
+    const read = await getScope(db, m.participant, m.projectId);
+    expect(read.ok && read.value.sources.map((s) => [s.label, s.url])).toEqual([
+      ["A", null],
+      ["B", "https://example.test/b"],
+      ["C", null],
+    ]);
+    expect(await logActions()).toContain("scope_source_restored");
+  });
+
+  it("restores at the end when the list has become shorter, and rejects a bad address", async () => {
+    await addSource("A");
+    const input = { projectId: m.projectId, label: "B", url: null, position: 9 };
+    expect((await restoreScopeSource(db, m.facilitator, input)).ok).toBe(true);
+    const read = await getScope(db, m.facilitator, m.projectId);
+    expect(read.ok && read.value.sources.map((s) => s.label)).toEqual(["A", "B"]);
+    expect(
+      restoreScopeSourceInput.safeParse({ ...input, url: "javascript:alert(1)" }).success,
+    ).toBe(false);
+    expect(restoreScopeSourceInput.safeParse({ ...input, position: -1 }).success).toBe(false);
   });
 
   it("validates the input: http(s) addresses only, a label, bounded text", () => {

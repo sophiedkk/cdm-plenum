@@ -9,6 +9,7 @@ import { useAppForm } from "@/components/form/app-form";
 import { m } from "@/i18n/messages";
 import { applyServerRefusal } from "@/lib/forms/server-refusal";
 import { type RefusalCode, refusalMessage } from "@/lib/i18n/refusals";
+import { splitUseCases } from "@/lib/use-cases";
 import { SCOPE_TEXT_MAX } from "@/server/scope/schemas";
 
 export interface ScopeTexts {
@@ -43,6 +44,14 @@ export function ScopeStatementView({ texts }: Readonly<{ texts: ScopeTexts }>) {
           </h4>
           {texts[part.key] === "" ? (
             <p className="text-muted-foreground">{m.scope_not_written()}</p>
+          ) : part.key === "useCases" ? (
+            <ul className="list-disc pl-5">
+              {splitUseCases(texts.useCases).map((useCase, index) => (
+                // The same text can appear twice in a list the facilitator typed.
+                // biome-ignore lint/suspicious/noArrayIndexKey: the list is static text
+                <li key={`${index}:${useCase}`}>{useCase}</li>
+              ))}
+            </ul>
           ) : (
             <p className="whitespace-pre-wrap">{texts[part.key]}</p>
           )}
@@ -114,7 +123,11 @@ export function ScopeStatementForm({
       {parts().map((part) => (
         <form.AppField key={part.key} name={part.key}>
           {(field) => (
-            <field.TextareaField label={part.title} description={part.description} rows={4} />
+            <field.TextareaField
+              label={part.key === "useCases" ? m.scope_use_cases_edit_label() : part.title}
+              description={part.description}
+              rows={4}
+            />
           )}
         </form.AppField>
       ))}

@@ -48,6 +48,13 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The scope page lists the use cases as bullets, one per use case, and the
+  edit form says that each use case goes on its own line. "Add source" opens
+  a dialog instead of an always open form. Removing a source no longer asks
+  for confirmation: it goes at once and the message offers "Undo", which puts
+  it back in the same place.
+- The facilitator's checklist for the scope phase has the item "Choose the
+  model type", done once a type is chosen, with a link to the scope page.
 - The Overview names your next step: every item that asks for work has a
   button to the page where you do it, and the first open item's button is the
   one filled button. "Go on to" turns filled once nothing is open, and its

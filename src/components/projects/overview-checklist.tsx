@@ -154,6 +154,17 @@ function itemView(
               </ItemLink>
             ),
           };
+    case "model_type":
+      return item.done
+        ? { text: m.projects_check_model_type_done() }
+        : {
+            text: m.projects_check_model_type(),
+            action: (
+              <ItemLink to="/projects/$projectId/scope" projectId={projectId} primary={primary}>
+                {m.projects_check_scope_action()}
+              </ItemLink>
+            ),
+          };
     case "panel":
       return item.done
         ? { text: m.projects_check_panel_done() }

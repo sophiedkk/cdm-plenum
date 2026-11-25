@@ -18,6 +18,7 @@ import type { ProjectOverview } from "./project-tasks.ts";
 function facts(changes: Partial<OverviewFacts> = {}): OverviewFacts {
   return {
     scopeWritten: true,
+    modelTypeSet: true,
     scopeComments: 0,
     panelMissing: 0,
     participants: 8,
@@ -93,18 +94,22 @@ describe("checklist (PR4)", () => {
     expect(openItems(detail(0, 0, 0, 0))).toBe(2);
   });
 
-  it("lists the scope, the panel and the comments in the scope phase", () => {
+  it("lists the scope, the model type, the panel and the comments in the scope phase", () => {
     const items = checklist(
       "scope",
-      facts({ scopeWritten: false, panelMissing: 2, scopeComments: 3 }),
+      facts({ scopeWritten: false, modelTypeSet: false, panelMissing: 2, scopeComments: 3 }),
     );
     expect(items).toEqual([
       { key: "scope_written", done: false },
+      { key: "model_type", done: false },
       { key: "panel", done: false, missing: 2 },
       { key: "scope_comments", done: null, count: 3 },
     ]);
     // A comment count only informs; nothing marks comments read.
-    expect(openItems(items)).toBe(2);
+    expect(openItems(items)).toBe(3);
+    expect(
+      checklist("scope", facts({ modelTypeSet: true })).find((item) => item.key === "model_type"),
+    ).toEqual({ key: "model_type", done: true });
   });
 
   it("offers a reminder only while someone has not finished the first look and e-mail works", () => {

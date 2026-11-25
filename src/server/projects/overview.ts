@@ -186,7 +186,7 @@ async function factsOf(
 ): Promise<OverviewFacts> {
   const row = await db
     .selectFrom("project")
-    .select(["private_brainstorm", "board_revealed_at"])
+    .select(["private_brainstorm", "board_revealed_at", "model_type"])
     .where("id", "=", project.id)
     .executeTakeFirstOrThrow();
   const scope = await db
@@ -243,6 +243,7 @@ async function factsOf(
   const { elements, lastClosedRound } = await decided(db, project.id);
   return {
     scopeWritten: (scope?.concept ?? "").trim() !== "",
+    modelTypeSet: row.model_type !== null,
     scopeComments,
     panelMissing: await panelMissing(db, project.id, deps.now),
     participants,
